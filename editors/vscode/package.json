@@ -1,0 +1,29 @@
+{
+    "name": "gofra",
+    "displayName": "Gofra",
+    "version": "1.0.0",
+    "engines": {
+        "vscode": "^1.0.0"
+    },
+    "contributes": {
+        "languages": [
+            {
+                "id": "gofra",
+                "aliases": [
+                    "Gofra"
+                ],
+                "extensions": [
+                    ".gof",
+                    ".gofra"
+                ]
+            }
+        ],
+        "grammars": [
+            {
+                "language": "gofra",
+                "scopeName": "source.gofra",
+                "path": "./syntaxes/gofra.tmLanguage.json"
+            }
+        ]
+    }
+}
