@@ -1,7 +1,14 @@
 from sys import stderr, stdout
 from typing import Literal
 
-type MessageLevel = Literal["INFO", "ERROR", "WARNING"]
+type MessageLevel = Literal["INFO", "ERROR", "WARNING", "SUCCESS"]
+
+
+class CLIColor:
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    RESET = "\033[0m"
+    YELLOW = "\033[93m"
 
 
 def cli_message(level: MessageLevel, text: str, *, verbose: bool = True) -> None:
@@ -10,4 +17,13 @@ def cli_message(level: MessageLevel, text: str, *, verbose: bool = True) -> None
 
     if level == "INFO" and not verbose:
         return
-    print(f"[{level}] {text}", file=fd)
+
+    color_mapping: dict[MessageLevel, str] = {
+        "ERROR": CLIColor.RED,
+        "WARNING": CLIColor.YELLOW,
+        "SUCCESS": CLIColor.GREEN,
+    }
+    print(
+        f"{color_mapping.get(level, CLIColor.RESET)}[{level}] {text}{CLIColor.RESET}",
+        file=fd,
+    )
