@@ -260,7 +260,7 @@ def infer_output_filename(  # noqa: PLR0911
             match output_format:
                 case "executable":
                     if source_filepath.suffix == "":
-                        return source_filepath.with_suffix(source_filepath.suffix + "_")
+                        return source_filepath.with_suffix("._")
                     return source_filepath.with_suffix("")
         case "Linux":
             match output_format:
