@@ -352,7 +352,7 @@ class ParserTopLevelError(GofraError):
         super().__init__(*args)
 
     def __repr__(self) -> str:
-        return f"""Expected
+        return """Expected
 
 Entry point function cannot be external or inlined!
 """

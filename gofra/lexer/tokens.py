@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from gofra.lexer.keywords import Keyword
-
-type TokenValue = int | float | str
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass(frozen=True)
 class TokenLocation:
+    """Location of any token within source code file."""
+
     filepath: Path
     line_number: int
     col_number: int
@@ -18,6 +21,13 @@ class TokenLocation:
 
 
 class TokenType(IntEnum):
+    """Type of the lexical token.
+
+    These types is a bit weird due to `convention` but this is a some sort of an legacy code.
+    (e.g character/strings/integers must be an literal and parsed at PARSER side)
+    https://en.wikipedia.org/wiki/Lexical_analysis
+    """
+
     INTEGER = auto()
 
     CHARACTER = auto()
@@ -29,12 +39,16 @@ class TokenType(IntEnum):
 
 @dataclass(frozen=True)
 class Token:
-    type: TokenType
-    text: str
-    value: TokenValue
-    location: TokenLocation
+    """Lexical token obtained by lexer."""
 
-    def __repr__(self) -> str:
-        if self.type == TokenType.KEYWORD:
-            return f"Token<{self.type.name}, {Keyword(self.value).name}>"
-        return f"Token<{self.type.name}, {self.value}>"
+    type: TokenType
+
+    # Real text of an token within source code
+    text: str
+
+    # `pre-parsed` value (e.g numbers are numbers, string are unescaped)
+    # This is actually may not be here (inside parser), but due to now this will be as-is
+    value: int | str
+
+    # Location within file
+    location: TokenLocation

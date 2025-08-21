@@ -9,9 +9,9 @@ from gofra.lexer import (
     Keyword,
     Token,
     TokenType,
-    load_file_for_lexical_analysis,
 )
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD
+from gofra.lexer.lexer import tokenize_file
 from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.validator import validate_and_pop_entry_point
@@ -44,13 +44,17 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
+def _tokenize_tokens_reversed(path: Path) -> deque[Token]:
+    return deque(list(tokenize_file(path))[::-1])
+
+
 def parse_file(
     path: Path,
     include_search_directories: Iterable[Path],
 ) -> tuple[ParserContext, Function]:
     """Load file for parsing into operators (lex and then parse)."""
     # Consider reversing at generator side or smth like that
-    tokens = deque(list(load_file_for_lexical_analysis(source_filepath=path))[::-1])
+    tokens = _tokenize_tokens_reversed(path)
     context = _parse_from_context_into_operators(
         context=ParserContext(
             is_top_level=True,
@@ -376,7 +380,7 @@ def _unpack_include_from_token(context: ParserContext, token: Token) -> None:
         return
 
     context.included_source_paths.add(include_path)
-    context.tokens.extend(reversed(list(load_file_for_lexical_analysis(include_path))))
+    context.tokens.extend(_tokenize_tokens_reversed(include_path))
 
 
 def _resolve_real_import_path(
@@ -500,7 +504,9 @@ def _try_unpack_macro_or_inline_function_from_token(
         if isinstance(inline_block, Function) and (
             not inline_block.emit_inline_body or inline_block.is_externally_defined
         ):
-            raise NotImplementedError
+            raise NotImplementedError(
+                "use `call` to call an function, obtaining an function is not implemented yet"
+            )
         context.expand_from_inline_block(inline_block)
 
     return bool(inline_block)

@@ -1,172 +1,158 @@
 from __future__ import annotations
 
-import sys
-from collections.abc import Generator, Sequence
 from typing import TYPE_CHECKING
 
-from gofra.lexer.keywords import WORD_TO_KEYWORD
-
-from ._context import LexerContext
-from .exceptions import (
+from gofra.lexer._state import LexerState
+from gofra.lexer.exceptions import (
+    LexerAmbigiousHexadecimalAlphabetError,
     LexerEmptyCharacterError,
     LexerExcessiveCharacterLengthError,
-    LexerFileNotFoundError,
     LexerUnclosedCharacterQuoteError,
     LexerUnclosedStringQuoteError,
 )
-from .helpers import (
+from gofra.lexer.helpers import (
+    CHARACTER_QUOTE,
+    HEXADECIMAL_MARK,
+    SINGLE_LINE_COMMENT,
+    STRING_QUOTE,
     find_string_end,
     find_word_end,
     find_word_start,
+    is_valid_hexadecimal,
+    is_valid_integer,
     unescape_string,
 )
-from .tokens import Token, TokenLocation, TokenType
+from gofra.lexer.io import open_source_file_line_stream
+from gofra.lexer.keywords import WORD_TO_KEYWORD
+from gofra.lexer.tokens import Token, TokenLocation, TokenType
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from pathlib import Path
 
-type TokenGenerator = Generator[Token, None, LexerContext]
 
+def tokenize_file(path: Path) -> Generator[Token]:
+    """Open given file and stream lexical tokens via generator (perform lexical analysis).
 
-def load_file_for_lexical_analysis(
-    source_filepath: Path,
-) -> TokenGenerator:
-    """Load file to read and stream resulting lexical tokens.
-
-    Propagates source file path so can be used for module file resolution
-
-    Returns tokens in default order (ordered)
+    :returns tokenizer: Generator of tokens, in order from top to bottom of an file (default order)
     """
-    if not source_filepath.exists():
-        raise LexerFileNotFoundError(filepath=source_filepath)
+    state = LexerState(path=path)
 
-    if not source_filepath.is_file():
-        sys.exit(1)
+    for row, line in enumerate(open_source_file_line_stream(path), start=0):
+        state.line = line
 
-    with source_filepath.open(
-        errors="strict",
-        buffering=1,
-        newline="",
-        encoding="UTF-8",
-    ) as fd:
-        source_file_lines = fd.readlines(-1)
+        state.row = row
+        state.col = find_word_start(line, 0)
 
-    context = yield from _perform_lexical_analysis(
-        lines=source_file_lines,
-        source_filepath=source_filepath,
-    )
-    return context
+        col_ends_at = len(state.line)
+        while state.col < col_ends_at and (token := _tokenize_line_next_token(state)):
+            yield token
 
 
-def _perform_lexical_analysis(
-    lines: Sequence[str],
-    source_filepath: Path,
-) -> TokenGenerator:
-    """Convert source lines of text into stream of tokens.
+def _tokenize_line_next_token(state: LexerState) -> Token | None:
+    """Acquire token from current state and modify it to apply next tokenize, or None if reached end (EOL/EOF).
 
-    TODO(@kirillzhosul): Input is not an stream, we may introduce generator sending with lines
+    :returns token: Token from state or None if state must go to the next line (no tokens).
     """
-    context = LexerContext(
-        source_filepath=source_filepath,
-        lines=lines,
-        row_end=len(lines),
-    )
+    # First symbol of an token, as we exclussivly tokenize character/string tokens due to their fixed/variadic length.
+    symbol = state.line[state.col]
 
-    while not context.row_is_consumed():
-        context.line = lines[context.row]
-        context = yield from _consume_context_from_row_start(context=context)
-        context.row += 1
+    if symbol == CHARACTER_QUOTE:
+        state.col += len(CHARACTER_QUOTE)
+        return _tokenize_character_symbol(state)
 
-    return context
+    if symbol == STRING_QUOTE:
+        state.col += len(STRING_QUOTE)
+        return _tokenize_string_symbol(state)
 
-
-def _consume_context_from_row_start(context: LexerContext) -> TokenGenerator:
-    """Feed context to begin from current context line (row)."""
-    context.col = find_word_start(context.line, 0)
-    context.col_end = len(context.line)
-
-    while not context.col_is_consumed():
-        symbol = context.line[context.col]
-        location = context.current_location()
-
-        if not (token := _consume_context_from_symbol(symbol, context, location)):
-            return context
-
-        yield token
-
-    return context
+    return _tokenize_word_into_token(state)
 
 
-def _consume_context_from_symbol(
-    symbol: str,
-    context: LexerContext,
-    location: TokenLocation,
-) -> Token | None:
-    """Consumes starting from given symbol an token.
+def _tokenize_string_symbol(state: LexerState) -> Token:
+    """Tokenize string symbol into an string."""
+    location = state.current_location()
 
-    returns None if there is no resulting tokens on line, and context is already switched to the next line
-    """
-    if symbol == "'":
-        return _consume_into_character_token(context, location)
+    if (ends_at := find_string_end(state.line, state.col)) is None:
+        raise LexerUnclosedStringQuoteError(open_quote_location=location)
 
-    if symbol == '"':
-        return _consume_into_string_token(context, location)
+    string_unescaped_quoted = state.line[state.col - 1 : ends_at]
+    string_text = unescape_string(string_unescaped_quoted[1:-2])
 
-    return _consume_into_token(context, location)
-
-
-def _consume_into_string_token(context: LexerContext, location: TokenLocation) -> Token:
-    """Consume context into string token."""
-    string_starts_at = context.col + 1
-    if string_starts_at >= context.col_end:
-        context.col += 1
-        raise LexerUnclosedStringQuoteError(
-            open_quote_location=context.current_location(),
-        )
-
-    string_ends_at = find_string_end(context.line, string_starts_at)
-    if string_ends_at is None:
-        context.col += 1
-        raise LexerUnclosedStringQuoteError(
-            open_quote_location=context.current_location(),
-        )
-
-    string_raw = context.line[string_starts_at - 1 : string_ends_at + 1]
-    string = context.line[string_starts_at:string_ends_at]
-
-    context.col = find_word_start(context.line, string_ends_at + 1)
+    state.col = find_word_start(state.line, ends_at)
     return Token(
         type=TokenType.STRING,
-        text=string_raw,
+        text=string_unescaped_quoted,
+        value=string_text,
         location=location,
-        value=unescape_string(string),
     )
 
 
-def _consume_number_into_token(word: str, location: TokenLocation) -> Token | None:
-    """Try to consume given word into number token (integer / float) or return nothing."""
-    if word.startswith("0x"):
-        # Hexadecimal number
-        if not all(c in "0123456789abcdefABCDEF" for c in word[2:]):
-            return None
-        return Token(
-            type=TokenType.INTEGER,
-            text=word,
-            value=int(word, 16),
-            location=location,
+def _tokenize_character_symbol(state: LexerState) -> Token:
+    """Tokenize character symbol into an character."""
+    location = state.current_location()
+
+    character_ends_at = state.line.find(CHARACTER_QUOTE, state.col)
+    if character_ends_at == -1:
+        raise LexerUnclosedCharacterQuoteError(open_quote_location=location)
+
+    character_unescaped_quoted = state.line[state.col - 1 : character_ends_at + 1]
+    character = unescape_string(character_unescaped_quoted[1:-1])
+
+    character_len = len(character)
+    if character_len == 0:
+        raise LexerEmptyCharacterError(open_quote_location=location)
+    if character_len != 1:
+        raise LexerExcessiveCharacterLengthError(
+            excess_begins_at=location,
+            excess_by_count=character_len,
         )
-    if not word.isdigit() and not (word[0] == "-" and word[1:].isdigit()):
+
+    state.col = find_word_start(state.line, character_ends_at + 1)
+    return Token(
+        type=TokenType.CHARACTER,
+        text=character_unescaped_quoted,
+        value=ord(character),
+        location=location,
+    )
+
+
+def _try_tokenize_numerable_into_token(
+    word: str,
+    location: TokenLocation,
+) -> Token | None:
+    """Try to consume given word into number token (integer / float) or return nothing.
+
+    TODO(@kirillzhosul): Review introduction of an unary negation operation (includes negation of non numeric values)
+    TODO(@kirillzhosul): Introduce float/decimal numbers
+    TODO(@kirillzhosul): Introduce binary base for numeric values
+    """
+    base = 0
+    sign = (1, -1)[word.startswith("-")]
+    word = word.removeprefix("-")
+
+    if is_valid_integer(word):
+        base = 10
+    elif word.startswith(HEXADECIMAL_MARK):
+        base = 16
+        if not is_valid_hexadecimal(word):
+            raise LexerAmbigiousHexadecimalAlphabetError(
+                hexadecimal_raw=word,
+                number_location=location,
+            )
+
+    if not base:
         return None
+
     return Token(
         type=TokenType.INTEGER,
         text=word,
-        value=int(word),
+        value=int(word, base) * sign,
         location=location,
     )
 
 
-def _consume_word_or_keyword_into_token(word: str, location: TokenLocation) -> Token:
-    """Consume given word into word or keyword according to declaration."""
+def _tokenize_word_or_keyword_into_token(word: str, location: TokenLocation) -> Token:
+    """Tokenize base word symbol into an word or keyword."""
     if keyword := WORD_TO_KEYWORD.get(word):
         return Token(
             type=TokenType.KEYWORD,
@@ -183,58 +169,23 @@ def _consume_word_or_keyword_into_token(word: str, location: TokenLocation) -> T
     )
 
 
-def _consume_into_token(context: LexerContext, location: TokenLocation) -> Token | None:
-    """Consumes base symbol into token (non-string, no-character)."""
-    word_starts_at = context.col
-    word_ends_at = find_word_end(context.line, context.col)
+def _tokenize_word_into_token(state: LexerState) -> Token | None:
+    """Consumes `word` (e.g can be also an number) into token (non-string and non-character as must be handled above).
 
-    word = context.line[word_starts_at:word_ends_at]
-    context.col = find_word_start(context.line, word_ends_at)
+    :returns token: Token or None if should skip this line due to EOL as comment mark found.
+    """
+    word_ends_at = find_word_end(state.line, state.col)
+    word = state.line[state.col : word_ends_at]
 
-    if word.startswith("//"):
+    if word.startswith(SINGLE_LINE_COMMENT):
+        # Next words were prefixed with comment mark - skip whole line.
         return None
 
-    if token := _consume_number_into_token(word, location):
+    # Remember current location and jump to next word for next() call.
+    location = state.current_location()
+    state.col = find_word_start(state.line, word_ends_at)
+
+    if token := _try_tokenize_numerable_into_token(word, location):
         return token
 
-    return _consume_word_or_keyword_into_token(word, location)
-
-
-def _consume_into_character_token(
-    context: LexerContext,
-    location: TokenLocation,
-) -> Token:
-    """Consume current context line with resulting character token."""
-    char_starts_at = context.col + 1
-    char_ends_at = context.line.find("'", char_starts_at)
-
-    if char_ends_at == -1:
-        context.col += 1
-        raise LexerUnclosedCharacterQuoteError(
-            open_quote_location=context.current_location(),
-        )
-
-    character_raw = context.line[char_starts_at - 1 : char_ends_at + 1]
-    character = character_raw[1:-1]
-    character = unescape_string(character)
-
-    character_len = len(character)
-    if character_len == 0:
-        context.col += 1
-        raise LexerEmptyCharacterError(open_quote_location=context.current_location())
-    if character_len > 1:
-        context.col += 2
-        raise LexerExcessiveCharacterLengthError(
-            excess_begins_at=context.current_location(),
-            excess_by_count=character_len,
-        )
-    assert character_len == 1
-
-    context.col = find_word_start(context.line, char_ends_at + 1)
-
-    return Token(
-        type=TokenType.CHARACTER,
-        text=character_raw,
-        value=ord(character),
-        location=location,
-    )
+    return _tokenize_word_or_keyword_into_token(word, location)
