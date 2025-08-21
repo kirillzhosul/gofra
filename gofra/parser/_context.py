@@ -40,13 +40,14 @@ class ParserContext:
     included_source_paths: set[Path] = field(default_factory=lambda: set())
 
     current_operator: int = field(default=0)
+    current_token_index: int = 0
 
     def __post_init__(self) -> None:
         assert self.tokens
         self.included_source_paths.add(self.parsing_from_path)
 
     def tokens_exhausted(self) -> bool:
-        return len(self.tokens) == 0
+        return self.current_token_index >= len(self.tokens)
 
     def has_context_stack(self) -> bool:
         return len(self.context_stack) > 0
@@ -55,6 +56,11 @@ class ParserContext:
         macro = Macro(location=from_token.location, inner_tokens=[], name=name)
         self.macros[name] = macro
         return macro
+
+    def next_token(self) -> Token:
+        token = self.tokens[self.current_token_index]
+        self.current_token_index += 1
+        return token
 
     def new_function(
         self,
@@ -89,7 +95,9 @@ class ParserContext:
             self.current_operator += len(inline_block.source)
             self.operators.extend(inline_block.source)
             return
-        self.tokens.extend(deque(reversed(inline_block.inner_tokens)))
+
+        for token in inline_block.inner_tokens:
+            self.tokens.insert(self.current_token_index, token)
 
     def pop_context_stack(self) -> tuple[int, Operator]:
         return self.context_stack.pop()

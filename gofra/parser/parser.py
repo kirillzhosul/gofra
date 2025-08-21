@@ -44,17 +44,14 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-def _tokenize_tokens_reversed(path: Path) -> deque[Token]:
-    return deque(list(tokenize_file(path))[::-1])
-
-
 def parse_file(
     path: Path,
     include_search_directories: Iterable[Path],
 ) -> tuple[ParserContext, Function]:
     """Load file for parsing into operators (lex and then parse)."""
     # Consider reversing at generator side or smth like that
-    tokens = _tokenize_tokens_reversed(path)
+    tokens = deque(tokenize_file(path))
+
     context = _parse_from_context_into_operators(
         context=ParserContext(
             is_top_level=True,
@@ -78,7 +75,7 @@ def _parse_from_context_into_operators(context: ParserContext) -> ParserContext:
     """Consumes token stream into language operators."""
     while not context.tokens_exhausted():
         _consume_token_for_parsing(
-            token=context.tokens.pop(),
+            token=context.next_token(),
             context=context,
         )
 
@@ -168,11 +165,11 @@ def _unpack_memory_segment_from_token(context: ParserContext, token: Token) -> N
     if context.tokens_exhausted():
         raise NotImplementedError
 
-    memory_segment_name = context.tokens.pop()
+    memory_segment_name = context.next_token()
     if memory_segment_name.type != TokenType.WORD:
         raise NotImplementedError
     assert isinstance(memory_segment_name.value, str)
-    memory_segment_size = context.tokens.pop()
+    memory_segment_size = context.next_token()
     if memory_segment_size.type != TokenType.INTEGER:
         raise NotImplementedError
     assert isinstance(memory_segment_size.value, int)
@@ -187,7 +184,7 @@ def _consume_macro_definition_into_token(context: ParserContext, token: Token) -
 
     # Macro definition probably can overlap with function definition container
 
-    macro_name_token = context.tokens.pop()
+    macro_name_token = context.next_token()
     macro_name = macro_name_token.text
 
     if macro_name_token.type != TokenType.WORD:
@@ -215,7 +212,7 @@ def _consume_macro_definition_into_token(context: ParserContext, token: Token) -
 
     original_token = token
     while not context.tokens_exhausted():
-        token = context.tokens.pop()
+        token = context.next_token()
 
         if token.type != TokenType.KEYWORD:
             macro.push_token(token)
@@ -244,7 +241,7 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
     if context.tokens_exhausted():
         raise NotImplementedError
 
-    extern_call_name_token = context.tokens.pop()
+    extern_call_name_token = context.next_token()
     extern_call_name = extern_call_name_token.text
 
     if extern_call_name_token.type != TokenType.WORD:
@@ -304,9 +301,9 @@ def _unpack_function_definition_from_token(
     end_keyword_text = KEYWORD_TO_NAME[Keyword.END]
 
     original_token = token
-    function_body_tokens: list[Token] = []
+    function_body_tokens: deque[Token] = deque()
     while not context.tokens_exhausted():
-        token = context.tokens.pop()
+        token = context.next_token()
 
         if token.type != TokenType.KEYWORD:
             function_body_tokens.append(token)
@@ -334,7 +331,7 @@ def _unpack_function_definition_from_token(
         parsing_from_path=context.parsing_from_path,
         is_top_level=False,
         include_search_directories=context.include_search_directories,
-        tokens=function_body_tokens[::-1],  # type: ignore  # noqa: PGH003
+        tokens=function_body_tokens,
         macros=context.macros,
         functions=context.functions,
         memories=context.memories,
@@ -355,7 +352,7 @@ def _unpack_include_from_token(context: ParserContext, token: Token) -> None:
     if context.tokens_exhausted():
         raise ParserIncludeNoPathError(include_token=token)
 
-    include_path_token = context.tokens.pop()
+    include_path_token = context.next_token()
     include_path_raw = include_path_token.value
 
     if include_path_token.type != TokenType.STRING:
@@ -380,7 +377,7 @@ def _unpack_include_from_token(context: ParserContext, token: Token) -> None:
         return
 
     context.included_source_paths.add(include_path)
-    context.tokens.extend(_tokenize_tokens_reversed(include_path))
+    context.tokens.extend(deque(tokenize_file(include_path)))
 
 
 def _resolve_real_import_path(
@@ -500,13 +497,15 @@ def _try_unpack_macro_or_inline_function_from_token(
         token.text,
         None,
     )
+
     if inline_block:
         if isinstance(inline_block, Function) and (
             not inline_block.emit_inline_body or inline_block.is_externally_defined
         ):
             raise NotImplementedError(
-                "use `call` to call an function, obtaining an function is not implemented yet"
+                f"use `call` to call an function, obtaining an function is not implemented yet {token.location}"
             )
+
         context.expand_from_inline_block(inline_block)
 
     return bool(inline_block)

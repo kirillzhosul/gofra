@@ -111,7 +111,7 @@ def consume_function_modifiers(
                 modifier_token=token,
             )
 
-        token = context.tokens.pop()
+        token = context.next_token()
 
     if token.type != TokenType.KEYWORD or token.value != Keyword.FUNCTION:
         raise ParserExpectedFunctionAfterFunctionModifiersError(modifier_token=token)
@@ -132,7 +132,7 @@ def consume_function_signature(
             definition_token=token,
         )
 
-    token = context.tokens.pop()
+    token = context.next_token()
     if token.type != TokenType.WORD:
         raise ValueError
 
@@ -148,7 +148,7 @@ def consume_function_signature(
     if context.tokens_exhausted():
         raise ParserFunctionNoNameError(token=token)
 
-    signature_token = context.tokens.pop()
+    signature_token = context.next_token()
     signature = signature_token.text
 
     # Assume for the first time that function has no input contract
