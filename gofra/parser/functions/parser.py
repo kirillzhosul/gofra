@@ -78,21 +78,22 @@ def consume_function_modifiers(
     mark_is_inline = False
     mark_is_global = False
 
-    while not context.tokens_exhausted():
-        if token.type != TokenType.KEYWORD:
-            raise ParserExpectedFunctionKeywordError(token=token)
+    next_token = token
+    while next_token:
+        if next_token.type != TokenType.KEYWORD:
+            raise ParserExpectedFunctionKeywordError(token=next_token)
 
-        match token.value:
+        match next_token.value:
             case Keyword.INLINE:
                 if mark_is_inline:
                     raise ParserFunctionModifierReappliedError(
-                        modifier_token=token,
+                        modifier_token=next_token,
                     )
                 mark_is_inline = True
             case Keyword.EXTERN:
                 if mark_is_extern:
                     raise ParserFunctionModifierReappliedError(
-                        modifier_token=token,
+                        modifier_token=next_token,
                     )
                 mark_is_extern = True
             case Keyword.FUNCTION:
@@ -100,23 +101,24 @@ def consume_function_modifiers(
             case Keyword.GLOBAL:
                 if mark_is_global:
                     raise ParserFunctionModifierReappliedError(
-                        modifier_token=token,
+                        modifier_token=next_token,
                     )
                 mark_is_global = True
             case _:
-                raise ParserExpectedFunctionKeywordError(token=token)
+                raise ParserExpectedFunctionKeywordError(token=next_token)
 
         if mark_is_extern and mark_is_inline:
             raise ParserFunctionIsBothInlineAndExternalError(
-                modifier_token=token,
+                modifier_token=next_token,
             )
+        next_token = next(context.tokenizer, None)
 
-        token = context.next_token()
-
-    if token.type != TokenType.KEYWORD or token.value != Keyword.FUNCTION:
+    if not next_token:
+        raise NotImplementedError
+    if next_token.type != TokenType.KEYWORD or next_token.value != Keyword.FUNCTION:
         raise ParserExpectedFunctionAfterFunctionModifiersError(modifier_token=token)
 
-    return token, (mark_is_inline, mark_is_extern, mark_is_global)
+    return next_token, (mark_is_inline, mark_is_extern, mark_is_global)
 
 
 def consume_function_signature(
@@ -127,28 +129,28 @@ def consume_function_signature(
 
     Returns function name and signature types (`in` and `out).
     """
-    if context.tokens_exhausted():
+
+    sig_token = next(context.tokenizer, None)
+    if not sig_token:
         raise ParserExpectedFunctionReturnTypeError(
             definition_token=token,
         )
-
-    token = context.next_token()
-    if token.type != TokenType.WORD:
+    if sig_token.type != TokenType.WORD:
         raise ValueError
 
     type_contract_out = _parse_function_type_contract(
-        token=token,
+        token=sig_token,
         contract=(
-            token.text
-            if token.text.startswith("[") and token.text.endswith("]")
-            else f"[{token.text}]"
+            sig_token.text
+            if sig_token.text.startswith("[") and sig_token.text.endswith("]")
+            else f"[{sig_token.text}]"
         ),
     )
 
-    if context.tokens_exhausted():
+    signature_token = next(context.tokenizer, None)
+    if not signature_token:
         raise ParserFunctionNoNameError(token=token)
 
-    signature_token = context.next_token()
     signature = signature_token.text
 
     # Assume for the first time that function has no input contract

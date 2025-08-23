@@ -5,6 +5,8 @@ from gofra.exceptions import GofraError
 
 from .output import cli_message
 
+DEBUG_UNWRAP_INTERNAL_ERRORS = True
+
 
 @contextmanager
 def cli_gofra_error_handler() -> Generator[None]:
@@ -12,4 +14,7 @@ def cli_gofra_error_handler() -> Generator[None]:
     try:
         yield
     except GofraError as ge:
-        cli_message("ERROR", repr(ge))
+        if DEBUG_UNWRAP_INTERNAL_ERRORS:
+            cli_message("ERROR", repr(ge))
+        else:
+            raise

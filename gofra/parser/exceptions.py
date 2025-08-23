@@ -7,10 +7,17 @@ from gofra.exceptions import GofraError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
 
     from gofra.lexer.tokens import Token, TokenLocation
     from gofra.parser.functions.function import FunctionTypeContract
+
+
+class ParserDirtyNonPreprocessedTokenError(GofraError):
+    def __repr__(self) -> str:
+        return """Got dirty non preprocessed token from tokenizer at parser stage.
+
+Probably this is not an language user fault.
+Did you forgot to call preprocessor stage to resolve these dirty tokens?"""
 
 
 class ParserExhaustiveContextStackError(GofraError):
@@ -117,58 +124,6 @@ Please use 'while true do .. end' if this is your intense.
 Did you forgot to add condition?"""
 
 
-class ParserIncludeNoPathError(GofraError):
-    def __init__(self, *args: object, include_token: Token) -> None:
-        super().__init__(*args)
-        self.include_token = include_token
-
-    def __repr__(self) -> str:
-        return f"""'include' has no path {self.include_token.location}!
-Expected there will be include path after 'include' as string.
-
-Did you forgot to add path?"""
-
-
-class ParserIncludeFileNotFoundError(GofraError):
-    def __init__(self, *args: object, include_token: Token, include_path: Path) -> None:
-        super().__init__(*args)
-        self.include_token = include_token
-        self.include_path = include_path
-
-    def __repr__(self) -> str:
-        return f"""Unable to include file '{self.include_path}' at {self.include_token.location}'
-File does not exists!
-Please check that this file exists, or try updating include directory paths.
-Direct import path resolves to '{self.include_path.resolve()}'
-(Does not includes import directory traverses)
-
-Did you supplied wrong name?"""
-
-
-class ParserIncludeNonStringNameError(GofraError):
-    def __init__(self, *args: object, include_path_token: Token) -> None:
-        super().__init__(*args)
-        self.include_path_token = include_path_token
-
-    def __repr__(self) -> str:
-        return f"""Invalid include path type {self.include_path_token.location}!
-Expected include path as string with quotes.
-
-Did you forgot to add quotes?"""
-
-
-class ParserNoMacroNameError(GofraError):
-    def __init__(self, *args: object, macro_token: Token) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-
-    def __repr__(self) -> str:
-        return f"""No 'macro' name specified at {self.macro_token.location}!
-Macros should have name after 'macro' keyword
-
-Do you have unfinished macro definition?"""
-
-
 class ExternNoFunctionNameError(GofraError):
     def __init__(self, *args: object, macro_token: Token) -> None:
         super().__init__(*args)
@@ -224,70 +179,6 @@ class ParserExternRedefinesLanguageDefinitionError(GofraError):
     def __repr__(self) -> str:
         return (
             f"Extern function '{self.extern_function_name}' at {self.extern_token.location}"
-            " tries to redefine language definition!"
-        )
-
-
-class ParserMacroNonWordNameError(GofraError):
-    def __init__(self, *args: object, macro_name_token: Token) -> None:
-        super().__init__(*args)
-        self.macro_name_token = macro_name_token
-
-    def __repr__(self) -> str:
-        return f"""Non word name for macro at {self.macro_name_token.location}!
-Macros should have name as word after 'macro' keyword but got '{self.macro_name_token.type.name}'!"""
-
-
-class ParserMacroRedefinitionError(GofraError):
-    def __init__(
-        self,
-        *args: object,
-        redefine_macro_name_token: Token,
-        original_macro_location: TokenLocation,
-    ) -> None:
-        super().__init__(*args)
-        self.redefine_macro_name_token = redefine_macro_name_token
-        self.original_macro_location = original_macro_location
-
-    def __repr__(self) -> str:
-        return f"""Redefinition of an macro '{self.redefine_macro_name_token.text}' at {self.redefine_macro_name_token.location}
-Original definition found at {self.original_macro_location}!
-Only single definition allowed for macros."""
-
-
-class ParserUnclosedMacroError(GofraError):
-    def __init__(self, *args: object, macro_token: Token, macro_name: str) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-        self.macro_name = macro_name
-
-    def __repr__(self) -> str:
-        return f"""Unclosed macro '{self.macro_name}' at {self.macro_token.location}!
-Macro definition should have 'end' to close block.
-
-Did you forgot to close macro definition?"""
-
-
-class ParserIncludeSelfFileMacroError(GofraError):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-    def __repr__(self) -> str:
-        return """Tried to include self within include!
-Including self is prohibited and will lead to no actions, so please remove self-import
-
-Did you mistyped import path?"""
-
-
-class ParserMacroRedefinesLanguageDefinitionError(GofraError):
-    def __init__(self, *args: object, macro_token: Token, macro_name: str) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-        self.macro_name = macro_name
-
-    def __repr__(self) -> str:
-        return (
-            f"Macro '{self.macro_name}' at {self.macro_token.location}"
             " tries to redefine language definition!"
         )
 

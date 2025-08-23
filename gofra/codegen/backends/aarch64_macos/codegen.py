@@ -107,11 +107,12 @@ def aarch64_macos_operator_instructions(
             context.fd.write(f"{label}:\n")
         case OperatorType.PUSH_STRING:
             assert isinstance(operator.operand, str)
+            string_raw = str(operator.token.text[1:-1])
             push_static_address_onto_stack(
                 context,
-                segment=context.load_string(operator.token.text[1:-1]),
+                segment=context.load_string(string_raw),
             )
-            push_integer_onto_stack(context, value=len(operator.operand))
+            push_integer_onto_stack(context, value=len(string_raw))
         case OperatorType.FUNCTION_RETURN:
             function_end_with_epilogue(context)
         case OperatorType.FUNCTION_CALL:

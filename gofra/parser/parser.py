@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from collections import deque
 from difflib import get_close_matches
-from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 from gofra.lexer import (
     Keyword,
@@ -11,28 +9,18 @@ from gofra.lexer import (
     TokenType,
 )
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD
-from gofra.lexer.lexer import tokenize_file
-from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.validator import validate_and_pop_entry_point
 
 from ._context import ParserContext
 from .exceptions import (
+    ParserDirtyNonPreprocessedTokenError,
     ParserEmptyIfBodyError,
     ParserEndAfterWhileError,
     ParserEndWithoutContextError,
     ParserExhaustiveContextStackError,
-    ParserIncludeFileNotFoundError,
-    ParserIncludeNonStringNameError,
-    ParserIncludeNoPathError,
-    ParserIncludeSelfFileMacroError,
-    ParserMacroNonWordNameError,
-    ParserMacroRedefinesLanguageDefinitionError,
-    ParserMacroRedefinitionError,
-    ParserNoMacroNameError,
     ParserNoWhileBeforeDoError,
     ParserNoWhileConditionOperatorsError,
-    ParserUnclosedMacroError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
     ParserUnknownWordError,
@@ -41,24 +29,17 @@ from .intrinsics import WORD_TO_INTRINSIC
 from .operators import OperatorType
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Generator
+
+    from gofra.parser.functions import Function
 
 
-def parse_file(
-    path: Path,
-    include_search_directories: Iterable[Path],
-) -> tuple[ParserContext, Function]:
-    """Load file for parsing into operators (lex and then parse)."""
-    # Consider reversing at generator side or smth like that
-    tokens = deque(tokenize_file(path))
-
+def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
+    """Load file for parsing into operators."""
     context = _parse_from_context_into_operators(
         context=ParserContext(
             is_top_level=True,
-            parsing_from_path=path,
-            tokens=tokens,
-            include_search_directories=include_search_directories,
-            macros={},
+            tokenizer=tokenizer,
             functions={},
             memories={},
         ),
@@ -73,9 +54,9 @@ def parse_file(
 
 def _parse_from_context_into_operators(context: ParserContext) -> ParserContext:
     """Consumes token stream into language operators."""
-    while not context.tokens_exhausted():
+    while token := next(context.tokenizer, None):
         _consume_token_for_parsing(
-            token=context.next_token(),
+            token=token,
             context=context,
         )
 
@@ -110,7 +91,7 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
 
             raise ParserUnknownWordError(
                 word_token=token,
-                macro_names=context.macros.keys(),
+                macro_names=context.functions.keys(),
                 best_match=_best_match_for_word(context, token.text),
             )
         case TokenType.KEYWORD:
@@ -118,7 +99,10 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
 
 
 def _best_match_for_word(context: ParserContext, word: str) -> str | None:
-    matches = get_close_matches(word, WORD_TO_INTRINSIC.keys() | context.macros.keys())
+    matches = get_close_matches(
+        word,
+        WORD_TO_INTRINSIC.keys() | context.functions.keys(),
+    )
     return matches[0] if matches else None
 
 
@@ -142,10 +126,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END:
             return _consume_conditional_keyword_from_token(context, token)
-        case Keyword.MACRO:
-            return _consume_macro_definition_into_token(context, token)
-        case Keyword.INCLUDE:
-            return _unpack_include_from_token(context, token)
+        case Keyword.INCLUDE | Keyword.MACRO:
+            raise ParserDirtyNonPreprocessedTokenError
         case Keyword.INLINE | Keyword.EXTERN | Keyword.FUNCTION | Keyword.GLOBAL:
             return _unpack_function_definition_from_token(context, token)
         case Keyword.FUNCTION_CALL:
@@ -159,17 +141,20 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             )
         case Keyword.MEMORY:
             return _unpack_memory_segment_from_token(context, token)
+        case _:
+            assert_never(token.value)
 
 
 def _unpack_memory_segment_from_token(context: ParserContext, token: Token) -> None:
-    if context.tokens_exhausted():
+    memory_segment_name = next(context.tokenizer, None)
+    if not memory_segment_name:
         raise NotImplementedError
-
-    memory_segment_name = context.next_token()
     if memory_segment_name.type != TokenType.WORD:
         raise NotImplementedError
     assert isinstance(memory_segment_name.value, str)
-    memory_segment_size = context.next_token()
+    memory_segment_size = next(context.tokenizer, None)
+    if not memory_segment_size:
+        raise NotImplementedError
     if memory_segment_size.type != TokenType.INTEGER:
         raise NotImplementedError
     assert isinstance(memory_segment_size.value, int)
@@ -178,70 +163,10 @@ def _unpack_memory_segment_from_token(context: ParserContext, token: Token) -> N
     context.memories[memory_segment_name.value] = memory_segment_size.value
 
 
-def _consume_macro_definition_into_token(context: ParserContext, token: Token) -> None:
-    if context.tokens_exhausted():
-        raise ParserNoMacroNameError(macro_token=token)
-
-    # Macro definition probably can overlap with function definition container
-
-    macro_name_token = context.next_token()
-    macro_name = macro_name_token.text
-
-    if macro_name_token.type != TokenType.WORD:
-        raise ParserMacroNonWordNameError(macro_name_token=macro_name_token)
-
-    if macro_name in context.macros:
-        raise ParserMacroRedefinitionError(
-            redefine_macro_name_token=macro_name_token,
-            original_macro_location=context.macros[macro_name].location,
-        )
-
-    if macro_name in (WORD_TO_INTRINSIC.keys() | WORD_TO_KEYWORD.keys()):
-        raise ParserMacroRedefinesLanguageDefinitionError(
-            macro_token=macro_name_token,
-            macro_name=macro_name,
-        )
-
-    macro = context.new_macro(from_token=token, name=macro_name)
-
-    opened_context_blocks = 0
-    macro_was_closed = False
-
-    context_keywords = (Keyword.IF, Keyword.MACRO, Keyword.DO)
-    end_keyword_text = KEYWORD_TO_NAME[Keyword.END]
-
-    original_token = token
-    while not context.tokens_exhausted():
-        token = context.next_token()
-
-        if token.type != TokenType.KEYWORD:
-            macro.push_token(token)
-            continue
-
-        if token.text == end_keyword_text:
-            if opened_context_blocks <= 0:
-                macro_was_closed = True
-                break
-            opened_context_blocks -= 1
-
-        is_context_keyword = WORD_TO_KEYWORD[token.text] in context_keywords
-        if is_context_keyword:
-            opened_context_blocks += 1
-
-        macro.push_token(token)
-
-    if not macro_was_closed:
-        raise ParserUnclosedMacroError(
-            macro_token=original_token,
-            macro_name=macro_name,
-        )
-
-
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:
-    if context.tokens_exhausted():
+    extern_call_name_token = next(context.tokenizer, None)
+    if not extern_call_name_token:
         raise NotImplementedError
-
-    extern_call_name_token = context.next_token()
     extern_call_name = extern_call_name_token.text
 
     if extern_call_name_token.type != TokenType.WORD:
@@ -301,43 +226,37 @@ def _unpack_function_definition_from_token(
     end_keyword_text = KEYWORD_TO_NAME[Keyword.END]
 
     original_token = token
-    function_body_tokens: deque[Token] = deque()
-    while not context.tokens_exhausted():
-        token = context.next_token()
-
-        if token.type != TokenType.KEYWORD:
-            function_body_tokens.append(token)
+    function_body_tokens: list[Token] = []
+    while func_token := next(context.tokenizer, None):
+        if func_token.type != TokenType.KEYWORD:
+            function_body_tokens.append(func_token)
             continue
 
-        if token.text == end_keyword_text:
+        if func_token.text == end_keyword_text:
             if opened_context_blocks <= 0:
                 function_was_closed = True
                 break
             opened_context_blocks -= 1
 
-        is_context_keyword = WORD_TO_KEYWORD[token.text] in context_keywords
+        is_context_keyword = WORD_TO_KEYWORD[func_token.text] in context_keywords
         if is_context_keyword:
             opened_context_blocks += 1
 
-        function_body_tokens.append(token)
+        function_body_tokens.append(func_token)
 
+    if not func_token:
+        raise NotImplementedError
     if not function_was_closed:
-        raise ParserUnclosedMacroError(
-            macro_token=original_token,
-            macro_name=function_name,
-        )
+        raise ValueError(original_token)
 
     new_context = ParserContext(
-        parsing_from_path=context.parsing_from_path,
         is_top_level=False,
-        include_search_directories=context.include_search_directories,
-        tokens=function_body_tokens,
-        macros=context.macros,
+        tokenizer=(t for t in function_body_tokens),
         functions=context.functions,
         memories=context.memories,
     )
     context.new_function(
-        from_token=token,
+        from_token=func_token,
         name=function_name,
         type_contract_in=type_contract_in,
         type_contract_out=type_contract_out,
@@ -346,53 +265,6 @@ def _unpack_function_definition_from_token(
         is_global_linker_symbol=modifier_is_global,
         source=_parse_from_context_into_operators(context=new_context).operators,
     )
-
-
-def _unpack_include_from_token(context: ParserContext, token: Token) -> None:
-    if context.tokens_exhausted():
-        raise ParserIncludeNoPathError(include_token=token)
-
-    include_path_token = context.next_token()
-    include_path_raw = include_path_token.value
-
-    if include_path_token.type != TokenType.STRING:
-        raise ParserIncludeNonStringNameError(include_path_token=include_path_token)
-
-    assert isinstance(include_path_raw, str)
-    requested_include_path = Path(include_path_raw)
-
-    if requested_include_path.absolute() == context.parsing_from_path.absolute():
-        raise ParserIncludeSelfFileMacroError
-
-    include_path = _resolve_real_import_path(requested_include_path, context)
-
-    if include_path is None:
-        raise ParserIncludeFileNotFoundError(
-            include_token=token,
-            include_path=requested_include_path,
-        )
-
-    already_included_sources = (n.resolve() for n in context.included_source_paths)
-    if include_path.resolve() in already_included_sources:
-        return
-
-    context.included_source_paths.add(include_path)
-    context.tokens.extend(deque(tokenize_file(include_path)))
-
-
-def _resolve_real_import_path(
-    requested_include_path: Path,
-    context: ParserContext,
-) -> Path | None:
-    if requested_include_path.exists():
-        return requested_include_path
-
-    for include_search_directory in context.include_search_directories:
-        load_from_path = include_search_directory.joinpath(requested_include_path)
-        if load_from_path.exists():
-            return load_from_path
-
-    return None
 
 
 def _consume_conditional_keyword_from_token(
@@ -493,15 +365,10 @@ def _try_unpack_macro_or_inline_function_from_token(
 ) -> bool:
     assert token.type == TokenType.WORD
 
-    inline_block = context.macros.get(token.text, None) or context.functions.get(
-        token.text,
-        None,
-    )
+    inline_block = context.functions.get(token.text, None)
 
     if inline_block:
-        if isinstance(inline_block, Function) and (
-            not inline_block.emit_inline_body or inline_block.is_externally_defined
-        ):
+        if not inline_block.emit_inline_body or inline_block.is_externally_defined:
             raise NotImplementedError(
                 f"use `call` to call an function, obtaining an function is not implemented yet {token.location}"
             )

@@ -75,10 +75,9 @@ def _tokenize_string_symbol(state: LexerState) -> Token:
     if (ends_at := find_string_end(state.line, state.col)) is None:
         raise LexerUnclosedStringQuoteError(open_quote_location=location)
 
-    string_unescaped_quoted = state.line[
-        state.col - 1 : ends_at
-    ]  # TODO(@kirillzhosul): There is an bug within lexer, look at IR for last char is missing.
-    string_text = unescape_string(string_unescaped_quoted[1:-2])
+    string_unescaped_quoted = state.line[state.col - 1 : ends_at]
+    # Unescaped version at current moment is being unused, and probably may be removeD
+    string_text = unescape_string(string_unescaped_quoted.strip(STRING_QUOTE))
 
     state.col = find_word_start(state.line, ends_at)
     return Token(

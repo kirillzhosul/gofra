@@ -1,7 +1,6 @@
 import operator as python_operator
 from collections import deque
-from collections.abc import MutableSequence, Sequence
-from typing import Callable
+from collections.abc import Callable, MutableSequence, Sequence
 
 from gofra.context import ProgramContext
 from gofra.lexer import Token, TokenType
