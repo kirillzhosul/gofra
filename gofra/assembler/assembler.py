@@ -111,7 +111,7 @@ def _link_final_output(  # noqa: PLR0913
 
             system_sdk = Path(
                 check_output(  # noqa: S603
-                    ["/usr/bin/xcrun", "-sdk", "macosx", "--show-sdk-path"],
+                             [which("xcrun"), "-sdk", "macosx", "--show-sdk-path"],
                     text=True,
                 ).strip(),
             )
@@ -143,7 +143,7 @@ def _link_final_output(  # noqa: PLR0913
     if output_format == "executable":
         linker_flags += ["-e", CODEGEN_ENTRY_POINT_SYMBOL]
 
-    command = ["/usr/bin/ld", "-o", str(output), str(o_filepath), *linker_flags]
+    command = [which("ld"), "-o", str(output), str(o_filepath), *linker_flags]
     cli_message(
         level="INFO",
         text=f"Running linker command: `{' '.join(command)}`",
@@ -178,7 +178,7 @@ def _assemble_object_file(  # noqa: PLR0913
             raise UnsupportedBuilderOperatingSystemError
 
     command = [
-        "/usr/bin/as",
+        which("as"),
         "-o",
         str(object_filepath),
         str(asm_filepath),

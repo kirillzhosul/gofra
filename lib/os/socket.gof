@@ -7,6 +7,3 @@
 
     #macro SOMAXCONN   128 end
 #endif
-
-
-#ifdef OS_DARWIN

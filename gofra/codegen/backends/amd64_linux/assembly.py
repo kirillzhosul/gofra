@@ -251,5 +251,5 @@ def evaluate_conditional_block_on_stack_with_jump(
     pop_cells_from_stack_into_registers(context, "rax")
     context.write(
         "cmpq $0, rax",
-        f"jeq {jump_over_label}",
+        f"je {jump_over_label}",
     )
