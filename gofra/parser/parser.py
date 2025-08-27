@@ -109,13 +109,16 @@ def _best_match_for_word(context: ParserContext, word: str) -> str | None:
 def _consume_keyword_token(context: ParserContext, token: Token) -> None:
     assert isinstance(token.value, Keyword)
     TOP_LEVEL_KEYWORD = (  # noqa: N806
-        Keyword.INCLUDE,
         Keyword.INLINE,
         Keyword.EXTERN,
         Keyword.FUNCTION,
         Keyword.GLOBAL,
         Keyword.MEMORY,
-        Keyword.MACRO,
+        # TODO(@kirillzhosul): Remove reference
+        Keyword.PP_ENDIF,
+        Keyword.PP_IFDEF,
+        Keyword.PP_INCLUDE,
+        Keyword.PP_MACRO,
     )
     if context.is_top_level and token.value not in (*TOP_LEVEL_KEYWORD, Keyword.END):
         msg = f"{token.value.name} expected to be not at top level! (temp-assert)"
@@ -126,8 +129,10 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END:
             return _consume_conditional_keyword_from_token(context, token)
-        case Keyword.INCLUDE | Keyword.MACRO:
-            raise ParserDirtyNonPreprocessedTokenError
+        case (
+            Keyword.PP_INCLUDE | Keyword.PP_MACRO | Keyword.PP_IFDEF | Keyword.PP_ENDIF
+        ):
+            raise ParserDirtyNonPreprocessedTokenError(token=token)
         case Keyword.INLINE | Keyword.EXTERN | Keyword.FUNCTION | Keyword.GLOBAL:
             return _unpack_function_definition_from_token(context, token)
         case Keyword.FUNCTION_CALL:
@@ -174,7 +179,7 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
 
     target_function = context.functions.get(extern_call_name)
     if not target_function:
-        raise NotImplementedError
+        raise NotImplementedError(f"Unknown function {extern_call_name}")
 
     if target_function.emit_inline_body:
         _try_unpack_macro_or_inline_function_from_token(context, extern_call_name_token)

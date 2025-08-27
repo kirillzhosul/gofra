@@ -1,15 +1,10 @@
-include "syscall.gof"
+// TODO: Finish definition system
+#macro OS_DARWIN end
 
-// Unix file descriptors
-macro FD_STD_IN 0 end
-macro FD_STD_OUT 1 end
-macro FD_STD_ERR 2 end
 
-// Boolean bindings for type-safety
-// Under optimizer this resolves into single boolean push onto stack
-// Probably, sometime this will be part of an langauge
-macro true 1 1 == end
-macro false 1 0 == end
+#include "os"
+#include "types.gof"
+
 
 memory .print_integer_buffer 128
 memory .print_integer_divres 16
@@ -17,15 +12,15 @@ memory .print_integer_idx 16
 inline func void print_integer[int]
     // Negative numbers not supported for now
     copy 0 < if
-        FD_STD_OUT "FATAL: print_integer got negative number!\n" sc_write drop
+        UNIX_STD_OUT "FATAL: print_integer got negative number!\n" sc_write drop
         1 sc_exit
     end
 
     // Straight zero
     copy 0 == if
         .print_integer_buffer '0' !<
-        .print_integer_buffer 1 + '\n' !<
-        FD_STD_OUT .print_integer_buffer 2 sc_write drop
+        .print_integer_buffer 1 + 20 !<
+        UNIX_STD_OUT .print_integer_buffer 2 sc_write drop
     end
 
     .print_integer_divres swap !<
@@ -40,10 +35,10 @@ inline func void print_integer[int]
     end
 
     while .print_integer_idx ?> 1 + 0 > do
-        FD_STD_OUT .print_integer_buffer .print_integer_idx ?> + 1 sc_write drop
+        UNIX_STD_OUT .print_integer_buffer .print_integer_idx ?> + 1 sc_write drop
         .print_integer_idx copy ?> dec !<
     end
 
-    .print_integer_buffer '\n' !<
-    FD_STD_OUT .print_integer_buffer 1 sc_write drop
+    .print_integer_buffer 20 !<
+    UNIX_STD_OUT .print_integer_buffer 1 sc_write drop
 end

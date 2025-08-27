@@ -1,0 +1,5 @@
+// Boolean bindings for type-safety
+// Under optimizer this resolves into single boolean push onto stack
+// Probably, sometime this will be part of an langauge
+#macro true 1 1 == end
+#macro false 1 0 == end

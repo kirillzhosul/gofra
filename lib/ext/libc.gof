@@ -1,0 +1,15 @@
+// libc wrapper
+// externs libc functions and provides inline functions for using them (but you may always use raw calls)
+
+
+extern func int _puts[ptr]
+extern func int _putchar[int]
+extern func ptr _malloc[int]
+extern func int _sprintf[ptr,ptr,int]
+extern func int _socket[int,int,int]
+extern func int _bind[int,ptr,int]
+extern func int _listen[int,int]
+extern func void _exit[int]
+extern func void _perror[ptr]
+
+inline func void puts[ptr,int] drop call _puts drop end

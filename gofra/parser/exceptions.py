@@ -13,8 +13,16 @@ if TYPE_CHECKING:
 
 
 class ParserDirtyNonPreprocessedTokenError(GofraError):
-    def __repr__(self) -> str:
-        return """Got dirty non preprocessed token from tokenizer at parser stage.
+    def __init__(self, *args: object, token: Token) -> None:
+        super().__init__(*args)
+        self.token = token
+
+    def __repr__(
+        self,
+    ) -> str:
+        return f"""Got dirty non preprocessed token from tokenizer at parser stage.
+
+`{self.token.text}` at {self.token.location}
 
 Probably this is not an language user fault.
 Did you forgot to call preprocessor stage to resolve these dirty tokens?"""

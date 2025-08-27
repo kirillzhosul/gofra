@@ -1,0 +1,6 @@
+// Unix file descriptors
+#ifdef OS_DARWIN
+    #macro UNIX_STD_IN  0 end
+    #macro UNIX_STD_OUT 1 end
+    #macro UNIX_STD_ERR 2 end
+#endif

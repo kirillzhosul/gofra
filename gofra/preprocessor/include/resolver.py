@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.lexer import tokenize_file
 from gofra.lexer.tokens import Token, TokenType
-from gofra.preprocessor.exceptions import (
+
+from .exceptions import (
     PreprocessorIncludeCurrentFileError,
     PreprocessorIncludeFileNotFoundError,
     PreprocessorIncludeNonStringNameError,
@@ -30,6 +31,7 @@ def resolve_include_from_token_into_state(
 
     include_path = _try_resolve_and_find_real_include_path(
         requested_include_path,
+        current_path=include_token.location.filepath,
         search_paths=state.include_search_paths,
     )
 
@@ -50,7 +52,7 @@ def _consume_include_raw_path_from_token(
 ) -> Path:
     """Consume include path from `include` construction."""
     assert include_token.type == TokenType.KEYWORD
-    assert include_token.value == Keyword.INCLUDE
+    assert include_token.value == Keyword.PP_INCLUDE
 
     include_path_token = next(state.tokenizer, None)
     if not include_path_token:
@@ -67,14 +69,23 @@ def _consume_include_raw_path_from_token(
 
 def _try_resolve_and_find_real_include_path(
     path: Path,
+    current_path: Path,
     search_paths: Iterable[Path],
 ) -> Path | None:
     """Resolve real import path and try to search for possible location of include (include directories system)."""
-    if path.exists(follow_symlinks=True):
-        return path.resolve(strict=True)
-
-    for search_path in search_paths:
+    for search_path in (Path("./"), current_path.parent, *search_paths):
         if (probable_path := search_path.joinpath(path)).exists(follow_symlinks=True):
-            return probable_path
+            if probable_path.is_file():
+                # We found an straighforward file reference
+                return probable_path
 
+            # Non-existant file here or directory reference.
+            if not probable_path.is_dir():
+                continue
+
+            probable_package = Path(probable_path / probable_path.name).with_suffix(
+                ".gof",
+            )
+            if probable_package.exists():
+                return probable_package
     return None

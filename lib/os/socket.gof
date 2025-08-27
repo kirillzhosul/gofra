@@ -1,0 +1,12 @@
+// Network socket helpers
+
+#ifdef OS_DARWIN
+    #macro AF_INET     2 end
+
+    #macro SOCK_STREAM 1 end
+
+    #macro SOMAXCONN   128 end
+#endif
+
+
+#ifdef OS_DARWIN

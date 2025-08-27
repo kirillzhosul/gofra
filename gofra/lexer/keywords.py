@@ -11,9 +11,6 @@ class Keyword(IntEnum):
 
     END = auto()
 
-    INCLUDE = auto()
-    MACRO = auto()
-
     MEMORY = auto()
 
     EXTERN = auto()
@@ -24,14 +21,18 @@ class Keyword(IntEnum):
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
 
+    # Preprocessor
+    PP_IFDEF = auto()
+    PP_ENDIF = auto()
+    PP_INCLUDE = auto()
+    PP_MACRO = auto()
+
 
 WORD_TO_KEYWORD = {
     "if": Keyword.IF,
     "while": Keyword.WHILE,
     "do": Keyword.DO,
     "end": Keyword.END,
-    "include": Keyword.INCLUDE,
-    "macro": Keyword.MACRO,
     "extern": Keyword.EXTERN,
     "call": Keyword.FUNCTION_CALL,
     "return": Keyword.FUNCTION_RETURN,
@@ -39,5 +40,10 @@ WORD_TO_KEYWORD = {
     "inline": Keyword.INLINE,
     "memory": Keyword.MEMORY,
     "global": Keyword.GLOBAL,
+    # Preprocessor
+    "#ifdef": Keyword.PP_IFDEF,
+    "#endif": Keyword.PP_ENDIF,
+    "#include": Keyword.PP_INCLUDE,
+    "#macro": Keyword.PP_MACRO,
 }
 KEYWORD_TO_NAME = {v: k for k, v in WORD_TO_KEYWORD.items()}

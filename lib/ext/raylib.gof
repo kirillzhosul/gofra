@@ -45,7 +45,7 @@ extern func void _DrawText[ptr,int,int,int,int]
 inline func void DrawText[ptr,int,int,int,int] call _DrawText end
 
 // Key codes
-macro KEY_W 87 end
-macro KEY_A 65 end
-macro KEY_S 83 end
-macro KEY_D 68 end
+#macro KEY_W 87 end
+#macro KEY_A 65 end
+#macro KEY_S 83 end
+#macro KEY_D 68 end

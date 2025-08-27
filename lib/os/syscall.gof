@@ -1,0 +1,18 @@
+// Provider of an syscall table for convient usage
+
+#ifdef OS_DARWIN
+    // MacOS (Darwin) syscall table
+    #macro DARWIN_SYSCALL_SYSCALL 0 end
+    #macro DARWIN_SYSCALL_EXIT    1 end
+    #macro DARWIN_SYSCALL_FORK    2 end
+    #macro DARWIN_SYSCALL_READ    3 end
+    #macro DARWIN_SYSCALL_WRITE   4 end
+
+    inline func void sc_syscall[]          DARWIN_SYSCALL_SYSCALL syscall0 drop  end
+    inline func void sc_exit[int]          DARWIN_SYSCALL_EXIT    syscall1 drop  end
+    inline func int  sc_fork[]             DARWIN_SYSCALL_FORK    syscall0       end
+    inline func int  sc_read[int,ptr,int]  DARWIN_SYSCALL_READ    syscall3       end
+    inline func int  sc_write[int,ptr,int] DARWIN_SYSCALL_WRITE   syscall3       end
+#endif
+
+

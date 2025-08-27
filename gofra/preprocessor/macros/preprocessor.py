@@ -88,7 +88,7 @@ def _consume_tokenizer_from_state_into_macro(
 
     while token := next(state.tokenizer, None):
         if token.type == TokenType.KEYWORD:
-            if token.value == Keyword.MACRO:
+            if token.value == Keyword.PP_MACRO:
                 raise PreprocessorMacroDefinesMacroError(
                     macro_token=macro.token,
                     macro_name=macro.name,
