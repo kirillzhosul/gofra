@@ -2,6 +2,8 @@
 
 **A Stack-based compiled programming language**
 
+**Project is made for FUN and educational purposes! Don`t expect anything cool from it and just try/contribute**
+
 ## Overview
 Gofra is a **concatenative** (stack-based) programming language that compiles to native code. 
 Programs are written using [Reverse Polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation), where operations follow their operands (e.g `2 + 2` is `2 2 +`).
@@ -33,7 +35,7 @@ Gofra currently supports native compilation (no cross-compilation yet). You must
 
 Before installing Gofra, ensure you have the following tools available system-wide:
 
-- [Python >3.12.x](https://www.python.org) available as `python` or `python3` command
+- [Python >3.12.x](https://www.python.org)
 - GNU/Mach-O Linker (ld) - For linking compiled objects
 - Assembler (as) - Typically included with Clang LLVM compiler
 
@@ -43,19 +45,17 @@ Before installing Gofra, ensure you have the following tools available system-wi
 
 [Gofra](https://github.com/kirillzhosul/gofra) is distributed as single Python-based toolchain. To install:
 
-(Step 1): Clone the repository
+(Step 1): Install toolchain
 ```bash
-git clone https://github.com/kirillzhosul/gofra.git
-cd gofra
+pip install gofra
 ```
 (Step 2): Verify Installation
 ```bash
-cd gofra
-python -m gofra --help
+gofra --help
 ```
 (Step 3): Try an example (Optional)
 ```bash
 # More examples available in `./examples`
-python -m gofra examples/01_hello_world.gof
+gofra examples/01_hello_world.gof
 ```
 

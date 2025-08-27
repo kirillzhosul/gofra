@@ -1,32 +1,4 @@
 {
-    "cSpell.words": [
-        "AARCH",
-        "adrp",
-        "asciz",
-        "codegen",
-        "Concatenative",
-        "cset",
-        "extendleft",
-        "gofra",
-        "gofralang",
-        "Kirill",
-        "kirillzhosul",
-        "libc",
-        "lldb",
-        "malloc",
-        "movk",
-        "movz",
-        "MUNMAP",
-        "PAGEOFF",
-        "sdiv",
-        "sprintf",
-        "SYSCALL",
-        "syslibroot",
-        "tadr",
-        "udiv",
-        "xcrun",
-        "Zhosul"
-    ],
     "conventionalCommits.scopes": [
         "optimizer",
         "lexer",
@@ -36,6 +8,8 @@
         "library",
         "codegen",
         "editors",
-        "testkit"
+        "testkit",
+        "preprocessor",
+        "docs"
     ],
 }

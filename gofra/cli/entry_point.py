@@ -15,15 +15,16 @@ from .arguments import CLIArguments, parse_cli_arguments
 from .errors import cli_gofra_error_handler
 from .output import cli_message
 
-WARN_ON_CONFUSING_PROG = False
-
 
 def cli_entry_point(prog: str | None = None) -> None:
     """CLI main entry."""
     prog = prog if prog else Path(sys.argv[0]).name
     with cli_gofra_error_handler():
-        if prog == "__main__.py" and WARN_ON_CONFUSING_PROG:
-            cli_message("WARNING", "Running with prog == '__main__.py'")
+        if prog == "__main__.py":
+            cli_message(
+                "WARNING",
+                "Running with prog == '__main__.py', consider proper installation!",
+            )
         args = parse_cli_arguments(prog)
 
         assert len(args.source_filepaths) == 1

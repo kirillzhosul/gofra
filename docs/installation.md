@@ -11,7 +11,24 @@ But as toolchain compiled code, it depends on target-specific linker and assembl
 
 [Gofra](https://github.com/kirillzhosul/gofra) is distributed as single Python-based toolchain. To install:
 
-## Install from sources
+## Install
+
+(Step 1): Install toolchain
+```bash
+pip install gofra
+```
+
+(Step 2): Verify Installation
+```bash
+gofra --help
+```
+(Step 3): Try an example (Optional)
+```bash
+# More examples available in `./examples`
+gofra examples/01_hello_world.gof
+```
+
+## Development installation
 
 (Step 1): Clone the repository
 ```bash
@@ -24,20 +41,7 @@ cd gofra
 cd gofra
 python -m gofra --help
 ```
-(Step 3): Try an example (Optional)
-```bash
-# More examples available in `./examples`
-python -m gofra examples/01_hello_world.gof
-```
-
-## System wide insallation
-Currently, system wide installation is not yet supported but you may add an alias to `scripts/entrypoint-alias.py`.
-(It has no dependencies so it will run without environment) consider naming it `gofra` (as it will not detect real alias name to give proper executable path)
-
-## Development installation
-
-If you wish to maintain development for toolchain initial steps will be same but you also need development tools, which is installed using [Poetry](https://python-poetry.org) (install before running command below)
-
+(Step 3): Install dependencies [Poetry](https://python-poetry.org) required
 ```bash
 # In repository root
 poetry install --with dev,docs
@@ -51,5 +55,5 @@ mkdocs serve
 ruff .
 ```
 
-(It will also propagate environment local `gofra-cli` script as alias to `python -m gofra`)
+(It will also propagate local `gofra` command over system-wide gofra if you inside environment (e.g `poetry shell`))
 
