@@ -1,5 +1,0 @@
-func void main
-    0 while copy 10 < do
-        inc
-    end drop
-end

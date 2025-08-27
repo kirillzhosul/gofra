@@ -1,6 +1,0 @@
-func void main
-    0        drop
-    128      drop
-    1024     drop
-    16777216 drop
-end

@@ -1,6 +1,0 @@
-memory static_blob 128
-
-func void main
-    static_blob 32 !<
-    static_blob ?> drop
-end

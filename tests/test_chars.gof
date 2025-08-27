@@ -1,5 +1,0 @@
-func void main
-    'i'  drop
-    '0'  drop
-    '\n' drop
-end

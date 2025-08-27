@@ -1,8 +1,0 @@
-func void main
-    0 0 == if
-        1 drop
-    end
-    0 1 > if
-        1 drop
-    end
-end
