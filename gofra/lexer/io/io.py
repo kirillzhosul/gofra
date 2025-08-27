@@ -2,7 +2,11 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import IO
 
-from .exceptions import IOFileDoesNotExistsError, IOFileNotAnFileError
+from .exceptions import (
+    IOFileDoesNotExistsError,
+    IOFileNotAnFileError,
+    IOFileNotAnTextFileError,
+)
 
 
 def open_source_file_line_stream(path: Path) -> Generator[str]:
@@ -11,9 +15,12 @@ def open_source_file_line_stream(path: Path) -> Generator[str]:
     :raises IOFileDoesNotExistsError: File does not exists
     :raises IOFileNotAnFileError: File is not an file
     """
-    with open_source_file(path) as io:
-        while line := io.readline(-1):
-            yield line
+    try:
+        with open_source_file(path) as io:
+            while line := io.readline(-1):
+                yield line
+    except UnicodeDecodeError as e:
+        raise IOFileNotAnTextFileError(path=path) from e
 
 
 def open_source_file(path: Path) -> IO[str]:

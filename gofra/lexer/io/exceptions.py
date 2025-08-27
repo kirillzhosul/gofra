@@ -30,3 +30,14 @@ Tried to open file at path: `{self.path}`
 (Resolves to: `{self.path.resolve()})
 
 Please ensure that requested file is an file and not an directory or anything else!"""
+
+
+class IOFileNotAnTextFileError(GofraError):
+    def __init__(self, *args: object, path: Path) -> None:
+        super().__init__(*args)
+        self.path = path
+
+    def __repr__(self) -> str:
+        return f"""File is not an text file (contains non UTF-8 text)
+
+Tried to read file at path: `{self.path}`"""
