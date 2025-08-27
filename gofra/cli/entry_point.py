@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 from subprocess import CalledProcessError, run
 
 from gofra.assembler import assemble_program
@@ -12,11 +15,17 @@ from .arguments import CLIArguments, parse_cli_arguments
 from .errors import cli_gofra_error_handler
 from .output import cli_message
 
+WARN_ON_CONFUSING_PROG = False
 
-def cli_entry_point() -> None:
+
+def cli_entry_point(prog: str | None = None) -> None:
     """CLI main entry."""
+    prog = prog if prog else Path(sys.argv[0]).name
     with cli_gofra_error_handler():
-        args = parse_cli_arguments()
+        if prog == "__main__.py" and WARN_ON_CONFUSING_PROG:
+            cli_message("WARNING", "Running with prog == '__main__.py'")
+        args = parse_cli_arguments(prog)
+
         assert len(args.source_filepaths) == 1
 
         cli_process_toolchain_on_input_files(args)

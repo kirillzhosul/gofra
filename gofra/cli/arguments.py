@@ -43,10 +43,10 @@ class CLIArguments:
     delete_build_cache: bool
 
 
-def parse_cli_arguments() -> CLIArguments:
+def parse_cli_arguments(prog: str) -> CLIArguments:
     """Parse CLI arguments from argparse into custom DTO."""
-    args = _construct_argument_parser().parse_args()
 
+    args = _construct_argument_parser(prog=prog).parse_args()
     if len(args.source_files) > 1:
         cli_message(
             level="ERROR",
@@ -103,11 +103,12 @@ def parse_cli_arguments() -> CLIArguments:
     )
 
 
-def _construct_argument_parser() -> ArgumentParser:
+def _construct_argument_parser(prog: str) -> ArgumentParser:
     """Get argument parser instance to parse incoming arguments."""
     parser = ArgumentParser(
         description="Gofra Toolkit - CLI for working with Gofra programming language",
         add_help=True,
+        prog=prog,
     )
 
     parser.add_argument(
