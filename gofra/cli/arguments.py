@@ -45,7 +45,6 @@ class CLIArguments:
 
 def parse_cli_arguments(prog: str) -> CLIArguments:
     """Parse CLI arguments from argparse into custom DTO."""
-
     args = _construct_argument_parser(prog=prog).parse_args()
     if len(args.source_files) > 1:
         cli_message(
@@ -74,10 +73,11 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         if args.output
         else infer_output_filename(source_filepaths, output_format=args.output_format)
     )
+
     include_paths = [
-        Path("./"),
-        *[f.parent for f in source_filepaths],
         *map(Path, [include for include in args.include if include]),
+        # Last one as we want additional include paths to override default distribution search
+        *infer_distribution_library_paths(),
     ]
 
     assembler_flags = args.assembler
@@ -177,10 +177,10 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         "--include",
         "-i",
         required=False,
-        help="Additional directories to search for include files. Default: ['./', './lib']",
+        help="Additional directories to search for include files.",
         action="append",
         nargs="?",
-        default=["./", "./lib"],
+        default=[],
     )
 
     parser.add_argument(
@@ -292,3 +292,18 @@ def infer_target() -> TARGET_T:
                 text="Unable to infer compilation target due to no fallback for current operating system",
             )
             sys.exit(1)
+
+
+def infer_distribution_library_paths() -> list[Path]:
+    """Infers paths to library distribution.
+
+    (as package may be installed via package managers and they may mess with files includes).
+    """
+    distribution_root = Path(__import__("gofra").__file__).parent
+    library_name = "lib"
+    return [
+        # Probably, and default distribution
+        distribution_root / library_name,
+        # Probably, an local package
+        distribution_root.parent / library_name,
+    ]

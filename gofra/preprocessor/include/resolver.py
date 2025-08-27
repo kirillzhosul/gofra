@@ -73,7 +73,15 @@ def _try_resolve_and_find_real_include_path(
     search_paths: Iterable[Path],
 ) -> Path | None:
     """Resolve real import path and try to search for possible location of include (include directories system)."""
-    for search_path in (Path("./"), current_path.parent, *search_paths):
+    traversed_paths = (
+        # 1. Try path where callee request an include
+        current_path.parent,
+        # 2. Try CLI toolchain call directory
+        Path("./"),
+        # 3. Traverse each search path
+        *search_paths,
+    )
+    for search_path in traversed_paths:
         if (probable_path := search_path.joinpath(path)).exists(follow_symlinks=True):
             if probable_path.is_file():
                 # We found an straighforward file reference

@@ -1,12 +1,15 @@
 [tool.poetry]
 name = "gofra"
-version = "0.0.3"
+version = "0.0.4"
 description = "A Stack-based compiled programming language"
+keywords = ["compiler", "language"]
 authors = ["Kirill Zhosul <kirillzhosul@yandex.com>"]
 documentation = "https://kirillzhosul.github.io/gofra"
 license = "MIT"
 package-mode = true
 readme = "README.md"
+packages = [{ include = "gofra" }]
+include = ["lib/**/*.gof"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
