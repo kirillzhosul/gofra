@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gofra"
 version = "0.0.1"
-description = "Stack based programming language"
+description = "A Stack-based compiled programming language"
 authors = ["Kirill Zhosul <kirillzhosul@yandex.com>"]
 license = "MIT"
 package-mode = true
@@ -12,6 +12,12 @@ python = "^3.12"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9.5"
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6.1"
+
+[tool.poetry.scripts]
+gofra-cli = "gofra.__main__:cli_entry_point"
 
 [tool.ruff.lint]
 select = ["ALL"]

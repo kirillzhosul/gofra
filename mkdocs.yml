@@ -1,0 +1,12 @@
+site_name: Gofra
+site_description: Documentation for Gofra programming language
+
+theme:
+  name: mkdocs
+
+repo_url: https://github.com/kirillzhosul/gofra
+edit_uri: edit/main/docs/
+
+nav:
+  - About: index.md
+  - Installation: installation.md
