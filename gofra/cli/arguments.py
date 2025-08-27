@@ -300,10 +300,12 @@ def infer_distribution_library_paths() -> list[Path]:
     (as package may be installed via package managers and they may mess with files includes).
     """
     distribution_root = Path(__import__("gofra").__file__).parent
-    library_name = "lib"
+    assert distribution_root.exists(), (
+        "Corrupted distribution (dist parent is non-existant, unable to infer/resolve library paths)"
+    )
     return [
-        # Probably, and default distribution
-        distribution_root / library_name,
-        # Probably, an local package
-        distribution_root.parent / library_name,
+        # default distribution
+        distribution_root / "_distlib",
+        # Local package
+        distribution_root.parent / "lib",
     ]

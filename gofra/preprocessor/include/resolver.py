@@ -34,7 +34,6 @@ def resolve_include_from_token_into_state(
         current_path=include_token.location.filepath,
         search_paths=state.include_search_paths,
     )
-
     if include_path is None:
         raise PreprocessorIncludeFileNotFoundError(
             include_token=include_token,

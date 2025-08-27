@@ -8,3 +8,5 @@
 # MacOS
 .DS_STORE
 dist
+site
+gofra/_distlib
