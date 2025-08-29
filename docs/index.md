@@ -53,9 +53,4 @@ pip install gofra
 ```bash
 gofra --help
 ```
-(Step 3): Try an example (Optional)
-```bash
-# More examples available in `./examples`
-gofra examples/01_hello_world.gof
-```
 

@@ -22,11 +22,7 @@ pip install gofra
 ```bash
 gofra --help
 ```
-(Step 3): Try an example (Optional)
-```bash
-# More examples available in `./examples`
-gofra examples/01_hello_world.gof
-```
+
 
 ## Development installation
 
@@ -41,13 +37,13 @@ cd gofra
 cd gofra
 python -m gofra --help
 ```
-(Step 3): Install dependencies [Poetry](https://python-poetry.org) required
+(Step 3): Install dependencies ([Poetry](https://python-poetry.org) required)
 ```bash
 # In repository root
 poetry install --with dev,docs
 ```
 
-This will install [Ruff]() and [MkDocs]() available as:
+This will install [Ruff](https://astral.sh/ruff) and [MkDocs](https://www.mkdocs.org) available as:
 ```bash
 # Serve documentation
 mkdocs serve
