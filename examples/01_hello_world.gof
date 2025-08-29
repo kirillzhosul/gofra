@@ -1,3 +1,5 @@
+// Prints "Hello, World!" to standart output stream
+
 #include "std.gof"
 
 func void main[] 

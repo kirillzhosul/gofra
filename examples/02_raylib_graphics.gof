@@ -1,0 +1,82 @@
+// Complex example of an using FFI-library (Raylib, C) as an graphics wrapper
+// Opens an window with a 2D-square which is can be moved with WASD.
+
+// Requires additional CLI toolchain flags to link with raylib
+// MacOS: `-L=-lraylib -L=-L/opt/homebrew/lib`
+
+#include "ext/raylib.gof"
+#include "std.gof"
+
+memory player_x 4
+memory player_y 4
+
+#macro BACKGROUND_COLOR 0xFFFFFFFF end
+
+#macro PLAYER_COLOR 0xFF0000FF end
+#macro PLAYER_SIZE  64         end
+#macro PLAYER_SPEED 10         end
+
+#macro WINDOW_NAME   "Welcome to Gofra!" end
+#macro WINDOW_WIDTH  512                 end
+#macro WINDOW_HEIGHT 512                 end
+#macro WINDOW_FPS    60                  end
+
+
+inline func void init_window[]
+    // Init window with Raylib
+    WINDOW_WIDTH 
+    WINDOW_HEIGHT 
+    WINDOW_NAME to_cstr_ptr 
+    call InitWindow
+
+    WINDOW_FPS 
+    call SetTargetFPS
+end
+
+inline func void draw_player[]
+    // Draws an player where it is located
+    player_x ?>
+    player_y ?>
+    PLAYER_SIZE 
+    PLAYER_SIZE
+    PLAYER_COLOR
+    call DrawRectangle
+end
+
+#macro handle_movement
+    // TODO(@kirillzhosul): This is an macro due to current critical problem with parser/codegen (inline function is also corrupted)
+    KEY_W call IsKeyPressed if
+        player_y copy ?> PLAYER_SPEED - !<
+    end
+    KEY_S call IsKeyPressed if
+        player_y copy ?> PLAYER_SPEED + !<
+    end 
+    KEY_A call IsKeyPressed if
+        player_x copy ?> PLAYER_SPEED - !<
+    end 
+    KEY_D call IsKeyPressed if
+        player_x copy ?> PLAYER_SPEED + !<
+    end
+end
+
+func void main[]
+    // Default player position
+    player_x 120 !<
+    player_y 120 !<
+
+    call init_window
+
+    while call WindowShouldClose 0 == do 
+        call BeginDrawing
+            call draw_player
+
+            BACKGROUND_COLOR
+            call ClearBackground
+
+            handle_movement
+        call EndDrawing
+    end
+
+    call CloseWindow
+    0 exit
+end
