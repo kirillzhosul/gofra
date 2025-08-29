@@ -14,5 +14,3 @@
     inline func int  sc_read[int,ptr,int]  DARWIN_SYSCALL_READ    syscall3       end
     inline func int  sc_write[int,ptr,int] DARWIN_SYSCALL_WRITE   syscall3       end
 #endif
-
-

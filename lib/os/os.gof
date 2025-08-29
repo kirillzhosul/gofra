@@ -1,3 +1,10 @@
+// Operating system interaction package
+
 #include "general.gof"
+
+// Definitions
 #include "socket.gof"
 #include "syscall.gof"
+
+#include "ffi.gof"
+#include "io.gof"

@@ -15,7 +15,7 @@ Here's a simple **"Hello, World!"** example:
 include "std.gof"
 
 func void main
-    FD_STD_OUT "Hello, World!\n" sc_write drop
+    "Hello, World!\n" print
 end
 ```
 

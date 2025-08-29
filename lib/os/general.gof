@@ -1,6 +1,21 @@
-// Unix file descriptors
-#ifdef OS_DARWIN
-    #macro UNIX_STD_IN  0 end
-    #macro UNIX_STD_OUT 1 end
-    #macro UNIX_STD_ERR 2 end
+// General operating system interactions / definitions
+
+#include "syscall.gof"
+
+#ifdef OS_POSIX
+    // POSIX file descriptors
+    #macro POSIX_STDIN  0 end
+    #macro POSIX_STDOUT 1 end
+    #macro POSIX_STDERR 2 end
 #endif
+
+
+inline func void exit[int]
+    // Exit an program with given exit code
+    call sc_exit
+end
+
+inline func void abort[int]
+    // Exit an program with error (1) exit code
+    1 call exit
+end

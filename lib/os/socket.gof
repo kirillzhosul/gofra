@@ -1,12 +1,22 @@
 // Network socket helpers
 
-#ifdef OS_DARWIN
-    #macro AF_INET     2 end
-
+#ifdef OS_POSIX
+    // Address families
+    #macro AF_UNIX  1  end
+    #macro AF_INET  2  end
+    #macro AF_INET6 10 end
+    
+    // Socket types
     #macro SOCK_STREAM 1 end
+    #macro SOCK_DGRAM  2 end
+    #macro SOCK_RAW    3 end
 
+    // Configuration and constants
     #macro SOMAXCONN   128 end
 #endif
 
 
-#ifdef OS_DARWIN
+
+
+
+

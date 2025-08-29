@@ -1,0 +1,53 @@
+#include "general.gof"
+#include "syscall.gof"
+
+inline func void print_fd[int,ptr,int]
+    // Print an string into given FD
+    sc_write drop
+end
+
+memory .print_string_size_buffer 1
+inline func void print[ptr,int]
+    // Print an string into standart output stream (STDOUT for POSIX)
+    .print_string_size_buffer swap !<
+    POSIX_STDOUT swap 
+    .print_string_size_buffer ?> 
+    print_fd
+end
+
+memory .print_integer_buffer 128
+memory .print_integer_divres 16
+memory .print_integer_idx 16
+inline func void print_integer[int]
+    // Print given number into 
+    // Negative numbers not supported for now
+    copy 0 < if
+        POSIX_STDERR "FATAL: print_integer got negative number!\n" print_fd abort
+    end
+
+    // Straight zero
+    copy 0 == if
+        .print_integer_buffer '0' !<
+        .print_integer_buffer 1 + 20 !< // TODO(@kirillzhosul): At some time '\n' has been broken.
+        .print_integer_buffer 2 print
+    end
+
+    .print_integer_divres swap !<
+    .print_integer_idx 0 !<
+    
+    while .print_integer_divres ?> 0 > do
+        .print_integer_divres ?> 10 %   
+        .print_integer_buffer .print_integer_idx ?> + swap 48 + !<
+        .print_integer_idx .print_integer_idx ?> inc !<
+        
+        .print_integer_divres copy ?> 10 / !< 
+    end
+
+    while .print_integer_idx ?> 1 + 0 > do
+        .print_integer_buffer .print_integer_idx ?> + 1 print
+        .print_integer_idx copy ?> dec !<
+    end
+
+    .print_integer_buffer 20 !<
+    .print_integer_buffer 1 print
+end
