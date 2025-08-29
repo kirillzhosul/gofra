@@ -9,7 +9,12 @@ extern func int socket[int,int,int]@link[_socket]
 extern func int bind[int,ptr,int]@link[_bind]
 extern func int listen[int,int]@link[_listen]
 extern func void exit[int]@link[_exit]
-extern func void perror[ptr]@link[_perror]
+
+extern func void _perror[ptr]
+inline func void perror[ptr,int] 
+    to_cstr_ptr
+    call _perror
+end
 
 extern func int _puts[ptr]
 inline func void puts[ptr,int] 
