@@ -78,5 +78,5 @@ func void main[]
     end
 
     call CloseWindow
-    0 exit
+    0 call exit
 end
