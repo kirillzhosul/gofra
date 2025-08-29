@@ -1,7 +1,3 @@
-// TODO: Finish definition system
-#macro OS_DARWIN end
-#macro OS_POSIX end
-
 #include "os"
 #include "assert.gof"
 #include "types.gof"

@@ -109,6 +109,7 @@ def _link_final_output(  # noqa: PLR0913
         case "Darwin":
             assert target == "aarch64-darwin"
 
+            # TODO(@kirillzhosul): Review default linkage with system library (libc by default)
             system_sdk = Path(
                 check_output(  # noqa: S603
                     ["/usr/bin/xcrun", "-sdk", "macosx", "--show-sdk-path"],

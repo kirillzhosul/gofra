@@ -44,7 +44,11 @@ def cli_entry_point(prog: str | None = None) -> None:
 def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
     """Process full toolchain onto input source files."""
     cli_message(level="INFO", text="Parsing input files...", verbose=args.verbose)
-    context = process_input_file(args.source_filepaths[0], args.include_paths)
+    context = process_input_file(
+        args.source_filepaths[0],
+        args.include_paths,
+        propagated_definitions=args.definitions,
+    )
 
     if not args.skip_typecheck:
         cli_message(

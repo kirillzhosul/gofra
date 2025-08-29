@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
 from platform import system as current_platform_system
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from gofra.cli.output import cli_message
 
@@ -35,6 +35,8 @@ class CLIArguments:
     verbose: bool
 
     target: TARGET_T
+
+    definitions: dict[str, str]
 
     disable_optimizations: bool
     skip_typecheck: bool
@@ -68,17 +70,9 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
     assert target in ("x86_64-linux", "aarch64-darwin")
 
     source_filepaths = [Path(f) for f in args.source_files]
-    output_filepath = (
-        Path(args.output)
-        if args.output
-        else infer_output_filename(source_filepaths, output_format=args.output_format)
-    )
-
-    include_paths = [
-        *map(Path, [include for include in args.include if include]),
-        # Last one as we want additional include paths to override default distribution search
-        *infer_distribution_library_paths(),
-    ]
+    output_filepath = process_output_path(source_filepaths, args)
+    include_paths = process_include_paths(args)
+    definitions = process_definitions(args, target)
 
     assembler_flags = args.assembler
     if bool(args.debug_symbols):
@@ -94,6 +88,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         delete_build_cache=bool(args.delete_cache),
         build_cache_dir=Path(args.cache_dir),
         target=target,
+        definitions=definitions,
         disable_optimizations=bool(args.disable_optimizations),
         skip_typecheck=bool(args.skip_typecheck),
         include_paths=include_paths,
@@ -101,6 +96,55 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         linker_flags=args.linker,
         assembler_flags=assembler_flags,
     )
+
+
+def process_definitions(args: Namespace, target: TARGET_T) -> dict[str, str]:
+    user_definitions: dict[str, str] = {}
+
+    for cli_definition in cast("list[str]", args.definitions):
+        if "=" in cli_definition:
+            name, value = cli_definition.split("=", maxsplit=1)
+            user_definitions[name] = value
+
+            if value != "1":
+                msg = "Propagated definitions with non-default values are prohibited / not yet supported via CLI!"
+                raise ValueError(msg)
+            continue
+        user_definitions[cli_definition] = "1"
+
+    toolchain_definitions = {}
+    match target:
+        case "aarch64-darwin":
+            toolchain_definitions = {
+                "OS_POSIX": "1",
+                "OS_DARWIN": "1",
+                "ARCH_AARCH64": "1",
+            }
+
+        case "x86_64-linux":
+            toolchain_definitions = {
+                "OS_POSIX": "1",
+                "OS_LINUX": "1",
+                "ARCH_X86_64": "1",
+            }
+
+    return user_definitions | toolchain_definitions
+
+
+def process_output_path(source_filepaths: list[Path], args: Namespace) -> Path:
+    return (
+        Path(args.output)
+        if args.output
+        else infer_output_filename(source_filepaths, output_format=args.output_format)
+    )
+
+
+def process_include_paths(args: Namespace) -> list[Path]:
+    return [
+        *map(Path, [include for include in args.include if include]),
+        # Last one as we want additional include paths to override default distribution search
+        *infer_distribution_library_paths(),
+    ]
 
 
 def _construct_argument_parser(prog: str) -> ArgumentParser:
@@ -157,6 +201,7 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         action="store_true",
         help="If passed will provide debug symbols into final target output.",
     )
+
     parser.add_argument(
         "--verbose",
         "-v",
@@ -190,6 +235,17 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         help="Additional flags passed to linker (`ld`)",
         action="append",
         nargs="?",
+        default=[],
+    )
+
+    parser.add_argument(
+        "--define",
+        "-D",
+        required=False,
+        help="Define an macro (default value is '1') and propagate to all input source files",
+        action="append",
+        nargs="?",
+        dest="definitions",
         default=[],
     )
 

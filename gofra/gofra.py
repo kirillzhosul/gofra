@@ -12,6 +12,8 @@ from gofra.preprocessor import preprocess_file
 def process_input_file(
     filepath: Path,
     include_paths: Iterable[Path],
+    *,
+    propagated_definitions: dict[str, str],
 ) -> ProgramContext:
     """Core entry for Gofra API.
 
@@ -21,6 +23,11 @@ def process_input_file(
     Does not provide optimizer or type checker.
     """
     lexer = tokenize_file(filepath)
-    preprocessor = preprocess_file(filepath, lexer, include_paths)
+    preprocessor = preprocess_file(
+        filepath,
+        lexer,
+        include_paths,
+        propagated_definitions,
+    )
     parser_context, entry_point = parse_file(preprocessor)
     return ProgramContext.from_parser_context(parser_context, entry_point)

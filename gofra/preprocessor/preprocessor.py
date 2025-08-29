@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import Token, TokenType
+from gofra.preprocessor.macros.definitions import propagate_raw_definitions
 
 from ._state import PreprocessorState
 from .conditions import resolve_conditional_block_from_token
@@ -22,6 +23,7 @@ def preprocess_file(
     path: Path,
     lexer: Generator[Token],
     include_search_paths: Iterable[Path],
+    propagated_definitions: dict[str, str],
 ) -> Generator[Token]:
     """Preprocess given lexer token stream by resolving includes, CTE/macros.
 
@@ -32,6 +34,8 @@ def preprocess_file(
         lexer=lexer,
         include_search_paths=include_search_paths,
     )
+
+    propagate_raw_definitions(state, propagated_definitions)
 
     for token in state.tokenizer:
         match token:
