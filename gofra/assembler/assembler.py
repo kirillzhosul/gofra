@@ -37,6 +37,7 @@ def assemble_program(  # noqa: PLR0913
     additional_linker_flags: list[str],
     additional_assembler_flags: list[str],
     delete_build_cache_after_compilation: bool,
+    link_with_system_libraries: bool,
 ) -> None:
     """Convert given program into executable/library/etc using assembly and linker."""
     _validate_toolkit_installation()
@@ -74,6 +75,7 @@ def assemble_program(  # noqa: PLR0913
         target,
         object_filepath,
         output_format=output_format,
+        link_with_system_libraries=link_with_system_libraries,
         additional_linker_flags=additional_linker_flags,
         verbose=verbose,
     )
@@ -101,6 +103,7 @@ def _link_final_output(  # noqa: PLR0913
     o_filepath: Path,
     output_format: Literal["executable", "library"],
     additional_linker_flags: list[str],
+    link_with_system_libraries: bool,
     *,
     verbose: bool,
 ) -> None:
@@ -108,27 +111,25 @@ def _link_final_output(  # noqa: PLR0913
     match current_platform_system():
         case "Darwin":
             assert target == "aarch64-darwin"
+            target_linker_flags = ["-arch", "arm64"]
 
             # TODO(@kirillzhosul): Review default linkage with system library (libc by default)
-            system_sdk = Path(
-                check_output(  # noqa: S603
-                    ["/usr/bin/xcrun", "-sdk", "macosx", "--show-sdk-path"],
-                    text=True,
-                ).strip(),
-            )
-            target_linker_flags = [
-                "-arch",
-                "arm64",
-                "-lSystem",
-                "-syslibroot",
-                str(system_sdk),
-            ]
+            if link_with_system_libraries:
+                system_sdk = Path(
+                    check_output(  # noqa: S603
+                        ["/usr/bin/xcrun", "-sdk", "macosx", "--show-sdk-path"],
+                        text=True,
+                    ).strip(),
+                )
+                target_linker_flags += ["-lSystem", "-syslibroot", str(system_sdk)]
 
             if output_format == "library":
                 target_linker_flags += ["-dylib"]
         case "Linux":
             assert target == "x86_64-linux"
-
+            assert not link_with_system_libraries, (
+                "`--link-system is not supported on Linux target, consider removing that flag for now."
+            )
             target_linker_flags = []
             assert output_format == "executable", (
                 "Libraries on Linux is not implemented"
