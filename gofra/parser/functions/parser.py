@@ -33,16 +33,18 @@ from .exceptions import (
 def consume_function_definition(
     context: ParserContext,
     token: Token,
-) -> tuple[Token, str, list[GofraType], list[GofraType], bool, bool, bool]:
+) -> tuple[Token, str, list[GofraType], list[GofraType], list[str], bool, bool, bool]:
     token, (modifier_is_inline, modifier_is_extern, modifier_is_global) = (
         consume_function_modifiers(
             context,
             token,
         )
     )
-    function_name, type_contract_in, type_contract_out = consume_function_signature(
-        context,
-        token,
+    function_name, type_contract_in, type_contract_out, additional_modifiers = (
+        consume_function_signature(
+            context,
+            token,
+        )
     )
 
     return (
@@ -50,6 +52,7 @@ def consume_function_definition(
         function_name,
         type_contract_in,
         type_contract_out,
+        additional_modifiers,
         modifier_is_inline,
         modifier_is_extern,
         modifier_is_global,
@@ -124,12 +127,11 @@ def consume_function_modifiers(
 def consume_function_signature(
     context: ParserContext,
     token: Token,
-) -> tuple[str, list[GofraType], list[GofraType]]:
+) -> tuple[str, list[GofraType], list[GofraType], list[str]]:
     """Consume parser context into function signature assuming given token is `function` keyword.
 
     Returns function name and signature types (`in` and `out).
     """
-
     sig_token = next(context.tokenizer, None)
     if not sig_token:
         raise ParserExpectedFunctionReturnTypeError(
@@ -157,6 +159,7 @@ def consume_function_signature(
     function_name = signature
     type_contract_in = []
 
+    signature, *additional_modifiers = signature.split("@")
     if "[" in signature and "]" in signature:
         function_name = function_name.split("[")[0].strip()
         contract = signature.split("[")[1].strip()[:-1]
@@ -166,7 +169,7 @@ def consume_function_signature(
             contract=f"[{contract}]",
         )
 
-    return function_name, type_contract_in, type_contract_out
+    return function_name, type_contract_in, type_contract_out, additional_modifiers
 
 
 def _parse_function_type_contract(token: Token, contract: str) -> list[GofraType]:

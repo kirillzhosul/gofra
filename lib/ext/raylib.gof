@@ -1,48 +1,16 @@
 // Raylib bindings to Gofra
 
-// void InitWindow(int, int, char[])
-extern func bool _InitWindow[int,int,ptr]
-inline func bool InitWindow[int,int,ptr] call _InitWindow end
-
-// bool WindowShouldClose()
-extern func bool _WindowShouldClose[]
-inline func bool WindowShouldClose[] call _WindowShouldClose end
-
-// void CloseWindow()
-extern func void _CloseWindow[]
-inline func void CloseWindow[] call _CloseWindow end
-
-// void SetTargetFPS(int)
-extern func void _SetTargetFPS[int]
-inline func void SetTargetFPS[int] call _SetTargetFPS end
-
-// void BeginDrawing()
-extern func void _BeginDrawing[]
-inline func void BeginDrawing[] call _BeginDrawing end
-
-// void EndDrawing()
-extern func void _EndDrawing[]
-inline func void EndDrawing[] call _EndDrawing end
-
-// void ClearBackground(Color)
-// TODO(@kirillzhosul): We cannot pass color struct for now
-extern func void _ClearBackground[int]
-inline func void ClearBackground[int] call _ClearBackground end
-
-// void DrawCircle(int, int, int, Color);
-// TODO(@kirillzhosul): Cannot pass floats into FFI ABI
-extern func void _DrawCircle[int,int,int,ptr]
-inline func void DrawCircle[int,int,int,ptr] call _DrawCircle end
-
-extern func void _DrawRectangle[int,int,int,int,int]
-inline func void DrawRectangle[int,int,int,int,int] call _DrawRectangle end
-extern func bool _IsKeyPressed[int]
-inline func bool IsKeyPressed[int] call _IsKeyPressed end
-
-// void DrawText(char[], int, int, int, Color)
-// TODO: pass color as ptr
-extern func void _DrawText[ptr,int,int,int,int]
-inline func void DrawText[ptr,int,int,int,int] call _DrawText end
+extern func bool InitWindow[int,int,ptr]@link[_InitWindow]
+extern func bool WindowShouldClose[]@link[_WindowShouldClose]
+extern func void CloseWindow[]@link[_CloseWindow]
+extern func void SetTargetFPS[int]@link[_SetTargetFPS]
+extern func void BeginDrawing[]@link[_BeginDrawing]
+extern func void EndDrawing[]@link[_EndDrawing]
+extern func void ClearBackground[int]@link[_ClearBackground]              // TODO(@kirillzhosul): We cannot pass color struct for now
+extern func void DrawCircle[int,int,int,ptr]@link[_DrawCircle]            // TODO(@kirillzhosul): Cannot pass floats into FFI ABI
+extern func void DrawRectangle[int,int,int,int,int]@link[_DrawRectangle]
+extern func bool IsKeyPressed[int]@link[_IsKeyPressed]
+extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
 
 // Key codes
 #macro KEY_W 87 end

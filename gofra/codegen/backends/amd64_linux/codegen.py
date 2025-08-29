@@ -118,9 +118,10 @@ def amd64_linux_operator_instructions(
             assert isinstance(operator.operand, str)
 
             function = program.functions[operator.operand]
+            function_name = function.external_definition_link_to or function.name
             call_function_block(
                 context,
-                function_name=function.name,
+                function_name=function_name,
                 abi_ffi_push_retval_onto_stack=function.abi_ffi_push_retval_onto_stack(),
                 abi_ffi_arguments_count=len(function.type_contract_in),
             )

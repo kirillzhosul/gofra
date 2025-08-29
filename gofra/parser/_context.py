@@ -52,7 +52,7 @@ class ParserContext:
         type_contract_in: Sequence[GofraType],
         type_contract_out: Sequence[GofraType],
         emit_inline_body: bool,
-        is_externally_defined: bool,
+        external_definition_link_to: str | None,
         is_global_linker_symbol: bool,
         source: Sequence[Operator],
     ) -> Function:
@@ -63,14 +63,14 @@ class ParserContext:
             type_contract_in=type_contract_in,
             type_contract_out=type_contract_out,
             emit_inline_body=emit_inline_body,
-            is_externally_defined=is_externally_defined,
+            external_definition_link_to=external_definition_link_to,
             is_global_linker_symbol=is_global_linker_symbol,
         )
         self.functions[name] = function
         return function
 
     def expand_from_inline_block(self, inline_block: Function) -> None:
-        if inline_block.is_externally_defined:
+        if inline_block.external_definition_link_to:
             msg = "Cannot expand extern function."
             raise ValueError(msg)
         self.current_operator += len(inline_block.source)

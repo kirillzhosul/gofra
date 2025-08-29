@@ -1,15 +1,19 @@
 // libc wrapper
 // externs libc functions and provides inline functions for using them (but you may always use raw calls)
+#include "os/ffi.gof"
 
+extern func int putchar[int]@link[_putchar]
+extern func ptr malloc[int]@link[_malloc]
+extern func int sprintf[ptr,ptr,int]@link[_sprintf]
+extern func int socket[int,int,int]@link[_socket]
+extern func int bind[int,ptr,int]@link[_bind]
+extern func int listen[int,int]@link[_listen]
+extern func void exit[int]@link[_exit]
+extern func void perror[ptr]@link[_perror]
 
-extern func int _puts[ptr]
-extern func int _putchar[int]
-extern func ptr _malloc[int]
-extern func int _sprintf[ptr,ptr,int]
-extern func int _socket[int,int,int]
-extern func int _bind[int,ptr,int]
-extern func int _listen[int,int]
-extern func void _exit[int]
-extern func void _perror[ptr]
-
-inline func void puts[ptr,int] drop call _puts drop end
+extern func int puts[ptr]
+inline func void puts[ptr,int] 
+    to_cstr_ptr 
+    call _puts 
+    drop 
+end

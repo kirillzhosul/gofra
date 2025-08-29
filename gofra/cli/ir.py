@@ -53,8 +53,11 @@ def emit_ir_operator(operator: Operator, context_block_shift: int) -> None:  # n
 
 
 def emit_ir_function_signature(function: Function, entry_point: Function) -> None:
-    if function.is_externally_defined:
-        print(f"[external function symbol '{function.name}'", end=" ")
+    if function.external_definition_link_to:
+        print(
+            f"[external function symbol '{function.name}', links to '{function.external_definition_link_to}'",
+            end=" ",
+        )
         print(f"({function.type_contract_in} -> {function.type_contract_out})")
         return
     if function == entry_point:

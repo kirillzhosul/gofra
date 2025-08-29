@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 def validate_type_safety(functions: MutableMapping[str, Function]) -> None:
     """Validate type safety of an program by type checking all given functions."""
     for function in functions.values():
-        if function.is_externally_defined:
+        if function.external_definition_link_to:
             continue
         validate_function_type_safety(
             function=function,

@@ -203,11 +203,31 @@ def _unpack_function_definition_from_token(
         function_name,
         type_contract_in,
         type_contract_out,
+        additional_modifiers,
         modifier_is_inline,
         modifier_is_extern,
         modifier_is_global,
     ) = definition
 
+    external_definition_link_to = function_name if modifier_is_extern else None
+
+    for additional_modifier in additional_modifiers:
+        if additional_modifier.startswith("link[") and additional_modifier.endswith(
+            "]",
+        ):
+            if not modifier_is_extern or external_definition_link_to is None:
+                msg = "Cannot specify link to modifier for non-extern function"
+                raise ValueError(msg)
+
+            if external_definition_link_to != function_name:
+                msg = "External definition already links to another name, did you supply 2 links modifiers?"
+                raise ValueError(msg)
+            external_definition_link_to = additional_modifier.removeprefix(
+                "link[",
+            ).removesuffix("]")
+            continue
+        msg = f"unknown modifier {additional_modifier}"
+        raise ValueError(msg)
     if modifier_is_extern:
         if len(type_contract_out) > 1:
             msg = "Extern functions cannot have stack type contract consider using C FFI ABI"
@@ -218,7 +238,7 @@ def _unpack_function_definition_from_token(
             type_contract_in=type_contract_in,
             type_contract_out=type_contract_out,
             emit_inline_body=modifier_is_inline,
-            is_externally_defined=modifier_is_extern,
+            external_definition_link_to=external_definition_link_to,
             is_global_linker_symbol=modifier_is_global,
             source=[],
         )
@@ -266,7 +286,7 @@ def _unpack_function_definition_from_token(
         type_contract_in=type_contract_in,
         type_contract_out=type_contract_out,
         emit_inline_body=modifier_is_inline,
-        is_externally_defined=modifier_is_extern,
+        external_definition_link_to=function_name if modifier_is_extern else None,
         is_global_linker_symbol=modifier_is_global,
         source=_parse_from_context_into_operators(context=new_context).operators,
     )
@@ -373,7 +393,10 @@ def _try_unpack_macro_or_inline_function_from_token(
     inline_block = context.functions.get(token.text, None)
 
     if inline_block:
-        if not inline_block.emit_inline_body or inline_block.is_externally_defined:
+        if (
+            not inline_block.emit_inline_body
+            or inline_block.external_definition_link_to
+        ):
             raise NotImplementedError(
                 f"use `call` to call an function, obtaining an function is not implemented yet {token.location}"
             )

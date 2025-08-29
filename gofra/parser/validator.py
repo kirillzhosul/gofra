@@ -21,7 +21,7 @@ def validate_and_pop_entry_point(context: ParserContext) -> Function:
         raise ParserNoEntryFunctionError
 
     entry_point = context.functions.pop(GOFRA_ENTRY_POINT)
-    if entry_point.is_externally_defined or entry_point.emit_inline_body:
+    if entry_point.external_definition_link_to or entry_point.emit_inline_body:
         raise ParserEntryPointFunctionModifiersError
 
     if entry_point.type_contract_out:

@@ -58,10 +58,11 @@ class Function:
     # TODO(@kirillzhosul): Current implementation pollutes original definition source (expand whole operator/token sequence)
     emit_inline_body: bool
 
-    # If true, function must have empty body as it is located somewhere else and only available after assembler step
+    # If given, function must have empty body as it is located somewhere else and only available after assembler step
+    # Contains name of an external label (function)
     # Extern functions mostly are `C` functions (system/user defined) and call to them does jumps inside linked source binaries (dynamic libraries)
     # Code generator takes care of that calls and specifies extern function requests if needed (aggregates them for that)
-    is_externally_defined: bool
+    external_definition_link_to: str | None = None
 
     is_global_linker_symbol: bool = False
 
@@ -74,7 +75,7 @@ class Function:
         type_contract_in: FunctionTypeContract,
         type_contract_out: FunctionTypeContract,
         emit_inline_body: bool,
-        is_externally_defined: bool,
+        external_definition_link_to: str | None,
         is_global_linker_symbol: bool,
     ) -> None:
         self.location = location
@@ -83,7 +84,7 @@ class Function:
         self.type_contract_in = type_contract_in
         self.type_contract_out = type_contract_out
         self.emit_inline_body = emit_inline_body
-        self.is_externally_defined = is_externally_defined
+        self.external_definition_link_to = external_definition_link_to
         self.is_global_linker_symbol = is_global_linker_symbol
         self._validate()
 
@@ -92,7 +93,7 @@ class Function:
 
         Actual error handling should be before that and function object should not be created.
         """
-        if self.is_externally_defined:
+        if self.external_definition_link_to:
             if self.emit_inline_body:
                 msg = "Functions cannot be both marked as `inline` and `external`"
                 raise ValueError(msg)
@@ -103,12 +104,12 @@ class Function:
                 msg = "Functions that marked as `global` cannot have be external!"
                 raise ValueError(msg)
 
-        if not self.is_externally_defined and not self.source:
+        if not self.external_definition_link_to and not self.source:
             msg = "Functions that not marked as `external` must have an body!"
             raise ValueError(msg)
 
     def has_executable_body(self) -> bool:
-        return not self.emit_inline_body and not self.is_externally_defined
+        return not self.emit_inline_body and not self.external_definition_link_to
 
     def abi_ffi_push_retval_onto_stack(self) -> bool:
-        return self.is_externally_defined and bool(self.type_contract_out)
+        return bool(self.external_definition_link_to) and bool(self.type_contract_out)
