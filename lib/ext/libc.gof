@@ -11,7 +11,7 @@ extern func int listen[int,int]@link[_listen]
 extern func void exit[int]@link[_exit]
 extern func void perror[ptr]@link[_perror]
 
-extern func int puts[ptr]
+extern func int _puts[ptr]
 inline func void puts[ptr,int] 
     to_cstr_ptr 
     call _puts 
