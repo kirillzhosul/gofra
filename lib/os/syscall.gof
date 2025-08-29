@@ -14,3 +14,12 @@
     inline func int  sc_read[int,ptr,int]  DARWIN_SYSCALL_READ    syscall3       end
     inline func int  sc_write[int,ptr,int] DARWIN_SYSCALL_WRITE   syscall3       end
 #endif
+
+#ifdef OS_LINUX
+    // Linux syscall table
+    #macro LINUX_SYSCALL_WRITE  1  end
+    #macro LINUX_SYSCALL_EXIT   60 end
+
+    inline func int  sc_write[int,ptr,int] LINUX_SYSCALL_WRITE syscall3 end
+    inline func int  sc_exit[int,ptr,int]  LINUX_SYSCALL_EXIT  syscall1 end
+#endif
