@@ -87,6 +87,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         additional_assembler_flags=args.assembler_flags,
         build_cache_dir=args.build_cache_dir,
         delete_build_cache_after_compilation=args.delete_build_cache,
+        link_with_system_libraries=args.link_with_system_libraries,
     )
 
     cli_message(

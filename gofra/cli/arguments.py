@@ -26,6 +26,7 @@ class CLIArguments:
     debug_symbols: bool
 
     include_paths: list[Path]
+    definitions: dict[str, str]
 
     ir: bool
 
@@ -35,8 +36,7 @@ class CLIArguments:
     verbose: bool
 
     target: TARGET_T
-
-    definitions: dict[str, str]
+    link_with_system_libraries: bool
 
     disable_optimizations: bool
     skip_typecheck: bool
@@ -95,6 +95,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         verbose=bool(args.verbose),
         linker_flags=args.linker,
         assembler_flags=assembler_flags,
+        link_with_system_libraries=args.link_with_system_libraries,
     )
 
 
@@ -194,6 +195,17 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         action="store_true",
         help="If passed will just emit IR of provided file(s) into stdin.",
     )
+
+    parser.add_argument(
+        "--no-link-system",
+        "-nlsys",
+        dest="link_with_system_libraries",
+        required=False,
+        action="store_false",
+        default=True,
+        help="If passed will link with system libraries (libc, target/system specific).",
+    )
+
     parser.add_argument(
         "--debug-symbols",
         "-g",
