@@ -1,0 +1,28 @@
+
+#include "std.gof"
+#include "ext/libc.gof"
+
+inline func void fatal[ptr,int]
+    call perror 
+    call abort
+end
+
+memory host_addr         16
+#macro sizeof(host_addr) 16 end
+#macro PORT 36895 end // 8080, TODO: htons
+
+func void main[]
+    AF_INET SOCK_STREAM 0 call socket
+    copy 0 1 - == if "socket" fatal end
+    "socket: OK!\n" print
+
+    host_addr sizeof(host_addr) call bind 
+    copy 0 != if "bind" fatal end
+    "bind: OK!\n" print
+
+    SOMAXCONN call listen
+    copy 0 != if "listen" fatal end
+    "listen: OK!\n" print
+
+    call exit
+end
