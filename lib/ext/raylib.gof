@@ -1,6 +1,6 @@
 // Raylib bindings to Gofra
 
-extern func bool InitWindow[int,int,ptr]@link[_InitWindow]
+extern func void InitWindow[int,int,ptr]@link[_InitWindow]
 extern func bool WindowShouldClose[]@link[_WindowShouldClose]
 extern func void CloseWindow[]@link[_CloseWindow]
 extern func void SetTargetFPS[int]@link[_SetTargetFPS]
@@ -10,6 +10,7 @@ extern func void ClearBackground[int]@link[_ClearBackground]              // TOD
 extern func void DrawCircle[int,int,int,ptr]@link[_DrawCircle]            // TODO(@kirillzhosul): Cannot pass floats into FFI ABI
 extern func void DrawRectangle[int,int,int,int,int]@link[_DrawRectangle]
 extern func bool IsKeyPressed[int]@link[_IsKeyPressed]
+extern func bool IsKeyDown[int]@link[_IsKeyDown]
 extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
 
 // Key codes
