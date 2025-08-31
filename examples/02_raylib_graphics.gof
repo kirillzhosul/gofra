@@ -14,7 +14,7 @@ memory player_y 4
 
 #macro PLAYER_COLOR 0xFF0000FF end
 #macro PLAYER_SIZE  64         end
-#macro PLAYER_SPEED 10         end
+#macro PLAYER_SPEED 5          end
 
 #macro WINDOW_NAME   "Welcome to Gofra!" end
 #macro WINDOW_WIDTH  512                 end
@@ -24,7 +24,7 @@ memory player_y 4
 
 inline func void init_window[]
     // Init window with Raylib
-    WINDOW_WIDTH 
+    WINDOW_WIDTH
     WINDOW_HEIGHT 
     WINDOW_NAME to_cstr_ptr 
     call InitWindow
@@ -45,16 +45,16 @@ end
 
 #macro handle_movement
     // TODO(@kirillzhosul): This is an macro due to current critical problem with parser/codegen (inline function is also corrupted)
-    KEY_W call IsKeyPressed if
+    KEY_W call IsKeyDown if
         player_y copy ?> PLAYER_SPEED - !<
     end
-    KEY_S call IsKeyPressed if
+    KEY_S call IsKeyDown if
         player_y copy ?> PLAYER_SPEED + !<
     end 
-    KEY_A call IsKeyPressed if
+    KEY_A call IsKeyDown if
         player_x copy ?> PLAYER_SPEED - !<
     end 
-    KEY_D call IsKeyPressed if
+    KEY_D call IsKeyDown if
         player_x copy ?> PLAYER_SPEED + !<
     end
 end
