@@ -1,19 +1,27 @@
 # noqa: INP001
 """Build an distrubution for publishing package to PyPi."""
 
+from __future__ import annotations
+
 import subprocess
 from pathlib import Path
+from platform import system
+
+assert system() in ("Darwin", "Linux")
 
 ROOT = Path() / "../"
 LOCAL_LIBRARY_DIRECTORY = ROOT / "lib"
 DIST_LIBRARY_DIRECTORY = ROOT / "gofra" / "_distlib"
 
 
-subprocess.run(  # noqa: S603
-    ["cp", "-r", str(LOCAL_LIBRARY_DIRECTORY), str(DIST_LIBRARY_DIRECTORY)],  # noqa: S607
-    check=True,
-)
-subprocess.run(  # noqa: S603
-    ["poetry", "build"],  # noqa: S607
-    check=True,
-)
+def exec(*cmd: str | Path) -> None:  # noqa: A001
+    subprocess.run(  # noqa: S603
+        list(map(str, cmd)),
+        check=True,
+    )
+
+
+exec("cp", "-r", LOCAL_LIBRARY_DIRECTORY, DIST_LIBRARY_DIRECTORY)
+exec("poetry", "build")
+exec("find", DIST_LIBRARY_DIRECTORY, "-name", "*.gof", "-type", "f", "-delete")
+exec("find", DIST_LIBRARY_DIRECTORY, "-type", "d", "-delete")
