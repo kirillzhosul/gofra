@@ -77,6 +77,18 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         propagated_definitions=args.definitions,
     )
 
+    if args.preprocess_only:
+        path = args.source_filepaths[0]
+        lexer = tokenize_file(path)
+        preprocessor = preprocess_file(
+            args.source_filepaths[0],
+            lexer,
+            args.include_paths,
+            propagated_definitions=args.definitions,
+        )
+        for token in preprocessor:
+            print(str(token.text), end=" ")
+        return
     if not args.skip_typecheck:
         cli_message(
             level="INFO",
@@ -126,6 +138,7 @@ def cli_execute_after_compilation(args: CLIArguments) -> None:
         verbose=args.verbose,
     )
     exit_code = 0
+    assert args.output_filepath.exists()
     try:
         run(  # noqa: S602
             [args.output_filepath.absolute()],

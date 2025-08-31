@@ -34,6 +34,7 @@ class CLIArguments:
     definitions: dict[str, str]
 
     ir: bool
+    preprocess_only: bool
 
     linker_flags: list[str]
     assembler_flags: list[str]
@@ -97,7 +98,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         build_cache_dir=Path(args.cache_dir),
         target=target,
         definitions=definitions,
-        disable_optimizations=bool(args.disable_optimizations),
+        preprocess_only=bool(args.preprocess_only),
         skip_typecheck=bool(args.skip_typecheck),
         include_paths=include_paths,
         verbose=bool(args.verbose),
@@ -174,6 +175,14 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         type=str,
         help="Input source code files in Gofra to process (`.gof` files)",
         nargs="+",
+    )
+
+    parser.add_argument(
+        "--preprocess-only",
+        "-pp",
+        default=False,
+        action="store_true",
+        help="If passed will emit preprocessed text of an source",
     )
 
     parser.add_argument(
