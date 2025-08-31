@@ -1,38 +1,20 @@
 from gofra.context import ProgramContext
-from gofra.parser.functions.function import Function
-from gofra.parser.operators import OperatorType
-
-DCE_MAX_TRAVERSIONS = 128
+from gofra.optimizer.helpers.function_usage import search_unused_functions
 
 
 def optimize_dead_code_elimination(
     program: ProgramContext,
+    max_iterations: int,
 ) -> None:
-    """Remove dead code from final operators result."""
-    dce_remove_unused_functions(program)
+    """Perform DCE (dead-code-elimination) optimization onto program.
 
-
-def dce_remove_unused_functions(program: ProgramContext) -> None:
-    """Apply DCE for functions so unused functions are removed."""
-    for _ in range(DCE_MAX_TRAVERSIONS):
-        unused_functions = [
-            function
-            for function in program.functions.values()
-            if not _is_function_was_called(program, program.functions[function.name])
-        ]
+    Removes unused function from final program.
+    TODO(@kirillzhosul): Does not optimize dead code.
+    """
+    for _ in range(max_iterations):
+        unused_functions = search_unused_functions(program)
         if not unused_functions:
             return
 
-        [program.functions.pop(function.name) for function in unused_functions]
-
-
-def _is_function_was_called(program: ProgramContext, function: Function) -> bool:
-    """Check is given function was called atleast once in whole program."""
-    for possible_caller in [*program.functions.values(), program.entry_point]:
-        for operator in possible_caller.source:
-            if (
-                operator.type == OperatorType.FUNCTION_CALL
-                and operator.operand == function.name
-            ):
-                return True
-    return False
+        for function in unused_functions:
+            program.functions.pop(function.name)

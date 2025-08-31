@@ -3,17 +3,23 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from subprocess import CalledProcessError, run
+from typing import TYPE_CHECKING
 
 from gofra.assembler import assemble_program
 from gofra.cli.ir import emit_ir_into_stdout
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.gofra import process_input_file
-from gofra.optimizer import optimize_program
+from gofra.lexer.lexer import tokenize_file
+from gofra.optimizer import create_optimizer_pipeline
+from gofra.preprocessor.preprocessor import preprocess_file
 from gofra.typecheck import validate_type_safety
 
 from .arguments import CLIArguments, parse_cli_arguments
 from .errors import cli_gofra_error_handler
 from .output import cli_message
+
+if TYPE_CHECKING:
+    from gofra.context import ProgramContext
 
 
 def cli_entry_point(prog: str | None = None) -> None:
@@ -41,6 +47,27 @@ def cli_entry_point(prog: str | None = None) -> None:
             cli_execute_after_compilation(args)
 
 
+def cli_process_optimization_pipeline(
+    program: ProgramContext,
+    args: CLIArguments,
+) -> None:
+    """Apply optimization pipeline for program according to CLI arguments."""
+    cli_message(
+        level="INFO",
+        text=f"Applying optimizer pipeline (From base optimization level: {args.optimizer.level})",
+        verbose=args.verbose,
+    )
+
+    pipeline = create_optimizer_pipeline(args.optimizer)
+    for optimizer_pass, optimizer_pass_name in pipeline:
+        cli_message(
+            level="INFO",
+            text=f"Applying optimizer '{optimizer_pass_name}' pass",
+            verbose=args.verbose,
+        )
+        optimizer_pass(program)
+
+
 def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
     """Process full toolchain onto input source files."""
     cli_message(level="INFO", text="Parsing input files...", verbose=args.verbose)
@@ -60,13 +87,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
             functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
         )
 
-    if not args.disable_optimizations:
-        cli_message(
-            level="INFO",
-            text="Applying optimizations...",
-            verbose=args.verbose,
-        )
-        optimize_program(context)
+    cli_process_optimization_pipeline(context, args)
 
     if args.ir:
         emit_ir_into_stdout(context)

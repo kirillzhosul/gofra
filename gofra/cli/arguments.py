@@ -8,6 +8,11 @@ from platform import system as current_platform_system
 from typing import TYPE_CHECKING, cast
 
 from gofra.cli.output import cli_message
+from gofra.optimizer.config import (
+    OptimizerConfig,
+    build_default_optimizer_config_from_level,
+    merge_into_optimizer_config,
+)
 
 if TYPE_CHECKING:
     from gofra.assembler.assembler import OUTPUT_FORMAT_T
@@ -44,6 +49,8 @@ class CLIArguments:
     build_cache_dir: Path
     delete_build_cache: bool
 
+    optimizer: OptimizerConfig
+
 
 def parse_cli_arguments(prog: str) -> CLIArguments:
     """Parse CLI arguments from argparse into custom DTO."""
@@ -78,6 +85,8 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
     if bool(args.debug_symbols):
         assembler_flags += ["-g"]
 
+    optimizer = build_default_optimizer_config_from_level(level=args.optimizer_level)
+    optimizer = merge_into_optimizer_config(optimizer, args, prefix="optimizer")
     return CLIArguments(
         debug_symbols=bool(args.debug_symbols),
         ir=bool(args.ir),
@@ -96,6 +105,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         linker_flags=args.linker,
         assembler_flags=assembler_flags,
         link_with_system_libraries=args.link_with_system_libraries,
+        optimizer=optimizer,
     )
 
 
@@ -163,7 +173,7 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     parser.add_argument(
         "source_files",
         type=str,
-        help="Source code files in Gofra (`.gof` files)",
+        help="Input source code files in Gofra to process (`.gof` files)",
         nargs="+",
     )
 
@@ -172,7 +182,7 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         "-o",
         type=str,
         required=False,
-        help="Path to output file to generate, by default will be infered from first input filename, also infers build cache filenames from that",
+        help="Output file path to generate, by default will be infered from first input filename",
     )
 
     parser.add_argument(
@@ -180,9 +190,10 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         "-t",
         type=str,
         required=False,
-        help="Compilation target. Infers codegen to use from that.",
+        help="Target compilation triplet. By default target is infered from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used.",
         choices=["x86_64-linux", "aarch64-darwin"],
     )
+
     parser.add_argument(
         "--output-format",
         "-of",
@@ -292,14 +303,6 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--disable-optimizations",
-        "-no",
-        action="store_true",
-        required=False,
-        help="If passed, all optimizations will be disable (DCE, CF)",
-    )
-
-    parser.add_argument(
         "--skip-typecheck",
         "-nt",
         action="store_true",
@@ -307,7 +310,92 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         help="If passed, will disable type safety checking",
     )
 
+    _inject_optimizer_group(parser)
     return parser
+
+
+def _inject_optimizer_group(parser: ArgumentParser) -> None:
+    """Construct and inject argument group with optimizer options into given parser."""
+    group = parser.add_argument_group(
+        title="Optimizations",
+        description="Flags for the optimizer, granually control how compiler optimize your code.",
+    )
+
+    ###
+    # Optimization level.
+    ###
+    group_optimization_level = group.add_mutually_exclusive_group()
+    group_optimization_level.add_argument(
+        "-O0",
+        dest="optimizer_level",
+        action="store_const",
+        default=0,
+        const=0,
+        help="Disable all optimizations (default).",
+    )
+    group_optimization_level.add_argument(
+        "-O1",
+        dest="optimizer_level",
+        action="store_const",
+        const=1,
+        help="Apply basic optimizations.",
+    )
+
+    ###
+    # DCE (dead-code-elimination).
+    ###
+    group_dce = group.add_mutually_exclusive_group()
+    group_dce.add_argument(
+        "-fdce",
+        dest="optimizer_do_dead_code_elimination",
+        action="store_const",
+        const=True,
+        help="[Enabled at -O1 and above] Force enable DCE (dead-code-elimination) optimization. Removes unused functions (no calls to them inside final program), except explicit 'global' ones.",
+    )
+    group_dce.add_argument(
+        "-fno-dce",
+        action="store_const",
+        const=False,
+        dest="optimizer_do_dead_code_elimination",
+        help="[Enabled at -O1 and above] Force disable DCE (dead-code-eliminiation) optimization, see '-fdce' flag for more information.",
+    )
+    group.add_argument(
+        "--dce-max-iterations",
+        metavar="<N>",
+        dest="optimizer_dead_code_elimination_max_iterations",
+        help="Max iterations limit for DCE optimization. Low limit may result into not all functions are being removed due to their reference to each in cascade.",
+    )
+
+    ###
+    # Function inlining
+    ###
+    group_dce = group.add_mutually_exclusive_group()
+    group_dce.add_argument(
+        "-finline-functions",
+        dest="optimizer_do_function_inlining",
+        action="store_const",
+        const=True,
+        help="[Enabled at -O1 and above] Force enable function inlining optimization. Marks small functions as 'inline' (size is controlled with '--inline-functions-threshold') to reduce function overhead.",
+    )
+    group_dce.add_argument(
+        "-fno-inline-functions",
+        action="store_const",
+        const=False,
+        dest="optimizer_do_function_inlining",
+        help="[Enabled at -O1 and above] Force disable function inlining optimization, see '-finline-functions' flag for more information.",
+    )
+    group.add_argument(
+        "--inline-functions-max-operators",
+        metavar="<N>",
+        dest="optimizer_function_inlining_max_operators",
+        help="Max size of an function to be inlined with function inlining optimization in operators",
+    )
+    group.add_argument(
+        "--inline-functions-max-iterations",
+        metavar="<N>",
+        dest="optimizer_function_inlining_max_iterations",
+        help="Max iterations for function inlining to search for new inlined function usage in other functions. Low limit will result into unknown function call at assembler stage. This may slightly increase finaly binary size",
+    )
 
 
 def infer_output_filename(  # noqa: PLR0911
