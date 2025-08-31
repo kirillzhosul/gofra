@@ -63,7 +63,11 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     test_matrix: list[Test] = []
     for test_path in test_paths:
         try:
-            context = process_input_file(filepath=test_path, include_paths=[])
+            context = process_input_file(
+                filepath=test_path,
+                include_paths=[],
+                propagated_definitions={},  # TODO(@kirillzhosul): Properly propagate default definitions.
+            )
         except GofraError as e:
             test_matrix.append(Test(status=TestStatus.ERROR, path=test_path, error=e))
             continue
@@ -80,6 +84,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
             additional_assembler_flags=[],
             additional_linker_flags=[],
             delete_build_cache_after_compilation=True,
+            link_with_system_libraries=True,
         )
         test_matrix.append(Test(status=TestStatus.SUCCESS, path=test_path))
     display_test_matrix(test_matrix)
