@@ -43,7 +43,6 @@ class CLIArguments:
     target: TARGET_T
     link_with_system_libraries: bool
 
-    disable_optimizations: bool
     skip_typecheck: bool
 
     build_cache_dir: Path
