@@ -1,0 +1,23 @@
+// Opens an text file from PATH and emits it content into stdout (`cat` analogue)
+
+#include "std.gof"
+
+#macro PATH "test.txt" to_cstr_ptr end
+
+memory BUFFER 1024
+#macro sizeof(BUFFER) 1024 end
+
+memory FD_BUFFER 32
+
+func void main[]
+    FD_BUFFER PATH 0 0 call sc_open !<
+    FD_BUFFER ?> 0 < if abort end // TODO(@kirillzhosul): Research why non-existant file returns STDERR FD
+
+
+    FD_BUFFER ?> BUFFER sizeof(BUFFER) call sc_read 
+    1 < if abort end
+
+    POSIX_STDOUT BUFFER sizeof(BUFFER) call sc_write drop
+
+    0 exit
+end
