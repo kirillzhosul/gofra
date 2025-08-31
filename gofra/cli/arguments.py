@@ -133,11 +133,15 @@ def process_definitions(args: Namespace, target: TARGET_T) -> dict[str, str]:
 
 
 def process_output_path(source_filepaths: list[Path], args: Namespace) -> Path:
-    return (
+    infered_output_path = (
         Path(args.output)
         if args.output
         else infer_output_filename(source_filepaths, output_format=args.output_format)
     )
+    if infered_output_path in source_filepaths:
+        msg = "Infered/specified output file path will rewrite existing input file, please specify another output path."
+        raise ValueError(msg)
+    return infered_output_path
 
 
 def process_include_paths(args: Namespace) -> list[Path]:
