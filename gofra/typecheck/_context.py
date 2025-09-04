@@ -11,6 +11,7 @@ from .exceptions import (
     TypecheckNotEnoughFunctionArgumentsError,
     TypecheckNotEnoughOperatorArgumentsError,
 )
+from .types import GOFRA_TYPE_UNION
 from .types import GofraType as T
 
 if TYPE_CHECKING:
@@ -67,7 +68,7 @@ class TypecheckContext:
         self,
         operator_or_function: Operator | Function,
         inside_function: Function,
-        *expected_types: T,
+        *expected_types: GOFRA_TYPE_UNION,
         operator: Operator | None = None,
     ) -> None:
         """Expect given arguments and count and their types should match.
@@ -85,19 +86,26 @@ class TypecheckContext:
             operator=operator,
         )
         _reference_type_stack = self.emulated_stack_types[::]
+
         for expected_type in expected_types[::-1]:
             argument_type = self.pop_type_from_stack()
-            if expected_type not in (T.ANY, argument_type):
-                if isinstance(operator_or_function, Operator):
-                    raise TypecheckInvalidOperatorArgumentTypeError(
-                        operator=operator_or_function,
-                        actual_type=argument_type,
-                        expected_type=expected_type,
-                        type_stack=_reference_type_stack,
-                        contract=expected_types,
-                    )
-                raise TypecheckInvalidFunctionArgumentTypeError(
-                    function=operator_or_function,
+
+            against_contract = (T.ANY, argument_type)
+
+            if any(t in against_contract for t in (*expected_type, T.ANY)):
+                continue
+
+            print(expected_type, against_contract)
+            if isinstance(operator_or_function, Operator):
+                raise TypecheckInvalidOperatorArgumentTypeError(
+                    operator=operator_or_function,
                     actual_type=argument_type,
                     expected_type=expected_type,
+                    type_stack=_reference_type_stack,
+                    contract=expected_types,
                 )
+            raise TypecheckInvalidFunctionArgumentTypeError(
+                function=operator_or_function,
+                actual_type=argument_type,
+                expected_contract=expected_type,
+            )

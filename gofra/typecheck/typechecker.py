@@ -13,6 +13,7 @@ from .exceptions import (
     TypecheckInvalidPointerArithmeticsError,
 )
 from .types import GofraType as T
+from .types import is_type_coerces_to
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping, MutableSequence, Sequence
@@ -69,7 +70,7 @@ def emulate_type_stack_for_operators(
             case OperatorType.WHILE | OperatorType.END:
                 ...  # Nothing here as there nothing to typecheck
             case OperatorType.DO | OperatorType.IF:
-                context.raise_for_arguments(operator, current_function, T.BOOLEAN)
+                context.raise_for_arguments(operator, current_function, (T.BOOLEAN,))
 
                 # Acquire where this block jumps, shift due to emulation layers
                 assert operator.jumps_to_operator_idx
@@ -115,7 +116,7 @@ def emulate_type_stack_for_operators(
                     context.raise_for_arguments(
                         function,
                         current_function,
-                        *type_contract_in,
+                        *((t,) for t in type_contract_in),
                         operator=operator,
                     )
                 context.push_types(*function.type_contract_out)
@@ -126,7 +127,7 @@ def emulate_type_stack_for_operators(
                         context.raise_for_arguments(
                             operator,
                             current_function,
-                            T.INTEGER,
+                            (T.INTEGER,),
                         )
                         context.push_types(T.INTEGER)
                     case Intrinsic.MULTIPLY | Intrinsic.DIVIDE | Intrinsic.MODULUS:
@@ -143,7 +144,10 @@ def emulate_type_stack_for_operators(
                             context.pop_type_from_stack(),
                         )
 
-                        if b != T.INTEGER or a != T.INTEGER:
+                        a_coerces = is_type_coerces_to(a, T.INTEGER)
+                        b_coerces = is_type_coerces_to(b, T.INTEGER)
+
+                        if not a_coerces or not b_coerces:
                             raise TypecheckInvalidBinaryMathArithmeticsError(
                                 actual_lhs_type=a,
                                 actual_rhs_type=b,
@@ -165,22 +169,22 @@ def emulate_type_stack_for_operators(
 
                         if a == T.POINTER:
                             # Pointer arithmetics
-                            if b != T.INTEGER:
-                                raise TypecheckInvalidPointerArithmeticsError(
-                                    actual_lhs_type=a,
-                                    actual_rhs_type=b,
-                                    operator=operator,
-                                )
-                            context.push_types(T.POINTER)
-                            continue
+                            if is_type_coerces_to(b, T.INTEGER):
+                                context.push_types(T.POINTER)
+                                continue
+                            raise TypecheckInvalidPointerArithmeticsError(
+                                actual_lhs_type=a,
+                                actual_rhs_type=b,
+                                operator=operator,
+                            )
 
                         # Integer math
                         context.push_types(b, a)
                         context.raise_for_arguments(
                             operator,
                             current_function,
-                            T.INTEGER,
-                            T.INTEGER,
+                            (T.INTEGER,),
+                            (T.INTEGER,),
                         )
                         context.push_types(T.INTEGER)
 
@@ -188,16 +192,16 @@ def emulate_type_stack_for_operators(
                         context.raise_for_arguments(
                             operator,
                             current_function,
-                            T.POINTER,
-                            T.INTEGER,
+                            (T.POINTER,),
+                            (T.INTEGER, T.BOOLEAN, T.POINTER),
                         )
                     case Intrinsic.MEMORY_LOAD:
                         context.raise_for_arguments(
                             operator,
                             current_function,
-                            T.POINTER,
+                            (T.POINTER,),
                         )
-                        context.push_types(T.INTEGER)
+                        context.push_types(T.ANY)
                     case Intrinsic.COPY:
                         context.raise_for_enough_arguments(
                             operator,
@@ -218,12 +222,16 @@ def emulate_type_stack_for_operators(
                         context.raise_for_arguments(
                             operator,
                             current_function,
-                            T.ANY,
-                            T.ANY,
+                            (T.ANY,),
+                            (T.ANY,),
                         )
                         context.push_types(T.BOOLEAN)
                     case Intrinsic.DROP:
-                        context.raise_for_arguments(operator, current_function, T.ANY)
+                        context.raise_for_arguments(
+                            operator,
+                            current_function,
+                            (T.ANY,),
+                        )
                     case (
                         Intrinsic.SYSCALL0
                         | Intrinsic.SYSCALL1
@@ -237,7 +245,7 @@ def emulate_type_stack_for_operators(
                         assert not operator.syscall_optimization_omit_result
                         args_count = operator.get_syscall_arguments_count()
 
-                        argument_types = (T.ANY for _ in range(args_count))
+                        argument_types = ((T.ANY,) for _ in range(args_count))
                         context.raise_for_arguments(
                             operator,
                             current_function,

@@ -29,3 +29,10 @@ WORD_TO_GOFRA_TYPE = {
     "bool": GofraType.BOOLEAN,
     "void": GofraType.VOID,
 }
+
+type GOFRA_TYPE_UNION = tuple[GofraType, ...]
+
+
+def is_type_coerces_to(a: GofraType, b: GofraType) -> bool:
+    # TODO(@kirillzhosul): This is quite complex overall system (typechecker) and requires overall refactor due to current unmaintability (a little bit).
+    return a in (b, GofraType.ANY)
