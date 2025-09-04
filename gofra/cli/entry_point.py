@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from subprocess import CalledProcessError, run
 from typing import TYPE_CHECKING
 
 from gofra.assembler import assemble_program
-from gofra.cli.ir import emit_ir_into_stdout
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.gofra import process_input_file
-from gofra.lexer.lexer import tokenize_file
+from gofra.lexer import tokenize_file
 from gofra.optimizer import create_optimizer_pipeline
 from gofra.preprocessor.preprocessor import preprocess_file
 from gofra.typecheck import validate_type_safety
 
 from .arguments import CLIArguments, parse_cli_arguments
 from .errors import cli_gofra_error_handler
+from .helpers import cli_get_executable_program
+from .ir import emit_ir_into_stdout
 from .output import cli_message
 
 if TYPE_CHECKING:
@@ -24,13 +24,8 @@ if TYPE_CHECKING:
 
 def cli_entry_point(prog: str | None = None) -> None:
     """CLI main entry."""
-    prog = prog if prog else Path(sys.argv[0]).name
+    prog = cli_get_executable_program(override=prog, warn_proper_installation=True)
     with cli_gofra_error_handler():
-        if prog == "__main__.py":
-            cli_message(
-                "WARNING",
-                "Running with prog == '__main__.py', consider proper installation!",
-            )
         args = parse_cli_arguments(prog)
 
         assert len(args.source_filepaths) == 1
@@ -128,6 +123,9 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         text=f"Compiled input file down to {args.output_format} `{args.output_filepath.name}`!",
         verbose=args.verbose,
     )
+
+
+PERMISSION_CHMOD_EXECUTABLE = 0o755
 
 
 def cli_execute_after_compilation(args: CLIArguments) -> None:

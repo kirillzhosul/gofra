@@ -1,46 +1,26 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum, auto
-from pathlib import Path
+import time
 from typing import TYPE_CHECKING
 
-from gofra.assembler.assembler import assemble_program
+from gofra.cli.arguments import infer_target
 from gofra.cli.errors import cli_gofra_error_handler
-from gofra.cli.output import CLIColor, cli_message
+from gofra.cli.output import cli_message
 from gofra.exceptions import GofraError
-from gofra.gofra import process_input_file
+from gofra.testkit.cli.matrix import display_test_matrix
 
-from .arguments import CLIArguments, parse_cli_arguments
+from .cli.arguments import CLIArguments, parse_cli_arguments
+from .evaluate import evaluate_test_case
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
+    from .test import Test
 
-class TestStatus(Enum):
-    SKIPPED = auto()
-
-    ERROR = auto()
-    SUCCESS = auto()
-
-
-@dataclass(frozen=False)
-class Test:
-    status: TestStatus
-    path: Path
-    error: GofraError | None = None
-
-
-COLORS = {
-    TestStatus.SUCCESS: CLIColor.GREEN,
-    TestStatus.ERROR: CLIColor.RED,
-    TestStatus.SKIPPED: CLIColor.RESET,
-}
-ICONS = {
-    TestStatus.SUCCESS: "+",
-    TestStatus.ERROR: "-",
-    TestStatus.SKIPPED: ".",
-}
+TEST_CASE_PATTERN = "test_*.gof"
+TESTKIT_CACHE_DIR = "__testkit__"
+NANOS_TO_SECONDS = 1_000_000_000
 
 
 def cli_entry_point() -> None:
@@ -52,54 +32,46 @@ def cli_entry_point() -> None:
 
 def cli_process_testkit_runner(args: CLIArguments) -> None:
     """Process full testkit toolchain."""
-    cli_message(level="INFO", text="Searching test files...")
+    cli_message(level="INFO", text="Searching test files...", verbose=args.verbose)
 
     test_paths = tuple(search_test_case_files(args.directory))
     cli_message(
         level="INFO",
         text=f"Found {len(test_paths)} test case files.",
+        verbose=args.verbose,
     )
 
+    # TODO(@kirillzhosul): If testkit is being ran first time, it skips proper creation of an build cache directory as it is modified by lines below.
+    cache_directory = args.build_cache_dir / TESTKIT_CACHE_DIR
+    cache_directory.mkdir(parents=True, exist_ok=True)
+
+    target = infer_target()
+    start_time = time.monotonic_ns()
     test_matrix: list[Test] = []
     for test_path in test_paths:
-        try:
-            context = process_input_file(
-                filepath=test_path,
-                include_paths=[],
-                propagated_definitions={},  # TODO(@kirillzhosul): Properly propagate default definitions.
-            )
-        except GofraError as e:
-            test_matrix.append(Test(status=TestStatus.ERROR, path=test_path, error=e))
-            continue
-        assemble_program(
-            context,
-            Path(
-                args.build_cache_dir
-                / f"._testkit__build__{test_path.with_suffix('').name}",
-            ),
-            output_format="executable",
-            target="aarch64-darwin",
-            build_cache_dir=args.build_cache_dir,
-            verbose=True,
-            additional_assembler_flags=[],
-            additional_linker_flags=[],
-            delete_build_cache_after_compilation=True,
-            link_with_system_libraries=True,
+        result = evaluate_test_case(
+            test_path,
+            args,
+            build_target=target,
+            build_format="executable",
+            cache_directory=cache_directory,
         )
-        test_matrix.append(Test(status=TestStatus.SUCCESS, path=test_path))
+        test_matrix.append(result)
+
+    if args.delete_build_artifacts:
+        cli_message(
+            level="INFO",
+            text="Removing build artifacts...",
+            verbose=args.verbose,
+        )
+        [test.artifact_path.unlink() for test in test_matrix if test.artifact_path]
+    time_taken = (time.monotonic_ns() - start_time) / NANOS_TO_SECONDS
+    cli_message(
+        level="SUCCESS",
+        text=f"Completed testkit run for target '{target}' with {len(test_paths)} cases in {time_taken:.2f}s. (avg {time_taken / len(test_paths):.2f}s.)",
+    )
     display_test_matrix(test_matrix)
     display_test_errors(test_matrix)
-
-
-def search_test_case_files(directory: Path) -> Generator[Path]:
-    return directory.glob("test_*.gof", case_sensitive=False)
-
-
-def display_test_matrix(matrix: list[Test]) -> None:
-    for test in matrix:
-        color = COLORS[test.status]
-        icon = ICONS[test.status]
-        print(f"{color}{icon}", test.path)
 
 
 def display_test_errors(matrix: list[Test]) -> None:
@@ -109,4 +81,14 @@ def display_test_errors(matrix: list[Test]) -> None:
         if test.error is None:
             continue
         cli_message("INFO", f"While testing `{test.path}`:")
-        cli_message("ERROR", repr(test.error))
+        if isinstance(test.error, GofraError):
+            cli_message("ERROR", repr(test.error))
+            continue
+        cli_message(
+            "ERROR",
+            f"Execution finished with exit code {test.error.returncode} while expected exit code 0!",
+        )
+
+
+def search_test_case_files(directory: Path) -> Generator[Path]:
+    return directory.glob(TEST_CASE_PATTERN, case_sensitive=False)

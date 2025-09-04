@@ -7,12 +7,15 @@ from pathlib import Path
 from platform import system as current_platform_system
 from typing import TYPE_CHECKING, cast
 
-from gofra.cli.output import cli_message
+from gofra.cli.distribution import infer_distribution_library_paths
 from gofra.optimizer.config import (
     OptimizerConfig,
     build_default_optimizer_config_from_level,
     merge_into_optimizer_config,
 )
+
+from .definitions import construct_propagated_toolchain_definitions
+from .output import cli_message
 
 if TYPE_CHECKING:
     from gofra.assembler.assembler import OUTPUT_FORMAT_T
@@ -123,23 +126,9 @@ def process_definitions(args: Namespace, target: TARGET_T) -> dict[str, str]:
             continue
         user_definitions[cli_definition] = "1"
 
-    toolchain_definitions = {}
-    match target:
-        case "aarch64-darwin":
-            toolchain_definitions = {
-                "OS_POSIX": "1",
-                "OS_DARWIN": "1",
-                "ARCH_AARCH64": "1",
-            }
-
-        case "x86_64-linux":
-            toolchain_definitions = {
-                "OS_POSIX": "1",
-                "OS_LINUX": "1",
-                "ARCH_X86_64": "1",
-            }
-
-    return user_definitions | toolchain_definitions
+    return user_definitions | construct_propagated_toolchain_definitions(
+        build_target_triplet=target,
+    )
 
 
 def process_output_path(source_filepaths: list[Path], args: Namespace) -> Path:
@@ -460,20 +449,3 @@ def infer_target() -> TARGET_T:
                 text="Unable to infer compilation target due to no fallback for current operating system",
             )
             sys.exit(1)
-
-
-def infer_distribution_library_paths() -> list[Path]:
-    """Infers paths to library distribution.
-
-    (as package may be installed via package managers and they may mess with files includes).
-    """
-    distribution_root = Path(__import__("gofra").__file__).parent
-    assert distribution_root.exists(), (
-        "Corrupted distribution (dist parent is non-existant, unable to infer/resolve library paths)"
-    )
-    return [
-        # default distribution
-        distribution_root / "_distlib",
-        # Local package
-        distribution_root.parent / "lib",
-    ]
