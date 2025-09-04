@@ -138,7 +138,10 @@ def cli_execute_after_compilation(args: CLIArguments) -> None:
         verbose=args.verbose,
     )
     exit_code = 0
+
     assert args.output_filepath.exists()
+    args.output_filepath.chmod(PERMISSION_CHMOD_EXECUTABLE)
+
     try:
         run(  # noqa: S602
             [args.output_filepath.absolute()],
