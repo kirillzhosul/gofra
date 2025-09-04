@@ -84,6 +84,7 @@ class TypecheckContext:
             len(expected_types),
             operator=operator,
         )
+        _reference_type_stack = self.emulated_stack_types[::]
         for expected_type in expected_types[::-1]:
             argument_type = self.pop_type_from_stack()
             if expected_type not in (T.ANY, argument_type):
@@ -92,6 +93,8 @@ class TypecheckContext:
                         operator=operator_or_function,
                         actual_type=argument_type,
                         expected_type=expected_type,
+                        type_stack=_reference_type_stack,
+                        contract=expected_types,
                     )
                 raise TypecheckInvalidFunctionArgumentTypeError(
                     function=operator_or_function,

@@ -14,17 +14,27 @@ class TypecheckInvalidOperatorArgumentTypeError(GofraError):
         expected_type: GofraType,
         actual_type: GofraType,
         operator: Operator,
+        contract: Sequence[GofraType],
+        type_stack: Sequence[GofraType],
     ) -> None:
         super().__init__(*args)
         self.expected_type = expected_type
         self.actual_type = actual_type
         self.operator = operator
+        self.contract = contract
+        self.type_stack = type_stack
 
     def __repr__(self) -> str:
+        contract = ", ".join(map(repr, self.contract))
+        type_stack = ", ".join(map(repr, self.type_stack))
+
         return f"""Type safety check failed!
 
 Expected {self.expected_type.name} but got {self.actual_type.name}
  for '{self.operator.token.text}' at {self.operator.token.location}
+
+'{self.operator.token.text}' contract is: {contract} 
+Actual type stack is: {type_stack}
 
 Did you miss the types?"""
 
