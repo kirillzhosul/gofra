@@ -1,14 +1,11 @@
 #include "os/io.gof"
 
-func void runtime_assert[int,int,ptr,int]
+#macro runtime_assert
     // Check for equality at runtime
     // (assert two values same)
 
-    // TODO(@kirillzhosul): Finish `runtime_assert` and parser fatal error
-    POSIX_STDERR "Runtime asserts not implemented yet!\n" print_fd abort
-
-    drop drop 
-    == if
+    != if
         POSIX_STDERR "runtime_assert: Assertion failed\n" print_fd abort
     end
 end
+
