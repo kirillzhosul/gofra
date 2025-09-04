@@ -1,3 +1,7 @@
 #include "os"
 #include "assert.gof"
 #include "types.gof"
+
+
+#macro ... 1 drop end
+#macro noop ... end
