@@ -80,7 +80,7 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
         case TokenType.STRING:
             return _push_string_operator(context, token)
         case TokenType.WORD:
-            if _try_unpack_macro_or_inline_function_from_token(context, token):
+            if _try_unpack_function_from_token(context, token):
                 return None
 
             if _try_unpack_memory_reference_from_token(context, token):
@@ -145,12 +145,12 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
                 is_contextual=False,
             )
         case Keyword.MEMORY:
-            return _unpack_memory_segment_from_token(context, token)
+            return _unpack_memory_segment_from_token(context)
         case _:
             assert_never(token.value)
 
 
-def _unpack_memory_segment_from_token(context: ParserContext, token: Token) -> None:
+def _unpack_memory_segment_from_token(context: ParserContext) -> None:
     memory_segment_name = next(context.tokenizer, None)
     if not memory_segment_name:
         raise NotImplementedError
@@ -169,26 +169,26 @@ def _unpack_memory_segment_from_token(context: ParserContext, token: Token) -> N
 
 
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:
-    extern_call_name_token = next(context.tokenizer, None)
-    if not extern_call_name_token:
+    name_token = next(context.tokenizer, None)
+    if not name_token:
         raise NotImplementedError
-    extern_call_name = extern_call_name_token.text
-
-    if extern_call_name_token.type != TokenType.WORD:
+    if name_token.type != TokenType.WORD:
         raise NotImplementedError
+    name = name_token.text
 
-    target_function = context.functions.get(extern_call_name)
-    if not target_function:
-        raise NotImplementedError(f"Unknown function {extern_call_name}")
+    if not (function := context.functions.get(name)):
+        msg = f"Unknown function {name}"
+        raise NotImplementedError(msg)
 
-    if target_function.emit_inline_body:
-        _try_unpack_macro_or_inline_function_from_token(context, extern_call_name_token)
+    if function.emit_inline_body:
+        assert not function.external_definition_link_to
+        context.expand_from_inline_block(function)
         return
 
     context.push_new_operator(
         OperatorType.FUNCTION_CALL,
         token,
-        extern_call_name,
+        name,
         is_contextual=False,
     )
 
@@ -384,26 +384,26 @@ def _try_unpack_memory_reference_from_token(
     return True
 
 
-def _try_unpack_macro_or_inline_function_from_token(
+def _try_unpack_function_from_token(
     context: ParserContext,
     token: Token,
 ) -> bool:
     assert token.type == TokenType.WORD
 
-    inline_block = context.functions.get(token.text, None)
+    function = context.functions.get(token.text, None)
+    if function:
+        if function.emit_inline_body:
+            context.expand_from_inline_block(function)
+            return True
+        context.push_new_operator(
+            OperatorType.FUNCTION_CALL,
+            token,
+            function.name,
+            is_contextual=False,
+        )
+        return True
 
-    if inline_block:
-        if (
-            not inline_block.emit_inline_body
-            or inline_block.external_definition_link_to
-        ):
-            raise NotImplementedError(
-                f"use `call` to call an function, obtaining an function is not implemented yet {token.location}"
-            )
-
-        context.expand_from_inline_block(inline_block)
-
-    return bool(inline_block)
+    return False
 
 
 def _push_string_operator(context: ParserContext, token: Token) -> None:
