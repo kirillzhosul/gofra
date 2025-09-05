@@ -113,3 +113,6 @@ class Function:
 
     def abi_ffi_push_retval_onto_stack(self) -> bool:
         return bool(self.external_definition_link_to) and bool(self.type_contract_out)
+
+    def abi_ffi_arguments_count(self) -> int:
+        return len(self.type_contract_in) if self.external_definition_link_to else 0
