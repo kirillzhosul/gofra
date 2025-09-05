@@ -123,7 +123,7 @@ def amd64_linux_operator_instructions(
                 context,
                 function_name=function_name,
                 abi_ffi_push_retval_onto_stack=function.abi_ffi_push_retval_onto_stack(),
-                abi_ffi_arguments_count=len(function.type_contract_in),
+                abi_ffi_arguments_count=function.abi_ffi_arguments_count(),
             )
         case OperatorType.FUNCTION_RETURN:
             function_end_with_epilogue(context)
