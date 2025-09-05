@@ -43,7 +43,12 @@ def validate_function_type_safety(
         initial_type_stack=list(function.type_contract_in),
         current_function=function,
     )
-    if emulated_type_stack != function.type_contract_out:
+
+    # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
+    if len(emulated_type_stack) != len(function.type_contract_out) or not all(
+        is_type_coerces_to(a, b)
+        for a, b in zip(emulated_type_stack, function.type_contract_out)
+    ):
         raise TypecheckFunctionTypeContractOutViolatedError(
             function=function,
             type_stack=list(emulated_type_stack),
