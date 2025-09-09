@@ -17,8 +17,8 @@ class CLIArguments:
     verbose: bool
     include_paths: list[Path]
 
+    delete_build_artifacts: bool
     delete_build_cache: bool = True
-    delete_build_artifacts: bool = True
 
 
 def parse_cli_arguments() -> CLIArguments:
@@ -31,6 +31,7 @@ def parse_cli_arguments() -> CLIArguments:
         verbose=not bool(args.silent),
         directory=Path(args.directory),
         build_cache_dir=Path(args.cache_dir),
+        delete_build_artifacts=bool(args.delete_build_artifacts),
     )
 
 
@@ -49,6 +50,16 @@ def _construct_argument_parser() -> ArgumentParser:
         action="store_true",
         help="Silence all verbose output, defaults to false (verbose)",
     )
+
+    parser.add_argument(
+        "--no-delete-artifacts",
+        "--keep-artifacts",
+        dest="delete_build_artifacts",
+        default=True,
+        action="store_false",
+        help="If true will not delete build cache artifacts within testkit sub directory.",
+    )
+
     parser.add_argument(
         "--directory",
         "-d",

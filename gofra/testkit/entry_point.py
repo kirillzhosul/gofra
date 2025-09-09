@@ -69,7 +69,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     time_taken = (time.monotonic_ns() - start_time) / NANOS_TO_SECONDS
     cli_message(
         level="SUCCESS",
-        text=f"Completed testkit run for target '{target}' with {len(test_paths)} cases in {time_taken:.2f}s. (avg {time_taken / len(test_paths):.2f}s.)",
+        text=f"Completed testkit run for target '{target}' with {len(test_paths)} cases in {time_taken:.2f}s. (avg {(time_taken / len(test_paths)) if len(test_paths) else 0:.2f}s.)",
     )
     display_test_matrix(test_matrix)
     display_test_errors(test_matrix)
