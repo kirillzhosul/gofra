@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from subprocess import TimeoutExpired
 from typing import TYPE_CHECKING
 
 from gofra.cli.arguments import infer_target
@@ -83,6 +84,9 @@ def display_test_errors(matrix: list[Test]) -> None:
         cli_message("INFO", f"While testing `{test.path}`:")
         if isinstance(test.error, GofraError):
             cli_message("ERROR", repr(test.error))
+            continue
+        if isinstance(test.error, TimeoutExpired):
+            cli_message("ERROR", "Execution timed out (compile OK!)")
             continue
         cli_message(
             "ERROR",

@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from subprocess import CalledProcessError, run
+from subprocess import CalledProcessError, TimeoutExpired, run
 
 from gofra.assembler.assembler import OUTPUT_FORMAT_T, assemble_program
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
@@ -72,8 +72,17 @@ def evaluate_test_case(
             stderr=sys.stderr,
             check=True,
             shell=True,
+            timeout=15,
         )
     except CalledProcessError as e:
+        return Test(
+            target=build_target,
+            status=TestStatus.EXECUTION_ERROR,
+            path=path,
+            artifact_path=artifact_path,
+            error=e,
+        )
+    except TimeoutExpired as e:
         return Test(
             target=build_target,
             status=TestStatus.EXECUTION_ERROR,
