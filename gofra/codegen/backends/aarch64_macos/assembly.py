@@ -148,7 +148,7 @@ def initialize_static_data_section(
 
     for name, data in static_data_section:
         if isinstance(data, str):
-            context.fd.write(f'{name}: .asciz "{data}\\0"\n')
+            context.fd.write(f'{name}: .asciz "{data}"\n')
             continue
         context.fd.write(f"{name}: .space {data}\n")
 
