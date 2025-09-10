@@ -32,7 +32,8 @@ class PreprocessorState:
         include_search_paths: Iterable[Path],
         macros: MacrosRegistry,
     ) -> None:
-        self.path = path.resolve(strict=True)
+        # Do not strictly resolve that path as this being lazy-toolchain and will cause to errors from lexer or previous stage to bloat preprocessor
+        self.path = path.resolve(strict=False)
 
         self.include_search_paths = include_search_paths
         self.already_included_paths = [path]

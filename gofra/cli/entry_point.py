@@ -79,7 +79,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         registry_from_raw_definitions(
             location=TokenLocation.toolchain(),
             definitions=construct_propagated_toolchain_definitions(
-                build_target_triplet=args.target,
+                target=args.target,
             ),
         ),
     )

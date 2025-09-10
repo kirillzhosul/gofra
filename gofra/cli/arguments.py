@@ -13,12 +13,12 @@ from gofra.optimizer.config import (
     build_default_optimizer_config_from_level,
     merge_into_optimizer_config,
 )
+from gofra.targets import Target
 
 from .output import cli_message
 
 if TYPE_CHECKING:
     from gofra.assembler.assembler import OUTPUT_FORMAT_T
-    from gofra.codegen.targets import TARGET_T
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ class CLIArguments:
 
     verbose: bool
 
-    target: TARGET_T
+    target: Target
     link_with_system_libraries: bool
 
     skip_typecheck: bool
@@ -75,11 +75,12 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
             text="Skipping typecheck is unsafe, ensure that you know what you doing",
         )
 
-    target: TARGET_T = args.target or infer_target()
-    assert target in ("x86_64-linux", "aarch64-darwin")
+    # args.target infer that
+    assert args.target in ("amd64-unknown-linux", "arm64-apple-darwin", None)
+    target: Target = Target.from_triplet(args.target) if args.target else infer_target()
 
     source_filepaths = [Path(f) for f in args.source_files]
-    output_filepath = process_output_path(source_filepaths, args)
+    output_filepath = process_output_path(source_filepaths, args, target)
     include_paths = process_include_paths(args)
     definitions = process_definitions(args)
 
@@ -125,11 +126,19 @@ def process_definitions(args: Namespace) -> dict[str, str]:
     return user_definitions
 
 
-def process_output_path(source_filepaths: list[Path], args: Namespace) -> Path:
+def process_output_path(
+    source_filepaths: list[Path],
+    args: Namespace,
+    target: Target,
+) -> Path:
     infered_output_path = (
         Path(args.output)
         if args.output
-        else infer_output_filename(source_filepaths, output_format=args.output_format)
+        else infer_output_filename(
+            source_filepaths,
+            output_format=args.output_format,
+            target=target,
+        )
     )
     if infered_output_path in source_filepaths:
         msg = "Infered/specified output file path will rewrite existing input file, please specify another output path."
@@ -182,7 +191,7 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         type=str,
         required=False,
         help="Target compilation triplet. By default target is infered from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used.",
-        choices=["x86_64-linux", "aarch64-darwin"],
+        choices=["amd64-unknown-linux", "arm64-apple-darwin"],
     )
 
     parser.add_argument(
@@ -389,9 +398,10 @@ def _inject_optimizer_group(parser: ArgumentParser) -> None:
     )
 
 
-def infer_output_filename(  # noqa: PLR0911
+def infer_output_filename(
     source_filepaths: list[Path],
     output_format: OUTPUT_FORMAT_T,
+    target: Target,
 ) -> Path:
     """Try to infer filename for output from input source files."""
     assert source_filepaths
@@ -400,43 +410,32 @@ def infer_output_filename(  # noqa: PLR0911
 
     match output_format:
         case "library":
-            return source_filepath.with_suffix(".dylib")
+            is_dynamic = False
+            suffix = [
+                target.file_library_static_suffix,
+                target.file_library_dynamic_suffix,
+            ][is_dynamic]
         case "object":
-            return source_filepath.with_suffix(".o")
+            suffix = target.file_object_suffix
         case "assembly":
-            return source_filepath.with_suffix(".s")
-        case _:
-            ...
-    match current_platform_system():
-        case "Darwin":
-            match output_format:
-                case "executable":
-                    if source_filepath.suffix == "":
-                        return source_filepath.with_suffix("._")
-                    return source_filepath.with_suffix("")
-        case "Linux":
-            match output_format:
-                case "executable":
-                    if source_filepath.suffix == "":
-                        return source_filepath.with_suffix(source_filepath.suffix + "_")
-                    return source_filepath.with_suffix("")
-        case _:
-            cli_message(
-                level="ERROR",
-                text="Unable to infer output filepath due to no fallback for current operating system",
-            )
-            sys.exit(1)
+            suffix = target.file_assembly_suffix
+        case "executable":
+            suffix = target.file_executable_suffix
+
+    if source_filepath.suffix == suffix:
+        suffix = source_filepath.suffix + suffix
+    return source_filepath.with_suffix(suffix)
 
 
-def infer_target() -> TARGET_T:
+def infer_target() -> Target:
     """Try to infer target from current system."""
     assert current_platform_system() in ["Darwin", "Linux"]
 
     match current_platform_system():
         case "Darwin":
-            return "aarch64-darwin"
+            return Target.from_triplet("arm64-apple-darwin")
         case "Linux":
-            return "x86_64-linux"
+            return Target.from_triplet("amd64-unknown-linux")
         case _:
             cli_message(
                 level="ERROR",

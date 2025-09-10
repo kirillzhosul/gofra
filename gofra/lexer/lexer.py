@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Literal
 
 from gofra.lexer._state import LexerState
@@ -28,7 +27,7 @@ from gofra.lexer.keywords import WORD_TO_KEYWORD
 from gofra.lexer.tokens import Token, TokenLocation, TokenType
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
     from pathlib import Path
 
 

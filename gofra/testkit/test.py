@@ -8,8 +8,8 @@ if TYPE_CHECKING:
     from pathlib import Path
     from subprocess import CalledProcessError, TimeoutExpired
 
-    from gofra.codegen.targets import TARGET_T
     from gofra.exceptions import GofraError
+    from gofra.targets import Target
 
 
 class TestStatus(Enum):
@@ -26,7 +26,7 @@ type ERROR = GofraError | CalledProcessError | TimeoutExpired
 
 @dataclass(frozen=False)
 class Test:
-    target: TARGET_T
+    target: Target
 
     path: Path
     status: TestStatus

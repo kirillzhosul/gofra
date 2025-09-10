@@ -1,25 +1,23 @@
-from gofra.codegen.targets import TARGET_T
+from gofra.targets import Target
 
 
 def construct_propagated_toolchain_definitions(
     *,
-    build_target_triplet: TARGET_T,
+    target: Target,
 ) -> dict[str, str]:
     toolchain_definitions = {}
-    match build_target_triplet:
-        case "aarch64-darwin":
+    match target.operating_system:
+        case "Darwin":
             toolchain_definitions = {
                 "OS_POSIX": "1",
                 "OS_DARWIN": "1",
                 "OS_MACOS": "1",
             }
 
-        case "x86_64-linux":
+        case "Linux":
             toolchain_definitions = {
                 "OS_POSIX": "1",
                 "OS_LINUX": "1",
             }
 
-    return toolchain_definitions | {
-        "__GOFRA_BUILD_TARGET_TRIPLET__": f'"{build_target_triplet}"',
-    }
+    return toolchain_definitions

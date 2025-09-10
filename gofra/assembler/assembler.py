@@ -20,17 +20,39 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from gofra.codegen.targets import TARGET_T
     from gofra.context import ProgramContext
+    from gofra.targets import Target
 
 type OUTPUT_FORMAT_T = Literal["library", "executable", "object", "assembly"]
+
+
+class CommandExecutor:
+    verbose: bool
+
+    def __init__(self, *, verbose: bool) -> None:
+        self.verbose = verbose
+
+    def execute(self, command: list[str], description: str) -> None:
+        cli_message(
+            level="INFO",
+            text=f"{description}: `{' '.join(command)}`...",
+            verbose=self.verbose,
+        )
+        try:
+            check_output(command)  # noqa: S603
+        except CalledProcessError as e:
+            error_msg = f"Command failed with code {e.returncode}"
+            if description:
+                error_msg = f"{description} failed: {error_msg}"
+            cli_message("ERROR", error_msg)
+            sys.exit(1)
 
 
 def assemble_program(  # noqa: PLR0913
     context: ProgramContext,
     output: Path,
     output_format: OUTPUT_FORMAT_T,
-    target: TARGET_T,
+    target: Target,
     *,
     build_cache_dir: Path,
     verbose: bool,
@@ -99,7 +121,7 @@ def _prepare_build_cache_directory(build_cache_directory: Path) -> None:
 
 def _link_final_output(  # noqa: PLR0913
     output: Path,
-    target: TARGET_T,
+    target: Target,
     o_filepath: Path,
     output_format: Literal["executable", "library"],
     additional_linker_flags: list[str],
@@ -110,7 +132,7 @@ def _link_final_output(  # noqa: PLR0913
     """Use linker to link object file into executable."""
     match current_platform_system():
         case "Darwin":
-            assert target == "aarch64-darwin"
+            assert target.triplet == "arm64-apple-darwin"
             target_linker_flags = ["-arch", "arm64"]
 
             # TODO(@kirillzhosul): Review default linkage with system library (libc by default)
@@ -126,7 +148,7 @@ def _link_final_output(  # noqa: PLR0913
             if output_format == "library":
                 target_linker_flags += ["-dylib"]
         case "Linux":
-            assert target == "x86_64-linux"
+            assert target.triplet == "amd64-unknown-linux"
             assert not link_with_system_libraries, (
                 "`--link-system is not supported on Linux target, consider removing that flag for now."
             )
@@ -155,7 +177,7 @@ def _link_final_output(  # noqa: PLR0913
 
 
 def _assemble_object_file(  # noqa: PLR0913
-    target: TARGET_T,
+    target: Target,
     asm_filepath: Path,
     output: Path,
     *,
@@ -164,16 +186,20 @@ def _assemble_object_file(  # noqa: PLR0913
     verbose: bool,
 ) -> Path:
     """Call assembler to assemble given assembly file from codegen."""
-    object_filepath = (build_cache_dir / output.name).with_suffix(".o")
+    object_filepath = (build_cache_dir / output.name).with_suffix(
+        target.file_object_suffix,
+    )
+
+    runner = CommandExecutor(verbose=verbose)
 
     # Assembler is not crossplatform so we expect host has same architecture
     match current_platform_system():
         case "Darwin":
-            if target != "aarch64-darwin":
+            if target.triplet != "arm64-apple-darwin":
                 raise UnsupportedBuilderOperatingSystemError
             assembler_flags = ["-arch", "arm64"]
         case "Linux":
-            if target != "x86_64-linux":
+            if target.triplet != "amd64-unknown-linux":
                 raise UnsupportedBuilderOperatingSystemError
             assembler_flags = []
         case _:
@@ -187,34 +213,22 @@ def _assemble_object_file(  # noqa: PLR0913
         *assembler_flags,
         *additional_assembler_flags,
     ]
-    cli_message(
-        level="INFO",
-        text=f"Running command: `{' '.join(command)}`",
-        verbose=verbose,
-    )
-    try:
-        check_output(command)  # noqa: S603
-    except CalledProcessError as e:
-        cli_message(
-            "ERROR",
-            "Failed to generate binary from output assembly, "
-            f"error code: {e.returncode}",
-        )
-        sys.exit(1)
-
+    runner.execute(command, description="Running assemble")
     return object_filepath
 
 
 def _generate_assembly_file_with_codegen(
     context: ProgramContext,
-    target: TARGET_T,
+    target: Target,
     output: Path,
     *,
     build_cache_dir: Path,
     verbose: bool,
 ) -> Path:
     """Call desired codegen backend for requested target and generate file contains assembly."""
-    assembly_filepath = (build_cache_dir / output.name).with_suffix(".s")
+    assembly_filepath = (build_cache_dir / output.name).with_suffix(
+        target.file_assembly_suffix,
+    )
 
     infered_backend = get_backend_for_target(target).__name__  # type: ignore  # noqa: PGH003
     cli_message(

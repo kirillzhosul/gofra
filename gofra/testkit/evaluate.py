@@ -6,12 +6,12 @@ from gofra.assembler.assembler import OUTPUT_FORMAT_T, assemble_program
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.cli.entry_point import PERMISSION_CHMOD_EXECUTABLE
 from gofra.cli.output import cli_message
-from gofra.codegen.targets import TARGET_T
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.exceptions import GofraError
 from gofra.gofra import process_input_file
 from gofra.lexer.tokens import TokenLocation
 from gofra.preprocessor.macros import registry_from_raw_definitions
+from gofra.targets import Target
 from gofra.typecheck.typechecker import validate_type_safety
 
 from .cli.arguments import CLIArguments
@@ -21,13 +21,11 @@ from .test import Test, TestStatus
 def evaluate_test_case(
     path: Path,
     args: CLIArguments,
-    build_target: TARGET_T,
+    build_target: Target,
     build_format: OUTPUT_FORMAT_T,
     cache_directory: Path,
 ) -> Test:
-    definitions = construct_propagated_toolchain_definitions(
-        build_target_triplet=build_target,
-    )
+    definitions = construct_propagated_toolchain_definitions(target=build_target)
 
     macros = registry_from_raw_definitions(
         location=TokenLocation.toolchain(),
