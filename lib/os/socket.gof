@@ -2,15 +2,15 @@
 
 #ifdef OS_POSIX
     // Address families
-    #macro AF_UNIX  1  end
-    #macro AF_INET  2  end
-    #macro AF_INET6 10 end
-    
+    #define AF_UNIX  1
+    #define AF_INET  2
+    #define AF_INET6 10
+
     // Socket types
-    #macro SOCK_STREAM 1 end
-    #macro SOCK_DGRAM  2 end
-    #macro SOCK_RAW    3 end
+    #define SOCK_STREAM 1
+    #define SOCK_DGRAM  2 
+    #define SOCK_RAW    3
 
     // Configuration and constants
-    #macro SOMAXCONN   128 end
+    #define SOMAXCONN   128
 #endif

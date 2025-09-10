@@ -10,6 +10,8 @@ from gofra.codegen.targets import TARGET_T
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.exceptions import GofraError
 from gofra.gofra import process_input_file
+from gofra.lexer.tokens import TokenLocation
+from gofra.preprocessor.macros import registry_from_raw_definitions
 from gofra.typecheck.typechecker import validate_type_safety
 
 from .cli.arguments import CLIArguments
@@ -27,11 +29,15 @@ def evaluate_test_case(
         build_target_triplet=build_target,
     )
 
+    macros = registry_from_raw_definitions(
+        location=TokenLocation.toolchain(),
+        definitions=definitions,
+    )
     try:
         context = process_input_file(
             path,
             include_paths=args.include_paths,
-            propagated_definitions=definitions,
+            macros=macros,
         )
         validate_type_safety(
             functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},

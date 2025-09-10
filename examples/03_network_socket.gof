@@ -8,8 +8,9 @@ inline func void fatal[ptr,int]
 end
 
 memory host_addr         16
-#macro sizeof(host_addr) 16 end
-#macro PORT 36895 end // 8080, TODO: htons
+
+#define sizeof(host_addr) 16
+#define PORT              36895 // 8080, TODO: htons
 
 func void main[]
     AF_INET SOCK_STREAM 0 call socket

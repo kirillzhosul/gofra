@@ -1,8 +1,10 @@
+#include "std.gof"
+
 func void main
-    0 0 == if
-        1 drop
-    end
-    0 1 > if
-        1 drop
-    end
+    //true true runtime_assert
+    true true != if abort end
+
+    //false false "False == False" runtime_assert_w_message
+    false false != if abort end
+
 end

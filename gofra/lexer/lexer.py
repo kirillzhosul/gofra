@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Literal
 
 from gofra.lexer._state import LexerState
 from gofra.lexer.exceptions import (
@@ -36,9 +37,19 @@ def tokenize_file(path: Path) -> Generator[Token]:
 
     :returns tokenizer: Generator of tokens, in order from top to bottom of an file (default order)
     """
-    state = LexerState(path=path)
+    yield from tokenize_from_raw(
+        source=path,
+        iterable=open_source_file_line_stream(path),
+    )
 
-    for row, line in enumerate(open_source_file_line_stream(path), start=0):
+
+def tokenize_from_raw(
+    source: Path | Literal["cli", "toolchain"],
+    iterable: Iterable[str],
+) -> Generator[Token]:
+    state = LexerState(path=source)
+
+    for row, line in enumerate(iterable, start=0):
         state.line = line
 
         state.row = row
@@ -47,6 +58,13 @@ def tokenize_file(path: Path) -> Generator[Token]:
         col_ends_at = len(state.line)
         while state.col < col_ends_at and (token := _tokenize_line_next_token(state)):
             yield token
+
+        yield Token(
+            type=TokenType.EOL,
+            text="\n",
+            value=0,
+            location=state.current_location(),
+        )
 
 
 def _tokenize_line_next_token(state: LexerState) -> Token | None:

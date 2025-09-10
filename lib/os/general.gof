@@ -4,11 +4,11 @@
 
 #ifdef OS_POSIX
     // POSIX file descriptors
-    #macro POSIX_STDIN  0 end
-    #macro POSIX_STDOUT 1 end
-    #macro POSIX_STDERR 2 end
+    #define POSIX_STDIN  0
+    #define POSIX_STDOUT 1
+    #define POSIX_STDERR 2
 
-    #macro OS_LINESEP "\n" end
+    #define OS_LINESEP "\n"
 #endif
 
 

@@ -1,5 +1,11 @@
+#include "std.gof"
+
 func void main
-    'i'  drop
-    '0'  drop
-    '\n' drop
+    'i'  105 runtime_assert
+    '0'  48  runtime_assert
+
+    // Broken
+    //'\n' 10  runtime_assert
+
+    0 exit
 end

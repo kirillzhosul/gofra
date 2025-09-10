@@ -1,80 +1,65 @@
-from gofra.lexer.tokens import Token, TokenLocation
+from gofra.lexer.tokens import Token, TokenLocation, TokenType
 from gofra.preprocessor.exceptions import PreprocessorError
+from gofra.preprocessor.macros.macro import Macro
 
 
-class PreprocessorNoMacroNameError(PreprocessorError):
-    def __init__(self, *args: object, macro_token: Token) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-
-    def __repr__(self) -> str:
-        return f"""No 'macro' name specified at {self.macro_token.location}!
-Macros should have name after 'macro' keyword as word
-
-Do you have unfinished macro definition?"""
-
-
-class PreprocessorMacroNonWordNameError(PreprocessorError):
-    def __init__(self, *args: object, macro_name_token: Token) -> None:
-        super().__init__(*args)
-        self.macro_name_token = macro_name_token
+class PreprocessorMacroRedefinesLanguageWordError(PreprocessorError):
+    def __init__(self, location: TokenLocation, name: str) -> None:
+        self.location = location
+        self.name = name
 
     def __repr__(self) -> str:
-        return f"""Non word name for macro at {self.macro_name_token.location}!
-
-Macros should have name as word after 'macro' keyword but got '{self.macro_name_token.type.name}'!"""
+        return f"""Macro '{self.name}' at {self.location} tries to redefine language word-definition!"""
 
 
 class PreprocessorMacroRedefinedError(PreprocessorError):
     def __init__(
         self,
-        *args: object,
-        redefine_macro_name_token: Token,
-        original_macro_location: TokenLocation,
+        name: str,
+        redefined: TokenLocation,
+        original: TokenLocation,
     ) -> None:
-        super().__init__(*args)
-        self.redefine_macro_name_token = redefine_macro_name_token
-        self.original_macro_location = original_macro_location
+        self.name = name
+        self.redefined = redefined
+        self.original = original
 
     def __repr__(self) -> str:
-        return f"""Redefinition of an macro '{self.redefine_macro_name_token.text}' at {self.redefine_macro_name_token.location}
+        return f"""Redefinition of an macro '{self.name}' at {self.redefined}
 
-Original definition found at {self.original_macro_location}.
+Original definition found at {self.original}.
 
-Only single definition allowed for macros."""
-
-
-class PreprocessorMacroRedefinesLanguageDefinitionError(PreprocessorError):
-    def __init__(self, *args: object, macro_token: Token, macro_name: str) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-        self.macro_name = macro_name
-
-    def __repr__(self) -> str:
-        return f"""Macro '{self.macro_name}' at {self.macro_token.location} tries to redefine language definition!"""
+Only single definition allowed for macros.
+If it possible scenatio of overriding, please un-define before redefinition."""
 
 
-class PreprocessorUnclosedMacroError(PreprocessorError):
-    def __init__(self, *args: object, macro_token: Token, macro_name: str) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-        self.macro_name = macro_name
+class PreprocessorMacroNonWordNameError(PreprocessorError):
+    def __init__(self, token: Token) -> None:
+        self.token = token
 
     def __repr__(self) -> str:
-        return f"""Unclosed macro '{self.macro_name}' at {self.macro_token.location}!
+        return f"""Non-word name for macro at {self.token.location}!
 
-Macro definition should have 'end' to close block.
-
-Did you forgot to close macro definition?"""
+Macros should have name as 'word' but got '{self.token.type.name}'!"""
 
 
-class PreprocessorMacroDefinesMacroError(PreprocessorError):
-    def __init__(self, *args: object, macro_token: Token, macro_name: str) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-        self.macro_name = macro_name
+class PreprocessorNoMacroNameError(PreprocessorError):
+    def __init__(self, location: TokenLocation) -> None:
+        self.location = location
 
     def __repr__(self) -> str:
-        return f"""Macro '{self.macro_name}' at {self.macro_token.location} defines another macro inside!
+        return f"""No macro name specified at {self.location}!
 
-Macro cannot define another macro inside their bodies."""
+Do you have unfinished macro definition?"""
+
+
+class PreprocessorMacroContainsKeywordError(PreprocessorError):
+    def __init__(self, macro: Macro, keyword: Token) -> None:
+        self.macro = macro
+        self.keyword = keyword
+        assert self.keyword.type == TokenType.KEYWORD
+
+    def __repr__(self) -> str:
+        return f"""Macro '{self.macro.name}' at {self.macro.location} contains keyword `{self.keyword.text}` inside, at {self.keyword.location}!
+
+Macro cannot contain keywords inside their bodies.
+Alternative possible approach is to use `inline` functions."""

@@ -1,108 +1,120 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
-from gofra.lexer.keywords import WORD_TO_KEYWORD, Keyword
-from gofra.lexer.tokens import TokenType
+from gofra.lexer import Token
+from gofra.lexer.keywords import PreprocessorKeyword
+from gofra.lexer.tokens import TokenLocation, TokenType
 from gofra.parser.intrinsics import WORD_TO_INTRINSIC
 
-from .container import Macro
 from .exceptions import (
-    PreprocessorMacroDefinesMacroError,
+    PreprocessorMacroContainsKeywordError,
     PreprocessorMacroNonWordNameError,
     PreprocessorMacroRedefinedError,
-    PreprocessorMacroRedefinesLanguageDefinitionError,
+    PreprocessorMacroRedefinesLanguageWordError,
     PreprocessorNoMacroNameError,
-    PreprocessorUnclosedMacroError,
 )
 
 if TYPE_CHECKING:
-    from gofra.lexer import Token
     from gofra.preprocessor._state import PreprocessorState
 
-PROHIBITED_MACRO_NAMES = WORD_TO_INTRINSIC.keys() | WORD_TO_KEYWORD.keys()
+    from .macro import Macro
+
+# Macros name can only be an word, but this does not adds additional validation
+# that set contains word that considered as prohibited
+PROHIBITED_MACRO_NAMES = WORD_TO_INTRINSIC.keys()
 
 
-def define_macro_block_from_token(token: Token, state: PreprocessorState) -> None:
-    macro_name = _consume_macro_name_from_token(token, state)
-    macro = _define_empty_macro(state, token, macro_name)
-    _consume_tokenizer_from_state_into_macro(macro, state)
-
-
-def try_resolve_macro_reference_from_token(
+def consume_macro_definition_from_token(
     token: Token,
     state: PreprocessorState,
-) -> bool:
-    """Try to search for defined macro and resolve it if possible."""
-    assert token.type == TokenType.WORD
-    assert isinstance(token.value, str)
-
-    macro = state.macros.get(token.value)
-    if not macro:
-        return False
-
-    state.tokenizers.append(macro.as_tokenizer())
-    return True
-
-
-def _consume_macro_name_from_token(token: Token, state: PreprocessorState) -> str:
-    """Consume macro name from `macro` construction."""
-    macro_name_token = next(state.tokenizer, None)
-    if not macro_name_token:
-        raise PreprocessorNoMacroNameError(macro_token=token)
-    if macro_name_token.type != TokenType.WORD:
-        raise PreprocessorMacroNonWordNameError(macro_name_token=macro_name_token)
-
-    macro_name = macro_name_token.text
-    if macro_name in state.macros:
-        raise PreprocessorMacroRedefinedError(
-            redefine_macro_name_token=macro_name_token,
-            original_macro_location=state.macros[macro_name].token.location,
-        )
-    if macro_name in PROHIBITED_MACRO_NAMES:
-        raise PreprocessorMacroRedefinesLanguageDefinitionError(
-            macro_token=macro_name_token,
-            macro_name=macro_name,
-        )
-    return macro_name
-
-
-def _define_empty_macro(
-    state: PreprocessorState,
-    token: Token,
-    name: str,
 ) -> Macro:
-    """Create empty macro that start at given token to fill it preprocessed tokens."""
-    macro = Macro(token=token, tokens=[], name=name)
-    state.macros[name] = macro
+    """Consume macro definition block tokens into preprocessed macro container with validation."""
+    assert token.type == TokenType.KEYWORD
+    assert token.value == PreprocessorKeyword.DEFINE
+    name = _consume_macro_name(token.location, state)
+
+    macro = state.macros.new(token.location, name)
+    _consume_macro_definition(macro, state)
+
     return macro
 
 
-def _consume_tokenizer_from_state_into_macro(
+def try_resolve_and_expand_macro_reference_from_token(
+    token: Token,
+    state: PreprocessorState,
+) -> bool:
+    """Try to search for defined macro and resolve it with expansion if possible."""
+    assert token.type == TokenType.WORD
+    assert isinstance(token.value, str)
+
+    name = token.value
+    if not (macro := state.macros.get(name)):
+        # Macro definition does not exists - do not expand
+        return False
+
+    tokenizer = iter(macro.tokens)
+    state.tokenizers.append(tokenizer)
+
+    return True
+
+
+def _consume_macro_name(location: TokenLocation, state: PreprocessorState) -> str:
+    """Consume and validate macro name from beginning of an macro definition."""
+    if not (token := next(state.tokenizer, None)):
+        raise PreprocessorNoMacroNameError(location=location)
+
+    if token.type != TokenType.WORD:
+        raise PreprocessorMacroNonWordNameError(token=token)
+
+    name = token.text
+    if original := state.macros.get(name):
+        raise PreprocessorMacroRedefinedError(
+            name=name,
+            redefined=token.location,
+            original=original.location,
+        )
+
+    if name in PROHIBITED_MACRO_NAMES:
+        raise PreprocessorMacroRedefinesLanguageWordError(
+            location=token.location,
+            name=name,
+        )
+    return name
+
+
+def _consume_macro_definition(
     macro: Macro,
     state: PreprocessorState,
 ) -> None:
-    """Consume current tokenizer into macro block."""
-    opened_context_blocks = 0
-    macro_was_closed = False
-
+    """Consume current tokenizer state into macro block container tokens."""
     while token := next(state.tokenizer, None):
+        if token.type == TokenType.EOL:
+            # Macro deifinition is line-dependant so it consumes until first end-of-line (EOL)
+            break
+
         if token.type == TokenType.KEYWORD:
-            if token.value == Keyword.PP_MACRO:
-                raise PreprocessorMacroDefinesMacroError(
-                    macro_token=macro.token,
-                    macro_name=macro.name,
-                )
-            if token.value == Keyword.END:
-                if opened_context_blocks <= 0:
-                    macro_was_closed = True
-                    break
-                opened_context_blocks -= 1
-            if token.value in (Keyword.IF, Keyword.DO, Keyword.FUNCTION):
-                opened_context_blocks += 1
+            raise PreprocessorMacroContainsKeywordError(macro=macro, keyword=token)
+
+        # Ensure that there is no lexer level new token types.
+        if token.type not in (
+            TokenType.INTEGER,
+            TokenType.CHARACTER,
+            TokenType.STRING,
+            TokenType.WORD,
+        ):
+            assert_never(token.type)
+
         macro.tokens.append(token)
-    if not macro_was_closed:
-        raise PreprocessorUnclosedMacroError(
-            macro_token=macro.token,
-            macro_name=macro.name,
+        continue
+
+    if not macro.tokens:
+        # We encoutered an empty macro, which must contain default token `1` (preprocessor conditions default)
+        default = 1
+        token = Token(
+            type=TokenType.INTEGER,
+            text=str(default),
+            value=default,
+            location=macro.location,
         )
+        macro.tokens.append(token)

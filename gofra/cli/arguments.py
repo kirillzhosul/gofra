@@ -14,7 +14,6 @@ from gofra.optimizer.config import (
     merge_into_optimizer_config,
 )
 
-from .definitions import construct_propagated_toolchain_definitions
 from .output import cli_message
 
 if TYPE_CHECKING:
@@ -82,7 +81,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
     source_filepaths = [Path(f) for f in args.source_files]
     output_filepath = process_output_path(source_filepaths, args)
     include_paths = process_include_paths(args)
-    definitions = process_definitions(args, target)
+    definitions = process_definitions(args)
 
     assembler_flags = args.assembler
     if bool(args.debug_symbols):
@@ -112,7 +111,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
     )
 
 
-def process_definitions(args: Namespace, target: TARGET_T) -> dict[str, str]:
+def process_definitions(args: Namespace) -> dict[str, str]:
     user_definitions: dict[str, str] = {}
 
     for cli_definition in cast("list[str]", args.definitions):
@@ -120,15 +119,10 @@ def process_definitions(args: Namespace, target: TARGET_T) -> dict[str, str]:
             name, value = cli_definition.split("=", maxsplit=1)
             user_definitions[name] = value
 
-            if value != "1":
-                msg = "Propagated definitions with non-default values are prohibited / not yet supported via CLI!"
-                raise ValueError(msg)
             continue
         user_definitions[cli_definition] = "1"
 
-    return user_definitions | construct_propagated_toolchain_definitions(
-        build_target_triplet=target,
-    )
+    return user_definitions
 
 
 def process_output_path(source_filepaths: list[Path], args: Namespace) -> Path:

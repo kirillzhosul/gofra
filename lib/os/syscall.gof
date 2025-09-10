@@ -2,12 +2,12 @@
 
 #ifdef OS_DARWIN
     // MacOS (Darwin) syscall table
-    #macro DARWIN_SYSCALL_SYSCALL 0 end
-    #macro DARWIN_SYSCALL_EXIT    1 end
-    #macro DARWIN_SYSCALL_FORK    2 end
-    #macro DARWIN_SYSCALL_READ    3 end
-    #macro DARWIN_SYSCALL_WRITE   4 end
-    #macro DARWIN_SYSCALL_OPEN    5 end
+    #define DARWIN_SYSCALL_SYSCALL 0
+    #define DARWIN_SYSCALL_EXIT    1
+    #define DARWIN_SYSCALL_FORK    2
+    #define DARWIN_SYSCALL_READ    3
+    #define DARWIN_SYSCALL_WRITE   4
+    #define DARWIN_SYSCALL_OPEN    5
 
     inline func void sc_syscall[]          DARWIN_SYSCALL_SYSCALL syscall0 drop  end
     inline func void sc_exit[int]          DARWIN_SYSCALL_EXIT    syscall1 drop  end
@@ -19,8 +19,8 @@
 
 #ifdef OS_LINUX
     // Linux syscall table
-    #macro LINUX_SYSCALL_WRITE  1  end
-    #macro LINUX_SYSCALL_EXIT   60 end
+    #define LINUX_SYSCALL_WRITE  1
+    #define LINUX_SYSCALL_EXIT   60
 
     inline func int  sc_write[int,ptr,int] LINUX_SYSCALL_WRITE syscall3 end
     inline func int  sc_exit[int,ptr,int]  LINUX_SYSCALL_EXIT  syscall1 end

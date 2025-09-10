@@ -1,11 +1,32 @@
 #include "os/io.gof"
 
-#macro runtime_assert
-    // Check for equality at runtime
+memory .runtime_assert_w_message_ptr 8 // research while ptr is not 4 bytes.
+memory .runtime_assert_w_message_len 4
+func void runtime_assert_w_message[int,int,ptr,int]
+    // Check for equality at runtime with additional message
     // (assert two values same)
+    
+    .runtime_assert_w_message_len swap !<
+    .runtime_assert_w_message_ptr swap !<
+
 
     != if
-        POSIX_STDERR "runtime_assert: Assertion failed\n" print_fd abort
+        POSIX_STDERR "runtime_assert: Assertion failed, " print_fd
+    
+        POSIX_STDERR
+            .runtime_assert_w_message_ptr ?>
+            .runtime_assert_w_message_len ?>
+        print_fd
+        
+        POSIX_STDERR "\n" print_fd 
+    
+        abort
     end
+ 
+    // TODO(@kirillzhosul): non closing context-blocks in one file leads to propagating that into another file
+    // must validate context-switches
 end
 
+// Check for equality at runtime
+// (assert two values same)
+#define runtime_assert "no message" runtime_assert_w_message

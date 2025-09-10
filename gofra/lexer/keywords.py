@@ -1,7 +1,7 @@
-from enum import IntEnum, auto
+from enum import Enum, auto
 
 
-class Keyword(IntEnum):
+class Keyword(Enum):
     """Words that are related to language due to internal implementation like loops or parsing stage."""
 
     IF = auto()
@@ -21,13 +21,24 @@ class Keyword(IntEnum):
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
 
-    # Preprocessor
-    PP_IFDEF = auto()
-    PP_ENDIF = auto()
-    PP_INCLUDE = auto()
-    PP_MACRO = auto()
+
+class PreprocessorKeyword(Enum):
+    DEFINE = auto()
+    UNDEFINE = auto()
+
+    INCLUDE = auto()
+
+    IF_DEFINED = auto()
+    END_IF = auto()
 
 
+WORD_TO_PREPROCESSOR_KEYWORD = {
+    "#ifdef": PreprocessorKeyword.IF_DEFINED,
+    "#endif": PreprocessorKeyword.END_IF,
+    "#include": PreprocessorKeyword.INCLUDE,
+    "#define": PreprocessorKeyword.DEFINE,
+    "#undef": PreprocessorKeyword.UNDEFINE,
+}
 WORD_TO_KEYWORD = {
     "if": Keyword.IF,
     "while": Keyword.WHILE,
@@ -40,10 +51,6 @@ WORD_TO_KEYWORD = {
     "inline": Keyword.INLINE,
     "memory": Keyword.MEMORY,
     "global": Keyword.GLOBAL,
-    # Preprocessor
-    "#ifdef": Keyword.PP_IFDEF,
-    "#endif": Keyword.PP_ENDIF,
-    "#include": Keyword.PP_INCLUDE,
-    "#macro": Keyword.PP_MACRO,
+    **WORD_TO_PREPROCESSOR_KEYWORD,
 }
 KEYWORD_TO_NAME = {v: k for k, v in WORD_TO_KEYWORD.items()}

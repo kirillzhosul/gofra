@@ -10,16 +10,16 @@
 memory player_x 4
 memory player_y 4
 
-#macro BACKGROUND_COLOR 0xFFFFFFFF end
+#define BACKGROUND_COLOR 0xFFFFFFFF
 
-#macro PLAYER_COLOR 0xFF0000FF end
-#macro PLAYER_SIZE  64         end
-#macro PLAYER_SPEED 5          end
+#define PLAYER_COLOR 0xFF0000FF
+#define PLAYER_SIZE  64
+#define PLAYER_SPEED 5
 
-#macro WINDOW_NAME   "Welcome to Gofra!" end
-#macro WINDOW_WIDTH  512                 end
-#macro WINDOW_HEIGHT 512                 end
-#macro WINDOW_FPS    60                  end
+#define WINDOW_NAME   "Welcome to Gofra!"
+#define WINDOW_WIDTH  512
+#define WINDOW_HEIGHT 512  
+#define WINDOW_FPS    60
 
 
 inline func void init_window[]
@@ -29,7 +29,7 @@ inline func void init_window[]
     WINDOW_NAME to_cstr_ptr 
     call InitWindow
 
-    WINDOW_FPS 
+    WINDOW_FPS
     call SetTargetFPS
 end
 
@@ -43,21 +43,6 @@ inline func void draw_player[]
     call DrawRectangle
 end
 
-#macro handle_movement
-    // TODO(@kirillzhosul): This is an macro due to current critical problem with parser/codegen (inline function is also corrupted)
-    KEY_W call IsKeyDown if
-        player_y copy ?> PLAYER_SPEED - !<
-    end
-    KEY_S call IsKeyDown if
-        player_y copy ?> PLAYER_SPEED + !<
-    end 
-    KEY_A call IsKeyDown if
-        player_x copy ?> PLAYER_SPEED - !<
-    end 
-    KEY_D call IsKeyDown if
-        player_x copy ?> PLAYER_SPEED + !<
-    end
-end
 
 func void main[]
     // Default player position
@@ -73,7 +58,18 @@ func void main[]
             BACKGROUND_COLOR
             call ClearBackground
 
-            handle_movement
+            'W' call IsKeyDown if
+                player_y copy ?> PLAYER_SPEED - !<
+            end
+            'S' call IsKeyDown if
+                player_y copy ?> PLAYER_SPEED + !<
+            end 
+            'A' call IsKeyDown if
+                player_x copy ?> PLAYER_SPEED - !<
+            end 
+            'D' call IsKeyDown if
+                player_x copy ?> PLAYER_SPEED + !<
+            end
         call EndDrawing
     end
 

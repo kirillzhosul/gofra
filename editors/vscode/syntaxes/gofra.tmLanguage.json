@@ -7,7 +7,7 @@
         },
         {
             "name": "keyword.preprocessor.gofra",
-            "match": "(#macro|#include|#endif|#ifdef)"
+            "match": "(#macro|#define|#include|#endif|#ifdef)"
         },
         {
             "name": "keyword.operator.gofra",

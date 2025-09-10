@@ -2,28 +2,29 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from gofra.lexer.keywords import Keyword
+from gofra.lexer.keywords import PreprocessorKeyword
 from gofra.lexer.tokens import Token, TokenType
-from gofra.preprocessor.macros.definitions import propagate_raw_definitions
 
 from ._state import PreprocessorState
 from .conditions import resolve_conditional_block_from_token
 from .include import resolve_include_from_token_into_state
 from .macros.preprocessor import (
-    define_macro_block_from_token,
-    try_resolve_macro_reference_from_token,
+    consume_macro_definition_from_token,
+    try_resolve_and_expand_macro_reference_from_token,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from pathlib import Path
 
+    from gofra.preprocessor.macros import MacrosRegistry
+
 
 def preprocess_file(
     path: Path,
     lexer: Generator[Token],
     include_search_paths: Iterable[Path],
-    propagated_definitions: dict[str, str],
+    macros: MacrosRegistry,
 ) -> Generator[Token]:
     """Preprocess given lexer token stream by resolving includes, CTE/macros.
 
@@ -32,25 +33,27 @@ def preprocess_file(
     state = PreprocessorState(
         path=path,
         lexer=lexer,
+        macros=macros,
         include_search_paths=include_search_paths,
     )
 
-    propagate_raw_definitions(state, propagated_definitions)
-
     for token in state.tokenizer:
         match token:
-            case Token(type=TokenType.KEYWORD, value=Keyword.PP_INCLUDE):
+            case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.INCLUDE):
                 resolve_include_from_token_into_state(token, state)
-            case Token(type=TokenType.KEYWORD, value=Keyword.PP_MACRO):
-                define_macro_block_from_token(token, state)
+            case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.DEFINE):
+                consume_macro_definition_from_token(token, state)
+            case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.IF_DEFINED):
+                resolve_conditional_block_from_token(token, state)
             case Token(type=TokenType.WORD):
-                if try_resolve_macro_reference_from_token(token, state):
+                if try_resolve_and_expand_macro_reference_from_token(token, state):
                     continue
                 yield token
-            case Token(type=TokenType.KEYWORD, value=Keyword.PP_IFDEF):
-                resolve_conditional_block_from_token(token, state)
-            case Token(type=TokenType.KEYWORD, value=Keyword.PP_ENDIF):
+            case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.END_IF):
                 # We dont yield preprocessor endif as preprocessor will resolve it by itself via conditional block resolver
+                pass
+            case Token(type=TokenType.EOL):
+                # EOL is usable only by preprocessor, so we drop that
                 pass
             case _:
                 yield token

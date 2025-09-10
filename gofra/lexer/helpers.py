@@ -44,6 +44,7 @@ def find_string_end(string: str, start: int) -> int | None:
     idx = start
     idx_end = len(string)
 
+    # TODO(@kirillzhosul): this fails while some playing with preprocessor and passing source code line by line.
     prev = string[idx]
 
     while idx < idx_end:

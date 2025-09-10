@@ -8,7 +8,7 @@ from gofra.lexer import (
     Token,
     TokenType,
 )
-from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD
+from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorKeyword
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.validator import validate_and_pop_entry_point
 
@@ -96,6 +96,8 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
             )
         case TokenType.KEYWORD:
             return _consume_keyword_token(context, token)
+        case TokenType.EOL:
+            return None
 
 
 def _best_match_for_word(context: ParserContext, word: str) -> str | None:
@@ -107,18 +109,15 @@ def _best_match_for_word(context: ParserContext, word: str) -> str | None:
 
 
 def _consume_keyword_token(context: ParserContext, token: Token) -> None:
-    assert isinstance(token.value, Keyword)
+    assert isinstance(token.value, (Keyword, PreprocessorKeyword))
+    if isinstance(token.value, PreprocessorKeyword):
+        raise ParserDirtyNonPreprocessedTokenError(token=token)
     TOP_LEVEL_KEYWORD = (  # noqa: N806
         Keyword.INLINE,
         Keyword.EXTERN,
         Keyword.FUNCTION,
         Keyword.GLOBAL,
         Keyword.MEMORY,
-        # TODO(@kirillzhosul): Remove reference
-        Keyword.PP_ENDIF,
-        Keyword.PP_IFDEF,
-        Keyword.PP_INCLUDE,
-        Keyword.PP_MACRO,
     )
     if context.is_top_level and token.value not in (*TOP_LEVEL_KEYWORD, Keyword.END):
         msg = f"{token.value.name} expected to be not at top level! (temp-assert)"
@@ -129,10 +128,6 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END:
             return _consume_conditional_keyword_from_token(context, token)
-        case (
-            Keyword.PP_INCLUDE | Keyword.PP_MACRO | Keyword.PP_IFDEF | Keyword.PP_ENDIF
-        ):
-            raise ParserDirtyNonPreprocessedTokenError(token=token)
         case Keyword.INLINE | Keyword.EXTERN | Keyword.FUNCTION | Keyword.GLOBAL:
             return _unpack_function_definition_from_token(context, token)
         case Keyword.FUNCTION_CALL:
@@ -148,6 +143,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             return _unpack_memory_segment_from_token(context)
         case _:
             assert_never(token.value)
+            return None
 
 
 def _unpack_memory_segment_from_token(context: ParserContext) -> None:
@@ -173,7 +169,8 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
     if not name_token:
         raise NotImplementedError
     if name_token.type != TokenType.WORD:
-        raise NotImplementedError
+        msg = "expected function name as word after `call`"
+        raise NotImplementedError(msg)
     name = name_token.text
 
     if not (function := context.functions.get(name)):

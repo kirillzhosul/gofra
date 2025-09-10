@@ -2,10 +2,10 @@
 
 #include "std.gof"
 
-#macro PATH "test.txt" to_cstr_ptr end
+#define PATH "test.txt" to_cstr_ptr
 
 memory BUFFER 1024
-#macro sizeof(BUFFER) 1024 end
+#define sizeof(BUFFER) 1024
 
 memory FD_BUFFER 32
 

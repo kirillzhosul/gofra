@@ -1,10 +1,10 @@
 from collections import deque
-from collections.abc import Generator, Iterable, MutableMapping
+from collections.abc import Generator, Iterable, Iterator
 from pathlib import Path
 
 from gofra.lexer import Token
 
-from .macros import Macro
+from .macros import MacrosRegistry
 
 
 class PreprocessorState:
@@ -15,7 +15,7 @@ class PreprocessorState:
 
     # Lexical token streams from lexer or preprocessor itself
     # by default first is one from lexer and then it is extended by preprocessor to also consume next tokens from it until exhausted
-    tokenizers: deque[Generator[Token]]
+    tokenizers: deque[Iterator[Token]]
 
     # Remember which paths was included to not include them again.
     already_included_paths: list[Path]
@@ -23,20 +23,21 @@ class PreprocessorState:
     # Where to additionally search for paths
     include_search_paths: Iterable[Path]
 
-    macros: MutableMapping[str, Macro]
+    macros: MacrosRegistry
 
     def __init__(
         self,
         path: Path,
         lexer: Generator[Token],
         include_search_paths: Iterable[Path],
+        macros: MacrosRegistry,
     ) -> None:
         self.path = path.resolve(strict=True)
 
         self.include_search_paths = include_search_paths
         self.already_included_paths = [path]
 
-        self.macros = {}
+        self.macros = macros
 
         self.tokenizers = deque((lexer,))
         self.tokenizer = self.iterate_tokenizers()

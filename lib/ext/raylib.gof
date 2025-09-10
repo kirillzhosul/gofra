@@ -14,7 +14,4 @@ extern func bool IsKeyDown[int]@link[_IsKeyDown]
 extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
 
 // Key codes
-#macro KEY_W 87 end
-#macro KEY_A 65 end
-#macro KEY_S 83 end
-#macro KEY_D 68 end
+// Yo may pass key code via char, e.g 'W', additional key codes will be implemented later or via raw char-code

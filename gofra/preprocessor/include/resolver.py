@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from gofra.lexer.keywords import Keyword
+from gofra.lexer.keywords import PreprocessorKeyword
 from gofra.lexer.lexer import tokenize_file
 from gofra.lexer.tokens import Token, TokenType
 
@@ -29,6 +29,10 @@ def resolve_include_from_token_into_state(
     if requested_include_path.resolve(strict=False) == state.path:
         raise PreprocessorIncludeCurrentFileError(include_path_token=include_token)
 
+    msg = "Include token for preprocessor must come from an file source, as implies relative imports, this must never happen and should consider as an bug in toolchain."
+    assert include_token.location.source == "file", msg
+    assert include_token.location.filepath, msg
+
     include_path = _try_resolve_and_find_real_include_path(
         requested_include_path,
         current_path=include_token.location.filepath,
@@ -51,7 +55,7 @@ def _consume_include_raw_path_from_token(
 ) -> Path:
     """Consume include path from `include` construction."""
     assert include_token.type == TokenType.KEYWORD
-    assert include_token.value == Keyword.PP_INCLUDE
+    assert include_token.value == PreprocessorKeyword.INCLUDE
 
     include_path_token = next(state.tokenizer, None)
     if not include_path_token:
