@@ -12,10 +12,19 @@
 #endif
 
 
-inline func void exit[int]
-    // Exit an program with given exit code
-    call sc_exit 
-end
+#ifdef OS_POSIX
+    inline func void exit[int]
+        // Exit an program with given exit code
+        call sc_exit 
+    end
+#endif
+
+#ifdef OS_WINDOWS
+    inline func void exit[int]
+        call ExitProcess
+    end
+#endif
+
 
 inline func void abort[]
     // Exit an program with error (1) exit code
