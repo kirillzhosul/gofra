@@ -65,19 +65,39 @@ class ParserUnknownWordError(GofraError):
         self,
         *args: object,
         word_token: Token,
-        macro_names: Iterable[str],
+        functions_available: Iterable[str],
         best_match: str | None = None,
     ) -> None:
         super().__init__(*args)
         self.word_token = word_token
-        self.macro_names = macro_names
+        self.functions_available = functions_available
         self.best_match = best_match
 
     def __repr__(self) -> str:
-        return f"""Encountered an unknown name '{self.word_token.text}' at {self.word_token.location}!
-Expected intrinsic or macro name.
+        return f"""Encountered an unknown name (word) '{self.word_token.text}' at {self.word_token.location}!
 
-Available macro names: {", ".join(self.macro_names) or "..."}""" + (
+Available macro names: {", ".join(self.functions_available) or "..."}""" + (
+            f"\nDid you mean '{self.best_match}'?" if self.best_match else ""
+        )
+
+
+class ParserUnknownFunctionError(GofraError):
+    def __init__(
+        self,
+        *args: object,
+        token: Token,
+        functions_available: Iterable[str],
+        best_match: str | None = None,
+    ) -> None:
+        super().__init__(*args)
+        self.token = token
+        self.functions_available = functions_available
+        self.best_match = best_match
+
+    def __repr__(self) -> str:
+        return f"""Encountered an unknown function name '{self.token.text}' at {self.token.location}!
+
+Available function names: {", ".join(self.functions_available) or "..."}""" + (
             f"\nDid you mean '{self.best_match}'?" if self.best_match else ""
         )
 

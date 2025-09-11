@@ -23,6 +23,7 @@ from .exceptions import (
     ParserNoWhileConditionOperatorsError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
+    ParserUnknownFunctionError,
     ParserUnknownWordError,
 )
 from .intrinsics import WORD_TO_INTRINSIC
@@ -91,7 +92,7 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
 
             raise ParserUnknownWordError(
                 word_token=token,
-                macro_names=context.functions.keys(),
+                functions_available=context.functions.keys(),
                 best_match=_best_match_for_word(context, token.text),
             )
         case TokenType.KEYWORD:
@@ -174,8 +175,11 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
     name = name_token.text
 
     if not (function := context.functions.get(name)):
-        msg = f"Unknown function {name}"
-        raise NotImplementedError(msg)
+        raise ParserUnknownFunctionError(
+            token=token,
+            functions_available=context.functions.keys(),
+            best_match=_best_match_for_word(context, token.text),
+        )
 
     if function.emit_inline_body:
         assert not function.external_definition_link_to
