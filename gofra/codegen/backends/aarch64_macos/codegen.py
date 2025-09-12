@@ -219,13 +219,13 @@ def aarch64_macos_executable_functions(
             context,
             name=function.name,
             global_name=function.name if function.is_global_linker_symbol else None,
-            preserve_frame=True,
+            preserve_frame=False,
         )
 
         aarch64_macos_instruction_set(context, function.source, program, function.name)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
-        function_end_with_epilogue(context, has_preserved_frame=True)
+        function_end_with_epilogue(context, has_preserved_frame=False)
 
 
 def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:

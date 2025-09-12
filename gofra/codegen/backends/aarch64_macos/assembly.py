@@ -27,7 +27,7 @@ def drop_cells_from_stack(context: AARCH64CodegenContext, *, cells_count: int) -
     """
     assert cells_count > 0, "Tried to drop negative cells count from stack"
     stack_pointer_shift = AARCH64_STACK_ALIGNMENT * cells_count
-    context.write(f"add x29, x29, #{stack_pointer_shift}")
+    context.write(f"add SP, SP, #{stack_pointer_shift}")
 
 
 def pop_cells_from_stack_into_registers(
@@ -43,8 +43,8 @@ def pop_cells_from_stack_into_registers(
 
     for register in registers:
         context.write(
-            f"ldr {register}, [x29]",
-            f"add x29, x29, #{AARCH64_STACK_ALIGNMENT}",
+            f"ldr {register}, [SP]",
+            f"add SP, SP, #{AARCH64_STACK_ALIGNMENT}",
         )
 
 
@@ -53,7 +53,7 @@ def push_register_onto_stack(
     register: AARCH64_GP_REGISTERS,
 ) -> None:
     """Store given register onto stack under current stack pointer."""
-    context.write(f"str {register}, [x29, -{AARCH64_STACK_ALIGNMENT}]!")
+    context.write(f"str {register}, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
 
 
 def store_integer_into_register(
