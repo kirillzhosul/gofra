@@ -60,8 +60,9 @@ def merge_into_optimizer_config(
     prefix: str = "",
 ) -> OptimizerConfig:
     for field in dataclasses.fields(OptimizerConfig):
-        if hasattr(from_object, field.name):
-            arg_value = getattr(from_object, prefix + field.name)
+        from_name = prefix + "_" + field.name
+        if hasattr(from_object, from_name):
+            arg_value = getattr(from_object, from_name)
             if arg_value is not None:
                 setattr(config, field.name, arg_value)
     return config

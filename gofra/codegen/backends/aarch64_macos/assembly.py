@@ -284,8 +284,12 @@ def function_begin_with_prologue(
         context.fd.write(f".global {function_name}\n")
     context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
     context.fd.write(f"{function_name}:\n")
+    context.fd.write(
+        "\tmov x18, x30\n",
+    )  # Store link register, TODO: optimize for non-callee functions
 
 
 def function_end_with_epilogue(context: AARCH64CodegenContext) -> None:
     """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
+    context.write("mov x30, x18")  # Restore link register for jumping out
     context.write("ret")
