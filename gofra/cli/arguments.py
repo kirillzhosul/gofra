@@ -76,7 +76,12 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         )
 
     # args.target infer that
-    assert args.target in ("amd64-unknown-linux", "arm64-apple-darwin", None)
+    assert args.target in (
+        "amd64-unknown-linux",
+        "arm64-apple-darwin",
+        "amd64-unknown-windows",
+        None,
+    )
     target: Target = Target.from_triplet(args.target) if args.target else infer_target()
 
     source_filepaths = [Path(f) for f in args.source_files]
@@ -191,7 +196,7 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         type=str,
         required=False,
         help="Target compilation triplet. By default target is infered from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used.",
-        choices=["amd64-unknown-linux", "arm64-apple-darwin"],
+        choices=["amd64-unknown-linux", "arm64-apple-darwin", "amd64-unknown-windows"],
     )
 
     parser.add_argument(

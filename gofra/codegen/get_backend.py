@@ -4,6 +4,7 @@ from .backends import (
     CodeGeneratorBackend,
     generate_aarch64_macos_backend,
     generate_amd64_linux_backend,
+    generate_amd64_windows_backend,
 )
 from .exceptions import CodegenUnsupportedBackendTargetPairError
 
@@ -17,5 +18,7 @@ def get_backend_for_target(
             return generate_aarch64_macos_backend
         case "amd64-unknown-linux":
             return generate_amd64_linux_backend
+        case "amd64-unknown-windows":
+            return generate_amd64_windows_backend
         case _:
             raise CodegenUnsupportedBackendTargetPairError(target=target)
