@@ -1,0 +1,82 @@
+// ==============================================
+// Darwin native system interaction layer and constant (AARCH64)
+// Must works on MacOS, iOS, watchOS and other Darwin kernel operating system
+// Interacts with kernel via system/supervisor calls
+// Caveats: Currently works only for AARCH64 Darwin!
+// TODO: Add x86-64 Darwin layer
+// ==============================================
+
+#ifdef OS_DARWIN
+    // Guard for uninteonal includes, mostly unused
+
+    // File access mode flags
+    #define O_RDONLY   0x0000  // Open for reading only
+    #define O_WRONLY   0x0001  // Open for writing only
+    #define O_RDWR     0x0002  // Open for reading and writing
+
+    // Standart file descriptors
+    #define STD_IN_FD  0
+    #define STD_OUT_FD 1
+    #define STD_ERR_FD 2
+
+    // --- Network constants ---
+    // Address family
+    #define AF_UNIX    1
+    #define AF_INET    2
+    #define AF_INET6   10
+    // Socket type
+    #define SOCK_STREAM 1
+    #define SOCK_DGRAM  2 
+    #define SOCK_RAW    3
+    // Other
+    #define SOMAXCONN   128
+
+    // Line separator
+    #define OS_LINESEP "\n"
+
+    // --- Syscall Numbers (Partial Table) ---
+    #ifdef ARCH_ARM64
+        #define DARWIN_SYSCALL_SYSCALL 0
+        #define DARWIN_SYSCALL_EXIT    1
+        #define DARWIN_SYSCALL_FORK    2
+        #define DARWIN_SYSCALL_READ    3
+        #define DARWIN_SYSCALL_WRITE   4
+        #define DARWIN_SYSCALL_OPEN    5
+        #define DARWIN_SYSCALL_CLOSE   6
+    #endif // ARCH_ARM64
+
+    // ---  Syscall Wrappers ---
+    // These are the preferred way to make syscalls.
+    #ifdef ARCH_ARM64
+        // TODO: that is actually variadic function to make any syscall which is currently useless
+        inline func void sc_syscall[] DARWIN_SYSCALL_SYSCALL syscall0 drop end
+
+        // Terminates the current process. Does not return.
+        // TODO: Add a compiler intrinsic or attribute for `no_return` if possible.
+        inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
+
+        // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
+        inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
+
+        // Reads from a file descriptor.
+        // Signature: [fd,buf,count]
+        // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
+        // Returns number of bytes read, 0 on EOF, or -1 on error.
+        inline func int sc_read[int,ptr,int] DARWIN_SYSCALL_READ syscall3 end
+
+        // Writes to a file descriptor.
+        // Signature: [fd,buf,count]
+        // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
+        // Returns number of bytes written, or -1 on error.
+        inline func int sc_write[int,ptr,int] DARWIN_SYSCALL_WRITE syscall3 end
+
+        // Opens a file.
+        // Signature: [patr, flags, mode]
+        // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
+        // Returns file descriptor, or -1 on error.
+        inline func int sc_open[ptr,int,int] DARWIN_SYSCALL_OPEN syscall3 end
+
+        // Closes a file descriptor.
+        inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
+    #endif // ARCH_ARM64
+#endif // OS_DARWIN

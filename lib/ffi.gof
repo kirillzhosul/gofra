@@ -1,0 +1,6 @@
+// ==============================================
+// FFI (foreign-functions-interface)
+// ==============================================
+
+// Convert an Gofra string to `C-String` via dropping size, suitable for FFI calls.
+inline func ptr to_cstr_ptr[ptr,int] drop end

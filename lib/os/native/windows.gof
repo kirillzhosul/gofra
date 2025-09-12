@@ -1,0 +1,106 @@
+// ==============================================
+// Windows native system interaction layer and constant (x86-64)
+// Interacts with kernel via API (WINAPI), acquired from libraries like `kernel32.dll` / `user32.dll` / `ntdll.dll` e.g)
+// Caveats: Currently works only for x86-64 Windows!
+// TODO: Add AARCH64 Windows layer
+// ==============================================
+
+#include "types.gof"
+
+#ifdef OS_WINDOWS
+    // Guard for uninteonal includes, mostly unused
+
+    // Windows API sometimes requires something name _LP_RESERVED
+    // This is mostly will be not required by user-end code
+    #define WINAPI_LP_RESERVED 0
+
+    // Line separator
+    #define OS_LINESEP "\r\n"
+
+    // --- Network constants ---
+    // Address family
+    #define AF_UNSPEC  0
+    #define AF_INET    2
+    #define AF_INET6   23
+    // Socket type
+    #define SOCK_STREAM 1
+    #define SOCK_DGRAM  2 
+    #define SOCK_RAW    3
+    // Other
+    #define SOMAXCONN   0x7FFFFFFF
+
+    // --- Standard Handle Constants ---
+    // TODO: Add negative numbers
+    #define STD_INPUT_HANDLE   0 10 -
+    #define STD_OUTPUT_HANDLE  0 11 -
+    #define STD_ERROR_HANDLE   0 12 -
+
+    // --- File Type Constants ---
+    #define FILE_TYPE_UNKNOWN  0x0000
+    #define FILE_TYPE_DISK     0x0001
+    #define FILE_TYPE_CHAR     0x0002   // Character file, typically console or printer
+    #define FILE_TYPE_PIPE     0x0003
+
+    // --- External symbols from kernel libraries (WINAPI) ---
+    extern func void winapi_exit_process[int]@link[ExitProcess]
+    extern func int  winapi_get_std_handle[int]@link[GetStdHandle]
+    extern func bool winapi_write_console_a[int,ptr,int,ptr,int]@link[WriteConsoleA]
+    extern func bool winapi_write_file[int,ptr,int,ptr,int]@link[WriteFile]
+    extern func int  winapi_get_file_type[int]@link[GetFileType]
+
+    // -- Windows API simple wrappers --
+    inline func void win_exit[int]                                          call winapi_exit_process    end
+    inline func int  win_get_std_handle[int]                                call winapi_get_std_handle  end
+    inline func int  win_get_stdout_handle[]             STD_OUTPUT_HANDLE  call winapi_get_std_handle  end
+    inline func int  win_get_stderr_handle[]             STD_ERROR_HANDLE   call winapi_get_std_handle  end
+    inline func int  win_get_stdin_handle[]              STD_INPUT_HANDLE   call winapi_get_std_handle  end
+    inline func bool win_write_console[int,ptr,int,ptr]  WINAPI_LP_RESERVED call winapi_write_console_a end
+    inline func bool win_write_file[int,ptr,int,ptr]      WINAPI_LP_RESERVED call winapi_write_file       end
+    inline func bool win_is_console_handle[int]          call winapi_get_file_type FILE_TYPE_CHAR ==     end
+
+    memory win_write_ptr_temp      8
+    memory win_write_len_temp      8
+    memory win_write_handle_temp   8
+    memory win_write_bytes_written 8
+    func int win_write[int,ptr,int]
+        // [raw handle, buffer, length]
+
+        // TODO: proper typechecking and return
+        // TODO: proper else blocks
+        // TODO: Add negative numbers
+
+        win_write_len_temp    !<
+        win_write_ptr_temp    !<
+        win_write_handle_temp !<
+
+        false // default error
+        win_write_handle_temp ?> win_is_console_handle true == if
+            // Is an console
+
+            win_write_handle_temp ?> win_get_std_handle
+            win_write_ptr_temp ?>
+            win_write_len_temp ?>
+            win_write_bytes_written
+            win_write_console
+
+            swap drop // override default error
+        end
+        win_write_handle_temp ?> win_is_console_handle false  == if
+            // Is an file
+
+            win_write_handle_temp ?>
+            win_write_ptr_temp ?>
+            win_write_len_temp ?>
+            win_write_bytes_written
+            win_write_file
+
+            swap drop // override default error
+        end
+        // [error]
+        false == if 
+            win_write_bytes_written 0 1 - !< 
+        end
+        win_write_bytes_written ?>
+    end
+
+#endif // OS_WINDOWS

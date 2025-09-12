@@ -1,0 +1,13 @@
+// ==============================================
+// CPU helpers
+// This is an *private* library method as should be removed and be an part of language
+// ==============================================
+
+// Size of the word in bytes
+// Probably, sometime this may become something like part of the language
+#ifdef ARCH_AMD64 
+    #define CPU_WORD 8 
+#endif // ARCH_AMD64
+#ifdef ARCH_ARM64
+    #define CPU_WORD 8 
+#endif // ARCH_ARM64

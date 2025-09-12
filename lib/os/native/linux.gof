@@ -1,0 +1,91 @@
+// Provider of an syscall table for convient usage
+
+
+#ifdef OS_LINUX
+    // Linux syscall table
+    #define LINUX_SYSCALL_WRITE  1
+    #define LINUX_SYSCALL_EXIT   60
+
+    inline func int  sc_write[int,ptr,int] LINUX_SYSCALL_WRITE syscall3 end
+    inline func int  sc_exit[int,ptr,int]  LINUX_SYSCALL_EXIT  syscall1 end
+#endif
+
+
+// ==============================================
+// Linux native system interaction layer and constant (x86-64)
+// Interacts with kernel via syscalls
+// Caveats: Currently works only for x86-64 Linux!
+// TODO: Add AARCH64 Linux layer
+// ==============================================
+
+#ifdef OS_LINUX
+    // Guard for uninteonal includes, mostly unused
+
+    // File access mode flags
+    #define O_RDONLY   0x0000  // Open for reading only
+    #define O_WRONLY   0x0001  // Open for writing only
+    #define O_RDWR     0x0002  // Open for reading and writing
+
+    // Standart file descriptors
+    #define STD_IN_FD  0
+    #define STD_OUT_FD 1
+    #define STD_ERR_FD 2
+
+    // --- Network constants ---
+    // Address family
+    #define AF_UNIX    1
+    #define AF_INET    2
+    #define AF_INET6   10
+    // Socket type
+    #define SOCK_STREAM 1
+    #define SOCK_DGRAM  2 
+    #define SOCK_RAW    3
+    // Other
+    #define SOMAXCONN   128
+
+    // Line separator
+    #define OS_LINESEP "\n"
+
+    // --- Syscall Numbers (Partial Table) ---
+    #ifdef ARCH_AMD64
+        #define LINUX_SYSCALL_READ    0
+        #define LINUX_SYSCALL_WRITE   1
+        #define LINUX_SYSCALL_OPEN    2
+        #define LINUX_SYSCALL_CLOSE   3
+    #endif // ARCH_AMD64
+
+    // ---  Syscall Wrappers ---
+    // These are the preferred way to make syscalls.
+    #ifdef ARCH_AMD64
+        // TODO: that is actually variadic function to make any syscall which is currently useless
+        inline func void sc_syscall[] DARWIN_SYSCALL_SYSCALL syscall0 drop end
+
+        // Terminates the current process. Does not return.
+        // TODO: Add a compiler intrinsic or attribute for `no_return` if possible.
+        inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
+
+        // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
+        inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
+
+        // Reads from a file descriptor.
+        // Signature: [fd,buf,count]
+        // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
+        // Returns number of bytes read, 0 on EOF, or -1 on error.
+        inline func int sc_read[int,ptr,int] DARWIN_SYSCALL_READ syscall3 end
+
+        // Writes to a file descriptor.
+        // Signature: [fd,buf,count]
+        // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
+        // Returns number of bytes written, or -1 on error.
+        inline func int sc_write[int,ptr,int] DARWIN_SYSCALL_WRITE syscall3 end
+
+        // Opens a file.
+        // Signature: [patr, flags, mode]
+        // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
+        // Returns file descriptor, or -1 on error.
+        inline func int sc_open[ptr,int,int] DARWIN_SYSCALL_OPEN syscall3 end
+
+        // Closes a file descriptor.
+        inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
+    #endif // ARCH_AMD64
+#endif // OS_LINUX

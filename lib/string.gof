@@ -1,0 +1,31 @@
+// ==============================================
+// String helpers
+// ==============================================
+
+#include "_cpu.gof"
+
+// Get length of an C-Style string (ends with `\0`)
+// Will cause segmentation fault / infinite loop if string is not an C-style.
+memory cstr_len_ptr_temp CPU_WORD
+memory cstr_len_idx_temp CPU_WORD
+func int cstr_len[ptr]
+    cstr_len_ptr_temp swap !<
+    cstr_len_idx_temp 0    !<
+
+    while 
+        cstr_len_ptr_temp ?>
+        cstr_len_idx_temp ?> 
+        + ?> 
+        '\0' !=
+    do
+        cstr_len_idx_temp
+            cstr_len_idx_temp ?> inc
+        !<
+    end
+
+    cstr_len_idx_temp ?>
+end
+
+
+// Almost as an alias to `cstr_len`, as in Gofra all string are C-strings by default (except size pushed after)
+func int str_len[ptr,int] drop cstr_len end

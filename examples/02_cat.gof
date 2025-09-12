@@ -1,0 +1,44 @@
+
+// ==============================================
+// `cat` analogue
+// Opens an text file from PATH and emits it content into stdout
+// Currently, half way crossplatform for Windows
+// Works only on Darwin / Linux
+// TODO: add argc argv
+// ==============================================
+
+#include "std.gof"
+#include "_cpu.gof"
+
+// Currently, this example doesnt work with arguments, so we hardcode path
+#define PATH "test.txt" to_cstr_ptr
+
+// Some segment in memory so we can store conent of the file
+#define CAPACITY 1024 // 1KiB
+memory BUFFER   CAPACITY
+
+// Store an FD of that files somewhere
+memory FD_BUFFER CPU_WORD
+
+func void main[]
+    // TODO(@kirillzhosul): Research why non-existant file returns STDERR FD
+    
+    // Open file
+    FD_BUFFER PATH 0 0 call sc_open !<
+    FD_BUFFER ?> 0 < if 
+        "Unable to open given file" eprint_fatal 
+    end
+
+    // Read file
+    FD_BUFFER ?> 
+    BUFFER CAPACITY
+    call sc_read 1 < if 
+        "Unable to read given file" eprint_fatal 
+    end
+
+    // Print whole buffer
+    STD_OUT BUFFER CAPACITY 
+    call print_fd drop
+
+    0 exit
+end

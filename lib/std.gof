@@ -1,10 +1,17 @@
-#include "os"
-#include "assert.gof"
-#include "types.gof"
-
+// ==============================================
+// Standart library
+// ==============================================
 
 // NOOP (NO OPeration) as an alias to `...` same
 // Used to mark block without operation (as compiler will treat that as an error)
 // Compiler will optimize that with optimize level greater or 1 (`-O1`)
 #define noop 1 drop
 #define ... ...
+
+#include "types.gof"
+#include "ffi.gof"
+
+#include "os"
+
+#include "string.gof"
+#include "assert.gof"

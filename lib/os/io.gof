@@ -1,89 +1,129 @@
+// ==============================================
+// I/O (Input / Output) manipulations based on operating system (wrapper)
+// ==============================================
+
 #include "general.gof"
-#include "syscall.gof"
 
+// OS-dependant native abstraction layer
+#ifdef OS_WINDOWS #include "os/native/windows.gof" #endif
+#ifdef OS_DARWIN  #include "os/native/darwin.gof"  #endif
+#ifdef OS_LINUX   #include "os/native/linux.gof"   #endif
+
+// --- Default handles / file descriptors ---
+// TODO: Add proper preprocessor conditions
 #ifdef OS_WINDOWS
-    memory .win_write_console_bytes_written_buffer 8
-    memory .win_gofra_print_fd_ptr_buffer 8 
-    memory .win_gofra_print_fd_len_buffer 8
-#endif
+    #define STD_IN  STD_INPUT_HANDLE
+    #define STD_OUT STD_OUTPUT_HANDLE
+    #define STD_ERR STD_ERROR_HANDLE
+#endif // OS_WINDOWS
+#ifdef OS_DARWIN
+    #define STD_IN  STD_IN_FD
+    #define STD_OUT STD_OUT_FD
+    #define STD_ERR STD_ERR_FD
+#endif // OS_DARWIN
+#ifdef OS_LINUX
+    #define STD_IN  STD_IN_FD
+    #define STD_OUT STD_OUT_FD
+    #define STD_ERR STD_ERR_FD
+#endif // OS_LINUX
 
-inline func void print_fd[int,ptr,int]
-    // Print an string into given FD
-    #ifdef OS_POSIX
-        sc_write drop
-    #endif
-    #ifdef OS_WINDOWS
-        .win_gofra_print_fd_ptr_buffer swap !<
-        .win_gofra_print_fd_len_buffer swap !<
+// Print an string into given file descriptor / handle and return bytes written
+#ifdef OS_DARWIN  func int print_fd[int,ptr,int] sc_write  end #endif
+#ifdef OS_LINUX   func int print_fd[int,ptr,int] sc_write  end #endif
+#ifdef OS_WINDOWS func int print_fd[int,ptr,int] win_write end #endif
 
-        copy // [handle, handle]
-        
-        GetFileType FILE_TYPE_CHAR == if 
-            GetStdHandle
-            .win_gofra_print_fd_ptr_buffer ?>
-            .win_gofra_print_fd_len_buffer ?>
-            .win_write_console_bytes_written_buffer 
-            WriteConsoleA 
-            drop return // [no handle]
-        end
-
-        .win_gofra_print_fd_ptr_buffer ?>
-        .win_gofra_print_fd_len_buffer ?>
-        .win_write_console_bytes_written_buffer 
-        WINDOWS_RAW_WriteFile
-        return // [no handle]
-    #endif
+// Print an string into standart console error stream
+memory print_length_temp 8
+func void print[ptr,int]
+    print_length_temp swap !<
+    STD_OUT swap
+    print_length_temp ?> 
+    print_fd drop
 end
 
-memory .print_string_size_buffer 1
-inline func void print[ptr,int]
-    // Print an string into standart output stream (STDOUT for POSIX)
-    .print_string_size_buffer swap !<
-    #ifdef OS_POSIX
-        POSIX_STDOUT swap
-    #endif
-    #ifdef OS_WINDOWS
-        STD_OUTPUT_HANDLE swap
-    #endif  
-    .print_string_size_buffer ?> 
-    print_fd
+// Print an string into standart console output stream
+func void eprint[ptr,int]
+    print_length_temp swap !<
+    STD_ERR swap
+    print_length_temp ?> 
+    print_fd drop
 end
 
-#ifdef OS_POSIX
-    memory .print_integer_buffer 128
-    memory .print_integer_divres 16
-    memory .print_integer_idx 16
-    inline func void print_integer[int]
-        // Print given number into 
-        // Negative numbers not supported for now
-        copy 0 < if
-            POSIX_STDERR "FATAL: print_integer got negative number!\n" print_fd abort
-        end
+// Print an string into standart error console stream and abort execution
+func void eprint_fatal[ptr,int]
+    "FATAL: " eprint
+    eprint abort
+end
 
-        // Straight zero
-        copy 0 == if
-            .print_integer_buffer '0' !<
-            .print_integer_buffer 1 + 20 !< // TODO(@kirillzhosul): At some time '\n' has been broken.
-            .print_integer_buffer 2 print
-        end
+// Print given number into given file descriptor / handle
+// does not emit '\n' at the end
+// negative numbers is not supported
+memory print_integer_buffer_temp 128
+memory print_integer_number_temp 16
+memory print_integer_idx_temp 16
+memory print_integer_fd_temp 16
+func void print_integer_fd[int,int]
+    // TODO: negative numbers is not supported
+    print_integer_number_temp swap !<
+    print_integer_fd_temp swap !<
 
-        .print_integer_divres swap !<
-        .print_integer_idx 0 !<
-        
-        while .print_integer_divres ?> 0 > do
-            .print_integer_divres ?> 10 %   
-            .print_integer_buffer .print_integer_idx ?> + swap 48 + !<
-            .print_integer_idx .print_integer_idx ?> inc !<
-            
-            .print_integer_divres copy ?> 10 / !< 
-        end
-
-        while .print_integer_idx ?> 1 + 0 > do
-            .print_integer_buffer .print_integer_idx ?> + 1 print
-            .print_integer_idx copy ?> dec !<
-        end
-
-        .print_integer_buffer 20 !<
-        .print_integer_buffer 1 print
+    print_integer_number_temp ?> 0 < if
+        "print_integer_fd got negative number!\n" eprint_fatal
     end
-#endif
+
+    print_integer_number_temp ?> 0 == if
+        // Straight zero
+        print_integer_buffer_temp 0 + '0'  !<
+        print_integer_buffer_temp 1 + '\n' !<
+
+        print_integer_fd_temp ?> 
+        print_integer_buffer_temp 
+        2 print_fd drop
+    end
+
+    print_integer_idx_temp 0 !<
+    
+    while 
+        print_integer_number_temp ?> 
+        0 >
+    do
+        // Get last digit of an number
+        print_integer_number_temp ?> 10 %
+
+        // position to write at
+        print_integer_buffer_temp print_integer_idx_temp ?> + 
+        
+        // Write digit as char
+        swap 
+        '0' + // `cast` to char (e.g digit + 48 => charcode) 
+        !<
+        
+        // Shift number from right to left (drop last digit)
+        print_integer_number_temp copy ?> 10 / !< 
+
+        // Increment IDX
+        print_integer_idx_temp copy ?> inc !<
+    end
+
+    // Number: 1234
+    // Buffer [...]
+    // After block above buffer will become: [4321]
+    // we iterate from right to left so emitting an '1234' string
+    while print_integer_idx_temp ?> 1 + 0 > do
+        // Print current symbol one-by-one from right to left
+        print_integer_fd_temp ?>
+            print_integer_buffer_temp print_integer_idx_temp ?> + 
+        1 print_fd drop
+
+        // Decrement IDX
+        print_integer_idx_temp copy ?> dec !<
+    end
+end
+
+// Print given number into standart console output
+// Emits '\n' at the end
+// negative numbers is not supported
+inline func void print_integer[int]
+    STD_IN swap print_integer_fd
+    "\n" print
+end

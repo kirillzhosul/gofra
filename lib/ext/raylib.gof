@@ -1,4 +1,7 @@
-// Raylib bindings to Gofra
+// ==============================================
+// Raylib binding for Gofra (Graphics API)
+// https://www.raylib.com
+// ==============================================
 
 extern func void InitWindow[int,int,ptr]@link[_InitWindow]
 extern func bool WindowShouldClose[]@link[_WindowShouldClose]
@@ -12,6 +15,3 @@ extern func void DrawRectangle[int,int,int,int,int]@link[_DrawRectangle]
 extern func bool IsKeyPressed[int]@link[_IsKeyPressed]
 extern func bool IsKeyDown[int]@link[_IsKeyDown]
 extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
-
-// Key codes
-// Yo may pass key code via char, e.g 'W', additional key codes will be implemented later or via raw char-code

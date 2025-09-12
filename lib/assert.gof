@@ -1,32 +1,32 @@
+// ==============================================
+// Runtime assertions
+// Check is value are equals without proper error handling
+// TODO: add static assertions (https://github.com/kirillzhosul/gofra/issues/19)
+// ==============================================
+
 #include "os/io.gof"
+#include "_cpu.gof"
 
-memory .runtime_assert_w_message_ptr 8 // research while ptr is not 4 bytes.
-memory .runtime_assert_w_message_len 4
-func void runtime_assert_w_message[int,int,ptr,int]
-    // Check for equality at runtime with additional message
-    // (assert two values same)
-    
-    .runtime_assert_w_message_len swap !<
-    .runtime_assert_w_message_ptr swap !<
-
+// Check for equality at runtime with additional message
+// (assert two values same)
+memory runtime_assert_ptr_temp CPU_WORD
+memory runtime_assert_len_temp CPU_WORD
+func void runtime_assert[int,int,ptr,int]
+    // TODO: add proper types to that function, as it may compare not only integers
+    runtime_assert_len_temp swap !<
+    runtime_assert_ptr_temp swap !<
 
     != if
-        POSIX_STDERR "runtime_assert: Assertion failed, " print_fd
+        "runtime_assert: Assertion failed, " eprint
     
-        POSIX_STDERR
-            .runtime_assert_w_message_ptr ?>
-            .runtime_assert_w_message_len ?>
-        print_fd
+        runtime_assert_ptr_temp ?>
+        runtime_assert_len_temp ?>
+        eprint
         
-        POSIX_STDERR "\n" print_fd 
-    
-        abort
+        "\n" eprint_fatal
     end
- 
-    // TODO(@kirillzhosul): non closing context-blocks in one file leads to propagating that into another file
-    // must validate context-switches
 end
 
-// Check for equality at runtime
-// (assert two values same)
-#define runtime_assert "no message" runtime_assert_w_message
+// *Export* simple `assert` as an alias to real `runtime_assert`
+// e.g static one will be `static_assert`, and this may be reworked
+#define assert runtime_assert

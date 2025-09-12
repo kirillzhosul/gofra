@@ -1,5 +1,6 @@
-// Type definitions and more
-
+// ==============================================
+// Type definition and helpers
+// ==============================================
 
 // Boolean bindings for type-safety
 // Under optimizer this resolves into single boolean push onto stack
