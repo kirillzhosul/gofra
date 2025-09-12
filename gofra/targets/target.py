@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from typing import Literal
 
-type Triplet = Literal["amd64-unknown-linux", "arm64-apple-darwin"]
+type Triplet = Literal[
+    "amd64-unknown-linux",
+    "arm64-apple-darwin",
+    "amd64-unknown-windows",
+]
 
 
 @dataclass
@@ -14,16 +18,16 @@ class Target:
     # Based on triplet
     architecture: Literal["AMD64", "ARM64"]
     vendor: Literal["unknown", "apple"]
-    operating_system: Literal["Darwin", "Linux"]
+    operating_system: Literal["Darwin", "Linux", "Windows"]
 
     cpu_word_size: Literal[8]
     cpu_pointer_width: Literal[8]
 
-    file_executable_suffix: Literal[""]
-    file_library_static_suffix: Literal[".a"]
-    file_library_dynamic_suffix: Literal[".dylib", ".so"]
-    file_assembly_suffix: Literal[".s"]
-    file_object_suffix: Literal[".o"]
+    file_executable_suffix: Literal["", ".exe"]
+    file_library_static_suffix: Literal[".a", ".lib"]
+    file_library_dynamic_suffix: Literal[".dylib", ".so", ".dll"]
+    file_assembly_suffix: Literal[".s", ".asm"]
+    file_object_suffix: Literal[".o", ".obj"]
 
     @staticmethod
     def from_triplet(triplet: Triplet) -> "Target":
@@ -41,6 +45,20 @@ class Target:
                     file_library_dynamic_suffix=".dylib",
                     file_object_suffix=".o",
                     file_assembly_suffix=".s",
+                )
+            case "amd64-unknown-windows":
+                return Target(
+                    triplet=triplet,
+                    vendor="unknown",
+                    architecture="AMD64",
+                    operating_system="Windows",
+                    cpu_pointer_width=8,
+                    cpu_word_size=8,
+                    file_executable_suffix=".exe",
+                    file_library_static_suffix=".lib",
+                    file_library_dynamic_suffix=".dll",
+                    file_object_suffix=".obj",
+                    file_assembly_suffix=".asm",
                 )
             case "amd64-unknown-linux":
                 return Target(
