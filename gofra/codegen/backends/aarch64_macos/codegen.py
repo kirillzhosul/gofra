@@ -8,6 +8,7 @@ from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
 from gofra.codegen.backends.aarch64_macos.assembly import (
     call_cffi_function,
     call_internal_function,
+    debugger_breakpoint_trap,
     drop_cells_from_stack,
     evaluate_conditional_block_on_stack_with_jump,
     function_begin_with_prologue,
