@@ -5,6 +5,4 @@ func void main
     '0'  48  "Characters must resolve to their char code" assert
     '\n' 10  "Characters must resolve to their char code" assert
     '\0' 0   "Characters must resolve to their char code" assert
-
-    0 exit
 end

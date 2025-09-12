@@ -6,6 +6,4 @@ func void main
     0 while copy ITERATIONS < do
         inc
     end ITERATIONS "While loop must perform exactly N iterations" assert
-
-    0 exit
 end
