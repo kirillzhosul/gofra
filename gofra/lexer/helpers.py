@@ -16,7 +16,7 @@ ESCAPE_SYMBOL = "\\"
 
 def unescape_string(string: str) -> str:
     """Remove all terminations within string (escape it)."""
-    return string.encode("unicode_escape").decode("UTF-8")
+    return string.encode().decode("unicode-escape")
 
 
 def is_valid_hexadecimal(text: str) -> bool:
