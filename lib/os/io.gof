@@ -28,9 +28,9 @@
 #endif // OS_LINUX
 
 // Print an string into given file descriptor / handle and return bytes written
-#ifdef OS_DARWIN  func int print_fd[int,ptr,int] sc_write  end #endif
-#ifdef OS_LINUX   func int print_fd[int,ptr,int] sc_write  end #endif
-#ifdef OS_WINDOWS func int print_fd[int,ptr,int] win_write end #endif
+#ifdef OS_DARWIN  inline func int print_fd[int,ptr,int] sc_write  end #endif
+#ifdef OS_LINUX   inline func int print_fd[int,ptr,int] sc_write  end #endif
+#ifdef OS_WINDOWS inline func int print_fd[int,ptr,int] win_write end #endif
 
 // Print an string into standart console error stream
 memory print_length_temp 8
@@ -67,6 +67,7 @@ func void print_integer_fd[int,int]
     print_integer_number_temp swap !<
     print_integer_fd_temp swap !<
 
+
     print_integer_number_temp ?> 0 < if
         "print_integer_fd got negative number!\n" eprint_fatal
     end
@@ -83,10 +84,12 @@ func void print_integer_fd[int,int]
 
     print_integer_idx_temp 0 !<
     
+   
     while 
         print_integer_number_temp ?> 
         0 >
     do
+        
         // Get last digit of an number
         print_integer_number_temp ?> 10 %
 
@@ -123,7 +126,7 @@ end
 // Print given number into standart console output
 // Emits '\n' at the end
 // negative numbers is not supported
-inline func void print_integer[int]
+func void print_integer[int]
     STD_IN swap print_integer_fd
     "\n" print
 end

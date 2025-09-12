@@ -52,40 +52,35 @@
         #define LINUX_SYSCALL_WRITE   1
         #define LINUX_SYSCALL_OPEN    2
         #define LINUX_SYSCALL_CLOSE   3
+        #define LINUX_SYSCALL_EXIT    60
     #endif // ARCH_AMD64
 
     // ---  Syscall Wrappers ---
     // These are the preferred way to make syscalls.
     #ifdef ARCH_AMD64
-        // TODO: that is actually variadic function to make any syscall which is currently useless
-        inline func void sc_syscall[] DARWIN_SYSCALL_SYSCALL syscall0 drop end
-
         // Terminates the current process. Does not return.
         // TODO: Add a compiler intrinsic or attribute for `no_return` if possible.
-        inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
-
-        // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
-        inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
+        inline func void sc_exit[int] LINUX_SYSCALL_EXIT syscall1 drop end
 
         // Reads from a file descriptor.
         // Signature: [fd,buf,count]
         // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
         // Returns number of bytes read, 0 on EOF, or -1 on error.
-        inline func int sc_read[int,ptr,int] DARWIN_SYSCALL_READ syscall3 end
+        inline func int sc_read[int,ptr,int] LINUX_SYSCALL_READ syscall3 end
 
         // Writes to a file descriptor.
         // Signature: [fd,buf,count]
         // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
         // Returns number of bytes written, or -1 on error.
-        inline func int sc_write[int,ptr,int] DARWIN_SYSCALL_WRITE syscall3 end
+        inline func int sc_write[int,ptr,int] LINUX_SYSCALL_WRITE syscall3 end
 
         // Opens a file.
         // Signature: [patr, flags, mode]
         // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
         // Returns file descriptor, or -1 on error.
-        inline func int sc_open[ptr,int,int] DARWIN_SYSCALL_OPEN syscall3 end
+        inline func int sc_open[ptr,int,int] LINUX_SYSCALL_OPEN syscall3 end
 
         // Closes a file descriptor.
-        inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
+        inline func int sc_close[int] LINUX_SYSCALL_CLOSE syscall1 end
     #endif // ARCH_AMD64
 #endif // OS_LINUX
