@@ -1,0 +1,8 @@
+#include "std.gof"
+
+func void main
+    true true    "True must equals true"   assert 
+    false false  "False must equals false" assert
+
+    0 exit
+end

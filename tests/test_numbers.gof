@@ -6,9 +6,8 @@ func void main
     1024     drop
     16777216 drop
 
-    // Hex must equal to same value in 10-base
-    0xFF 255 runtime_assert
-    0xFFFF 65535 runtime_assert
+    0xFF 255      "Hex must equals to same value in 10-base " assert
+    0xFFFF 65535  "Hex must equals to same value in 10-base " assert
 
     // Max 16 bytes (64 bits) register
     // This is probably is 64bits arch related

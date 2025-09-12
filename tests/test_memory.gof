@@ -1,6 +1,15 @@
-memory static_blob 128
+#include "std.gof"
+#include "_cpu.gof"
+
+#define NUMBER 32
+memory static_blob CPU_WORD
 
 func void main
-    static_blob 32 !<
-    static_blob ?> drop
+    static_blob NUMBER !<
+
+    static_blob ?> 
+    NUMBER
+    "Write and read must return same value" assert
+
+    0 exit
 end
