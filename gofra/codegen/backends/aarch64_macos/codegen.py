@@ -6,7 +6,8 @@ from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
 from gofra.codegen.backends.aarch64_macos.assembly import (
-    call_function_block,
+    call_cffi_function,
+    call_internal_function,
     drop_cells_from_stack,
     evaluate_conditional_block_on_stack_with_jump,
     function_begin_with_prologue,
@@ -119,14 +120,18 @@ def aarch64_macos_operator_instructions(
             assert isinstance(operator.operand, str)
 
             function = program.functions[operator.operand]
-            function_name = function.external_definition_link_to or function.name
 
-            call_function_block(
-                context,
-                function_name,
-                abi_ffi_push_retval_onto_stack=function.abi_ffi_push_retval_onto_stack(),
-                abi_ffi_arguments_count=function.abi_ffi_arguments_count(),
-            )
+            is_uses_cffi = bool(function.external_definition_link_to)
+            function_name = function.external_definition_link_to or function.name
+            if is_uses_cffi:
+                call_cffi_function(
+                    context,
+                    name=function_name,
+                    arguments_count=function.abi_ffi_arguments_count(),
+                    push_return_value_onto_stack=function.abi_ffi_push_retval_onto_stack(),
+                )
+                return
+            call_internal_function(context, name=function_name)
 
         case _:
             assert_never(operator.type)
@@ -213,7 +218,7 @@ def aarch64_macos_executable_functions(
         function_begin_with_prologue(
             context,
             name=function.name,
-            as_global_linker_symbol=function.is_global_linker_symbol,
+            global_name=function.name if function.is_global_linker_symbol else None,
             preserve_frame=True,
         )
 
@@ -229,17 +234,12 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
     function_begin_with_prologue(
         context,
         name=CODEGEN_ENTRY_POINT_SYMBOL,
-        as_global_linker_symbol=True,
+        global_name=CODEGEN_ENTRY_POINT_SYMBOL,
         preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
     )
 
     # Prepare and execute main function
-    call_function_block(
-        context,
-        function_name=GOFRA_ENTRY_POINT,
-        abi_ffi_push_retval_onto_stack=False,
-        abi_ffi_arguments_count=0,
-    )
+    call_internal_function(context, name=GOFRA_ENTRY_POINT)
 
     # Call syscall to exit without accessing protected system memory.
     # `ret` into return-address will fail with segfault

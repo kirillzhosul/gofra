@@ -8,11 +8,11 @@ from .registers import (
     AARCH64_DOUBLE_WORD_BITS,
     AARCH64_GP_REGISTERS,
     AARCH64_HALF_WORD_BITS,
-    AARCH64_MACOS_ABI_ARGUMENT_REGISTERS,
-    AARCH64_MACOS_ABI_RETVAL_REGISTER,
-    AARCH64_MACOS_SYSCALL_NUMBER_REGISTER,
     AARCH64_STACK_ALIGNMENT,
     AARCH64_STACK_ALINMENT_BIN,
+    FRAME_POINTER,
+    LINK_REGISTER,
+    STACK_POINTER,
 )
 
 if TYPE_CHECKING:
@@ -166,9 +166,10 @@ def ipc_syscall_macos(
     if not injected_args:
         injected_args = [None for _ in range(arguments_count + 1)]
 
+    abi = context.abi
     registers_to_load = (
-        AARCH64_MACOS_SYSCALL_NUMBER_REGISTER,
-        *AARCH64_MACOS_ABI_ARGUMENT_REGISTERS[:arguments_count][::-1],
+        abi.syscall_number_register,
+        *abi.argument_registers[:arguments_count][::-1],
     )
 
     for injected_argument, register in zip(injected_args, registers_to_load):
@@ -187,7 +188,7 @@ def ipc_syscall_macos(
 
     if store_retval_onto_stack:
         # Mostly related to optimizations above if we dont want to store result
-        push_register_onto_stack(context, AARCH64_MACOS_ABI_RETVAL_REGISTER)
+        push_register_onto_stack(context, abi.return_value_register)
 
 
 def perform_operation_onto_stack(
@@ -249,57 +250,75 @@ def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> No
     context.write("str X0, [X1]")
 
 
-def call_function_block(
+def call_cffi_function(
     context: AARCH64CodegenContext,
-    function_name: str,
     *,
-    abi_ffi_push_retval_onto_stack: bool,
-    abi_ffi_arguments_count: int,
+    name: str,
+    arguments_count: int,
+    push_return_value_onto_stack: bool,
 ) -> None:
-    """Call an function with preparing required fields (like stack-pointer).
+    """Call an function with C-FFI ABI.
 
-    Also allows to call ABI/FFI function with providing arguments and return value (retval) via:
-    `abi_ffi_push_retval_onto_stack` / `abi_ffi_arguments_count`
+    C-FFI functions are different from internal (Gofra) ones.
     """
-    assert abi_ffi_arguments_count >= 0, "FFI arguments count cannot go negative"
-    if abi_ffi_arguments_count:
-        arguments = abi_ffi_arguments_count
-        registers = AARCH64_MACOS_ABI_ARGUMENT_REGISTERS[:arguments][::-1]
+    if arguments_count > len(context.abi.argument_registers):
+        msg = (
+            f"C-FFI function call with {arguments_count} arguments not supported. "
+            f"Maximum {len(context.abi.argument_registers)} register arguments supported. "
+            "Stack argument passing not implemented."
+        )
+        raise NotImplementedError(msg)
+
+    if arguments_count < 0:
+        msg = "Tried to call function with C-FFI ABI with negative arguments count"
+        raise ValueError(msg)
+
+    abi = context.abi
+    if arguments_count:
+        registers = abi.argument_registers[:arguments_count][::-1]
         pop_cells_from_stack_into_registers(context, *registers)
 
-    context.write(f"bl {function_name}")
+    context.write(f"bl {name}")
 
-    if abi_ffi_push_retval_onto_stack:
-        push_register_onto_stack(context, AARCH64_MACOS_ABI_RETVAL_REGISTER)
+    if push_return_value_onto_stack:
+        push_register_onto_stack(context, abi.return_value_register)
+
+
+def call_internal_function(context: AARCH64CodegenContext, *, name: str) -> None:
+    """Call an function internally (e.g Gofra internal function without invokation of C-FFI ABI."""
+    context.write(f"bl {name}")
 
 
 def function_begin_with_prologue(
     context: AARCH64CodegenContext,
     *,
     name: str,
-    as_global_linker_symbol: bool,
+    global_name: str | None = None,
     preserve_frame: bool = True,
 ) -> None:
     """Begin an function symbol.
 
     Injects prologue with preparing required state (e.g registers, frame/stack pointers)
+
+    :is_global_symbol: Mark that function symbol as global for linker
+    :preserve_frame: If true will preserve function state for proper stack management and return adress
     """
-    if as_global_linker_symbol:
-        context.fd.write(f".global {name}\n")
+    if global_name:
+        context.fd.write(f".global {global_name}\n")
 
     context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
     context.fd.write(f"{name}:\n")
 
     if preserve_frame:
         # Save frame pointer and link register
-        context.write("stp x29, x30, [sp, #-16]!")
-        context.write("mov x29, sp")
+        context.write(f"stp {FRAME_POINTER}, {LINK_REGISTER}, [sp, #-16]!")
+        context.write(f"mov {FRAME_POINTER}, sp")
 
 
 def function_end_with_epilogue(
     context: AARCH64CodegenContext,
     *,
-    has_preserved_frame: bool,
+    has_preserved_frame: bool = True,
     execution_trap_instead_return: bool = False,
 ) -> None:
     """End function with proper epilogue.
@@ -311,8 +330,8 @@ def function_end_with_epilogue(
     :execution_trap_instead_return: Internal, if true, will replace simple return with execution guard trap to raise from execution
     """
     if has_preserved_frame:
-        # Restore X29 (calee frame pointer) and X30 (link register, where to jump out via `ret`)
-        context.write("ldp x29, x30, [sp], #16")
+        # Restore frame pointer and link register
+        context.write(f"ldp {FRAME_POINTER}, {LINK_REGISTER}, [{STACK_POINTER}], #16")
 
     if execution_trap_instead_return:
         execution_guard_trap(context)
@@ -328,14 +347,16 @@ def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> Non
     Also due to being an trap (e.g execution will be catched) allows to trap some execution places.
     (e.g start entry exit failure)
     """
-    assert 0 <= number <= 2**16, "Expected 16-bit immediate for breakpoint trap number!"
-    context.write(f"brk #{number}")
+    if not (0 <= number <= AARCH64_HALF_WORD_BITS):
+        msg = "Expected 16-bit immediate for breakpoint trap number!"
+        raise ValueError(msg)
+    context.write(f"brk #{number & AARCH64_HALF_WORD_BITS}")
 
 
 def execution_guard_trap(context: AARCH64CodegenContext) -> None:
-    """Place an trap for preventing execution after entry symbol.
+    """Place a trap to prevent execution after function return.
 
-    Will prevent fatal possible errors when execution will fall through exit call
-    and will go into unbound memory (e.g binary file instructions end)
+    Prevents fatal errors when execution falls through exit call into
+    unbound memory.
     """
     debugger_breakpoint_trap(context, number=0)

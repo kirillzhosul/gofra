@@ -2,6 +2,8 @@ from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from typing import IO
 
+from .abi import DarwinAARCH64ABI
+
 
 @dataclass(frozen=True)
 class AARCH64CodegenContext:
@@ -13,6 +15,7 @@ class AARCH64CodegenContext:
 
     fd: IO[str]
     strings: MutableMapping[str, str] = field()
+    abi = DarwinAARCH64ABI
 
     def write(self, *lines: str) -> int:
         return self.fd.write("\t" + "\n\t".join(lines) + "\n")
