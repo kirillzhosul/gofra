@@ -268,6 +268,8 @@ def emulate_type_stack_for_operators(
                             context.pop_type_from_stack(),
                         )
                         context.push_types(b, a)
+                    case Intrinsic.BREAKPOINT:
+                        ...
                     case _:
                         assert_never(operator.operand)
             case _:

@@ -33,6 +33,8 @@ class Intrinsic(IntEnum):
     DROP = auto()
     SWAP = auto()
 
+    BREAKPOINT = auto()
+
 
 WORD_TO_INTRINSIC = {
     "+": Intrinsic.PLUS,
@@ -60,4 +62,5 @@ WORD_TO_INTRINSIC = {
     "syscall6": Intrinsic.SYSCALL6,
     "?>": Intrinsic.MEMORY_LOAD,
     "!<": Intrinsic.MEMORY_STORE,
+    "breakpoint": Intrinsic.BREAKPOINT,
 }

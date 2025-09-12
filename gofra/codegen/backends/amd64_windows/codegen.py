@@ -183,6 +183,8 @@ def amd64_windows_intrinsic_instructions(
             load_memory_from_stack_arguments(context)
         case Intrinsic.MEMORY_STORE:
             store_into_memory_from_stack_arguments(context)
+        case Intrinsic.BREAKPOINT:
+            raise NotImplementedError(operator)
         case _:
             assert_never(operator.operand)
 
