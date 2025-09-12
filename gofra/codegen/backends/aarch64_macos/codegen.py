@@ -114,7 +114,7 @@ def aarch64_macos_operator_instructions(
             )
             push_integer_onto_stack(context, value=len(string_raw))
         case OperatorType.FUNCTION_RETURN:
-            function_end_with_epilogue(context)
+            function_end_with_epilogue(context, has_preserved_frame=True)
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
 
@@ -212,14 +212,15 @@ def aarch64_macos_executable_functions(
         ), "Codegen does not supports global linker symbols that has type contracts"
         function_begin_with_prologue(
             context,
-            function_name=function.name,
+            name=function.name,
             as_global_linker_symbol=function.is_global_linker_symbol,
+            preserve_frame=True,
         )
 
         aarch64_macos_instruction_set(context, function.source, program, function.name)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
-        function_end_with_epilogue(context)
+        function_end_with_epilogue(context, has_preserved_frame=True)
 
 
 def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
@@ -227,8 +228,9 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
     # This is an executable entry point
     function_begin_with_prologue(
         context,
-        function_name=CODEGEN_ENTRY_POINT_SYMBOL,
+        name=CODEGEN_ENTRY_POINT_SYMBOL,
         as_global_linker_symbol=True,
+        preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
     )
 
     # Prepare and execute main function
@@ -249,6 +251,12 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
             AARCH64_MACOS_EPILOGUE_EXIT_CODE,
             AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
         ],
+    )
+
+    function_end_with_epilogue(
+        context=context,
+        has_preserved_frame=False,
+        execution_trap_instead_return=True,
     )
 
 

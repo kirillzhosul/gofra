@@ -27,7 +27,7 @@ def drop_cells_from_stack(context: AARCH64CodegenContext, *, cells_count: int) -
     """
     assert cells_count > 0, "Tried to drop negative cells count from stack"
     stack_pointer_shift = AARCH64_STACK_ALIGNMENT * cells_count
-    context.write(f"add SP, SP, #{stack_pointer_shift}")
+    context.write(f"add x29, x29, #{stack_pointer_shift}")
 
 
 def pop_cells_from_stack_into_registers(
@@ -43,8 +43,8 @@ def pop_cells_from_stack_into_registers(
 
     for register in registers:
         context.write(
-            f"ldr {register}, [SP]",
-            f"add SP, SP, #{AARCH64_STACK_ALIGNMENT}",
+            f"ldr {register}, [x29]",
+            f"add x29, x29, #{AARCH64_STACK_ALIGNMENT}",
         )
 
 
@@ -53,7 +53,7 @@ def push_register_onto_stack(
     register: AARCH64_GP_REGISTERS,
 ) -> None:
     """Store given register onto stack under current stack pointer."""
-    context.write(f"str {register}, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
+    context.write(f"str {register}, [x29, -{AARCH64_STACK_ALIGNMENT}]!")
 
 
 def store_integer_into_register(
@@ -244,7 +244,7 @@ def load_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
 
 
 def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
-    """Store value from into memory pointer, pointer and value acquired from stack."""
+    """Store value into memory pointer, pointer and value acquired from stack."""
     pop_cells_from_stack_into_registers(context, "X0", "X1")
     context.write("str X0, [X1]")
 
@@ -276,20 +276,66 @@ def call_function_block(
 def function_begin_with_prologue(
     context: AARCH64CodegenContext,
     *,
-    function_name: str,
+    name: str,
     as_global_linker_symbol: bool,
+    preserve_frame: bool = True,
 ) -> None:
-    """Begin an function symbol with prologue with preparing required (like stack-pointer)."""
+    """Begin an function symbol.
+
+    Injects prologue with preparing required state (e.g registers, frame/stack pointers)
+    """
     if as_global_linker_symbol:
-        context.fd.write(f".global {function_name}\n")
+        context.fd.write(f".global {name}\n")
+
     context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
-    context.fd.write(f"{function_name}:\n")
-    context.fd.write(
-        "\tmov x18, x30\n",
-    )  # Store link register, TODO: optimize for non-callee functions
+    context.fd.write(f"{name}:\n")
+
+    if preserve_frame:
+        # Save frame pointer and link register
+        context.write("stp x29, x30, [sp, #-16]!")
+        context.write("mov x29, sp")
 
 
-def function_end_with_epilogue(context: AARCH64CodegenContext) -> None:
-    """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
-    context.write("mov x30, x18")  # Restore link register for jumping out
+def function_end_with_epilogue(
+    context: AARCH64CodegenContext,
+    *,
+    has_preserved_frame: bool,
+    execution_trap_instead_return: bool = False,
+) -> None:
+    """End function with proper epilogue.
+
+    Epilogue is required to proper restore required state (e.g registers, frame/stack pointers)
+    and possibly cleanup.
+
+    :has_preserved_frame: If true, will restore that to jump out and proper stack management
+    :execution_trap_instead_return: Internal, if true, will replace simple return with execution guard trap to raise from execution
+    """
+    if has_preserved_frame:
+        # Restore X29 (calee frame pointer) and X30 (link register, where to jump out via `ret`)
+        context.write("ldp x29, x30, [sp], #16")
+
+    if execution_trap_instead_return:
+        execution_guard_trap(context)
+        return
+
     context.write("ret")
+
+
+def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> None:
+    """Place an debugger breakpoint (e.g trace trap).
+
+    Will halt execution to the debugger, useful for debugging purposes.
+    Also due to being an trap (e.g execution will be catched) allows to trap some execution places.
+    (e.g start entry exit failure)
+    """
+    assert 0 <= number <= 2**16, "Expected 16-bit immediate for breakpoint trap number!"
+    context.write(f"brk #{number}")
+
+
+def execution_guard_trap(context: AARCH64CodegenContext) -> None:
+    """Place an trap for preventing execution after entry symbol.
+
+    Will prevent fatal possible errors when execution will fall through exit call
+    and will go into unbound memory (e.g binary file instructions end)
+    """
+    debugger_breakpoint_trap(context, number=0)
