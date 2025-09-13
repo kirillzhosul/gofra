@@ -1,13 +1,14 @@
 import sys
 from pathlib import Path
-from subprocess import CalledProcessError, TimeoutExpired, run
+from subprocess import CalledProcessError, TimeoutExpired
 
 from gofra.assembler.assembler import OUTPUT_FORMAT_T, assemble_program
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
-from gofra.cli.entry_point import PERMISSION_CHMOD_EXECUTABLE
 from gofra.cli.output import cli_message
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.exceptions import GofraError
+from gofra.execution.execution import execute_binary_executable
+from gofra.execution.permissions import apply_file_executable_permissions
 from gofra.gofra import process_input_file
 from gofra.lexer.tokens import TokenLocation
 from gofra.preprocessor.macros import registry_from_raw_definitions
@@ -65,27 +66,10 @@ def evaluate_test_case(
             error=e,
         )
 
-    assert artifact_path.exists()
-    artifact_path.chmod(PERMISSION_CHMOD_EXECUTABLE)
+    apply_file_executable_permissions(filepath=artifact_path)
 
     try:
-        run(  # noqa: S602
-            [artifact_path.absolute()],
-            stdin=sys.stdin,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            check=True,
-            shell=True,
-            timeout=15,
-        )
-    except CalledProcessError as e:
-        return Test(
-            target=build_target,
-            status=TestStatus.EXECUTION_ERROR,
-            path=path,
-            artifact_path=artifact_path,
-            error=e,
-        )
+        exit_code = execute_binary_executable(artifact_path, args=[], timeout=15)
     except TimeoutExpired as e:
         return Test(
             target=build_target,
@@ -97,6 +81,15 @@ def evaluate_test_case(
     except KeyboardInterrupt:
         cli_message("WARNING", "Testkit execution was interrupted by user!")
         sys.exit(0)
+
+    if exit_code != 0:
+        return Test(
+            target=build_target,
+            status=TestStatus.EXECUTION_ERROR,
+            path=path,
+            artifact_path=artifact_path,
+            error=CalledProcessError(returncode=exit_code, cmd=artifact_path),
+        )
 
     return Test(
         target=build_target,

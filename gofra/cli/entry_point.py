@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import sys
-from subprocess import CalledProcessError, run
 from typing import TYPE_CHECKING
 
 from gofra.assembler import assemble_program
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.execution.execution import execute_binary_executable
+from gofra.execution.permissions import apply_file_executable_permissions
 from gofra.gofra import process_input_file
 from gofra.lexer import tokenize_from_raw
 from gofra.lexer.io.io import open_source_file_line_stream
@@ -139,14 +140,13 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         link_with_system_libraries=args.link_with_system_libraries,
     )
 
+    apply_file_executable_permissions(args.output_filepath)
+
     cli_message(
         level="INFO",
         text=f"Compiled input file down to {args.output_format} `{args.output_filepath.name}`!",
         verbose=args.verbose,
     )
-
-
-PERMISSION_CHMOD_EXECUTABLE = 0o755
 
 
 def cli_execute_after_compilation(args: CLIArguments) -> None:
@@ -156,22 +156,9 @@ def cli_execute_after_compilation(args: CLIArguments) -> None:
         "Trying to execute compiled file due to execute flag...",
         verbose=args.verbose,
     )
-    exit_code = 0
-
-    assert args.output_filepath.exists()
-    args.output_filepath.chmod(PERMISSION_CHMOD_EXECUTABLE)
 
     try:
-        run(  # noqa: S602
-            [args.output_filepath.absolute()],
-            stdin=sys.stdin,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            check=True,
-            shell=True,
-        )
-    except CalledProcessError as e:
-        exit_code = e.returncode
+        exit_code = execute_binary_executable(args.output_filepath, args=[])
     except KeyboardInterrupt:
         cli_message("WARNING", "Execution was interrupted by user!")
         sys.exit(0)
