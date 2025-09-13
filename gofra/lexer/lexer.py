@@ -22,7 +22,6 @@ from gofra.lexer.helpers import (
     is_valid_integer,
     unescape_string,
 )
-from gofra.lexer.io import open_source_file_line_stream
 from gofra.lexer.keywords import WORD_TO_KEYWORD
 from gofra.lexer.tokens import Token, TokenLocation, TokenType
 
@@ -31,21 +30,14 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def tokenize_file(path: Path) -> Generator[Token]:
-    """Open given file and stream lexical tokens via generator (perform lexical analysis).
-
-    :returns tokenizer: Generator of tokens, in order from top to bottom of an file (default order)
-    """
-    yield from tokenize_from_raw(
-        source=path,
-        iterable=open_source_file_line_stream(path),
-    )
-
-
 def tokenize_from_raw(
     source: Path | Literal["cli", "toolchain"],
     iterable: Iterable[str],
 ) -> Generator[Token]:
+    """Stream lexical tokens via generator (perform lexical analysis).
+
+    :returns tokenizer: Generator of tokens, in order from top to bottom of an file (default order)
+    """
     state = LexerState(path=source)
 
     for row, line in enumerate(iterable, start=0):

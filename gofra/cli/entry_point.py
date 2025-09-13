@@ -8,7 +8,8 @@ from gofra.assembler import assemble_program
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.gofra import process_input_file
-from gofra.lexer import tokenize_file
+from gofra.lexer import tokenize_from_raw
+from gofra.lexer.io.io import open_source_file_line_stream
 from gofra.lexer.tokens import TokenLocation
 from gofra.optimizer import create_optimizer_pipeline
 from gofra.preprocessor.macros.registry import registry_from_raw_definitions
@@ -86,7 +87,8 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
 
     if args.preprocess_only:
         path = args.source_filepaths[0]
-        lexer = tokenize_file(path)
+        io = open_source_file_line_stream(path)
+        lexer = tokenize_from_raw(path, io)
         preprocessor = preprocess_file(
             args.source_filepaths[0],
             lexer,

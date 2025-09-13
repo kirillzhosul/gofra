@@ -8,7 +8,7 @@ Some token types are misleading, this code does not always imply conventions.
 
 from .exceptions import LexerError
 from .keywords import Keyword
-from .lexer import tokenize_file
+from .lexer import tokenize_from_raw
 from .tokens import Token, TokenType
 
 __all__ = [
@@ -16,5 +16,5 @@ __all__ = [
     "LexerError",
     "Token",
     "TokenType",
-    "tokenize_file",
+    "tokenize_from_raw",
 ]

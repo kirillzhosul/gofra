@@ -4,7 +4,8 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from gofra.context import ProgramContext
-from gofra.lexer import tokenize_file
+from gofra.lexer import tokenize_from_raw
+from gofra.lexer.io import open_source_file_line_stream
 from gofra.parser import parse_file
 from gofra.preprocessor import preprocess_file
 from gofra.preprocessor.macros.registry import MacrosRegistry
@@ -23,7 +24,8 @@ def process_input_file(
 
     Does not provide optimizer or type checker.
     """
-    lexer = tokenize_file(filepath)
+    io = open_source_file_line_stream(filepath)
+    lexer = tokenize_from_raw(filepath, iterable=io)
     preprocessor = preprocess_file(
         filepath,
         lexer,

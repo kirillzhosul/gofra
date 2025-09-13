@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from gofra.lexer.io.io import open_source_file_line_stream
 from gofra.lexer.keywords import PreprocessorKeyword
-from gofra.lexer.lexer import tokenize_file
+from gofra.lexer.lexer import tokenize_from_raw
 from gofra.lexer.tokens import Token, TokenType
 
 from .exceptions import (
@@ -46,7 +47,9 @@ def resolve_include_from_token_into_state(
 
     if include_path not in state.already_included_paths:
         state.already_included_paths.append(include_path)
-        state.tokenizers.append(tokenize_file(include_path))
+        io = open_source_file_line_stream(include_path)
+        lexer = tokenize_from_raw(include_path, io)
+        state.tokenizers.append(lexer)
 
 
 def _consume_include_raw_path_from_token(
