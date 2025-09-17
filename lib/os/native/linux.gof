@@ -1,16 +1,5 @@
 // Provider of an syscall table for convient usage
 
-
-#ifdef OS_LINUX
-    // Linux syscall table
-    #define LINUX_SYSCALL_WRITE  1
-    #define LINUX_SYSCALL_EXIT   60
-
-    inline func int  sc_write[int,ptr,int] LINUX_SYSCALL_WRITE syscall3 end
-    inline func int  sc_exit[int,ptr,int]  LINUX_SYSCALL_EXIT  syscall1 end
-#endif
-
-
 // ==============================================
 // Linux native system interaction layer and constant (x86-64)
 // Interacts with kernel via syscalls
