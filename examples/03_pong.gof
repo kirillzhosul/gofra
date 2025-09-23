@@ -1,0 +1,292 @@
+
+// ==============================================
+// Complex example of an pong game
+//
+// Requires additional CLI toolchain flags to link with raylib
+// MacOS: `-L=-lraylib -L=-L/opt/homebrew/lib`
+// ==============================================
+
+#include "ext/raylib.gof"
+#include "std.gof"
+#include "_cpu.gof"
+
+#define WHITE 0xFFFFFFFF
+#define BLACK 0xFF000000
+
+#define BALL_COLOR WHITE
+#define BALL_SIZE  20
+#define BALL_SPEED 3
+memory ball_speed_x CPU_WORD
+memory ball_speed_y CPU_WORD
+memory ball_x CPU_WORD
+memory ball_y CPU_WORD
+
+memory player_score CPU_WORD
+memory enemy_score CPU_WORD
+
+#define DEFAULT_DIFFICULTY 3
+memory difficulty CPU_WORD
+
+#define PADDLE_DEFAULT_SPEED 3
+#define PADDLE_WIDTH 25
+#define PADDLE_HEIGHT 120
+memory paddle_player_speed CPU_WORD
+memory paddle_player_x CPU_WORD
+memory paddle_player_y CPU_WORD
+memory paddle_enemy_speed CPU_WORD
+memory paddle_enemy_x CPU_WORD
+memory paddle_enemy_y CPU_WORD
+
+memory game_is_running CPU_WORD
+
+#define WINDOW_NAME   "Gofra Pong"
+#define WINDOW_WIDTH  1200
+#define WINDOW_HEIGHT 800
+#define WINDOW_FPS    120
+
+#define FONT_SIZE 80
+#define BACKGROUND_COLOR BLACK
+
+inline func void update_difficulty
+    ball_speed_x BALL_SPEED difficulty ?> + !<
+    ball_speed_y BALL_SPEED difficulty ?> + !<
+
+    paddle_enemy_speed PADDLE_DEFAULT_SPEED difficulty ?> + !<
+end
+
+inline func void init_game
+    ball_x WINDOW_WIDTH  2 / BALL_SIZE - !<
+    ball_y WINDOW_HEIGHT 2 / BALL_SIZE - !<
+
+    player_score 0 !<
+    enemy_score  0 !<
+
+    ball_speed_x BALL_SPEED !<
+    ball_speed_y BALL_SPEED !<
+
+    paddle_player_x WINDOW_WIDTH PADDLE_WIDTH - 10 - !<
+    paddle_player_y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
+    paddle_player_speed PADDLE_DEFAULT_SPEED !<
+
+    paddle_enemy_x 10 !<
+    paddle_enemy_y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
+    paddle_enemy_speed PADDLE_DEFAULT_SPEED !<
+
+    difficulty DEFAULT_DIFFICULTY !<
+    call update_difficulty
+end
+
+inline func void init_raylib
+     WINDOW_WIDTH
+     WINDOW_HEIGHT
+     WINDOW_NAME to_cstr_ptr 
+    call InitWindow
+
+     WINDOW_FPS
+    call SetTargetFPS
+end
+
+memory enemy_score_str 128
+memory player_score_str 128
+memory pong_int2str_buffer_temp 16
+memory pong_int2str_number_temp 16
+memory pong_int2str_idx_temp 16
+
+inline func void draw_game
+     BACKGROUND_COLOR
+    call ClearBackground
+
+     enemy_score_str
+     WINDOW_WIDTH 4 / 20 -
+     20
+     FONT_SIZE 
+     WHITE
+    call DrawText
+
+     player_score_str
+     WINDOW_WIDTH 4 / 20 - 3 *
+     20
+     FONT_SIZE 
+     WHITE
+    call DrawText
+
+     WINDOW_WIDTH 2 / 
+     0
+     WINDOW_WIDTH 2 /
+     WINDOW_HEIGHT
+     WHITE
+    call DrawLine
+
+     ball_x ?> BALL_SIZE 2 / +
+     ball_y ?> BALL_SIZE 2 / +
+     BALL_SIZE
+     BALL_SIZE
+     BALL_COLOR
+    call DrawRectangle
+
+     paddle_player_x ?>
+     paddle_player_y ?>
+     PADDLE_WIDTH
+     PADDLE_HEIGHT
+     WHITE
+    call DrawRectangle
+
+     paddle_enemy_x ?>
+     paddle_enemy_y ?>
+     PADDLE_WIDTH
+     PADDLE_HEIGHT
+     WHITE
+    call DrawRectangle
+end
+
+inline func void update_ball_movement[]
+    ball_x copy ?> ball_speed_x ?> + !<
+    ball_y copy ?> ball_speed_y ?> + !<
+end
+
+inline func void finalize_game[]
+    CloseWindow
+    0 exit
+end
+
+inline func void increase_score[ptr]
+    copy ?> 1 + !<
+
+    difficulty copy ?> 1 + !<
+end
+
+inline func void inverse_speed[ptr]
+    copy ?> 0 1 - * !<
+end
+
+func void main[]
+    call init_game
+    call init_raylib
+
+    game_is_running 1 !<
+    while WindowShouldClose false == do BeginDrawing
+
+
+        game_is_running ?> 1 == if
+            call draw_game
+            // Movement of an player paddle
+            'W' IsKeyDown if
+                paddle_player_y copy ?> paddle_player_speed ?> - !<
+            end
+            'S' IsKeyDown if
+                paddle_player_y copy ?> paddle_player_speed ?> + !<
+            end
+
+            // Boundaries for player paddle
+            0 paddle_player_y ?> <= if
+                paddle_player_y 0 !<
+            end
+            WINDOW_HEIGHT paddle_player_y ?> PADDLE_HEIGHT + >= if
+                paddle_player_y WINDOW_HEIGHT PADDLE_HEIGHT - !<
+            end
+
+            // Boundaries for enemy paddle
+            0 paddle_enemy_y ?> <= if
+                paddle_enemy_y 0 !<
+            end
+            WINDOW_HEIGHT paddle_enemy_y ?> PADDLE_HEIGHT + >= if
+                paddle_enemy_y WINDOW_HEIGHT PADDLE_HEIGHT - !<
+            end
+
+            // Enemy AI
+            paddle_enemy_y ?> ball_y ?> > if
+                paddle_enemy_y copy ?> paddle_enemy_speed ?> - !<
+            end
+            
+            paddle_enemy_y ?> ball_y ?> < if
+                paddle_enemy_y copy ?> paddle_enemy_speed ?> + !<
+            end
+
+            // Collisions
+            ball_x ?> paddle_player_x ?> PADDLE_WIDTH - <= if
+                ball_y ?> paddle_player_y ?> <= if
+                    ball_y ?> paddle_player_y ?> PADDLE_HEIGHT + >= if
+                        ball_speed_x call inverse_speed
+                        ball_speed_y call inverse_speed
+                    end
+                end
+            end
+            ball_x ?> paddle_enemy_x ?> PADDLE_WIDTH + >= if
+                ball_y ?> paddle_enemy_y ?> <= if
+                    ball_y ?> paddle_enemy_y ?> PADDLE_HEIGHT + >= if
+                        ball_speed_x call inverse_speed
+                        ball_speed_y call inverse_speed
+                    end
+                end
+            end
+
+            //
+            // Ball bouncing from corners and scoring
+            //
+
+            WINDOW_WIDTH ball_x ?> BALL_SIZE 2 * + >= if 
+                // Bounce of right corner
+                enemy_score call increase_score
+                ball_speed_x call inverse_speed
+            end
+
+            WINDOW_HEIGHT ball_y ?> BALL_SIZE 2 * + >= if 
+                // Bounce of bottom corner
+                ball_speed_y call inverse_speed
+            end
+            0 ball_y ?> <= if 
+                // Bounce of top corner
+                ball_speed_y call inverse_speed
+            end
+
+            0 ball_x ?> <= if 
+                // Bounce of left corner
+                player_score call increase_score
+                ball_speed_x call inverse_speed
+            end
+
+            call update_ball_movement
+
+            // Temporary int2str conversion
+            enemy_score ?> 0 == if
+                enemy_score_str 0 + '0' !<
+                enemy_score_str 1 + '\0' !<
+            end
+
+            enemy_score ?> 0 != if 
+                pong_int2str_number_temp enemy_score ?> !<
+                pong_int2str_idx_temp 0 !<
+                while pong_int2str_number_temp ?> 0 > do
+                    pong_int2str_number_temp ?> 10 %
+                    enemy_score_str pong_int2str_idx_temp ?> + 
+                    swap '0' + !<
+                    pong_int2str_number_temp copy ?> 10 / !< 
+                    pong_int2str_idx_temp copy ?> inc !<
+                end
+            end
+
+            player_score ?> 0 == if
+                player_score_str 0 + '0' !<
+                player_score_str 1 + '\0' !<
+            end
+
+            player_score ?> 0 != if
+                pong_int2str_number_temp player_score ?> !<
+                pong_int2str_idx_temp 0 !<
+                while pong_int2str_number_temp ?> 0 > do
+                    pong_int2str_number_temp ?> 10 %
+                    player_score_str pong_int2str_idx_temp ?> + 
+                    swap '0' + !<
+                    pong_int2str_number_temp copy ?> 10 / !< 
+                    pong_int2str_idx_temp copy ?> inc !<
+                end
+                player_score_str pong_int2str_idx_temp ?> 1 + + '\0' !<
+            end
+        end
+    EndDrawing end
+
+    finalize_game
+end
+
+// todo add or
+// todo fix operator precedence

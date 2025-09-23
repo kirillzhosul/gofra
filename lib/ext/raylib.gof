@@ -12,6 +12,9 @@ extern func void EndDrawing[]@link[_EndDrawing]
 extern func void ClearBackground[int]@link[_ClearBackground]              // TODO(@kirillzhosul): We cannot pass color struct for now
 extern func void DrawCircle[int,int,int,ptr]@link[_DrawCircle]            // TODO(@kirillzhosul): Cannot pass floats into FFI ABI
 extern func void DrawRectangle[int,int,int,int,int]@link[_DrawRectangle]
+extern func void DrawLine[int,int,int,int,int]@link[_DrawLine]
+extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
 extern func bool IsKeyPressed[int]@link[_IsKeyPressed]
 extern func bool IsKeyDown[int]@link[_IsKeyDown]
 extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
+extern func ptr  TextFormat[ptr,ptr]@link[_TextFormat]
