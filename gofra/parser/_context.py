@@ -4,8 +4,6 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from gofra.parser.functions import Function
-
 from .operators import Operator, OperatorOperand, OperatorType
 
 if TYPE_CHECKING:
@@ -13,12 +11,11 @@ if TYPE_CHECKING:
         Generator,
         MutableMapping,
         MutableSequence,
-        Sequence,
     )
     from pathlib import Path
 
     from gofra.lexer import Token
-    from gofra.typecheck.types import GofraType
+    from gofra.parser.functions import Function
 
 
 @dataclass(frozen=False)
@@ -44,29 +41,8 @@ class ParserContext:
     def has_context_stack(self) -> bool:
         return len(self.context_stack) > 0
 
-    def new_function(
-        self,
-        from_token: Token,
-        name: str,
-        *,
-        type_contract_in: Sequence[GofraType],
-        type_contract_out: Sequence[GofraType],
-        emit_inline_body: bool,
-        external_definition_link_to: str | None,
-        is_global_linker_symbol: bool,
-        source: Sequence[Operator],
-    ) -> Function:
-        function = Function(
-            location=from_token.location,
-            name=name,
-            source=source,
-            type_contract_in=type_contract_in,
-            type_contract_out=type_contract_out,
-            emit_inline_body=emit_inline_body,
-            external_definition_link_to=external_definition_link_to,
-            is_global_linker_symbol=is_global_linker_symbol,
-        )
-        self.functions[name] = function
+    def add_function(self, function: Function) -> Function:
+        self.functions[function.name] = function
         return function
 
     def expand_from_inline_block(self, inline_block: Function) -> None:

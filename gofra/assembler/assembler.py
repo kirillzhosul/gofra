@@ -39,7 +39,7 @@ class CommandExecutor:
             verbose=self.verbose,
         )
         try:
-            check_output(command)  # noqa: S603
+            check_output(command)
         except CalledProcessError as e:
             error_msg = f"Command failed with code {e.returncode}"
             if description:
@@ -125,8 +125,8 @@ def _link_final_output(  # noqa: PLR0913
     o_filepath: Path,
     output_format: Literal["executable", "library"],
     additional_linker_flags: list[str],
-    link_with_system_libraries: bool,
     *,
+    link_with_system_libraries: bool,
     verbose: bool,
 ) -> None:
     """Use linker to link object file into executable."""
@@ -138,7 +138,7 @@ def _link_final_output(  # noqa: PLR0913
             # TODO(@kirillzhosul): Review default linkage with system library (libc by default)
             if link_with_system_libraries:
                 system_sdk = Path(
-                    check_output(  # noqa: S603
+                    check_output(
                         ["/usr/bin/xcrun", "-sdk", "macosx", "--show-sdk-path"],
                         text=True,
                     ).strip(),
@@ -173,7 +173,7 @@ def _link_final_output(  # noqa: PLR0913
         text=f"Running linker command: `{' '.join(command)}`",
         verbose=verbose,
     )
-    check_output(command)  # noqa: S603
+    check_output(command)
 
 
 def _assemble_object_file(  # noqa: PLR0913

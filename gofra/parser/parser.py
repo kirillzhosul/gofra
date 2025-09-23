@@ -9,6 +9,7 @@ from gofra.lexer import (
     TokenType,
 )
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorKeyword
+from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.validator import validate_and_pop_entry_point
 
@@ -31,8 +32,6 @@ from .operators import OperatorType
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-    from gofra.parser.functions import Function
 
 
 def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
@@ -81,24 +80,28 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
         case TokenType.STRING:
             return _push_string_operator(context, token)
         case TokenType.WORD:
-            if _try_unpack_function_from_token(context, token):
-                return None
-
-            if _try_unpack_memory_reference_from_token(context, token):
-                return None
-
-            if _try_push_intrinsic_operator(context, token):
-                return None
-
-            raise ParserUnknownWordError(
-                word_token=token,
-                functions_available=context.functions.keys(),
-                best_match=_best_match_for_word(context, token.text),
-            )
+            return _consume_word_token(token, context)
         case TokenType.KEYWORD:
             return _consume_keyword_token(context, token)
         case TokenType.EOL:
             return None
+
+
+def _consume_word_token(token: Token, context: ParserContext) -> None:
+    if _try_unpack_function_from_token(context, token):
+        return
+
+    if _try_unpack_memory_reference_from_token(context, token):
+        return
+
+    if _try_push_intrinsic_operator(context, token):
+        return
+
+    raise ParserUnknownWordError(
+        word_token=token,
+        functions_available=context.functions.keys(),
+        best_match=_best_match_for_word(context, token.text),
+    )
 
 
 def _best_match_for_word(context: ParserContext, word: str) -> str | None:
@@ -110,7 +113,7 @@ def _best_match_for_word(context: ParserContext, word: str) -> str | None:
 
 
 def _consume_keyword_token(context: ParserContext, token: Token) -> None:
-    assert isinstance(token.value, (Keyword, PreprocessorKeyword))
+    assert isinstance(token.value, Keyword | PreprocessorKeyword)
     if isinstance(token.value, PreprocessorKeyword):
         raise ParserDirtyNonPreprocessedTokenError(token=token)
     TOP_LEVEL_KEYWORD = (  # noqa: N806
@@ -233,16 +236,19 @@ def _unpack_function_definition_from_token(
         if len(type_contract_out) > 1:
             msg = "Extern functions cannot have stack type contract consider using C FFI ABI"
             raise NotImplementedError(msg)
-        context.new_function(
-            from_token=token,
-            name=function_name,
-            type_contract_in=type_contract_in,
-            type_contract_out=type_contract_out,
-            emit_inline_body=modifier_is_inline,
-            external_definition_link_to=external_definition_link_to,
-            is_global_linker_symbol=modifier_is_global,
-            source=[],
+        context.add_function(
+            Function(
+                location=token.location,
+                name=function_name,
+                type_contract_in=type_contract_in,
+                type_contract_out=type_contract_out,
+                emit_inline_body=modifier_is_inline,
+                external_definition_link_to=external_definition_link_to,
+                is_global_linker_symbol=modifier_is_global,
+                source=[],
+            ),
         )
+
         return
 
     opened_context_blocks = 0
@@ -281,15 +287,17 @@ def _unpack_function_definition_from_token(
         functions=context.functions,
         memories=context.memories,
     )
-    context.new_function(
-        from_token=func_token,
-        name=function_name,
-        type_contract_in=type_contract_in,
-        type_contract_out=type_contract_out,
-        emit_inline_body=modifier_is_inline,
-        external_definition_link_to=function_name if modifier_is_extern else None,
-        is_global_linker_symbol=modifier_is_global,
-        source=_parse_from_context_into_operators(context=new_context).operators,
+    context.add_function(
+        Function(
+            location=func_token.location,
+            name=function_name,
+            type_contract_in=type_contract_in,
+            type_contract_out=type_contract_out,
+            emit_inline_body=modifier_is_inline,
+            external_definition_link_to=external_definition_link_to,
+            is_global_linker_symbol=modifier_is_global,
+            source=_parse_from_context_into_operators(context=new_context).operators,
+        ),
     )
 
 

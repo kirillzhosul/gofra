@@ -121,7 +121,11 @@ def ipc_syscall_linux(
     if not injected_args:
         injected_args = [None for _ in range(arguments_count + 1)]
 
-    for injected_argument, register in zip(injected_args, registers_to_load):
+    for injected_argument, register in zip(
+        injected_args,
+        registers_to_load,
+        strict=False,
+    ):
         if injected_argument is not None:
             # Register injected and infered from stack
             store_integer_into_register(

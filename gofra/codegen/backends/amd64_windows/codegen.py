@@ -9,7 +9,6 @@ from gofra.codegen.backends.general import (
     CODEGEN_GOFRA_CONTEXT_LABEL,
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
 )
-from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
@@ -236,17 +235,7 @@ def amd64_windows_program_entry_point(context: AMD64CodegenContext) -> None:
         abi_ffi_arguments_count=0,
     )
 
-    # Call syscall to exit without accessing protected system memory.
-    # `ret` into return-address will fail with segfault
-    # ipc_syscall_linux(
-    #    context,
-    #    arguments_count=1,
-    #    store_retval_onto_stack=False,
-    #   injected_args=[
-    #        AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER,
-    #        AMD64_LINUX_EPILOGUE_EXIT_CODE,
-    #    ],
-    # )
+    # TODO(@kirillzhosul): review exit code on Windows
 
 
 def amd64_windows_data_section(

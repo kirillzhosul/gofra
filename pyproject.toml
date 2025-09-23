@@ -1,27 +1,33 @@
-[tool.poetry]
+[project]
 name = "gofra"
 version = "0.0.5"
 description = "A Stack-based compiled programming language"
-keywords = ["compiler", "language"]
-authors = ["Kirill Zhosul <kirillzhosul@yandex.com>"]
-documentation = "https://kirillzhosul.github.io/gofra"
+requires-python = ">=3.12"
 license = "MIT"
-package-mode = true
 readme = "README.md"
+authors = [{ name = "Kirill Zhosul", email = "kirillzhosul@yandex.com" }]
+maintainers = []
+keywords = ["compiler", "language"]
+
+[project.scripts]
+gofra = "gofra.__main__:cli_entry_point"
+
+[project.urls]
+documentation = "https://kirillzhosul.github.io/gofra"
+repository = "https://github.com/kirillzhosul/gofra"
+
+[tool.poetry]
+package-mode = true
 packages = [{ include = "gofra" }]
 include = ["gofra/_distlib/**/*.gof"]
-
-[tool.poetry.dependencies]
-python = "^3.12"
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.9.5"
+exclude = ["gofra/testkit"]
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.6.1"
 
-[tool.poetry.scripts]
-gofra = "gofra.__main__:cli_entry_point"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.13.1"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -41,6 +47,11 @@ ignore = [
     "E501",
     "UP031",
     "T201",
+    "S603",
+    "D203",
+    "D213",
+    "FIX002", # do not warn on TODOs
+    "TD003", # do not warn on TODOs
 ]
 
 [build-system]

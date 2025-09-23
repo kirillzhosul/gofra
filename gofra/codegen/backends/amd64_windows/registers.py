@@ -11,7 +11,8 @@ from typing import Literal
 # Registers specification for AMD64
 # Skips some of registers due to currently being unused
 type AMD64_GP_REGISTERS = Literal[
-    Literal["rax", "eax"],
+    "rax",
+    "eax",
     "rbx",
     "rdi",
     "rsi",

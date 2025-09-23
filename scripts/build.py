@@ -15,7 +15,7 @@ DIST_LIBRARY_DIRECTORY = ROOT / "gofra" / "_distlib"
 
 
 def exec(*cmd: str | Path) -> None:  # noqa: A001
-    subprocess.run(  # noqa: S603
+    subprocess.run(
         list(map(str, cmd)),
         check=True,
     )
