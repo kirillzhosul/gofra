@@ -37,8 +37,6 @@ memory paddle_enemy_speed CPU_WORD
 memory paddle_enemy_x CPU_WORD
 memory paddle_enemy_y CPU_WORD
 
-memory game_is_running CPU_WORD
-
 #define WINDOW_NAME   "Gofra Pong"
 #define WINDOW_WIDTH  1200
 #define WINDOW_HEIGHT 800
@@ -167,10 +165,10 @@ func void handle_enemy_ai[]
     end
 
     // Boundaries for enemy paddle
-    0 paddle_enemy_y ?> <= if
+    paddle_enemy_y ?> 0 < if
         paddle_enemy_y 0 !<
     end
-    WINDOW_HEIGHT paddle_enemy_y ?> PADDLE_HEIGHT + >= if
+    paddle_enemy_y ?> PADDLE_HEIGHT + WINDOW_HEIGHT > if
         paddle_enemy_y WINDOW_HEIGHT PADDLE_HEIGHT - !<
     end
 end
@@ -185,26 +183,27 @@ func void handle_player_movement[]
     end
 
     // Boundaries for player paddle
-    0 paddle_player_y ?> <= if
+    paddle_player_y ?> 0 < if
         paddle_player_y 0 !<
     end
-    WINDOW_HEIGHT paddle_player_y ?> PADDLE_HEIGHT + >= if
+    
+    paddle_player_y ?> PADDLE_HEIGHT + WINDOW_HEIGHT > if
         paddle_player_y WINDOW_HEIGHT PADDLE_HEIGHT - !<
     end
 end
 
 func void handle_ball_paddle_bounce[]
-    ball_x ?> paddle_player_x ?> PADDLE_WIDTH - <= if
-        ball_y ?> paddle_player_y ?> <= if
-            ball_y ?> paddle_player_y ?> PADDLE_HEIGHT + >= if
+    ball_x ?> paddle_player_x ?> PADDLE_WIDTH - >= if
+        ball_y ?> paddle_player_y ?> >= if
+            ball_y ?> paddle_player_y ?> PADDLE_HEIGHT + <= if
                 ball_speed_x call inverse_speed
                 ball_speed_y call inverse_speed
             end
         end
     end
-    ball_x ?> paddle_enemy_x ?> PADDLE_WIDTH + >= if
-        ball_y ?> paddle_enemy_y ?> <= if
-            ball_y ?> paddle_enemy_y ?> PADDLE_HEIGHT + >= if
+    ball_x ?> paddle_enemy_x ?> PADDLE_WIDTH + <= if
+        ball_y ?> paddle_enemy_y ?> >= if
+            ball_y ?> paddle_enemy_y ?> PADDLE_HEIGHT + <= if
                 ball_speed_x call inverse_speed
                 ball_speed_y call inverse_speed
             end
@@ -213,22 +212,22 @@ func void handle_ball_paddle_bounce[]
 end
 
 func void handle_ball_wall_bounce[]
-    WINDOW_WIDTH ball_x ?> BALL_SIZE 2 * + >= if 
+    ball_x ?> BALL_SIZE 2 * + WINDOW_WIDTH >= if 
         // Bounce of right corner
         enemy_score call increase_score
         ball_speed_x call inverse_speed
     end
 
-    WINDOW_HEIGHT ball_y ?> BALL_SIZE 2 * + >= if 
+    ball_y ?> BALL_SIZE 2 * + WINDOW_HEIGHT >= if 
         // Bounce of bottom corner
         ball_speed_y call inverse_speed
     end
-    0 ball_y ?> <= if 
+    ball_y ?> 0 <= if 
         // Bounce of top corner
         ball_speed_y call inverse_speed
     end
 
-    0 ball_x ?> <= if 
+    ball_x ?> 0 <= if 
         // Bounce of left corner
         player_score call increase_score
         ball_speed_x call inverse_speed
@@ -239,7 +238,6 @@ func void update_user_interface[]
     enemy_score enemy_score_str call int2str
     player_score player_score_str call int2str
 end
-
 
 func void game_loop[]
     call draw_game
@@ -255,15 +253,9 @@ func void main[]
     call init_game
     call init_raylib
 
-    game_is_running 1 !<
     while WindowShouldClose false == do BeginDrawing
-        game_is_running ?> 1 == if
-            call game_loop
-        end
+        call game_loop
     EndDrawing end
 
-    finalize_game
+    call finalize_game
 end
-
-// todo add or
-// todo fix operator precedence
