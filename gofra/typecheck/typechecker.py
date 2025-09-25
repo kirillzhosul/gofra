@@ -270,6 +270,22 @@ def emulate_type_stack_for_operators(
                         context.push_types(b, a)
                     case Intrinsic.BREAKPOINT:
                         ...
+                    case Intrinsic.LOGICAL_OR | Intrinsic.LOGICAL_AND:
+                        context.raise_for_arguments(
+                            operator,
+                            current_function,
+                            (T.BOOLEAN,),
+                            (T.BOOLEAN,),
+                        )
+                        context.push_types(T.BOOLEAN)
+                    case Intrinsic.BITWISE_OR | Intrinsic.BITWISE_AND:
+                        context.raise_for_arguments(
+                            operator,
+                            current_function,
+                            (T.INTEGER,),
+                            (T.INTEGER,),
+                        )
+                        context.push_types(T.INTEGER)
                     case _:
                         assert_never(operator.operand)
             case _:

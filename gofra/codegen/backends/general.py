@@ -21,6 +21,10 @@ type CODEGEN_GOFRA_ON_STACK_OPERATIONS = Literal[
     "!=",
     "++",
     "--",
+    "||",
+    "&&",
+    "&",
+    "|",
 ]
 
 CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS: dict[
@@ -40,4 +44,8 @@ CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS: dict[
     Intrinsic.LESS_THAN: "<",
     Intrinsic.GREATER_THAN: ">",
     Intrinsic.EQUAL: "==",
+    Intrinsic.LOGICAL_OR: "||",
+    Intrinsic.LOGICAL_AND: "&&",
+    Intrinsic.BITWISE_OR: "|",
+    Intrinsic.BITWISE_AND: "&",
 }

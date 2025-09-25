@@ -162,6 +162,10 @@ def amd64_windows_intrinsic_instructions(
             | Intrinsic.LESS_THAN
             | Intrinsic.GREATER_THAN
             | Intrinsic.EQUAL
+            | Intrinsic.LOGICAL_OR
+            | Intrinsic.LOGICAL_AND
+            | Intrinsic.BITWISE_AND
+            | Intrinsic.BITWISE_OR
         ):
             perform_operation_onto_stack(
                 context,

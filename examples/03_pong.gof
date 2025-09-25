@@ -193,21 +193,20 @@ func void handle_player_movement[]
 end
 
 func void handle_ball_paddle_bounce[]
-    ball_x ?> paddle_player_x ?> PADDLE_WIDTH - >= if
-        ball_y ?> paddle_player_y ?> >= if
-            ball_y ?> paddle_player_y ?> PADDLE_HEIGHT + <= if
-                ball_speed_x call inverse_speed
-                ball_speed_y call inverse_speed
-            end
-        end
+    ball_x ?> paddle_player_x ?> PADDLE_WIDTH - >= 
+    ball_y ?> paddle_player_y ?> >=
+    ball_y ?> paddle_player_y ?> PADDLE_HEIGHT + <= 
+    && && if
+        ball_speed_x call inverse_speed
+        ball_speed_y call inverse_speed
     end
-    ball_x ?> paddle_enemy_x ?> PADDLE_WIDTH + <= if
-        ball_y ?> paddle_enemy_y ?> >= if
-            ball_y ?> paddle_enemy_y ?> PADDLE_HEIGHT + <= if
-                ball_speed_x call inverse_speed
-                ball_speed_y call inverse_speed
-            end
-        end
+
+    ball_x ?> paddle_enemy_x ?> PADDLE_WIDTH + <=
+    ball_y ?> paddle_enemy_y ?> >=
+    ball_y ?> paddle_enemy_y ?> PADDLE_HEIGHT + <=
+    && && if
+        ball_speed_x call inverse_speed
+        ball_speed_y call inverse_speed
     end
 end
 

@@ -18,6 +18,12 @@ class Intrinsic(IntEnum):
     LESS_EQUAL_THAN = auto()
     GREATER_EQUAL_THAN = auto()
 
+    LOGICAL_OR = auto()
+    LOGICAL_AND = auto()
+
+    BITWISE_OR = auto()
+    BITWISE_AND = auto()
+
     MEMORY_LOAD = auto()
     MEMORY_STORE = auto()
 
@@ -47,6 +53,10 @@ WORD_TO_INTRINSIC = {
     "<=": Intrinsic.LESS_EQUAL_THAN,
     ">": Intrinsic.GREATER_THAN,
     ">=": Intrinsic.GREATER_EQUAL_THAN,
+    "||": Intrinsic.LOGICAL_OR,
+    "&&": Intrinsic.LOGICAL_AND,
+    "|": Intrinsic.BITWISE_OR,
+    "&": Intrinsic.BITWISE_AND,
     "%": Intrinsic.MODULUS,
     "dec": Intrinsic.DECREMENT,
     "inc": Intrinsic.INCREMENT,
