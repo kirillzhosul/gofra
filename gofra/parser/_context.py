@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import deque
+from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -32,8 +32,8 @@ class ParserContext:
 
     functions: MutableMapping[str, Function] = field(default_factory=lambda: dict())  # noqa: C408
     memories: MutableMapping[str, int] = field(default_factory=lambda: dict())  # noqa: C408
-    variables: MutableMapping[str, GofraType] = field(
-        default_factory=lambda: dict(),  # noqa: C408
+    variables: OrderedDict[str, GofraType] = field(
+        default_factory=lambda: OrderedDict(),
     )
 
     context_stack: deque[tuple[int, Operator]] = field(default_factory=lambda: deque())

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, assert_never
 
-from gofra.targets.target import Target
+from gofra.codegen.backends.aarch64_macos.frame import (
+    build_local_variables_frame_offsets,
+    preserve_calee_frame,
+    restore_calee_frame,
+)
 from gofra.typecheck.types import GofraType
 
 from .registers import (
@@ -17,8 +20,19 @@ from .registers import (
 )
 
 if TYPE_CHECKING:
+    from collections import OrderedDict
+    from collections.abc import Mapping, Sequence
+
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
+
+GOFRA_TYPE_WORD_SIZE = {
+    GofraType.ANY: 0,
+    GofraType.VOID: 0,
+    GofraType.BOOLEAN: 8,
+    GofraType.INTEGER: 8,
+    GofraType.POINTER: 8,
+}
 
 
 def drop_stack_slots(
@@ -131,6 +145,25 @@ def push_static_address_onto_stack(
     push_register_onto_stack(context, register="X0")
 
 
+def push_local_variable_address_from_frame_offset(
+    context: AARCH64CodegenContext,
+    local_variables: OrderedDict[str, GofraType],
+    local_variable: str,
+) -> None:
+    context.write(f"// Load local variable from frame offset ({local_variable})")
+
+    # Calculate negative offset from X29
+    current_offset = build_local_variables_frame_offsets(local_variables).offsets[
+        local_variable
+    ]
+
+    context.write(
+        "mov X0, X29",
+        f"sub X0, X0, #{current_offset} // X0 = FP, X0 = &{local_variable} (offset -{current_offset})",
+    )
+    push_register_onto_stack(context, register="X0")
+
+
 def evaluate_conditional_block_on_stack_with_jump(
     context: AARCH64CodegenContext,
     jump_over_label: str,
@@ -160,14 +193,6 @@ def initialize_static_data_section(
     context.fd.write(".section __DATA,__data\n")
     context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
 
-    target = Target.from_triplet("arm64-apple-darwin")
-    cpu_typesize = {
-        GofraType.VOID: 0,
-        GofraType.BOOLEAN: target.cpu_word_size,
-        GofraType.INTEGER: target.cpu_word_size,
-        GofraType.POINTER: target.cpu_word_size,
-    }
-
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, data in static_memories.items():
@@ -176,7 +201,7 @@ def initialize_static_data_section(
         if data == GofraType.ANY:
             raise ValueError
 
-        typesize = cpu_typesize[data]
+        typesize = GOFRA_TYPE_WORD_SIZE[data]
         if typesize != 0:
             context.fd.write(f"{name}: .space {typesize}\n")
 
@@ -297,6 +322,7 @@ def function_begin_with_prologue(
     name: str,
     global_name: str | None = None,
     preserve_frame: bool = True,
+    local_variables: OrderedDict[str, GofraType],
     arguments_count: int,
 ) -> None:
     """Begin an function symbol.
@@ -306,6 +332,7 @@ def function_begin_with_prologue(
     :is_global_symbol: Mark that function symbol as global for linker
     :preserve_frame: If true will preserve function state for proper stack management and return adress
     """
+    local_offsets = build_local_variables_frame_offsets(local_variables)
     if global_name:
         context.fd.write(f".global {global_name}\n")
 
@@ -313,10 +340,7 @@ def function_begin_with_prologue(
     context.fd.write(f"{name}:\n")
 
     if preserve_frame:
-        # Save frame pointer and link register
-        context.write("// Frame setup")
-        context.write("stp X29, X30, [SP, #-32]!")
-        context.write("mov X29, SP")
+        preserve_calee_frame(context, local_space_size=local_offsets.local_space_size)
 
     abi = context.abi
     if arguments_count:
@@ -324,6 +348,19 @@ def function_begin_with_prologue(
         context.write("// C-FFI arguments")
         for register in registers:
             push_register_onto_stack(context, register)
+
+
+def calculate_frame_size(local_variables: OrderedDict[str, GofraType]) -> int:
+    # Minimum frame size is 16 bytes for LR/FP, but we typically use 32 for alignment
+    frame_size = 32  # Base frame size (16-byte aligned)
+
+    if local_variables:
+        local_size = sum(GOFRA_TYPE_WORD_SIZE[t] for t in local_variables.values())
+        # Ensure 16-byte alignment for local variables
+        local_size = (local_size + 15) & ~15
+        frame_size += local_size
+
+    return frame_size
 
 
 def function_end_with_epilogue(
@@ -342,10 +379,7 @@ def function_end_with_epilogue(
     :execution_trap_instead_return: Internal, if true, will replace simple return with execution guard trap to raise from execution
     """
     if has_preserved_frame:
-        # Restore frame pointer and link register
-        context.write("// Frame restore")
-        context.write("mov SP, X29")
-        context.write("ldp X29, X30, [SP], #16")
+        restore_calee_frame(context)
 
     if execution_trap_instead_return:
         execution_guard_trap(context)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections import OrderedDict
     from collections.abc import Sequence
 
     from gofra.lexer.tokens import TokenLocation
@@ -39,6 +40,11 @@ class Function:
     # For extern functions, on different backends conventions is quite different
     # So on MacOS it will be prefixed with `_` and on Linux it will not
     name: str
+
+    # Local variables defined inside that function
+    # only that function can reference them and location of that variable is different as codegen may solve that
+    # it is ordered because codegen will assume their positions for referencing
+    variables: OrderedDict[str, GofraType]
 
     # Actual executable region that this function contains
     # If this is extern function will always be empty
@@ -77,6 +83,7 @@ class Function:
         emit_inline_body: bool,
         external_definition_link_to: str | None,
         is_global_linker_symbol: bool,
+        variables: OrderedDict[str, GofraType],
     ) -> None:
         self.location = location
         self.name = name
@@ -86,6 +93,7 @@ class Function:
         self.emit_inline_body = emit_inline_body
         self.external_definition_link_to = external_definition_link_to
         self.is_global_linker_symbol = is_global_linker_symbol
+        self.variables = variables
         self._validate()
 
     def _validate(self) -> None:

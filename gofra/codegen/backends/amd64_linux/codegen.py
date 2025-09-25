@@ -218,6 +218,9 @@ def amd64_linux_executable_functions(
         [*program.functions.values(), program.entry_point],
     )
     for function in functions:
+        if function.variables:
+            msg = "That target codegen does not support local variables yet."
+            raise NotImplementedError(msg)
         assert not function.is_global_linker_symbol or (
             not function.type_contract_in and not function.type_contract_out
         ), "Codegen does not supports global linker symbols that has type contracts"

@@ -299,6 +299,8 @@ def emulate_type_stack_for_operators(
                 )
                 context.pop_type_from_stack()
                 context.push_types(to_type_cast)
+            case OperatorType.VARIABLE_DEFINE:
+                raise ValueError
             case _:
                 assert_never(operator.type)
 

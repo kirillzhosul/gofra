@@ -65,4 +65,5 @@ def emit_ir_function_signature(function: Function, entry_point: Function) -> Non
         return
     print(f"[function symbol '{function.name}'", end=" ")
     print(f"({function.type_contract_in} -> {function.type_contract_out})", end=" ")
-    print(f"(global={function.is_global_linker_symbol})]")
+    print(f"(global={function.is_global_linker_symbol})]", end=" ")
+    print(f"({len(function.variables)} local variables)")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from difflib import get_close_matches
 from typing import TYPE_CHECKING, assert_never
 
@@ -163,12 +164,16 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         Keyword.FUNCTION,
         Keyword.GLOBAL,
         Keyword.MEMORY,
-        Keyword.VARIABLE_DEFINE,
     )
-    if context.is_top_level and token.value not in (*TOP_LEVEL_KEYWORD, Keyword.END):
-        msg = f"{token.value.name} expected to be not at top level! (temp-assert)"
-        raise NotImplementedError(msg)
-    if not context.is_top_level and token.value in TOP_LEVEL_KEYWORD:
+    if context.is_top_level:
+        if token.value not in (
+            *TOP_LEVEL_KEYWORD,
+            Keyword.END,
+            Keyword.VARIABLE_DEFINE,
+        ):
+            msg = f"{token.value.name} expected to be not at top level! (temp-assert)"
+            raise NotImplementedError(msg)
+    elif token.value in TOP_LEVEL_KEYWORD:
         msg = f"{token.value.name} expected to be at top level! (temp-assert)"
         raise NotImplementedError(msg)
     match token.value:
@@ -342,6 +347,7 @@ def _unpack_function_definition_from_token(
                 external_definition_link_to=external_definition_link_to,
                 is_global_linker_symbol=modifier_is_global,
                 source=[],
+                variables=OrderedDict(),
             ),
         )
 
@@ -383,18 +389,19 @@ def _unpack_function_definition_from_token(
         memories=context.memories,
         parent=context,
     )
-    context.add_function(
-        Function(
-            location=func_token.location,
-            name=function_name,
-            type_contract_in=type_contract_in,
-            type_contract_out=type_contract_out,
-            emit_inline_body=modifier_is_inline,
-            external_definition_link_to=external_definition_link_to,
-            is_global_linker_symbol=modifier_is_global,
-            source=_parse_from_context_into_operators(context=new_context).operators,
-        ),
+    source = _parse_from_context_into_operators(context=new_context).operators
+    function = Function(
+        location=func_token.location,
+        name=function_name,
+        type_contract_in=type_contract_in,
+        type_contract_out=type_contract_out,
+        emit_inline_body=modifier_is_inline,
+        external_definition_link_to=external_definition_link_to,
+        is_global_linker_symbol=modifier_is_global,
+        source=source,
+        variables=new_context.variables,
     )
+    context.add_function(function)
 
 
 def _consume_conditional_keyword_from_token(

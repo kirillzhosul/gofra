@@ -212,6 +212,9 @@ def amd64_windows_executable_functions(
         [*program.functions.values(), program.entry_point],
     )
     for function in functions:
+        if function.variables:
+            msg = "That target codegen does not support local variables yet."
+            raise NotImplementedError(msg)
         function_name = function.name
         if function == program.entry_point:
             function_name = "gofra_main"

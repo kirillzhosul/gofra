@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
@@ -18,6 +19,7 @@ from gofra.codegen.backends.aarch64_macos.assembly import (
     perform_operation_onto_stack,
     pop_cells_from_stack_into_registers,
     push_integer_onto_stack,
+    push_local_variable_address_from_frame_offset,
     push_register_onto_stack,
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
@@ -59,7 +61,7 @@ def aarch64_macos_instruction_set(
     context: AARCH64CodegenContext,
     operators: Sequence[Operator],
     program: ProgramContext,
-    owner_function_name: str,
+    owner_function: Function,
 ) -> None:
     """Write executable instructions from given operators."""
     for idx, operator in enumerate(operators):
@@ -68,7 +70,7 @@ def aarch64_macos_instruction_set(
             operator,
             program,
             idx,
-            owner_function_name,
+            owner_function,
         )
         if operator.type == OperatorType.FUNCTION_RETURN:
             break
@@ -79,13 +81,24 @@ def aarch64_macos_operator_instructions(
     operator: Operator,
     program: ProgramContext,
     idx: int,
-    owner_function_name: str,
+    owner_function: Function,
 ) -> None:
     match operator.type:
         case OperatorType.INTRINSIC:
             aarch64_macos_intrinsic_instructions(context, operator)
         case OperatorType.PUSH_MEMORY_POINTER:
             assert isinstance(operator.operand, str)
+            local_variable = operator.operand
+            if local_variable in owner_function.variables:
+                print("local")
+                push_local_variable_address_from_frame_offset(
+                    context,
+                    owner_function.variables,
+                    operator.operand,
+                )
+                return
+
+            # Global variable or memory
             push_static_address_onto_stack(context, operator.operand)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
@@ -93,16 +106,16 @@ def aarch64_macos_operator_instructions(
         case OperatorType.DO | OperatorType.IF:
             assert isinstance(operator.jumps_to_operator_idx, int)
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (
-                owner_function_name,
+                owner_function.name,
                 operator.jumps_to_operator_idx,
             )
             evaluate_conditional_block_on_stack_with_jump(context, label)
         case OperatorType.END | OperatorType.WHILE:
             # This also should be refactored into `assembly` layer
-            label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function_name, idx)
+            label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
             if isinstance(operator.jumps_to_operator_idx, int):
                 label_to = CODEGEN_GOFRA_CONTEXT_LABEL % (
-                    owner_function_name,
+                    owner_function.name,
                     operator.jumps_to_operator_idx,
                 )
                 context.write(f"b {label_to}")
@@ -116,9 +129,7 @@ def aarch64_macos_operator_instructions(
             )
             push_integer_onto_stack(context, value=len(string_raw))
         case OperatorType.FUNCTION_RETURN:
-            owner_function = program.functions[owner_function_name]
             has_retval = len(owner_function.type_contract_out) >= 1
-
             function_end_with_epilogue(
                 context,
                 has_preserved_frame=True,
@@ -238,15 +249,17 @@ def aarch64_macos_executable_functions(
         assert not function.is_global_linker_symbol or (
             not function.type_contract_in and not function.type_contract_out
         ), "Codegen does not supports global linker symbols that has type contracts"
+
         function_begin_with_prologue(
             context,
             name=function.name,
+            local_variables=function.variables,
             global_name=function.name if function.is_global_linker_symbol else None,
             preserve_frame=True,
             arguments_count=len(function.type_contract_in),
         )
 
-        aarch64_macos_instruction_set(context, function.source, program, function.name)
+        aarch64_macos_instruction_set(context, function.source, program, function)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
         has_retval = len(function.type_contract_out) >= 1
@@ -265,6 +278,7 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
         name=CODEGEN_ENTRY_POINT_SYMBOL,
         global_name=CODEGEN_ENTRY_POINT_SYMBOL,
         preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
+        local_variables=OrderedDict(),
         arguments_count=0,
     )
 
