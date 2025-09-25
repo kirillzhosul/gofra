@@ -3,6 +3,7 @@
 // ==============================================
 
 #include "general.gof"
+#include "string.gof"
 
 // OS-dependant native abstraction layer
 #ifdef OS_WINDOWS #include "os/native/windows.gof" #endif

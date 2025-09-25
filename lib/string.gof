@@ -29,3 +29,28 @@ end
 
 // Almost as an alias to `cstr_len`, as in Gofra all string are C-strings by default (except size pushed after)
 func int str_len[ptr,int] drop cstr_len end
+
+
+memory int2str_ptr_temp CPU_WORD
+memory int2str_number_temp CPU_WORD
+memory int2str_idx_temp CPU_WORD
+func void int2str[int,ptr]
+    int2str_ptr_temp swap !<
+    int2str_number_temp swap ?> !<
+
+    int2str_number_temp ?> 0 == if
+        int2str_ptr_temp ?> 0 + '0' !<
+        int2str_ptr_temp ?> 1 + '\0' !<
+    end
+
+    int2str_number_temp ?> 0 != if 
+        int2str_idx_temp 0 !<
+        while int2str_number_temp ?> 0 > do
+            int2str_number_temp ?> 10 %
+            int2str_ptr_temp ?> int2str_idx_temp ?> + 
+            swap '0' + !<
+            int2str_number_temp copy ?> 10 / !< 
+            int2str_idx_temp copy ?> inc !<
+        end
+    end
+end
