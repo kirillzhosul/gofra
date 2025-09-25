@@ -144,6 +144,9 @@ def aarch64_macos_operator_instructions(
                 type_contract_in=function.type_contract_in,
                 type_contract_out=retval_type,
             )
+        case OperatorType.TYPECAST:
+            # Skip that as it is typechecker only.
+            pass
         case _:
             assert_never(operator.type)
 

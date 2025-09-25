@@ -85,17 +85,19 @@ class TypecheckContext:
             len(expected_types),
             operator=operator,
         )
+
+        # Store shallow copy as we mutate that but want to display proper error with stack before our manipulations
         _reference_type_stack = self.emulated_stack_types[::]
 
         for expected_type in expected_types[::-1]:
             argument_type = self.pop_type_from_stack()
 
-            against_contract = (T.ANY, argument_type)
-
-            if any(t in against_contract for t in (*expected_type, T.ANY)):
+            if argument_type == T.ANY or T.ANY in expected_type:
                 continue
 
-            print(expected_type, against_contract)
+            if argument_type in (expected_type):
+                continue
+
             if isinstance(operator_or_function, Operator):
                 raise TypecheckInvalidOperatorArgumentTypeError(
                     operator=operator_or_function,

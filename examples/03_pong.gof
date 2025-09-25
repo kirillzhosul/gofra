@@ -234,8 +234,8 @@ func void handle_ball_wall_bounce[]
 end
 
 func void update_user_interface[]
-    enemy_score enemy_score_str call int2str
-    player_score player_score_str call int2str
+    enemy_score ?> enemy_score_str call int2str
+    player_score ?> player_score_str call int2str
 end
 
 func void game_loop[]

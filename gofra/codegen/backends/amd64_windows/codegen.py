@@ -126,6 +126,9 @@ def amd64_windows_operator_instructions(
             )
         case OperatorType.FUNCTION_RETURN:
             function_end_with_epilogue(context)
+        case OperatorType.TYPECAST:
+            # Skip that as it is typechecker only.
+            pass
         case _:
             assert_never(operator.type)
 

@@ -32,7 +32,7 @@ class TypecheckInvalidOperatorArgumentTypeError(GofraError):
 
         return f"""Type safety check failed!
 
-Expected [{" | ".join(map(repr, self.expected_type))} but got {self.actual_type.name}
+Expected [{" | ".join(map(repr, self.expected_type))}] but got {self.actual_type.name}
  for '{self.operator.token.text}' at {self.operator.token.location}
 
 '{self.operator.token.text}' contract is: [{contract}]

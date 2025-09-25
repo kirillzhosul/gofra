@@ -21,6 +21,8 @@ class Keyword(Enum):
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
 
+    TYPECAST = auto()
+
 
 class PreprocessorKeyword(Enum):
     DEFINE = auto()
@@ -51,6 +53,7 @@ WORD_TO_KEYWORD = {
     "inline": Keyword.INLINE,
     "memory": Keyword.MEMORY,
     "global": Keyword.GLOBAL,
+    "typecast": Keyword.TYPECAST,
     **WORD_TO_PREPROCESSOR_KEYWORD,
 }
 KEYWORD_TO_NAME = {v: k for k, v in WORD_TO_KEYWORD.items()}

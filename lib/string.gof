@@ -14,8 +14,8 @@ func int cstr_len[ptr]
 
     while 
         cstr_len_ptr_temp ?>
-        cstr_len_idx_temp ?> 
-        + ?> 
+        cstr_len_idx_temp ?>
+        + typecast ptr ?>
         '\0' !=
     do
         cstr_len_idx_temp
@@ -23,7 +23,7 @@ func int cstr_len[ptr]
         !<
     end
 
-    cstr_len_idx_temp ?>
+    cstr_len_idx_temp ?> typecast int
 end
 
 
@@ -35,20 +35,20 @@ memory int2str_ptr_temp CPU_WORD
 memory int2str_number_temp CPU_WORD
 memory int2str_idx_temp CPU_WORD
 func void int2str[int,ptr]
-    int2str_ptr_temp swap !<
-    int2str_number_temp swap ?> !<
+    int2str_ptr_temp    swap !<
+    int2str_number_temp swap !<
 
     int2str_number_temp ?> 0 == if
-        int2str_ptr_temp ?> 0 + '0' !<
-        int2str_ptr_temp ?> 1 + '\0' !<
+        int2str_ptr_temp ?> typecast ptr 0 + '0' !<
+        int2str_ptr_temp ?> typecast ptr 1 + '\0' !<
     end
 
     int2str_number_temp ?> 0 != if 
         int2str_idx_temp 0 !<
         while int2str_number_temp ?> 0 > do
-            int2str_number_temp ?> 10 %
-            int2str_ptr_temp ?> int2str_idx_temp ?> + 
-            swap '0' + !<
+            int2str_ptr_temp ?> int2str_idx_temp ?> + typecast ptr
+            int2str_number_temp ?> 10 % '0' + !<
+
             int2str_number_temp copy ?> 10 / !< 
             int2str_idx_temp copy ?> inc !<
         end

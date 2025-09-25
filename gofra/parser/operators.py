@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from gofra.lexer import Token
     from gofra.typecheck.types import GofraType
 
-type OperatorOperand = int | str | None | Intrinsic
+type OperatorOperand = int | str | None | Intrinsic | GofraType
 
 
 class OperatorType(IntEnum):
@@ -27,6 +27,8 @@ class OperatorType(IntEnum):
 
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
+
+    TYPECAST = auto()  # Typechecker only for now
 
 
 @dataclass(frozen=False)

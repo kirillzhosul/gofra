@@ -12,6 +12,7 @@ from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorK
 from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.validator import validate_and_pop_entry_point
+from gofra.typecheck.types import WORD_TO_GOFRA_TYPE
 
 from ._context import ParserContext
 from .exceptions import (
@@ -145,9 +146,31 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             )
         case Keyword.MEMORY:
             return _unpack_memory_segment_from_token(context)
+        case Keyword.TYPECAST:
+            return _unpack_typecast_from_token(context, token)
         case _:
             assert_never(token.value)
             return None
+
+
+def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:
+    typename_token = next(context.tokenizer, None)
+    if not typename_token:
+        raise NotImplementedError
+    if typename_token.type != TokenType.IDENTIFIER:
+        raise NotImplementedError
+    assert isinstance(typename_token.value, str)
+
+    typename = WORD_TO_GOFRA_TYPE.get(typename_token.text)
+    if not typename:
+        msg = "Unknown typecast typename"
+        raise ValueError(msg)
+    context.push_new_operator(
+        OperatorType.TYPECAST,
+        token,
+        typename,
+        is_contextual=False,
+    )
 
 
 def _unpack_memory_segment_from_token(context: ParserContext) -> None:

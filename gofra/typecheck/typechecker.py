@@ -288,6 +288,17 @@ def emulate_type_stack_for_operators(
                         context.push_types(T.INTEGER)
                     case _:
                         assert_never(operator.operand)
+            case OperatorType.TYPECAST:
+                assert isinstance(operator.operand, T)
+                to_type_cast = operator.operand
+                context.raise_for_enough_arguments(
+                    operator,
+                    current_function,
+                    required_args=1,
+                    operator=operator,
+                )
+                context.pop_type_from_stack()
+                context.push_types(to_type_cast)
             case _:
                 assert_never(operator.type)
 
