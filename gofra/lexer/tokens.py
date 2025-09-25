@@ -64,7 +64,7 @@ class TokenType(IntEnum):
     CHARACTER = auto()
     STRING = auto()
 
-    WORD = auto()
+    IDENTIFIER = auto()
     KEYWORD = auto()
 
     EOL = auto()

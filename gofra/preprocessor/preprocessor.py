@@ -45,7 +45,7 @@ def preprocess_file(
                 consume_macro_definition_from_token(token, state)
             case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.IF_DEFINED):
                 resolve_conditional_block_from_token(token, state)
-            case Token(type=TokenType.WORD):
+            case Token(type=TokenType.IDENTIFIER):
                 if try_resolve_and_expand_macro_reference_from_token(token, state):
                     continue
                 yield token

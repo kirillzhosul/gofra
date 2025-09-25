@@ -47,7 +47,7 @@ def _consume_macro_from_token(token: Token, state: PreprocessorState) -> Macro |
     macro_name = next(state.tokenizer, None)
     if not macro_name:
         raise PreprocessorConditionalNoMacroNameError(conditional_token=token)
-    if macro_name.type != TokenType.WORD:
+    if macro_name.type != TokenType.IDENTIFIER:
         raise ValueError(macro_name)
     assert isinstance(macro_name.value, str)
     return state.macros.get(macro_name.value)

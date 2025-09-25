@@ -79,7 +79,7 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
             return _push_integer_operator(context, token)
         case TokenType.STRING:
             return _push_string_operator(context, token)
-        case TokenType.WORD:
+        case TokenType.IDENTIFIER:
             return _consume_word_token(token, context)
         case TokenType.KEYWORD:
             return _consume_keyword_token(context, token)
@@ -154,7 +154,7 @@ def _unpack_memory_segment_from_token(context: ParserContext) -> None:
     memory_segment_name = next(context.tokenizer, None)
     if not memory_segment_name:
         raise NotImplementedError
-    if memory_segment_name.type != TokenType.WORD:
+    if memory_segment_name.type != TokenType.IDENTIFIER:
         raise NotImplementedError
     assert isinstance(memory_segment_name.value, str)
     memory_segment_size = next(context.tokenizer, None)
@@ -172,7 +172,7 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
     name_token = next(context.tokenizer, None)
     if not name_token:
         raise NotImplementedError
-    if name_token.type != TokenType.WORD:
+    if name_token.type != TokenType.IDENTIFIER:
         msg = "expected function name as word after `call`"
         raise NotImplementedError(msg)
     name = name_token.text
@@ -379,7 +379,7 @@ def _try_unpack_memory_reference_from_token(
     context: ParserContext,
     token: Token,
 ) -> bool:
-    assert token.type == TokenType.WORD
+    assert token.type == TokenType.IDENTIFIER
 
     memory_name = token.text
     if memory_name not in context.memories:
@@ -397,7 +397,7 @@ def _try_unpack_function_from_token(
     context: ParserContext,
     token: Token,
 ) -> bool:
-    assert token.type == TokenType.WORD
+    assert token.type == TokenType.IDENTIFIER
 
     function = context.functions.get(token.text, None)
     if function:

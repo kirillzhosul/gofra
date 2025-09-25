@@ -32,14 +32,14 @@ Only single definition allowed for macros.
 If it possible scenatio of overriding, please un-define before redefinition."""
 
 
-class PreprocessorMacroNonWordNameError(PreprocessorError):
+class PreprocessorMacroNonIdentifierNameError(PreprocessorError):
     def __init__(self, token: Token) -> None:
         self.token = token
 
     def __repr__(self) -> str:
-        return f"""Non-word name for macro at {self.token.location}!
+        return f"""Non-identifier name for macro at {self.token.location}!
 
-Macros should have name as 'word' but got '{self.token.type.name}'!"""
+Macros should have name as 'identifier' but got '{self.token.type.name}'!"""
 
 
 class PreprocessorNoMacroNameError(PreprocessorError):

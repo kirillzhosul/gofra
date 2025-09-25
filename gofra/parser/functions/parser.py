@@ -137,7 +137,7 @@ def consume_function_signature(
         raise ParserExpectedFunctionReturnTypeError(
             definition_token=token,
         )
-    if sig_token.type != TokenType.WORD:
+    if sig_token.type != TokenType.IDENTIFIER:
         raise ValueError
 
     type_contract_out = _parse_function_type_contract(

@@ -9,7 +9,7 @@ from gofra.parser.intrinsics import WORD_TO_INTRINSIC
 
 from .exceptions import (
     PreprocessorMacroContainsKeywordError,
-    PreprocessorMacroNonWordNameError,
+    PreprocessorMacroNonIdentifierNameError,
     PreprocessorMacroRedefinedError,
     PreprocessorMacroRedefinesLanguageWordError,
     PreprocessorNoMacroNameError,
@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 
     from .macro import Macro
 
-# Macros name can only be an word, but this does not adds additional validation
-# that set contains word that considered as prohibited
+# Macros name can only be an identifier, but this does not adds additional validation
+# that set contains identifiers that considered as prohibited
 PROHIBITED_MACRO_NAMES = WORD_TO_INTRINSIC.keys()
 
 
@@ -45,7 +45,7 @@ def try_resolve_and_expand_macro_reference_from_token(
     state: PreprocessorState,
 ) -> bool:
     """Try to search for defined macro and resolve it with expansion if possible."""
-    assert token.type == TokenType.WORD
+    assert token.type == TokenType.IDENTIFIER
     assert isinstance(token.value, str)
 
     name = token.value
@@ -64,8 +64,8 @@ def _consume_macro_name(location: TokenLocation, state: PreprocessorState) -> st
     if not (token := next(state.tokenizer, None)):
         raise PreprocessorNoMacroNameError(location=location)
 
-    if token.type != TokenType.WORD:
-        raise PreprocessorMacroNonWordNameError(token=token)
+    if token.type != TokenType.IDENTIFIER:
+        raise PreprocessorMacroNonIdentifierNameError(token=token)
 
     name = token.text
     if original := state.macros.get(name):
@@ -101,7 +101,7 @@ def _consume_macro_definition(
             TokenType.INTEGER,
             TokenType.CHARACTER,
             TokenType.STRING,
-            TokenType.WORD,
+            TokenType.IDENTIFIER,
         ):
             assert_never(token.type)
 

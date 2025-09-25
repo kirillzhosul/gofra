@@ -172,7 +172,7 @@ def _tokenize_word_or_keyword_into_token(word: str, location: TokenLocation) -> 
         )
 
     return Token(
-        type=TokenType.WORD,
+        type=TokenType.IDENTIFIER,
         text=word,
         location=location,
         value=word,
