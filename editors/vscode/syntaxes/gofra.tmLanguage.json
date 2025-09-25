@@ -3,7 +3,7 @@
     "patterns": [
         {
             "name": "keyword.control.gofra",
-            "match": "\\b(if|while|end|extern|inline|func|memory|do)\\b"
+            "match": "\\b(if|while|end|extern|inline|func|memory|do|var)\\b"
         },
         {
             "name": "keyword.preprocessor.gofra",

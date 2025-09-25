@@ -18,3 +18,6 @@ extern func bool IsKeyPressed[int]@link[_IsKeyPressed]
 extern func bool IsKeyDown[int]@link[_IsKeyDown]
 extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
 extern func ptr  TextFormat[ptr,ptr]@link[_TextFormat]
+
+#define WHITE 0xFFFFFFFF
+#define BLACK 0xFF000000

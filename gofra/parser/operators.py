@@ -27,7 +27,7 @@ class OperatorType(IntEnum):
 
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
-
+    VARIABLE_DEFINE = auto()
     TYPECAST = auto()  # Typechecker only for now
 
 

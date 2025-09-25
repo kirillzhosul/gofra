@@ -12,7 +12,7 @@ from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorK
 from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.validator import validate_and_pop_entry_point
-from gofra.typecheck.types import WORD_TO_GOFRA_TYPE
+from gofra.typecheck.types import WORD_TO_GOFRA_TYPE, GofraType
 
 from ._context import ParserContext
 from .exceptions import (
@@ -39,7 +39,7 @@ def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
     """Load file for parsing into operators."""
     context = _parse_from_context_into_operators(
         context=ParserContext(
-            is_top_level=True,
+            parent=None,
             tokenizer=tokenizer,
             functions={},
             memories={},
@@ -98,11 +98,51 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
     if _try_push_intrinsic_operator(context, token):
         return
 
+    if _try_push_variable_reference(context, token):
+        return
+
     raise ParserUnknownWordError(
         word_token=token,
         functions_available=context.functions.keys(),
         best_match=_best_match_for_word(context, token.text),
     )
+
+
+def _search_variable_in_context_parents(
+    child: ParserContext,
+    variable: str,
+) -> GofraType | None:
+    context_ref = child
+
+    while True:
+        if variable in context_ref.variables:
+            return context_ref.variables[variable]
+
+        if context_ref.parent:
+            context_ref = context_ref.parent
+            continue
+
+        return None
+
+
+def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
+    assert token.type == TokenType.IDENTIFIER
+
+    varname = token.text
+
+    variable = _search_variable_in_context_parents(context, varname)
+    if not variable:
+        msg = "variable referenced is not found"
+        raise ValueError(msg)
+
+    # TODO(@kirillzhosul): variable is quite left over but type should be saved.
+    context.push_new_operator(
+        type=OperatorType.PUSH_MEMORY_POINTER,
+        token=token,
+        operand=varname,
+        is_contextual=False,
+    )
+    return True
 
 
 def _best_match_for_word(context: ParserContext, word: str) -> str | None:
@@ -123,6 +163,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         Keyword.FUNCTION,
         Keyword.GLOBAL,
         Keyword.MEMORY,
+        Keyword.VARIABLE_DEFINE,
     )
     if context.is_top_level and token.value not in (*TOP_LEVEL_KEYWORD, Keyword.END):
         msg = f"{token.value.name} expected to be not at top level! (temp-assert)"
@@ -148,9 +189,41 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             return _unpack_memory_segment_from_token(context)
         case Keyword.TYPECAST:
             return _unpack_typecast_from_token(context, token)
+        case Keyword.VARIABLE_DEFINE:
+            return _unpack_variable_definition_from_token(context)
         case _:
             assert_never(token.value)
             return None
+
+
+def _unpack_variable_definition_from_token(
+    context: ParserContext,
+) -> None:
+    varname_token = next(context.tokenizer, None)
+    if not varname_token:
+        raise NotImplementedError
+    if varname_token.type != TokenType.IDENTIFIER:
+        raise NotImplementedError
+    assert isinstance(varname_token.value, str)
+
+    typename_token = next(context.tokenizer, None)
+    if not typename_token:
+        raise NotImplementedError
+    if typename_token.type != TokenType.IDENTIFIER:
+        msg = f"expected identifier as typename but got {typename_token.type.name}"
+        raise NotImplementedError(msg)
+    assert isinstance(varname_token.value, str)
+
+    typename = WORD_TO_GOFRA_TYPE.get(typename_token.text)
+    if not typename:
+        msg = "Unknown variable typename"
+        raise ValueError(msg)
+
+    varname = varname_token.text
+    if varname in context.variables:
+        msg = "variable already defined"
+        raise ValueError(msg)
+    context.variables[varname] = typename
 
 
 def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:
@@ -305,10 +378,10 @@ def _unpack_function_definition_from_token(
         raise ValueError(original_token)
 
     new_context = ParserContext(
-        is_top_level=False,
         tokenizer=(t for t in function_body_tokens),
         functions=context.functions,
         memories=context.memories,
+        parent=context,
     )
     context.add_function(
         Function(

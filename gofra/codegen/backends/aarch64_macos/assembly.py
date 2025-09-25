@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.targets.target import Target
 from gofra.typecheck.types import GofraType
 
 from .registers import (
@@ -147,7 +148,9 @@ def evaluate_conditional_block_on_stack_with_jump(
 
 def initialize_static_data_section(
     context: AARCH64CodegenContext,
-    static_data_section: list[tuple[str, str | int]],
+    static_strings: Mapping[str, str],
+    static_memories: Mapping[str, int],
+    static_variables: Mapping[str, GofraType],
 ) -> None:
     """Initialize data section fields with given values.
 
@@ -157,11 +160,25 @@ def initialize_static_data_section(
     context.fd.write(".section __DATA,__data\n")
     context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
 
-    for name, data in static_data_section:
-        if isinstance(data, str):
-            context.fd.write(f'{name}: .asciz "{data}"\n')
-            continue
+    target = Target.from_triplet("arm64-apple-darwin")
+    cpu_typesize = {
+        GofraType.VOID: 0,
+        GofraType.BOOLEAN: target.cpu_word_size,
+        GofraType.INTEGER: target.cpu_word_size,
+        GofraType.POINTER: target.cpu_word_size,
+    }
+
+    for name, data in static_strings.items():
+        context.fd.write(f'{name}: .asciz "{data}"\n')
+    for name, data in static_memories.items():
         context.fd.write(f"{name}: .space {data}\n")
+    for name, data in static_variables.items():
+        if data == GofraType.ANY:
+            raise ValueError
+
+        typesize = cpu_typesize[data]
+        if typesize != 0:
+            context.fd.write(f"{name}: .space {typesize}\n")
 
 
 def ipc_syscall_macos(
@@ -407,8 +424,8 @@ def function_call(
         f"bl {name} // C-FFI {'' if store_return_value else 'no retval'}",
     )
 
-    if type_contract_out:
+    if type_contract_out != GofraType.VOID:
         context.write(
-            f"// {name} return value (defined as type {type_contract_out.name}",
+            f"// {name} return value (defined as type {type_contract_out.name})",
         )
         push_register_onto_stack(context, "X0")

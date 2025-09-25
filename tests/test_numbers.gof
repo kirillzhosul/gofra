@@ -12,4 +12,6 @@ func void main
     // Max 16 bytes (64 bits) register
     // This is probably is 64bits arch related
     18446744073709551615 drop
+
+    0 exit
 end

@@ -129,6 +129,9 @@ def amd64_windows_operator_instructions(
         case OperatorType.TYPECAST:
             # Skip that as it is typechecker only.
             pass
+        case OperatorType.VARIABLE_DEFINE:
+            msg = "Parser must resolve variable definition before codegen"
+            raise ValueError(msg)
         case _:
             assert_never(operator.type)
 
@@ -252,8 +255,7 @@ def amd64_windows_data_section(
     """Write program static data section filled with static strings and memory blobs."""
     initialize_static_data_section(
         context,
-        static_data_section=[
-            *context.strings.items(),
-            *program.memories.items(),
-        ],
+        static_strings=context.strings,
+        static_memories=program.memories,
+        static_variables=program.global_variables,
     )

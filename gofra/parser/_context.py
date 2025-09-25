@@ -4,6 +4,8 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from gofra.typecheck.types import GofraType
+
 from .operators import Operator, OperatorOperand, OperatorType
 
 if TYPE_CHECKING:
@@ -23,15 +25,16 @@ class ParserContext:
     """Context for parsing which only required from internal usages."""
 
     tokenizer: Generator[Token]
-
-    # Should be refactored
-    is_top_level: bool
+    parent: ParserContext | None
 
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=lambda: list())  # noqa: C408
 
     functions: MutableMapping[str, Function] = field(default_factory=lambda: dict())  # noqa: C408
     memories: MutableMapping[str, int] = field(default_factory=lambda: dict())  # noqa: C408
+    variables: MutableMapping[str, GofraType] = field(
+        default_factory=lambda: dict(),  # noqa: C408
+    )
 
     context_stack: deque[tuple[int, Operator]] = field(default_factory=lambda: deque())
     included_source_paths: set[Path] = field(default_factory=lambda: set())
@@ -44,6 +47,10 @@ class ParserContext:
     def add_function(self, function: Function) -> Function:
         self.functions[function.name] = function
         return function
+
+    @property
+    def is_top_level(self) -> bool:
+        return self.parent is None
 
     def expand_from_inline_block(self, inline_block: Function) -> None:
         if inline_block.external_definition_link_to:

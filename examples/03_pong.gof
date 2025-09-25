@@ -10,32 +10,30 @@
 #include "std.gof"
 #include "_cpu.gof"
 
-#define WHITE 0xFFFFFFFF
-#define BLACK 0xFF000000
-
 #define BALL_COLOR WHITE
 #define BALL_SIZE  20
 #define BALL_SPEED 3
-memory ball_speed_x CPU_WORD
-memory ball_speed_y CPU_WORD
-memory ball_x CPU_WORD
-memory ball_y CPU_WORD
+var ball_speed_x int
+var ball_speed_y int
 
-memory player_score CPU_WORD
-memory enemy_score CPU_WORD
+var ball_x int
+var ball_y int
+
+var player_score int
+var enemy_score int
 
 #define DEFAULT_DIFFICULTY 3
-memory difficulty CPU_WORD
+var difficulty int
 
 #define PADDLE_DEFAULT_SPEED 3
 #define PADDLE_WIDTH 25
 #define PADDLE_HEIGHT 120
-memory paddle_player_speed CPU_WORD
-memory paddle_player_x CPU_WORD
-memory paddle_player_y CPU_WORD
-memory paddle_enemy_speed CPU_WORD
-memory paddle_enemy_x CPU_WORD
-memory paddle_enemy_y CPU_WORD
+var paddle_player_speed int
+var paddle_player_x int
+var paddle_player_y int
+var paddle_enemy_speed int
+var paddle_enemy_x int
+var paddle_enemy_y int
 
 #define WINDOW_NAME   "Gofra Pong"
 #define WINDOW_WIDTH  1200

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, assert_never
+
+from gofra.targets.target import Target
+from gofra.typecheck.types import GofraType
 
 from .registers import (
     AMD64_WINDOWS_ABI_ARGUMENTS_REGISTERS,
@@ -85,7 +89,9 @@ def push_static_address_onto_stack(
 
 def initialize_static_data_section(
     context: AMD64CodegenContext,
-    static_data_section: list[tuple[str, str | int]],
+    static_strings: Mapping[str, str],
+    static_memories: Mapping[str, int],
+    static_variables: Mapping[str, GofraType],
 ) -> None:
     """Initialize data section fields with given values.
 
@@ -93,16 +99,28 @@ def initialize_static_data_section(
     Data is an string (raw ASCII) or number (zeroed memory blob)
     TODO(@kirillzhosul, @stepanzubkov): Review alignment for data sections.
     """
-    context.fd.write("section .data\n")
-    for name, data in static_data_section:
-        if isinstance(data, str):
-            context.fd.write(f'{name}: db "{data}", 0\n')
-            continue
+    context.fd.write(".section .data\n")
+
+    target = Target.from_triplet("amd64-unknown-windows")
+    cpu_typesize = {
+        GofraType.VOID: 0,
+        GofraType.BOOLEAN: target.cpu_word_size,
+        GofraType.INTEGER: target.cpu_word_size,
+        GofraType.POINTER: target.cpu_word_size,
+    }
+
+    for name, data in static_strings.items():
+        context.fd.write(f'{name}: .asciz "{data}"\n')
     context.fd.write("section .bss\n")
-    for name, data in static_data_section:
-        if not isinstance(data, str):
-            context.fd.write(f"{name}: resb {data}\n")
-            continue
+    for name, data in static_memories.items():
+        context.fd.write(f"{name}: .space {data}\n")
+    for name, data in static_variables.items():
+        if data == GofraType.ANY:
+            raise ValueError
+
+        typesize = cpu_typesize[data]
+        if typesize != 0:
+            context.fd.write(f"{name}: .space {typesize}\n")
 
 
 def function_end_with_epilogue(context: AMD64CodegenContext) -> None:

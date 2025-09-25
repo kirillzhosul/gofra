@@ -10,4 +10,6 @@ func void main
     static_blob ?> 
     NUMBER
     "Write and read must return same value" assert
+
+    0 exit
 end

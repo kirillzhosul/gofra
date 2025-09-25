@@ -21,6 +21,8 @@ class Keyword(Enum):
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
 
+    VARIABLE_DEFINE = auto()
+
     TYPECAST = auto()
 
 
@@ -53,6 +55,7 @@ WORD_TO_KEYWORD = {
     "inline": Keyword.INLINE,
     "memory": Keyword.MEMORY,
     "global": Keyword.GLOBAL,
+    "var": Keyword.VARIABLE_DEFINE,
     "typecast": Keyword.TYPECAST,
     **WORD_TO_PREPROCESSOR_KEYWORD,
 }
