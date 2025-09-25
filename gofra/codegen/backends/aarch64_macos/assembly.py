@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, assert_never
+
+from gofra.typecheck.types import GofraType
 
 from .registers import (
     AARCH64_DOUBLE_WORD_BITS,
@@ -10,9 +13,6 @@ from .registers import (
     AARCH64_HALF_WORD_BITS,
     AARCH64_STACK_ALIGNMENT,
     AARCH64_STACK_ALINMENT_BIN,
-    FRAME_POINTER,
-    LINK_REGISTER,
-    STACK_POINTER,
 )
 
 if TYPE_CHECKING:
@@ -20,14 +20,23 @@ if TYPE_CHECKING:
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
 
 
-def drop_cells_from_stack(context: AARCH64CodegenContext, *, cells_count: int) -> None:
-    """Drop stack cells from stack by shifting stack pointer (SP) by N bytes.
+def drop_stack_slots(
+    context: AARCH64CodegenContext,
+    *,
+    slots_count: int,
+    slot_size: int = AARCH64_STACK_ALIGNMENT,
+) -> None:
+    """Drop stack slots by shifting stack pointer (SP) by N bytes.
 
-    Stack must be aligned so we use `AARCH64_STACK_ALIGNMENT`
+    In ARM64 context, a 'stack slot' typically represents an aligned unit
+    of memory that can hold primitive values, pointers, or parts of larger objects.
     """
-    assert cells_count > 0, "Tried to drop negative cells count from stack"
-    stack_pointer_shift = AARCH64_STACK_ALIGNMENT * cells_count
-    context.write(f"add SP, SP, #{stack_pointer_shift}")
+    if slot_size <= 0:
+        msg = "`slots_count` must be positive, cannot drop zero or less stack slots"
+        raise ValueError(msg)
+
+    shift_in_bits = slot_size * slots_count
+    context.write(f"add SP, SP, #{shift_in_bits}")
 
 
 def pop_cells_from_stack_into_registers(
@@ -82,6 +91,7 @@ def push_integer_onto_stack(
         "Tried to push integer that exceeding 16 bytes (64 bits register)."
     )
 
+    context.write("// push integer")
     if value <= AARCH64_HALF_WORD_BITS:
         # We have small immediate value which we may just store without shifts
         context.write(f"mov X0, #{value}")
@@ -112,6 +122,7 @@ def push_static_address_onto_stack(
     segment: str,
 ) -> None:
     """Push executable static memory addresss onto stack with page dereference."""
+    context.write(f"// Load static address (segment: {segment})")
     context.write(
         f"adrp X0, {segment}@PAGE",
         f"add X0, X0, {segment}@PAGEOFF",
@@ -204,6 +215,7 @@ def perform_operation_onto_stack(
     registers = ("X0",) if is_unary else ("X0", "X1")
     pop_cells_from_stack_into_registers(context, *registers)
 
+    context.write(f"// OP on-stack {operation}")
     match operation:
         case "+":
             context.write("add X0, X1, X0")
@@ -243,54 +255,17 @@ def perform_operation_onto_stack(
 
 def load_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
     """Load memory as value using arguments from stack."""
+    context.write("// Load memory from stack")
     pop_cells_from_stack_into_registers(context, "X0")
     context.write("ldr X0, [X0]")
     push_register_onto_stack(context, "X0")
 
 
 def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
+    context.write("// store into memory from stack")
     """Store value into memory pointer, pointer and value acquired from stack."""
     pop_cells_from_stack_into_registers(context, "X0", "X1")
     context.write("str X0, [X1]")
-
-
-def call_cffi_function(
-    context: AARCH64CodegenContext,
-    *,
-    name: str,
-    arguments_count: int,
-    push_return_value_onto_stack: bool,
-) -> None:
-    """Call an function with C-FFI ABI.
-
-    C-FFI functions are different from internal (Gofra) ones.
-    """
-    if arguments_count > len(context.abi.argument_registers):
-        msg = (
-            f"C-FFI function call with {arguments_count} arguments not supported. "
-            f"Maximum {len(context.abi.argument_registers)} register arguments supported. "
-            "Stack argument passing not implemented."
-        )
-        raise NotImplementedError(msg)
-
-    if arguments_count < 0:
-        msg = "Tried to call function with C-FFI ABI with negative arguments count"
-        raise ValueError(msg)
-
-    abi = context.abi
-    if arguments_count:
-        registers = abi.argument_registers[:arguments_count][::-1]
-        pop_cells_from_stack_into_registers(context, *registers)
-
-    context.write(f"bl {name}")
-
-    if push_return_value_onto_stack:
-        push_register_onto_stack(context, abi.return_value_register)
-
-
-def call_internal_function(context: AARCH64CodegenContext, *, name: str) -> None:
-    """Call an function internally (e.g Gofra internal function without invokation of C-FFI ABI."""
-    context.write(f"bl {name}")
 
 
 def function_begin_with_prologue(
@@ -299,6 +274,7 @@ def function_begin_with_prologue(
     name: str,
     global_name: str | None = None,
     preserve_frame: bool = True,
+    arguments_count: int,
 ) -> None:
     """Begin an function symbol.
 
@@ -315,8 +291,16 @@ def function_begin_with_prologue(
 
     if preserve_frame:
         # Save frame pointer and link register
-        context.write(f"stp {FRAME_POINTER}, {LINK_REGISTER}, [sp, #-16]!")
-        context.write(f"mov {FRAME_POINTER}, sp")
+        context.write("// Frame setup")
+        context.write("stp X29, X30, [SP, #-32]!")
+        context.write("mov X29, SP")
+
+    abi = context.abi
+    if arguments_count:
+        registers = abi.argument_registers[:arguments_count]
+        context.write("// C-FFI arguments")
+        for register in registers:
+            push_register_onto_stack(context, register)
 
 
 def function_end_with_epilogue(
@@ -324,6 +308,7 @@ def function_end_with_epilogue(
     *,
     has_preserved_frame: bool = True,
     execution_trap_instead_return: bool = False,
+    has_return_value: bool,
 ) -> None:
     """End function with proper epilogue.
 
@@ -335,11 +320,18 @@ def function_end_with_epilogue(
     """
     if has_preserved_frame:
         # Restore frame pointer and link register
-        context.write(f"ldp {FRAME_POINTER}, {LINK_REGISTER}, [{STACK_POINTER}], #16")
+        context.write("// Frame restore")
+        context.write("mov SP, X29")
+        context.write("ldp X29, X30, [SP], #16")
 
     if execution_trap_instead_return:
         execution_guard_trap(context)
         return
+
+    if has_return_value:
+        abi = context.abi
+        context.write("// C-FFI retval")
+        pop_cells_from_stack_into_registers(context, abi.return_value_register)
 
     context.write("ret")
 
@@ -364,3 +356,53 @@ def execution_guard_trap(context: AARCH64CodegenContext) -> None:
     unbound memory.
     """
     debugger_breakpoint_trap(context, number=0)
+
+
+def function_call(
+    context: AARCH64CodegenContext,
+    *,
+    name: str,
+    type_contract_in: Sequence[GofraType],
+    type_contract_out: GofraType,
+) -> None:
+    """Call an function using C ABI (Gofra native and C-FFI both functions).
+
+    As Gofra under the hood uses C call convention for functions, this simplifies differences between C and Gofra calls.
+
+    Uses Branch-With-Link (BL) instruction to `jump` into an function and passing Link-Register (LR, x30 on AARCH64) to callee
+    Passes arguments before function call with C call convention (e.g via registers and stack depending on arguments byte size and type),
+    Restores single return value if requested from retval register.
+
+    Most of the call logic is covered into function own prologue, which unpacks arguments and stores calee stack frame
+    """
+    abi = context.abi
+
+    integer_arguments_count = len(type_contract_in)
+    store_return_value = type_contract_out != GofraType.VOID
+
+    if integer_arguments_count > len(abi.argument_registers):
+        msg = (
+            f"C-FFI function call with {integer_arguments_count} arguments not supported. "
+            f"Maximum {len(context.abi.argument_registers)} register arguments supported. "
+            "Stack argument passing not implemented."
+        )
+        raise NotImplementedError(msg)
+
+    if integer_arguments_count < 0:
+        msg = f"Tried to call function `{name}` with negative arguments count"
+        raise ValueError(msg)
+
+    if integer_arguments_count:
+        registers = abi.argument_registers[:integer_arguments_count][::-1]
+        context.write("// C-FFI arguments")
+        pop_cells_from_stack_into_registers(context, *registers)
+
+    context.write(
+        f"bl {name} // C-FFI {'' if store_return_value else 'no retval'}",
+    )
+
+    if type_contract_out:
+        context.write(
+            f"// {name} return value (defined as type {type_contract_out.name}",
+        )
+        push_register_onto_stack(context, "X0")

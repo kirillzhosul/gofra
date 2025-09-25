@@ -6,12 +6,11 @@ from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
 from gofra.codegen.backends.aarch64_macos.assembly import (
-    call_cffi_function,
-    call_internal_function,
     debugger_breakpoint_trap,
-    drop_cells_from_stack,
+    drop_stack_slots,
     evaluate_conditional_block_on_stack_with_jump,
     function_begin_with_prologue,
+    function_call,
     function_end_with_epilogue,
     initialize_static_data_section,
     ipc_syscall_macos,
@@ -36,6 +35,7 @@ from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
+from gofra.typecheck.types import GofraType
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -116,24 +116,34 @@ def aarch64_macos_operator_instructions(
             )
             push_integer_onto_stack(context, value=len(string_raw))
         case OperatorType.FUNCTION_RETURN:
-            function_end_with_epilogue(context, has_preserved_frame=True)
+            owner_function = program.functions[owner_function_name]
+            has_retval = len(owner_function.type_contract_out) >= 1
+
+            function_end_with_epilogue(
+                context,
+                has_preserved_frame=True,
+                has_return_value=has_retval,
+            )
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
 
             function = program.functions[operator.operand]
 
-            is_uses_cffi = bool(function.external_definition_link_to)
             function_name = function.external_definition_link_to or function.name
-            if is_uses_cffi:
-                call_cffi_function(
-                    context,
-                    name=function_name,
-                    arguments_count=function.abi_ffi_arguments_count(),
-                    push_return_value_onto_stack=function.abi_ffi_push_retval_onto_stack(),
-                )
-                return
-            call_internal_function(context, name=function_name)
-
+            assert len(function.type_contract_out) in (0, 1), (
+                "Wide type contract out is not supported in Codegen and will be eventually removed"
+            )
+            retval_type = (
+                function.type_contract_out[0]
+                if function.type_contract_out
+                else GofraType.VOID
+            )
+            function_call(
+                context,
+                name=function_name,
+                type_contract_in=function.type_contract_in,
+                type_contract_out=retval_type,
+            )
         case _:
             assert_never(operator.type)
 
@@ -147,7 +157,7 @@ def aarch64_macos_intrinsic_instructions(
     assert operator.type == OperatorType.INTRINSIC
     match operator.operand:
         case Intrinsic.DROP:
-            drop_cells_from_stack(context, cells_count=1)
+            drop_stack_slots(context, slots_count=1)
         case Intrinsic.COPY:
             pop_cells_from_stack_into_registers(context, "X0")
             push_register_onto_stack(context, "X0")
@@ -222,13 +232,19 @@ def aarch64_macos_executable_functions(
             context,
             name=function.name,
             global_name=function.name if function.is_global_linker_symbol else None,
-            preserve_frame=False,
+            preserve_frame=True,
+            arguments_count=len(function.type_contract_in),
         )
 
         aarch64_macos_instruction_set(context, function.source, program, function.name)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
-        function_end_with_epilogue(context, has_preserved_frame=False)
+        has_retval = len(function.type_contract_out) >= 1
+        function_end_with_epilogue(
+            context,
+            has_preserved_frame=True,
+            has_return_value=has_retval,
+        )
 
 
 def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
@@ -239,10 +255,16 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
         name=CODEGEN_ENTRY_POINT_SYMBOL,
         global_name=CODEGEN_ENTRY_POINT_SYMBOL,
         preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
+        arguments_count=0,
     )
 
     # Prepare and execute main function
-    call_internal_function(context, name=GOFRA_ENTRY_POINT)
+    function_call(
+        context,
+        name=GOFRA_ENTRY_POINT,
+        type_contract_in=[],
+        type_contract_out=GofraType.VOID,
+    )
 
     # Call syscall to exit without accessing protected system memory.
     # `ret` into return-address will fail with segfault
@@ -260,6 +282,7 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
         context=context,
         has_preserved_frame=False,
         execution_trap_instead_return=True,
+        has_return_value=False,
     )
 
 
