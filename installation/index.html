@@ -40,6 +40,12 @@
                             <li class="nav-item">
                                 <a href="./" class="nav-link active" aria-current="page">Installation</a>
                             </li>
+                            <li class="nav-item">
+                                <a href="../tutorial/" class="nav-link">Tutorial</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../advanced/" class="nav-link">Advanced</a>
+                            </li>
                         </ul>
 
                     <ul class="nav navbar-nav ms-md-auto">
@@ -54,7 +60,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" class="nav-link disabled">
+                                <a rel="next" href="../tutorial/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -116,10 +122,6 @@ But as toolchain compiled code, it depends on target-specific linker and assembl
 </code></pre>
 <p>(Step 2): Verify Installation</p>
 <pre><code class="language-bash">gofra --help
-</code></pre>
-<p>(Step 3): Try an example (Optional)</p>
-<pre><code class="language-bash"># More examples available in `./examples`
-gofra examples/01_hello_world.gof
 </code></pre>
 <h2 id="development-installation">Development installation</h2>
 <p>(Step 1): Clone the repository</p>

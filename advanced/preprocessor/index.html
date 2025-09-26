@@ -7,14 +7,14 @@
         
         
         
-        <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Overview - Gofra</title>
-        <link href="../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../css/fontawesome.min.css" rel="stylesheet">
-        <link href="../css/brands.min.css" rel="stylesheet">
-        <link href="../css/solid.min.css" rel="stylesheet">
-        <link href="../css/v4-font-face.min.css" rel="stylesheet">
-        <link href="../css/base.css" rel="stylesheet">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Preprocessor - Gofra</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
         <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
         <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
@@ -24,7 +24,7 @@
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
-                <a class="navbar-brand" href="..">Gofra</a>
+                <a class="navbar-brand" href="../..">Gofra</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -35,10 +35,16 @@
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
                             <li class="nav-item">
-                                <a href=".." class="nav-link">About</a>
+                                <a href="../.." class="nav-link">About</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../installation/" class="nav-link">Installation</a>
+                                <a href="../../installation/" class="nav-link">Installation</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../tutorial/" class="nav-link">Tutorial</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../" class="nav-link">Advanced</a>
                             </li>
                         </ul>
 
@@ -49,7 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/overview.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/preprocessor.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -69,47 +75,43 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
+            <li class="nav-item" data-bs-level="1"><a href="#preprocessor" class="nav-link">Preprocessor</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             
-            
+            <li class="nav-item" data-bs-level="1"><a href="#include-system-and-include" class="nav-link">Include system and #include</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h3 id="language-overview">Language overview</h3>
-<p>As language is stack based so your basic action is to <em>put something on a stack</em>, like <code>2 2</code> will push 2 and then another 2 on stack so stack underneath will look like [2, 2]</p>
-<p>If you want to operate on that numbers you may do something like <code>3 2 +</code> which is same as <code>3 + 2</code> in other language or default math. Underneath this will mean: push 3 on stack -&gt; push 2 on stack -&gt; take 2 elements from stack -&gt; sum them -&gt; push result back. Stack after that will become [5]</p>
-<p>Conditionals is also a bit controversial:</p>
-<pre><code>1 2 == if
-    ...
-end
-</code></pre>
-<p>which is same as other languages:</p>
-<pre><code>if (1 == 2){
-    ...
-}
-</code></pre>
-<p>(You can follow previous math example for checking stack manipulation)</p>
-<p>For writing a bit more complex programs you may want to use macros and includes:
-Macros is an collection of tokens (like functions in other languages) but does not have an object-like system they just an way to not write same logic (for now)
-So, this code:</p>
-<pre><code>macro multiply_by_2
-    2 *
-end
+<h1 id="preprocessor">Preprocessor</h1>
+<p>Preprocessor is an stage in within compilation (simplified) that works with lexer tokens (e.g raw text) and resolves references to preprocessor itself (e.g <code>#include</code> is preprocessor only directive and will throw an error if occured at next possible stage: parser)</p>
+<p>All preprocessor keywords begins with <code>#</code></p>
+<h1 id="include-system-and-include">Include system and <code>#include</code></h1>
+<p>Most of the time you dont write program in a single file, or require additional code from libraries, in Gofra <code>#inlcude</code> allows to straighforward include whole text of an file (with some additional file path resolving and include-once strategy)</p>
+<pre><code class="language-gofra">
+#include &quot;sum.gof&quot;
 
-4 multiply_by_2
+func void main
+    2 2 sum // sum is defined at sum.gof
+end
 </code></pre>
-<p>at compilation stage will be converted into simple <code>4 2 *</code> (tokens expanded)
-For importing some file (same as macros system but for files) you can use <code>import "file.gof"</code></p>
-<h3 id="examples">Examples</h3>
-<p>Examples may be found inside <code>./examples</code> directory</p>
-<h3 id="milestones-and-planned-features">Milestones and planned features</h3>
-<ul>
-<li>Standard library with not only syscall mapping</li>
-<li>Stability improvements</li>
-<li>Support for x86_64 Windows</li>
-<li>More examples</li>
-</ul></div>
+<p>Inlcude system is like <em>recursive</em> so all definitions of an preprocessor will be available at include side</p>
+<h3 id="module-include">Module include</h3>
+<p>In Gofra, there is convention that when you include an directory (e.g <code>#include "dir"</code>) it will search for file in that directory named same as directory itself, e.g <code>dir</code> directory will search for <code>dir/dir.gof</code> file and that is being included, that simplifies layout of directory tree of libraries</p>
+<h3 id="searching-strategy">Searching strategy</h3>
+<p>At start of search, same file or an directory (e.g directory include file) will be searched in current working file directory parent, e.g if you include something from stdlib and it include something it first looks at its own directory, not your main one
+At next, if file is not found, it will search from directory where you main file is located
+And if file is not found there also, it will search against all include search directory (e.g <code>-isd</code> CLI flag)</p>
+<p>Overview:
+1. Parent of an current file (not main)
+2. Parent of an main file
+3. Include search directories</p></div>
             </div>
         </div>
 
@@ -117,13 +119,13 @@ For importing some file (same as macros system but for files) you can use <code>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
-            var base_url = "..",
+            var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js"></script>
-        <script src="../search/main.js"></script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
