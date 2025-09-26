@@ -5,12 +5,11 @@
 // ==============================================
 
 #include "os/io.gof"
-#include "_cpu.gof"
 
 // Check for equality at runtime with additional message
 // (assert two values same)
-memory runtime_assert_ptr_temp CPU_WORD
-memory runtime_assert_len_temp CPU_WORD
+var runtime_assert_ptr_temp int
+var runtime_assert_len_temp int
 func void runtime_assert[int,int,ptr,int]
     // TODO: add proper types to that function, as it may compare not only integers
     runtime_assert_len_temp swap !<

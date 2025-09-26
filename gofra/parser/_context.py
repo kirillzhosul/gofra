@@ -4,8 +4,6 @@ from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from gofra.typecheck.types import GofraType
-
 from .operators import Operator, OperatorOperand, OperatorType
 
 if TYPE_CHECKING:
@@ -18,6 +16,7 @@ if TYPE_CHECKING:
 
     from gofra.lexer import Token
     from gofra.parser.functions import Function
+    from gofra.parser.variables import Variable
 
 
 @dataclass(frozen=False)
@@ -32,7 +31,7 @@ class ParserContext:
 
     functions: MutableMapping[str, Function] = field(default_factory=lambda: dict())  # noqa: C408
     memories: MutableMapping[str, int] = field(default_factory=lambda: dict())  # noqa: C408
-    variables: OrderedDict[str, GofraType] = field(
+    variables: OrderedDict[str, Variable] = field(
         default_factory=lambda: OrderedDict(),
     )
 

@@ -9,6 +9,7 @@ from gofra.codegen.backends.aarch64_macos.frame import (
     preserve_calee_frame,
     restore_calee_frame,
 )
+from gofra.parser.variables import ArrayType, Variable
 from gofra.typecheck.types import GofraType
 
 from .registers import (
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
 GOFRA_TYPE_WORD_SIZE = {
     GofraType.ANY: 0,
     GofraType.VOID: 0,
+    GofraType.CHAR: 1,
     GofraType.BOOLEAN: 8,
     GofraType.INTEGER: 8,
     GofraType.POINTER: 8,
@@ -147,7 +149,7 @@ def push_static_address_onto_stack(
 
 def push_local_variable_address_from_frame_offset(
     context: AARCH64CodegenContext,
-    local_variables: OrderedDict[str, GofraType],
+    local_variables: OrderedDict[str, Variable],
     local_variable: str,
 ) -> None:
     context.write(f"// Load local variable from frame offset ({local_variable})")
@@ -183,7 +185,7 @@ def initialize_static_data_section(
     context: AARCH64CodegenContext,
     static_strings: Mapping[str, str],
     static_memories: Mapping[str, int],
-    static_variables: Mapping[str, GofraType],
+    static_variables: Mapping[str, Variable],
 ) -> None:
     """Initialize data section fields with given values.
 
@@ -197,11 +199,17 @@ def initialize_static_data_section(
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, data in static_memories.items():
         context.fd.write(f"{name}: .space {data}\n")
-    for name, data in static_variables.items():
-        if data == GofraType.ANY:
+    for name, variable in static_variables.items():
+        if variable.type == GofraType.ANY:
             raise ValueError
 
-        typesize = GOFRA_TYPE_WORD_SIZE[data]
+        if isinstance(variable.type, ArrayType):
+            base_t = variable.type
+            typesize = (
+                GOFRA_TYPE_WORD_SIZE[base_t.primitive_type] * base_t.size_in_elements
+            )
+        else:
+            typesize = GOFRA_TYPE_WORD_SIZE[variable.type]
         if typesize != 0:
             context.fd.write(f"{name}: .space {typesize}\n")
 
@@ -322,7 +330,7 @@ def function_begin_with_prologue(
     name: str,
     global_name: str | None = None,
     preserve_frame: bool = True,
-    local_variables: OrderedDict[str, GofraType],
+    local_variables: OrderedDict[str, Variable],
     arguments_count: int,
 ) -> None:
     """Begin an function symbol.

@@ -1,8 +1,7 @@
 #include "std.gof"
-#include "_cpu.gof"
 
 #define NUMBER 32
-memory static_blob CPU_WORD
+var static_blob int
 
 func void main
     static_blob NUMBER !<
@@ -11,5 +10,5 @@ func void main
     NUMBER
     "Write and read must return same value" assert
 
-    0 exit
+    NUMBER ?> exit
 end

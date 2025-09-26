@@ -8,7 +8,6 @@
 
 #include "ext/raylib.gof"
 #include "std.gof"
-#include "_cpu.gof"
 
 #define BALL_COLOR WHITE
 #define BALL_SIZE  20
@@ -22,7 +21,7 @@ var ball_y int
 var player_score int
 var enemy_score int
 
-#define DEFAULT_DIFFICULTY 3
+#define DEFAULT_DIFFICULTY 30
 var difficulty int
 
 #define PADDLE_DEFAULT_SPEED 3
@@ -43,8 +42,8 @@ var paddle_enemy_y int
 #define FONT_SIZE 80
 #define BACKGROUND_COLOR BLACK
 
-memory enemy_score_str 128
-memory player_score_str 128
+var enemy_score_str  char[32]
+var player_score_str char[32]
 
 inline func void update_ball_movement[]
     ball_x copy ?> ball_speed_x ?> + !<
@@ -150,6 +149,8 @@ func void draw_game
      PADDLE_HEIGHT
      WHITE
     call DrawRectangle
+
+    0 0 call DrawFPS
 end
 
 func void handle_enemy_ai[]

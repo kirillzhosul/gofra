@@ -46,7 +46,7 @@
         },
         {
             "name": "storage.type.gofra",
-            "match": "\\b(int|ptr|void|bool)\\b"
+            "match": "\\b(int|ptr|void|bool|char)\\b"
         }
     ]
 }

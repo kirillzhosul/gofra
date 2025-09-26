@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.parser.variables import ArrayType, Variable
 from gofra.targets.target import Target
 from gofra.typecheck.types import GofraType
 
@@ -93,7 +94,7 @@ def initialize_static_data_section(
     context: AMD64CodegenContext,
     static_strings: Mapping[str, str],
     static_memories: Mapping[str, int],
-    static_variables: Mapping[str, GofraType],
+    static_variables: Mapping[str, Variable],
 ) -> None:
     """Initialize data section fields with given values.
 
@@ -115,11 +116,15 @@ def initialize_static_data_section(
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, data in static_memories.items():
         context.fd.write(f"{name}: .space {data}\n")
-    for name, data in static_variables.items():
-        if data == GofraType.ANY:
+    for name, variable in static_variables.items():
+        if variable.type == GofraType.ANY:
             raise ValueError
 
-        typesize = cpu_typesize[data]
+        if isinstance(variable.type, ArrayType):
+            base_t = variable.type
+            typesize = cpu_typesize[base_t.primitive_type] * base_t.size_in_elements
+        else:
+            typesize = cpu_typesize[variable.type]
         if typesize != 0:
             context.fd.write(f"{name}: .space {typesize}\n")
 

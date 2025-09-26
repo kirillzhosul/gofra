@@ -34,7 +34,7 @@
 #ifdef OS_WINDOWS inline func int print_fd[int,ptr,int] win_write end #endif
 
 // Print an string into standart console error stream
-memory print_length_temp 8
+var print_length_temp int
 func void print[ptr,int]
     print_length_temp swap !<
     STD_OUT swap
@@ -59,10 +59,10 @@ end
 // Print given number into given file descriptor / handle
 // does not emit '\n' at the end
 // negative numbers is not supported
-memory print_integer_buffer_temp 128
-memory print_integer_number_temp 16
-memory print_integer_idx_temp 16
-memory print_integer_fd_temp 16
+var print_integer_buffer_temp char[128]
+var print_integer_number_temp int
+var print_integer_idx_temp int
+var print_integer_fd_temp int
 func void print_integer_fd[int,int]
     // TODO: negative numbers is not supported
     print_integer_number_temp swap !<

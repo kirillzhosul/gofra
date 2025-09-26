@@ -58,10 +58,10 @@
     inline func bool win_write_file[int,ptr,int,ptr]      WINAPI_LP_RESERVED call winapi_write_file       end
     inline func bool win_is_console_handle[int]          call winapi_get_file_type FILE_TYPE_CHAR ==     end
 
-    memory win_write_ptr_temp      8
-    memory win_write_len_temp      8
-    memory win_write_handle_temp   8
-    memory win_write_bytes_written 8
+    var win_write_ptr_temp      int
+    var win_write_len_temp      int
+    var win_write_handle_temp   int
+    var win_write_bytes_written int
     func int win_write[int,ptr,int]
         // [raw handle, buffer, length]
 

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
     from gofra.parser._context import ParserContext
     from gofra.parser.functions import Function
-    from gofra.typecheck.types import GofraType
+    from gofra.parser.variables import Variable
 
 
 @dataclass(frozen=False)
@@ -19,7 +19,7 @@ class ProgramContext:
     """
 
     functions: MutableMapping[str, Function]
-    global_variables: MutableMapping[str, GofraType]
+    global_variables: MutableMapping[str, Variable]
     memories: MutableMapping[str, int]
     entry_point: Function
 

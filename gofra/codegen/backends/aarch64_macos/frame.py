@@ -6,7 +6,7 @@ from gofra.codegen.backends.aarch64_macos._context import (
     AARCH64CodegenContext,
 )
 from gofra.codegen.backends.aarch64_macos.alignment import align_to_highest_size
-from gofra.typecheck.types import GofraType
+from gofra.parser.variables import ArrayType, Variable
 
 # Size of frame head (FP, LR registers)
 FRAME_HEAD_SIZE = 8 * 2
@@ -20,7 +20,7 @@ class LocalVariablesFrameOffsets(NamedTuple):
 
 
 def build_local_variables_frame_offsets(
-    variables: Mapping[str, GofraType],
+    variables: Mapping[str, Variable],
 ) -> LocalVariablesFrameOffsets:
     """Construct mapping from local variable name to stack frame offset where that variable should live.
 
@@ -44,8 +44,14 @@ def build_local_variables_frame_offsets(
     offsets: dict[str, int] = {}
     current_offset = 8
 
-    for var_name, var_type in variables.items():
-        sizeof = GOFRA_TYPE_WORD_SIZE[var_type]
+    for var_name, var in variables.items():
+        if isinstance(var.type, ArrayType):
+            sizeof = (
+                GOFRA_TYPE_WORD_SIZE[var.type.primitive_type]
+                * var.type.size_in_elements
+            )
+        else:
+            sizeof = GOFRA_TYPE_WORD_SIZE[var.type]
         offsets[var_name] = current_offset
         current_offset += sizeof
 

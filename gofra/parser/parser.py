@@ -13,6 +13,7 @@ from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorK
 from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.validator import validate_and_pop_entry_point
+from gofra.parser.variables import ArrayType, Variable
 from gofra.typecheck.types import WORD_TO_GOFRA_TYPE, GofraType
 
 from ._context import ParserContext
@@ -112,7 +113,7 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
 def _search_variable_in_context_parents(
     child: ParserContext,
     variable: str,
-) -> GofraType | None:
+) -> Variable | None:
     context_ref = child
 
     while True:
@@ -219,16 +220,32 @@ def _unpack_variable_definition_from_token(
         raise NotImplementedError(msg)
     assert isinstance(varname_token.value, str)
 
-    typename = WORD_TO_GOFRA_TYPE.get(typename_token.text)
-    if not typename:
-        msg = "Unknown variable typename"
-        raise ValueError(msg)
+    typename = _parse_composite_type(typename_token.text)
 
     varname = varname_token.text
     if varname in context.variables:
         msg = "variable already defined"
         raise ValueError(msg)
-    context.variables[varname] = typename
+    context.variables[varname] = Variable(name=varname, type=typename)
+
+
+def _parse_composite_type(typename: str) -> GofraType | ArrayType:
+    primitive_type = WORD_TO_GOFRA_TYPE.get(typename)
+    if primitive_type:
+        return primitive_type
+
+    array_primitive, composite_array_size, *_ = typename.split("[")
+    composite_array_size = composite_array_size.removesuffix("]")
+    if composite_array_size.isdigit():
+        array_elements = int(composite_array_size)
+        primitive_type = WORD_TO_GOFRA_TYPE.get(array_primitive)
+        if not primitive_type:
+            msg = "Unknown array primitive typename"
+            raise ValueError(msg)
+        return ArrayType(primitive_type=primitive_type, size_in_elements=array_elements)
+
+    msg = "Unknown variable typename"
+    raise ValueError(msg)
 
 
 def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:

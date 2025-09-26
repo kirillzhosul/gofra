@@ -1,0 +1,9 @@
+#include "std.gof"
+func void main
+    var another int
+    var exitcode int
+    var two int
+
+    exitcode 32 !<
+    exitcode ?> exit
+end

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
     from gofra.lexer.tokens import TokenLocation
     from gofra.parser.operators import Operator
+    from gofra.parser.variables import Variable
     from gofra.typecheck.types import GofraType
 
 
@@ -44,7 +45,7 @@ class Function:
     # Local variables defined inside that function
     # only that function can reference them and location of that variable is different as codegen may solve that
     # it is ordered because codegen will assume their positions for referencing
-    variables: OrderedDict[str, GofraType]
+    variables: OrderedDict[str, Variable]
 
     # Actual executable region that this function contains
     # If this is extern function will always be empty
@@ -83,7 +84,7 @@ class Function:
         emit_inline_body: bool,
         external_definition_link_to: str | None,
         is_global_linker_symbol: bool,
-        variables: OrderedDict[str, GofraType],
+        variables: OrderedDict[str, Variable],
     ) -> None:
         self.location = location
         self.name = name

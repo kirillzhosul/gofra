@@ -15,22 +15,22 @@
 
 // Some segment in memory so we can store conent of the file
 #define CAPACITY 1024 // 1KiB
-memory BUFFER   CAPACITY
+var BUFFER char[CAPACITY]
 
 // Store an FD of that files somewhere
-memory FD_BUFFER CPU_WORD
+var fd int
 
 func void main[]
     // TODO(@kirillzhosul): Research why non-existant file returns STDERR FD
     
     // Open file
-    FD_BUFFER PATH 0 0 call sc_open !<
-    FD_BUFFER ?> 0 < if 
+    fd PATH 0 0 call sc_open !<
+    fd ?> 0 < if 
         "Unable to open given file" eprint_fatal 
     end
 
     // Read file
-    FD_BUFFER ?> 
+    fd ?> 
     BUFFER CAPACITY
     call sc_read 1 < if 
         "Unable to read given file" eprint_fatal 

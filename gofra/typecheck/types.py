@@ -19,6 +19,8 @@ class GofraType(IntEnum):
     # Typechecker only!
     ANY = auto()
 
+    CHAR = auto()
+
     def __repr__(self) -> str:
         return self.name
 
@@ -28,6 +30,7 @@ WORD_TO_GOFRA_TYPE = {
     "ptr": GofraType.POINTER,
     "bool": GofraType.BOOLEAN,
     "void": GofraType.VOID,
+    "char": GofraType.CHAR,
 }
 
 type GOFRA_TYPE_UNION = tuple[GofraType, ...]
