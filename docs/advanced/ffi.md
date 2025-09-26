@@ -42,3 +42,11 @@ For letting linker know about that dependencies (Libraries with FFI), you can pa
 
 For example linking with `raylib` and using their functions:
 `-L=-lraylib -L=-L/opt/homebrew/lib`
+
+# Additional flags: @
+By using `@` flag you may specify for example against which function to link your external:
+```gofra
+extern func int _puts[ptr]@link[_puts]
+```
+
+In that case is straighforward same name, but you can change that, and 

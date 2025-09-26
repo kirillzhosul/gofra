@@ -10,4 +10,5 @@ edit_uri: edit/main/docs/
 nav:
   - About: index.md
   - Installation: installation.md
-  - Optimizations: optimizations.md
+  - Tutorial: tutorial/index.md
+  - Advanced: advanced/index.md
