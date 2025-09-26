@@ -44,7 +44,6 @@ def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
             parent=None,
             tokenizer=tokenizer,
             functions={},
-            memories={},
         ),
     )
 
@@ -92,9 +91,6 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
 
 def _consume_word_token(token: Token, context: ParserContext) -> None:
     if _try_unpack_function_from_token(context, token):
-        return
-
-    if _try_unpack_memory_reference_from_token(context, token):
         return
 
     if _try_push_intrinsic_operator(context, token):
@@ -164,7 +160,6 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         Keyword.EXTERN,
         Keyword.FUNCTION,
         Keyword.GLOBAL,
-        Keyword.MEMORY,
     )
     if context.is_top_level:
         if token.value not in (
@@ -191,8 +186,6 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
                 None,
                 is_contextual=False,
             )
-        case Keyword.MEMORY:
-            return _unpack_memory_segment_from_token(context)
         case Keyword.TYPECAST:
             return _unpack_typecast_from_token(context, token)
         case Keyword.VARIABLE_DEFINE:
@@ -266,24 +259,6 @@ def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:
         typename,
         is_contextual=False,
     )
-
-
-def _unpack_memory_segment_from_token(context: ParserContext) -> None:
-    memory_segment_name = next(context.tokenizer, None)
-    if not memory_segment_name:
-        raise NotImplementedError
-    if memory_segment_name.type != TokenType.IDENTIFIER:
-        raise NotImplementedError
-    assert isinstance(memory_segment_name.value, str)
-    memory_segment_size = next(context.tokenizer, None)
-    if not memory_segment_size:
-        raise NotImplementedError
-    if memory_segment_size.type != TokenType.INTEGER:
-        raise NotImplementedError
-    assert isinstance(memory_segment_size.value, int)
-
-    # This is an definition only so we dont acquire reference/pointer
-    context.memories[memory_segment_name.value] = memory_segment_size.value
 
 
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:
@@ -403,7 +378,6 @@ def _unpack_function_definition_from_token(
     new_context = ParserContext(
         tokenizer=(t for t in function_body_tokens),
         functions=context.functions,
-        memories=context.memories,
         parent=context,
     )
     source = _parse_from_context_into_operators(context=new_context).operators
@@ -493,24 +467,6 @@ def _consume_conditional_keyword_from_token(
             return None
         case _:
             raise AssertionError
-
-
-def _try_unpack_memory_reference_from_token(
-    context: ParserContext,
-    token: Token,
-) -> bool:
-    assert token.type == TokenType.IDENTIFIER
-
-    memory_name = token.text
-    if memory_name not in context.memories:
-        return False
-    context.push_new_operator(
-        type=OperatorType.PUSH_MEMORY_POINTER,
-        token=token,
-        operand=memory_name,
-        is_contextual=False,
-    )
-    return True
 
 
 def _try_unpack_function_from_token(

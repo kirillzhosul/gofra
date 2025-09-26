@@ -272,6 +272,5 @@ def amd64_linux_data_section(
     initialize_static_data_section(
         context,
         static_strings=context.strings,
-        static_memories=program.memories,
         static_variables=program.global_variables,
     )

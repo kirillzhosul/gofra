@@ -20,7 +20,6 @@ class ProgramContext:
 
     functions: MutableMapping[str, Function]
     global_variables: MutableMapping[str, Variable]
-    memories: MutableMapping[str, int]
     entry_point: Function
 
     @staticmethod
@@ -30,7 +29,6 @@ class ProgramContext:
     ) -> ProgramContext:
         return ProgramContext(
             functions=parser_context.functions,
-            memories=parser_context.memories,
             global_variables=parser_context.variables,
             entry_point=entry_point,
         )

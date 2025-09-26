@@ -91,7 +91,6 @@ def push_static_address_onto_stack(
 def initialize_static_data_section(
     context: AMD64CodegenContext,
     static_strings: Mapping[str, str],
-    static_memories: Mapping[str, int],
     static_variables: Mapping[str, Variable],
 ) -> None:
     """Initialize data section fields with given values.
@@ -113,8 +112,6 @@ def initialize_static_data_section(
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     context.fd.write("section .bss\n")
-    for name, data in static_memories.items():
-        context.fd.write(f"{name}: .space {data}\n")
     for name, variable in static_variables.items():
         if variable.type == GofraType.ANY:
             raise ValueError

@@ -16,7 +16,7 @@ type OperatorOperand = int | str | None | Intrinsic | GofraType
 class OperatorType(IntEnum):
     PUSH_INTEGER = auto()
     PUSH_STRING = auto()
-    PUSH_MEMORY_POINTER = auto()  # Static segment memory pointer
+    PUSH_MEMORY_POINTER = auto()
 
     INTRINSIC = auto()
 

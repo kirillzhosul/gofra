@@ -30,7 +30,6 @@ class ParserContext:
     operators: MutableSequence[Operator] = field(default_factory=lambda: list())  # noqa: C408
 
     functions: MutableMapping[str, Function] = field(default_factory=lambda: dict())  # noqa: C408
-    memories: MutableMapping[str, int] = field(default_factory=lambda: dict())  # noqa: C408
     variables: OrderedDict[str, Variable] = field(
         default_factory=lambda: OrderedDict(),
     )

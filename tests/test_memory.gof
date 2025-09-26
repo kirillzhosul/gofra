@@ -10,5 +10,5 @@ func void main
     NUMBER
     "Write and read must return same value" assert
 
-    NUMBER ?> exit
+    0 exit
 end
