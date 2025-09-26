@@ -1,39 +1,69 @@
-# Control flow constructions
+# Control Flow Constructs
 
-### If
+Gofra provides essential control flow constructs for conditional execution and looping.
 
-`if` is an control flow block construction that consumes single boolean type argument and if it is not equals to 0 - jumps into block body, otherwise jumps to own closure `end` block
+## `if` Statement
+The `if` statement evaluates a boolean condition and executes the block if the condition is non-zero.
+
+#### Syntax
 ```gofra
+<condition> if
+    // code to execute if condition is true
+end
+```
+
+#### Example
+```gofra
+// This block will NOT execute
 0 1 == if 
-    // will not happen
+    "This will not print" print
 end
 
+// This block WILL execute
 1 1 == if
-    // will fall here
+    "This will print" print
+end
+
+// Using variables
+var is_valid bool
+true is_valid !<
+
+is_valid ?> if
+    "Valid state" print
 end
 ```
 
-### While-do
+## `while` Statement
 
-`while` is an control flow block construction that consumes single boolean type argument and if it is not equals to 0 - jumps into block body, otherwise jumps to own closure `end` block, but in difference with if, will always jump back to while after reaching own `end`, so only way to left that loop is out of that condition
+The `while` loop repeatedly executes a block of code as long as the condition remains non-zero. The loop continues until the condition evaluates to false (zero).
+
+#### Syntax
 ```gofra
-var counter int 
-counter 0 !<
-
-while counter < 10 do
-    // Will print 10 times
-    "Hello!" print
-
-    counter copy ?> inc !<
+while <condition> do
+    // code to execute repeatedly
 end
 ```
 
-In control-flow reference graph:
-`while` -> `end`
-`do` -> `while`
-`end` -> `while`
+#### Example
+```gofra
+var counter int
+counter 0 !<  // Initialize counter to 0
 
+while 
+    counter 10 < // condition
+do
+    "Hello! Iteration: " print
+    counter print_integer  // Print current counter value
+    "\n" print
+    
+    counter copy ?> inc !<  // Increment counter
+end
+```
 
-### Additional notes on logic operators
-
-Language supports logical AND (`&&`) and OR (`||`), read more at operator / intrinsics page.
+#### Control flow pattern
+```text
+while → (condition check) → do → end → while (loop back)
+                    │
+                    ↓ (condition false)
+               (exit loop)
+```
