@@ -90,7 +90,6 @@ def aarch64_macos_operator_instructions(
             assert isinstance(operator.operand, str)
             local_variable = operator.operand
             if local_variable in owner_function.variables:
-                print("local")
                 push_local_variable_address_from_frame_offset(
                     context,
                     owner_function.variables,

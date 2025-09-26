@@ -350,19 +350,6 @@ def function_begin_with_prologue(
             push_register_onto_stack(context, register)
 
 
-def calculate_frame_size(local_variables: OrderedDict[str, GofraType]) -> int:
-    # Minimum frame size is 16 bytes for LR/FP, but we typically use 32 for alignment
-    frame_size = 32  # Base frame size (16-byte aligned)
-
-    if local_variables:
-        local_size = sum(GOFRA_TYPE_WORD_SIZE[t] for t in local_variables.values())
-        # Ensure 16-byte alignment for local variables
-        local_size = (local_size + 15) & ~15
-        frame_size += local_size
-
-    return frame_size
-
-
 def function_end_with_epilogue(
     context: AARCH64CodegenContext,
     *,
