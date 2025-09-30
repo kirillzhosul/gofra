@@ -61,23 +61,23 @@ Expected there will be 'end' block after 'if'.
 Did you forgot to close 'if' block?"""
 
 
-class ParserUnknownWordError(GofraError):
+class ParserUnknownIdentifierError(GofraError):
     def __init__(
         self,
         *args: object,
         word_token: Token,
-        functions_available: Iterable[str],
+        names_available: Iterable[str],
         best_match: str | None = None,
     ) -> None:
         super().__init__(*args)
         self.word_token = word_token
-        self.functions_available = functions_available
+        self.names_available = names_available
         self.best_match = best_match
 
     def __repr__(self) -> str:
-        return f"""Encountered an unknown name (word) '{self.word_token.text}' at {self.word_token.location}!
+        return f"""Encountered an unknown identifier '{self.word_token.text}' at {self.word_token.location}!
 
-Available macro names: {", ".join(self.functions_available) or "..."}""" + (
+Available names: {", ".join(self.names_available) or "...":{512}}""" + (
             f"\nDid you mean '{self.best_match}'?" if self.best_match else ""
         )
 
@@ -265,6 +265,27 @@ class ParserEntryPointFunctionModifiersError(GofraError):
 
 Entry point function cannot be external or inlined!
 """
+
+
+class ParserExpectedTypecastTypeError(GofraError):
+    def __init__(self, *args: object, token: Token) -> None:
+        super().__init__(*args)
+        self.token = token
+
+    def __repr__(self) -> str:
+        return f"""Expected typename after `typecast` at {self.token.location} but found nothing"""
+
+
+class ParserVariableNameAlreadyDefinedAsVariableError(GofraError):
+    def __init__(self, *args: object, token: Token, name: str) -> None:
+        super().__init__(*args)
+        self.token = token
+        self.name = name
+
+    def __repr__(self) -> str:
+        return f"""Tried to redefine variable with name {self.name} at {self.token.location}
+
+Variable is already defined."""
 
 
 class ParserTopLevelError(GofraError):

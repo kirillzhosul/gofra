@@ -23,12 +23,14 @@ from .exceptions import (
     ParserEndAfterWhileError,
     ParserEndWithoutContextError,
     ParserExhaustiveContextStackError,
+    ParserExpectedTypecastTypeError,
     ParserNoWhileBeforeDoError,
     ParserNoWhileConditionOperatorsError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
     ParserUnknownFunctionError,
-    ParserUnknownWordError,
+    ParserUnknownIdentifierError,
+    ParserVariableNameAlreadyDefinedAsVariableError,
 )
 from .intrinsics import WORD_TO_INTRINSIC
 from .operators import OperatorType
@@ -99,9 +101,10 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
     if _try_push_variable_reference(context, token):
         return
 
-    raise ParserUnknownWordError(
+    raise ParserUnknownIdentifierError(
         word_token=token,
-        functions_available=context.functions.keys(),
+        names_available=context.functions.keys()
+        | [v.name for v in _get_all_scopes_variables(context)],
         best_match=_best_match_for_word(context, token.text),
     )
 
@@ -123,6 +126,21 @@ def _search_variable_in_context_parents(
         return None
 
 
+def _get_all_scopes_variables(
+    child: ParserContext,
+) -> list[Variable]:
+    context_ref = child
+    variables: list[Variable] = []
+    while True:
+        variables.extend(context_ref.variables.values())
+
+        if context_ref.parent:
+            context_ref = context_ref.parent
+            continue
+
+        return variables
+
+
 def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
     assert token.type == TokenType.IDENTIFIER
 
@@ -130,8 +148,7 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     variable = _search_variable_in_context_parents(context, varname)
     if not variable:
-        msg = "variable referenced is not found"
-        raise ValueError(msg)
+        return False
 
     # TODO(@kirillzhosul): variable is quite left over but type should be saved.
     context.push_new_operator(
@@ -146,7 +163,7 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 def _best_match_for_word(context: ParserContext, word: str) -> str | None:
     matches = get_close_matches(
         word,
-        WORD_TO_INTRINSIC.keys() | context.functions.keys(),
+        WORD_TO_INTRINSIC.keys() | context.functions.keys() | context.variables.keys(),
     )
     return matches[0] if matches else None
 
@@ -217,8 +234,10 @@ def _unpack_variable_definition_from_token(
 
     varname = varname_token.text
     if varname in context.variables:
-        msg = "variable already defined"
-        raise ValueError(msg)
+        raise ParserVariableNameAlreadyDefinedAsVariableError(
+            token=varname_token,
+            name=varname,
+        )
     context.variables[varname] = Variable(name=varname, type=typename)
 
 
@@ -244,7 +263,7 @@ def _parse_composite_type(typename: str) -> GofraType | ArrayType:
 def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:
     typename_token = next(context.tokenizer, None)
     if not typename_token:
-        raise NotImplementedError
+        raise ParserExpectedTypecastTypeError(token=token)
     if typename_token.type != TokenType.IDENTIFIER:
         raise NotImplementedError
     assert isinstance(typename_token.value, str)
