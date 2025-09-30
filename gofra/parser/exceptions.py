@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.exceptions import GofraError
+from gofra.typecheck.types import GofraType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -243,7 +244,7 @@ But currently it have type contract in: {self.type_contract_in}
 
 
 class ParserEntryPointFunctionTypeContractOutError(GofraError):
-    def __init__(self, *args: object, type_contract_out: FunctionTypeContract) -> None:
+    def __init__(self, *args: object, type_contract_out: GofraType) -> None:
         super().__init__(*args)
         self.type_contract_out = type_contract_out
 
@@ -251,7 +252,7 @@ class ParserEntryPointFunctionTypeContractOutError(GofraError):
         return f"""Entry point function '{GOFRA_ENTRY_POINT}' violates type contract!
 
 Entry point function cannot have type contract out!
-But currently it have type contract out: {self.type_contract_out}
+But currently it have type contract out: {self.type_contract_out.name}
 """
 
 

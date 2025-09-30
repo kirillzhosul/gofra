@@ -45,10 +45,24 @@ def validate_function_type_safety(
     )
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
-    if len(emulated_type_stack) != len(function.type_contract_out) or not all(
-        is_type_coerces_to(a, b)
-        for a, b in zip(emulated_type_stack, function.type_contract_out, strict=True)
+    has_retval = function.type_contract_out != T.VOID
+    if not has_retval and emulated_type_stack:
+        # function must not return any
+        raise TypecheckFunctionTypeContractOutViolatedError(
+            function=function,
+            type_stack=list(emulated_type_stack),
+        )
+    if has_retval and len(emulated_type_stack) != 1:
+        # function must return something
+        raise TypecheckFunctionTypeContractOutViolatedError(
+            function=function,
+            type_stack=list(emulated_type_stack),
+        )
+    if has_retval and not is_type_coerces_to(
+        emulated_type_stack[0],
+        function.type_contract_out,
     ):
+        # type mismatch.
         raise TypecheckFunctionTypeContractOutViolatedError(
             function=function,
             type_stack=list(emulated_type_stack),
@@ -124,7 +138,8 @@ def emulate_type_stack_for_operators(
                         *((t,) for t in type_contract_in),
                         operator=operator,
                     )
-                context.push_types(*function.type_contract_out)
+                if function.type_contract_out != T.VOID:
+                    context.push_types(function.type_contract_out)
             case OperatorType.INTRINSIC:
                 assert isinstance(operator.operand, Intrinsic)
                 match operator.operand:

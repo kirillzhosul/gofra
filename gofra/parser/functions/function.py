@@ -57,7 +57,7 @@ class Function:
     # Code generator will generate desired wrapper around that contract system
     # Type checker also validate usage of function so it does not be used with wrong contract
     type_contract_in: FunctionTypeContract
-    type_contract_out: FunctionTypeContract
+    type_contract_out: GofraType
 
     # If true `function call` rather than proceeding into `jumping` (`calling`) into that function
     # just inject (emit) body of the function inside call target location (expand body of the function from call)
@@ -80,7 +80,7 @@ class Function:
         name: str,
         source: Sequence[Operator],
         type_contract_in: FunctionTypeContract,
-        type_contract_out: FunctionTypeContract,
+        type_contract_out: GofraType,
         emit_inline_body: bool,
         external_definition_link_to: str | None,
         is_global_linker_symbol: bool,

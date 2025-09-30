@@ -306,6 +306,10 @@ def _unpack_function_definition_from_token(
         modifier_is_global,
     ) = definition
 
+    assert len(type_contract_out) in (0, 1)
+    type_contract_out = (
+        GofraType.VOID if len(type_contract_out) == 0 else type_contract_out[0]
+    )
     external_definition_link_to = function_name if modifier_is_extern else None
 
     for additional_modifier in additional_modifiers:
@@ -326,9 +330,6 @@ def _unpack_function_definition_from_token(
         msg = f"unknown modifier {additional_modifier}"
         raise ValueError(msg)
     if modifier_is_extern:
-        if len(type_contract_out) > 1:
-            msg = "Extern functions cannot have stack type contract consider using C FFI ABI"
-            raise NotImplementedError(msg)
         context.add_function(
             Function(
                 location=token.location,
