@@ -195,28 +195,3 @@ def _parse_function_type_contract(token: Token, contract: str) -> list[GofraType
         if raw_contract_type != ""
         and WORD_TO_GOFRA_TYPE[raw_contract_type] != GofraType.VOID
     ]
-
-
-"""
-def _consume_function_definition_name_with_types(
-    context: ParserContext,
-    token: Token,
-) -> tuple[GofraType, str, list[GofraType]]:
-
-
-    if function_name in context.macros:
-        macro_reference = context.macros[function_name]
-        raise ParserExternRedefinesMacroError(
-            redefine_extern_function_name_token=function_sig_def_token,
-            original_macro_name=macro_reference.name,
-            original_macro_location=macro_reference.location,
-        )
-
-    if function_name in (WORD_TO_INTRINSIC.keys() | WORD_TO_KEYWORD.keys()):
-        raise ParserExternRedefinesLanguageDefinitionError(
-            extern_token=function_sig_def_token,
-            extern_function_name=function_name,
-        )
-
-    return return_type, function_name, signature_types
-"""
