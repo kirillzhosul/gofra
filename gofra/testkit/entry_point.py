@@ -90,7 +90,7 @@ def display_test_errors(matrix: list[Test]) -> None:
             continue
         cli_message(
             "ERROR",
-            f"Execution finished with exit code {test.error.returncode} while expected exit code 0!",
+            f"Execution finished with exit code {test.error.returncode} while expected exit code {test.expected_exit_code}!",
         )
 
 

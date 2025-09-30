@@ -12,11 +12,49 @@ from gofra.execution.permissions import apply_file_executable_permissions
 from gofra.gofra import process_input_file
 from gofra.lexer.tokens import TokenLocation
 from gofra.preprocessor.macros import registry_from_raw_definitions
+from gofra.preprocessor.macros.registry import MacrosRegistry
 from gofra.targets import Target
 from gofra.typecheck.typechecker import validate_type_safety
 
 from .cli.arguments import CLIArguments
 from .test import Test, TestStatus
+
+
+def toolchain_assembly_executable(
+    path: Path,
+    args: CLIArguments,
+    macros: MacrosRegistry,
+    build_target: Target,
+    cache_directory: Path,
+    build_format: OUTPUT_FORMAT_T,
+) -> Path:
+    context = process_input_file(
+        path,
+        include_paths=args.include_paths,
+        macros=macros,
+    )
+    validate_type_safety(
+        functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
+    )
+    artifact_path = cache_directory / f"{path.with_suffix('').name}"
+    assemble_program(
+        context,
+        artifact_path,
+        output_format=build_format,
+        target=build_target,
+        verbose=args.verbose,
+        # Probably, at some time this may became configurable for more complex tests.
+        additional_assembler_flags=[],
+        additional_linker_flags=[],
+        # This must not fail, and generally will just decrease binary size
+        # which is not reasonable for testkit.
+        link_with_system_libraries=True,
+        # Artifacts removed by top level, here we delete only build cache.
+        delete_build_cache_after_compilation=args.delete_build_cache,
+        build_cache_dir=cache_directory,
+    )
+
+    return artifact_path
 
 
 def evaluate_test_case(
@@ -33,30 +71,13 @@ def evaluate_test_case(
         definitions=definitions,
     )
     try:
-        context = process_input_file(
+        artifact_path = toolchain_assembly_executable(
             path,
-            include_paths=args.include_paths,
-            macros=macros,
-        )
-        validate_type_safety(
-            functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
-        )
-        artifact_path = cache_directory / f"{path.with_suffix('').name}"
-        assemble_program(
-            context,
-            artifact_path,
-            output_format=build_format,
-            target=build_target,
-            verbose=args.verbose,
-            # Probably, at some time this may became configurable for more complex tests.
-            additional_assembler_flags=[],
-            additional_linker_flags=[],
-            # This must not fail, and generally will just decrease binary size
-            # which is not reasonable for testkit.
-            link_with_system_libraries=True,
-            # Artifacts removed by top level, here we delete only build cache.
-            delete_build_cache_after_compilation=args.delete_build_cache,
-            build_cache_dir=cache_directory,
+            args,
+            macros,
+            build_target,
+            cache_directory,
+            build_format,
         )
     except GofraError as e:
         return Test(
@@ -66,6 +87,15 @@ def evaluate_test_case(
             error=e,
         )
 
+    expected_exit_code_macro = macros.get("TESTKIT_EXPECTED_EXIT_CODE")
+    expected_exit_code = (
+        0 if not expected_exit_code_macro else expected_exit_code_macro.tokens[0].value
+    )
+
+    if not isinstance(expected_exit_code, int):
+        msg = "Expected TESTKIT_EXPECTED_EXIT_CODE to be an integer."
+        raise TypeError(msg)
+
     apply_file_executable_permissions(filepath=artifact_path)
 
     try:
@@ -73,7 +103,7 @@ def evaluate_test_case(
     except TimeoutExpired as e:
         return Test(
             target=build_target,
-            status=TestStatus.EXECUTION_ERROR,
+            status=TestStatus.EXECUTION_TIMEOUT_ERROR,
             path=path,
             artifact_path=artifact_path,
             error=e,
@@ -82,10 +112,11 @@ def evaluate_test_case(
         cli_message("WARNING", "Testkit execution was interrupted by user!")
         sys.exit(0)
 
-    if exit_code != 0:
+    if exit_code != expected_exit_code:
         return Test(
             target=build_target,
-            status=TestStatus.EXECUTION_ERROR,
+            status=TestStatus.EXECUTION_STATUS_ERROR,
+            expected_exit_code=expected_exit_code,
             path=path,
             artifact_path=artifact_path,
             error=CalledProcessError(returncode=exit_code, cmd=artifact_path),
@@ -96,4 +127,5 @@ def evaluate_test_case(
         status=TestStatus.SUCCESS,
         path=path,
         artifact_path=artifact_path,
+        expected_exit_code=expected_exit_code,
     )
