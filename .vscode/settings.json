@@ -11,6 +11,7 @@
         "testkit",
         "preprocessor",
         "docs",
-        "examples"
+        "examples",
+        "types"
     ],
 }

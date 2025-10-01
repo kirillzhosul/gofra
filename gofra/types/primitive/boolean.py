@@ -7,4 +7,4 @@ class BoolType(PrimitiveType):
     size_in_bytes = 8  # TODO(@kirillzhosul): Checkout usage without whole 8 bytes
 
     def __repr__(self) -> str:
-        return "Boolean"
+        return "Bool"

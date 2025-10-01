@@ -5,7 +5,7 @@ Type may be used both in high-level like typecheck system or in low-level one as
 """
 
 from ._base import CompositeType, PrimitiveType, Type
-from .composite import ArrayType, PointerType
+from .composite import ArrayType, FunctionType, PointerType
 from .primitive import BoolType, CharType, I64Type, VoidType
 
 __all__ = [
@@ -13,6 +13,7 @@ __all__ = [
     "BoolType",
     "CharType",
     "CompositeType",
+    "FunctionType",
     "I64Type",
     "PointerType",
     "PrimitiveType",
