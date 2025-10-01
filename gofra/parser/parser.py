@@ -4,6 +4,7 @@ from collections import OrderedDict
 from difflib import get_close_matches
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.feature_flags import FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
 from gofra.lexer import (
     Keyword,
     Token,
@@ -33,7 +34,7 @@ from .exceptions import (
     ParserUnknownIdentifierError,
     ParserVariableNameAlreadyDefinedAsVariableError,
 )
-from .intrinsics import WORD_TO_INTRINSIC
+from .intrinsics import WORD_TO_INTRINSIC, Intrinsic
 from .operators import OperatorType
 
 if TYPE_CHECKING:
@@ -147,17 +148,51 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     varname = token.text
 
+    if FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT:
+        if varname.startswith("&"):
+            # By default, all variables has implicit dereference
+            # by marking them with & that behaviour is disabled and we obtain just an addr
+            varname = varname.removeprefix("&")
+            variable = _search_variable_in_context_parents(context, varname)
+            if not variable:
+                return False
+
+            context.push_new_operator(
+                type=OperatorType.PUSH_MEMORY_POINTER,
+                token=token,
+                operand=(varname, variable.type),
+                is_contextual=False,
+            )
+            return True
+
+        variable = _search_variable_in_context_parents(context, varname)
+        if not variable:
+            return False
+
+        context.push_new_operator(
+            type=OperatorType.PUSH_MEMORY_POINTER,
+            token=token,
+            operand=(varname, variable.type),
+            is_contextual=False,
+        )
+        context.push_new_operator(
+            type=OperatorType.INTRINSIC,
+            token=token,
+            operand=Intrinsic.MEMORY_LOAD,
+            is_contextual=False,
+        )
+        return True
+
     variable = _search_variable_in_context_parents(context, varname)
     if not variable:
         return False
-
-    # TODO(@kirillzhosul): variable is quite left over but type should be saved.
     context.push_new_operator(
         type=OperatorType.PUSH_MEMORY_POINTER,
         token=token,
         operand=(varname, variable.type),
         is_contextual=False,
     )
+
     return True
 
 
@@ -189,7 +224,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             raise NotImplementedError(msg)
     elif token.value in TOP_LEVEL_KEYWORD:
         msg = f"{token.value.name} expected to be at top level! (temp-assert)"
-        raise NotImplementedError(msg)
+        raise NotImplementedError(msg, token.location)
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END:
             return _consume_conditional_keyword_from_token(context, token)
