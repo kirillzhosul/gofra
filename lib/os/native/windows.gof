@@ -44,25 +44,25 @@
     // --- External symbols from kernel libraries (WINAPI) ---
     extern func void winapi_exit_process[int]@link[ExitProcess]
     extern func int  winapi_get_std_handle[int]@link[GetStdHandle]
-    extern func bool winapi_write_console_a[int,ptr,int,ptr,int]@link[WriteConsoleA]
-    extern func bool winapi_write_file[int,ptr,int,ptr,int]@link[WriteFile]
+    extern func bool winapi_write_console_a[int,*char[],int,*char[],int]@link[WriteConsoleA]
+    extern func bool winapi_write_file[int,*char[],int,*char[],int]@link[WriteFile]
     extern func int  winapi_get_file_type[int]@link[GetFileType]
 
     // -- Windows API simple wrappers --
-    inline func void win_exit[int]                                          call winapi_exit_process    end
-    inline func int  win_get_std_handle[int]                                call winapi_get_std_handle  end
-    inline func int  win_get_stdout_handle[]             STD_OUTPUT_HANDLE  call winapi_get_std_handle  end
-    inline func int  win_get_stderr_handle[]             STD_ERROR_HANDLE   call winapi_get_std_handle  end
-    inline func int  win_get_stdin_handle[]              STD_INPUT_HANDLE   call winapi_get_std_handle  end
-    inline func bool win_write_console[int,ptr,int,ptr]  WINAPI_LP_RESERVED call winapi_write_console_a end
-    inline func bool win_write_file[int,ptr,int,ptr]      WINAPI_LP_RESERVED call winapi_write_file       end
-    inline func bool win_is_console_handle[int]          call winapi_get_file_type FILE_TYPE_CHAR ==     end
+    inline func void win_exit[int]                                               call winapi_exit_process    end
+    inline func int  win_get_std_handle[int]                                     call winapi_get_std_handle  end
+    inline func int  win_get_stdout_handle[]                  STD_OUTPUT_HANDLE  call winapi_get_std_handle  end
+    inline func int  win_get_stderr_handle[]                  STD_ERROR_HANDLE   call winapi_get_std_handle  end
+    inline func int  win_get_stdin_handle[]                   STD_INPUT_HANDLE   call winapi_get_std_handle  end
+    inline func bool win_write_console[int,*char[],int,*int]  WINAPI_LP_RESERVED call winapi_write_console_a end
+    inline func bool win_write_file[int,*char[],int,*int]      WINAPI_LP_RESERVED call winapi_write_file       end
+    inline func bool win_is_console_handle[int]               call winapi_get_file_type FILE_TYPE_CHAR ==     end
 
     var win_write_ptr_temp      int
     var win_write_len_temp      int
     var win_write_handle_temp   int
     var win_write_bytes_written int
-    func int win_write[int,ptr,int]
+    func int win_write[int,*char[],int]
         // [raw handle, buffer, length]
 
         // TODO: proper typechecking and return

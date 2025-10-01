@@ -15,6 +15,9 @@ var {name} {type}
 
 // Composite type
 var array {type}[{size_in_elements}]
+var ptr *{type}
+
+var complex **int[32] // pointer to an pointer containing array of integers
 ```
 
 It must start with `var` then `name` and `type`

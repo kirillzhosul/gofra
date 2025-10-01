@@ -6,7 +6,7 @@ from gofra.context import ProgramContext
 from gofra.lexer import Token, TokenType
 from gofra.parser import Operator, OperatorType
 from gofra.parser.intrinsics import Intrinsic
-from gofra.typecheck.types import GofraType
+from gofra.types import I64Type
 
 type BinaryIntFoldPredicate = Callable[[int, int], int]
 BINARY_INT_INTRINSIC_FOLD_PREDICATES: dict[Intrinsic, BinaryIntFoldPredicate] = {
@@ -162,6 +162,7 @@ def _fold_binary_integer_math_operator(
     *,
     fold_predicate: BinaryIntFoldPredicate,
 ) -> bool:
+    raise NotImplementedError("infer_type_after_optimization")
     operators = [unoptimized[idx - 1], unoptimized[idx - 2]]
 
     if not (operators[0].type == operators[1].type == OperatorType.PUSH_INTEGER):
@@ -171,10 +172,10 @@ def _fold_binary_integer_math_operator(
     assert isinstance(operands[0], int)
     assert isinstance(operands[1], int)
 
-    infer_type = GofraType.INTEGER
+    infer_type = I64Type()
     folded_value = fold_predicate(operands[0], operands[1])
     if isinstance(folded_value, bool):
-        infer_type = GofraType.BOOLEAN
+        infer_type = I64Type()  # bool
 
     folded_value = int(folded_value)
 
@@ -191,7 +192,7 @@ def _fold_binary_integer_math_operator(
         ),
         operand=folded_value,
         has_optimizations=True,
-        infer_type_after_optimization=infer_type,
+        infer_type_after_optimization=None,
     )
 
     optimized.append(operator)

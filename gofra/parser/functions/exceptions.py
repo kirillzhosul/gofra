@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from gofra.exceptions import GofraError
-from gofra.typecheck.types import WORD_TO_GOFRA_TYPE
 
 if TYPE_CHECKING:
     from gofra.lexer.tokens import Token
@@ -89,4 +88,4 @@ class ParserFunctionInvalidTypeError(GofraError):
     def __repr__(self) -> str:
         return f"""Unknown type `{self.requested_type}` used in function definition at {self.type_token.location}.
 
-Expected one of known types: {", ".join(WORD_TO_GOFRA_TYPE.keys())}"""
+Expected one of known types"""

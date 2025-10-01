@@ -1,0 +1,39 @@
+#include "std.gof"
+
+#define N 1024
+var buf char[128]
+
+func void print_int_with_sep[*int]
+    ?> buf int2str 
+    buf 128 print
+     ", " print
+end
+
+func void main[]
+    var a int
+    var b int
+    var x int
+
+    a 0 !<
+    b 1 !<
+    x a ?> b ?> + !<
+
+    "Fibonacci Series: " print
+    a call print_int_with_sep
+    b call print_int_with_sep
+
+    while x ?> N <= do
+        x ?> buf int2str 
+        buf 128 print
+
+        a b ?> !<
+        b x ?> !<
+        x a ?> b ?> + !<
+
+        x ?> N <= if
+            ", " print
+        end
+    end 
+
+    "\n" print
+end

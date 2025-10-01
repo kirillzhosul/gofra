@@ -15,7 +15,7 @@ To do that assembler after code generation at linker stage should be acknowledge
 
 Functions marked with `extern` keyword/marker will be treated as externally defined via FFI for example external function `puts` from `libc` is declared as:
 ```gofra
-extern func int _puts[ptr]
+extern func int _puts[*char[]]
 ```
 
 This is written according to `libc` library `C` interface: 
@@ -46,7 +46,7 @@ For example linking with `raylib` and using their functions:
 # Additional flags: @
 By using `@` flag you may specify for example against which function to link your external:
 ```gofra
-extern func int _puts[ptr]@link[_puts]
+extern func int _puts[*char[]*]@link[_puts]
 ```
 
 In that case is straighforward same name, but you can change that, and 

@@ -3,20 +3,18 @@ from collections.abc import Sequence
 from gofra.exceptions import GofraError
 from gofra.parser.functions.function import Function
 from gofra.parser.operators import Operator
-
-from .types import GOFRA_TYPE_UNION
-from .types import GofraType as T
+from gofra.types._base import Type
 
 
 class TypecheckInvalidOperatorArgumentTypeError(GofraError):
     def __init__(
         self,
         *args: object,
-        expected_type: GOFRA_TYPE_UNION,
-        actual_type: T,
+        expected_type: Sequence[type[Type]],
+        actual_type: Type,
         operator: Operator,
-        contract: Sequence[GOFRA_TYPE_UNION],
-        type_stack: Sequence[T],
+        contract: Sequence[Sequence[type[Type]]],
+        type_stack: Sequence[Type],
     ) -> None:
         super().__init__(*args)
         self.expected_type = expected_type
@@ -32,7 +30,7 @@ class TypecheckInvalidOperatorArgumentTypeError(GofraError):
 
         return f"""Type safety check failed!
 
-Expected [{" | ".join(map(repr, self.expected_type))}] but got {self.actual_type.name}
+Expected [{" | ".join(map(repr, self.expected_type))}] but got {self.actual_type}
  for '{self.operator.token.text}' at {self.operator.token.location}
 
 '{self.operator.token.text}' contract is: [{contract}]
@@ -45,8 +43,8 @@ class TypecheckInvalidFunctionArgumentTypeError(GofraError):
     def __init__(
         self,
         *args: object,
-        expected_contract: GOFRA_TYPE_UNION,
-        actual_type: T,
+        expected_contract: Sequence[type[Type]],
+        actual_type: Type,
         function: Function,
     ) -> None:
         super().__init__(*args)
@@ -57,7 +55,7 @@ class TypecheckInvalidFunctionArgumentTypeError(GofraError):
     def __repr__(self) -> str:
         return f"""Type safety check failed!
 
-Expected {", ".join(map(repr, self.expected_contract))} but got {self.actual_type.name}
+Expected {", ".join(map(repr, self.expected_contract))} but got {self.actual_type}
  for function '{self.function.name}' at {self.function.location}
 
 Did you miss the types?"""
@@ -67,8 +65,8 @@ class TypecheckInvalidBinaryMathArithmeticsError(GofraError):
     def __init__(
         self,
         *args: object,
-        actual_lhs_type: T,
-        actual_rhs_type: T,
+        actual_lhs_type: Type,
+        actual_rhs_type: Type,
         operator: Operator,
     ) -> None:
         super().__init__(*args)
@@ -79,11 +77,11 @@ class TypecheckInvalidBinaryMathArithmeticsError(GofraError):
     def __repr__(self) -> str:
         return f"""Type safety check failed!
 
-Binary math operator '{self.operator.token.text}' at {self.operator.token.location} expected both {T.INTEGER.name} operands, 
-but got {self.actual_lhs_type.name} on the left and {self.actual_rhs_type.name} on the right.
+Binary math operator '{self.operator.token.text}' at {self.operator.token.location} expected both INT operands, 
+but got {self.actual_lhs_type} on the left and {self.actual_rhs_type} on the right.
 
-Expected contract: [{T.INTEGER.name}, {T.INTEGER.name}]
-Actual contract: [{self.actual_lhs_type.name}, {self.actual_rhs_type.name}]
+Expected contract: [INT, INT]
+Actual contract: [{self.actual_lhs_type}, {self.actual_rhs_type}]
 
 Pointer arithmetics disallowed within binary math operators!
 Please use desired pointer-arithmetics safe operators!
@@ -95,8 +93,8 @@ class TypecheckInvalidPointerArithmeticsError(GofraError):
     def __init__(
         self,
         *args: object,
-        actual_lhs_type: T,
-        actual_rhs_type: T,
+        actual_lhs_type: Type,
+        actual_rhs_type: Type,
         operator: Operator,
     ) -> None:
         super().__init__(*args)
@@ -109,8 +107,8 @@ class TypecheckInvalidPointerArithmeticsError(GofraError):
 
 Invalid pointer arithmetics for operator '{self.operator.token.text}' at {self.operator.token.location}
 
-Expected contract: [{T.POINTER.name}, {T.INTEGER.name}]
-Actual contract: [{self.actual_lhs_type.name}, {self.actual_rhs_type.name}]
+Expected contract: [PTR*, INT]
+Actual contract: [{self.actual_lhs_type}, {self.actual_rhs_type}]
 
 Did you miss the types?"""
 
@@ -120,7 +118,7 @@ class TypecheckFunctionTypeContractOutViolatedError(GofraError):
         self,
         *args: object,
         function: Function,
-        type_stack: Sequence[T],
+        type_stack: Sequence[Type],
     ) -> None:
         super().__init__(*args)
         self.function = function
@@ -138,7 +136,7 @@ class TypecheckNotEnoughOperatorArgumentsError(GofraError):
     def __init__(
         self,
         *args: object,
-        types_on_stack: Sequence[T],
+        types_on_stack: Sequence[Type],
         required_args: int,
         operator: Operator,
     ) -> None:
@@ -160,7 +158,7 @@ class TypecheckNotEnoughFunctionArgumentsError(GofraError):
     def __init__(
         self,
         *args: object,
-        types_on_stack: Sequence[T],
+        types_on_stack: Sequence[Type],
         function: Function,
         callee_function: Function,
         called_from_operator: Operator,
@@ -190,8 +188,8 @@ class TypecheckBlockStackMismatchError(GofraError):
         *args: object,
         operator_begin: Operator,
         operator_end: Operator,
-        stack_before_block: Sequence[T],
-        stack_after_block: Sequence[T],
+        stack_before_block: Sequence[Type],
+        stack_after_block: Sequence[Type],
     ) -> None:
         super().__init__(*args)
         self.operator_begin = operator_begin

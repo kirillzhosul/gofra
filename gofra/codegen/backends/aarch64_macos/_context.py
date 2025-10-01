@@ -2,8 +2,6 @@ from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from typing import IO
 
-from gofra.typecheck.types import GofraType
-
 from .abi import DarwinAARCH64ABI
 
 
@@ -29,12 +27,3 @@ class AARCH64CodegenContext:
         string_key = "str%d" % len(self.strings)
         self.strings[string_key] = string
         return string_key
-
-
-GOFRA_TYPE_WORD_SIZE = {
-    GofraType.ANY: 0,
-    GofraType.VOID: 0,
-    GofraType.BOOLEAN: 8,
-    GofraType.INTEGER: 8,
-    GofraType.POINTER: 8,
-}

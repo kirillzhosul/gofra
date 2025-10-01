@@ -37,7 +37,7 @@ from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
-from gofra.typecheck.types import GofraType
+from gofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -87,18 +87,18 @@ def aarch64_macos_operator_instructions(
         case OperatorType.INTRINSIC:
             aarch64_macos_intrinsic_instructions(context, operator)
         case OperatorType.PUSH_MEMORY_POINTER:
-            assert isinstance(operator.operand, str)
-            local_variable = operator.operand
+            assert isinstance(operator.operand, tuple)
+            local_variable, _ = operator.operand
             if local_variable in owner_function.variables:
                 push_local_variable_address_from_frame_offset(
                     context,
                     owner_function.variables,
-                    operator.operand,
+                    local_variable,
                 )
                 return
 
             # Global variable or memory
-            push_static_address_onto_stack(context, operator.operand)
+            push_static_address_onto_stack(context, local_variable)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
@@ -128,7 +128,7 @@ def aarch64_macos_operator_instructions(
             )
             push_integer_onto_stack(context, value=len(string_raw))
         case OperatorType.FUNCTION_RETURN:
-            has_retval = len(owner_function.type_contract_out) >= 1
+            has_retval = not isinstance(owner_function.type_contract_out, VoidType)
             function_end_with_epilogue(
                 context,
                 has_preserved_frame=True,
@@ -140,19 +140,11 @@ def aarch64_macos_operator_instructions(
             function = program.functions[operator.operand]
 
             function_name = function.external_definition_link_to or function.name
-            assert len(function.type_contract_out) in (0, 1), (
-                "Wide type contract out is not supported in Codegen and will be eventually removed"
-            )
-            retval_type = (
-                function.type_contract_out[0]
-                if function.type_contract_out
-                else GofraType.VOID
-            )
             function_call(
                 context,
                 name=function_name,
                 type_contract_in=function.type_contract_in,
-                type_contract_out=retval_type,
+                type_contract_out=function.type_contract_out,
             )
         case OperatorType.TYPECAST:
             # Skip that as it is typechecker only.
@@ -261,7 +253,7 @@ def aarch64_macos_executable_functions(
         aarch64_macos_instruction_set(context, function.source, program, function)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
-        has_retval = len(function.type_contract_out) >= 1
+        has_retval = not isinstance(function.type_contract_out, VoidType)
         function_end_with_epilogue(
             context,
             has_preserved_frame=True,
@@ -286,7 +278,7 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
         context,
         name=GOFRA_ENTRY_POINT,
         type_contract_in=[],
-        type_contract_out=GofraType.VOID,
+        type_contract_out=VoidType(),
     )
 
     # Call syscall to exit without accessing protected system memory.

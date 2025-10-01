@@ -11,13 +11,12 @@ from .exceptions import (
     TypecheckNotEnoughFunctionArgumentsError,
     TypecheckNotEnoughOperatorArgumentsError,
 )
-from .types import GOFRA_TYPE_UNION
-from .types import GofraType as T
 
 if TYPE_CHECKING:
     from collections.abc import MutableSequence
 
     from gofra.parser.functions.function import Function
+    from gofra.types import Type
 
 
 @dataclass(frozen=False)
@@ -25,9 +24,9 @@ class TypecheckContext:
     """Context for type checking which only required for internal usages."""
 
     # Typechecker is an emulated type stack, e.g 1 2 would produce [INT, INT] ino type stack
-    emulated_stack_types: MutableSequence[T]
+    emulated_stack_types: MutableSequence[Type]
 
-    def push_types(self, *types: T) -> None:
+    def push_types(self, *types: Type) -> None:
         """Push given types onto emulated typeS stack."""
         self.emulated_stack_types.extend(types)
 
@@ -55,7 +54,7 @@ class TypecheckContext:
                 called_from_operator=operator,
             )
 
-    def pop_type_from_stack(self) -> T:
+    def pop_type_from_stack(self) -> Type:
         """Pop current type on the stack."""
         return self.emulated_stack_types.pop()
 
@@ -68,7 +67,7 @@ class TypecheckContext:
         self,
         operator_or_function: Operator | Function,
         inside_function: Function,
-        *expected_types: GOFRA_TYPE_UNION,
+        *expected_types: tuple[type[Type], ...],
         operator: Operator | None = None,
     ) -> None:
         """Expect given arguments and count and their types should match.
@@ -92,10 +91,7 @@ class TypecheckContext:
         for expected_type in expected_types[::-1]:
             argument_type = self.pop_type_from_stack()
 
-            if argument_type == T.ANY or T.ANY in expected_type:
-                continue
-
-            if argument_type in (expected_type):
+            if isinstance(argument_type, expected_type):
                 continue
 
             if isinstance(operator_or_function, Operator):

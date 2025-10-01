@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from gofra.types import Type
+
 if TYPE_CHECKING:
     from collections import OrderedDict
     from collections.abc import Sequence
@@ -11,11 +13,10 @@ if TYPE_CHECKING:
     from gofra.lexer.tokens import TokenLocation
     from gofra.parser.operators import Operator
     from gofra.parser.variables import Variable
-    from gofra.typecheck.types import GofraType
 
 
 # Both input and output type contracts are the same
-type FunctionTypeContract = Sequence[GofraType]
+type FunctionTypeContract = Sequence[Type]
 
 
 class Function:
@@ -57,7 +58,7 @@ class Function:
     # Code generator will generate desired wrapper around that contract system
     # Type checker also validate usage of function so it does not be used with wrong contract
     type_contract_in: FunctionTypeContract
-    type_contract_out: GofraType
+    type_contract_out: Type
 
     # If true `function call` rather than proceeding into `jumping` (`calling`) into that function
     # just inject (emit) body of the function inside call target location (expand body of the function from call)
@@ -80,7 +81,7 @@ class Function:
         name: str,
         source: Sequence[Operator],
         type_contract_in: FunctionTypeContract,
-        type_contract_out: GofraType,
+        type_contract_out: Type,
         emit_inline_body: bool,
         external_definition_link_to: str | None,
         is_global_linker_symbol: bool,

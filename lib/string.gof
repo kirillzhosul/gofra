@@ -3,18 +3,19 @@
 // ==============================================
 
 
+
 // Get length of an C-Style string (ends with `\0`)
 // Will cause segmentation fault / infinite loop if string is not an C-style.
 var cstr_len_ptr_temp int
 var cstr_len_idx_temp int
-func int cstr_len[ptr]
+func int cstr_len[*char[]]
     cstr_len_ptr_temp swap !<
     cstr_len_idx_temp 0    !<
 
-    while 
+    while
         cstr_len_ptr_temp ?>
         cstr_len_idx_temp ?>
-        + typecast ptr ?>
+        + typecast *int ?>
         '\0' !=
     do
         cstr_len_idx_temp
@@ -27,10 +28,10 @@ end
 
 
 // Almost as an alias to `cstr_len`, as in Gofra all string are C-strings by default (except size pushed after)
-func int str_len[ptr,int] drop cstr_len end
+func int str_len[*char[],int] drop cstr_len end
 
-func void int2str[int,ptr]
-    var str ptr
+func void int2str[int,*char[]]
+    var str *char[]
     var idx int
     var num int
 
@@ -38,14 +39,14 @@ func void int2str[int,ptr]
     num swap !<
 
     num ?> 0 == if
-        str ?> typecast ptr 0 + '0' !<
-        str ?> typecast ptr 1 + '\0' !<
+        str ?> typecast *char 0 + '0' !<
+        str ?> typecast *char 1 + '\0' !<
     end
 
     num ?> 0 != if 
         idx 0 !<
         while num ?> 0 > do
-            str ?> idx ?> + typecast ptr
+            str ?> idx ?> + typecast *char
             num ?> 10 % '0' + !<
 
             num copy ?> 10 / !< 

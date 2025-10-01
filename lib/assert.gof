@@ -8,9 +8,9 @@
 
 // Check for equality at runtime with additional message
 // (assert two values same)
-var runtime_assert_ptr_temp int
+var runtime_assert_ptr_temp *char[]
 var runtime_assert_len_temp int
-func void runtime_assert[int,int,ptr,int]
+func void runtime_assert[int,int,*char[],int]
     // TODO: add proper types to that function, as it may compare not only integers
     runtime_assert_len_temp swap !<
     runtime_assert_ptr_temp swap !<

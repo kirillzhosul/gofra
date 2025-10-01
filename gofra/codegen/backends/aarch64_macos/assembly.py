@@ -9,8 +9,9 @@ from gofra.codegen.backends.aarch64_macos.frame import (
     preserve_calee_frame,
     restore_calee_frame,
 )
-from gofra.parser.variables import ArrayType, Variable
-from gofra.typecheck.types import GofraType
+from gofra.parser.variables import Variable
+from gofra.types._base import Type
+from gofra.types.primitive.void import VoidType
 
 from .registers import (
     AARCH64_DOUBLE_WORD_BITS,
@@ -26,15 +27,6 @@ if TYPE_CHECKING:
 
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
-
-GOFRA_TYPE_WORD_SIZE = {
-    GofraType.ANY: 0,
-    GofraType.VOID: 0,
-    GofraType.CHAR: 1,
-    GofraType.BOOLEAN: 8,
-    GofraType.INTEGER: 8,
-    GofraType.POINTER: 8,
-}
 
 
 def drop_stack_slots(
@@ -197,16 +189,7 @@ def initialize_static_data_section(
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, variable in static_variables.items():
-        if variable.type == GofraType.ANY:
-            raise ValueError
-
-        if isinstance(variable.type, ArrayType):
-            base_t = variable.type
-            typesize = (
-                GOFRA_TYPE_WORD_SIZE[base_t.primitive_type] * base_t.size_in_elements
-            )
-        else:
-            typesize = GOFRA_TYPE_WORD_SIZE[variable.type]
+        typesize = variable.type.size_in_bytes
         if typesize != 0:
             context.fd.write(f"{name}: .space {typesize}\n")
 
@@ -411,8 +394,8 @@ def function_call(
     context: AARCH64CodegenContext,
     *,
     name: str,
-    type_contract_in: Sequence[GofraType],
-    type_contract_out: GofraType,
+    type_contract_in: Sequence[Type],
+    type_contract_out: Type,
 ) -> None:
     """Call an function using C ABI (Gofra native and C-FFI both functions).
 
@@ -427,7 +410,7 @@ def function_call(
     abi = context.abi
 
     integer_arguments_count = len(type_contract_in)
-    store_return_value = type_contract_out != GofraType.VOID
+    store_return_value = not isinstance(type_contract_out, VoidType)
 
     if integer_arguments_count > len(abi.argument_registers):
         msg = (
@@ -450,8 +433,8 @@ def function_call(
         f"bl {name} // C-FFI {'' if store_return_value else 'no retval'}",
     )
 
-    if type_contract_out != GofraType.VOID:
+    if store_return_value:
         context.write(
-            f"// {name} return value (defined as type {type_contract_out.name})",
+            f"// {name} return value (defined as type {type_contract_out})",
         )
         push_register_onto_stack(context, "X0")

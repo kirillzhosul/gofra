@@ -55,13 +55,13 @@ inline func void finalize_game[]
     0 exit
 end
 
-inline func void increase_score[ptr]
+inline func void increase_score[*int]
     copy ?> 1 + !<
 
     difficulty copy ?> 1 + !<
 end
 
-inline func void inverse_speed[ptr]
+inline func void inverse_speed[*int]
     copy ?> 0 1 - * !<
 end
 
@@ -97,7 +97,7 @@ end
 func void init_raylib
      WINDOW_WIDTH
      WINDOW_HEIGHT
-     WINDOW_NAME to_cstr_ptr 
+     WINDOW_NAME to_cstr_ptr
     call InitWindow
 
      WINDOW_FPS

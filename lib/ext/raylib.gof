@@ -3,23 +3,23 @@
 // https://www.raylib.com
 // ==============================================
 
-extern func void InitWindow[int,int,ptr]@link[_InitWindow]
+extern func void InitWindow[int,int,*char[]]@link[_InitWindow]
 extern func bool WindowShouldClose[]@link[_WindowShouldClose]
 extern func void CloseWindow[]@link[_CloseWindow]
 extern func void SetTargetFPS[int]@link[_SetTargetFPS]
 extern func void BeginDrawing[]@link[_BeginDrawing]
 extern func void EndDrawing[]@link[_EndDrawing]
 extern func void ClearBackground[int]@link[_ClearBackground]              // TODO(@kirillzhosul): We cannot pass color struct for now
-extern func void DrawCircle[int,int,int,ptr]@link[_DrawCircle]            // TODO(@kirillzhosul): Cannot pass floats into FFI ABI
+extern func void DrawCircle[int,int,int,*int]@link[_DrawCircle]            // TODO(@kirillzhosul): Cannot pass floats into FFI ABI
 extern func void DrawRectangle[int,int,int,int,int]@link[_DrawRectangle]
 extern func void DrawLine[int,int,int,int,int]@link[_DrawLine]
 extern func bool IsKeyPressed[int]@link[_IsKeyPressed]
 extern func bool IsKeyDown[int]@link[_IsKeyDown]
-extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
-extern func ptr  TextFormat[ptr,ptr]@link[_TextFormat]
+extern func void DrawText[*char[],int,int,int,int]@link[_DrawText]
+extern func *int TextFormat[*char[],*char[]]@link[_TextFormat]
 
 // module: rtext
-extern func void DrawText[ptr,int,int,int,int]@link[_DrawText]
+extern func void DrawText[*char[],int,int,int,int]@link[_DrawText]
 extern func void DrawFPS[int,int]@link[_DrawFPS]
 
 #define WHITE 0xFFFFFFFF

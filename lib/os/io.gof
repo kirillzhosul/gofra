@@ -29,13 +29,13 @@
 #endif // OS_LINUX
 
 // Print an string into given file descriptor / handle and return bytes written
-#ifdef OS_DARWIN  inline func int print_fd[int,ptr,int] sc_write  end #endif
-#ifdef OS_LINUX   inline func int print_fd[int,ptr,int] sc_write  end #endif
-#ifdef OS_WINDOWS inline func int print_fd[int,ptr,int] win_write end #endif
+#ifdef OS_DARWIN  inline func int print_fd[int,*int,int] sc_write  end #endif
+#ifdef OS_LINUX   inline func int print_fd[int,*int,int] sc_write  end #endif
+#ifdef OS_WINDOWS inline func int print_fd[int,*int,int] win_write end #endif
 
 // Print an string into standart console error stream
 var print_length_temp int
-func void print[ptr,int]
+func void print[*int,int]
     print_length_temp swap !<
     STD_OUT swap
     print_length_temp ?> 
@@ -43,7 +43,7 @@ func void print[ptr,int]
 end
 
 // Print an string into standart console output stream
-func void eprint[ptr,int]
+func void eprint[*int,int]
     print_length_temp swap !<
     STD_ERR swap
     print_length_temp ?> 
@@ -51,7 +51,7 @@ func void eprint[ptr,int]
 end
 
 // Print an string into standart error console stream and abort execution
-func void eprint_fatal[ptr,int]
+func void eprint_fatal[*int,int]
     "FATAL: " eprint
     eprint abort
 end
@@ -59,7 +59,7 @@ end
 // Print given number into given file descriptor / handle
 // does not emit '\n' at the end
 // negative numbers is not supported
-var print_integer_buffer_temp char[128]
+var print_integer_buffer_temp int[128]
 var print_integer_number_temp int
 var print_integer_idx_temp int
 var print_integer_fd_temp int

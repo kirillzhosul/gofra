@@ -2,11 +2,10 @@ from collections.abc import Mapping
 from typing import NamedTuple
 
 from gofra.codegen.backends.aarch64_macos._context import (
-    GOFRA_TYPE_WORD_SIZE,
     AARCH64CodegenContext,
 )
 from gofra.codegen.backends.aarch64_macos.alignment import align_to_highest_size
-from gofra.parser.variables import ArrayType, Variable
+from gofra.parser.variables import Variable
 
 # Size of frame head (FP, LR registers)
 FRAME_HEAD_SIZE = 8 * 2
@@ -45,15 +44,8 @@ def build_local_variables_frame_offsets(
     current_offset = 8
 
     for var_name, var in variables.items():
-        if isinstance(var.type, ArrayType):
-            sizeof = (
-                GOFRA_TYPE_WORD_SIZE[var.type.primitive_type]
-                * var.type.size_in_elements
-            )
-        else:
-            sizeof = GOFRA_TYPE_WORD_SIZE[var.type]
         offsets[var_name] = current_offset
-        current_offset += sizeof
+        current_offset += var.type.size_in_bytes
 
     # Alignment is required on AARCH64
     local_space_size = align_to_highest_size(current_offset)

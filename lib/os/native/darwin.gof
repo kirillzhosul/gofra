@@ -62,19 +62,19 @@
         // Signature: [fd,buf,count]
         // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
         // Returns number of bytes read, 0 on EOF, or -1 on error.
-        inline func int sc_read[int,ptr,int] DARWIN_SYSCALL_READ syscall3 end
+        inline func int sc_read[int,*int,int] DARWIN_SYSCALL_READ syscall3 end
 
         // Writes to a file descriptor.
         // Signature: [fd,buf,count]
         // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
         // Returns number of bytes written, or -1 on error.
-        inline func int sc_write[int,ptr,int] DARWIN_SYSCALL_WRITE syscall3 end
+        inline func int sc_write[int,*int,int] DARWIN_SYSCALL_WRITE syscall3 end
 
         // Opens a file.
         // Signature: [patr, flags, mode]
         // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
         // Returns file descriptor, or -1 on error.
-        inline func int sc_open[ptr,int,int] DARWIN_SYSCALL_OPEN syscall3 end
+        inline func int sc_open[*int,int,int] DARWIN_SYSCALL_OPEN syscall3 end
 
         // Closes a file descriptor.
         inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end

@@ -12,9 +12,10 @@ from gofra.lexer import (
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorKeyword
 from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
+from gofra.parser.types import parse_type
 from gofra.parser.validator import validate_and_pop_entry_point
-from gofra.parser.variables import ArrayType, Variable
-from gofra.typecheck.types import WORD_TO_GOFRA_TYPE, GofraType
+from gofra.parser.variables import Variable
+from gofra.types.primitive.void import VoidType
 
 from ._context import ParserContext
 from .exceptions import (
@@ -154,7 +155,7 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
     context.push_new_operator(
         type=OperatorType.PUSH_MEMORY_POINTER,
         token=token,
-        operand=varname,
+        operand=(varname, variable.type),
         is_contextual=False,
     )
     return True
@@ -230,7 +231,10 @@ def _unpack_variable_definition_from_token(
         raise NotImplementedError(msg)
     assert isinstance(varname_token.value, str)
 
-    typename = _parse_composite_type(typename_token.text)
+    typename = parse_type(typename_token.text)
+    if not typename:
+        msg = "Unknown typecast typename"
+        raise ValueError(msg, typename_token.location)
 
     varname = varname_token.text
     if varname in context.variables:
@@ -241,25 +245,6 @@ def _unpack_variable_definition_from_token(
     context.variables[varname] = Variable(name=varname, type=typename)
 
 
-def _parse_composite_type(typename: str) -> GofraType | ArrayType:
-    primitive_type = WORD_TO_GOFRA_TYPE.get(typename)
-    if primitive_type:
-        return primitive_type
-
-    array_primitive, composite_array_size, *_ = typename.split("[")
-    composite_array_size = composite_array_size.removesuffix("]")
-    if composite_array_size.isdigit():
-        array_elements = int(composite_array_size)
-        primitive_type = WORD_TO_GOFRA_TYPE.get(array_primitive)
-        if not primitive_type:
-            msg = "Unknown array primitive typename"
-            raise ValueError(msg)
-        return ArrayType(primitive_type=primitive_type, size_in_elements=array_elements)
-
-    msg = "Unknown variable typename"
-    raise ValueError(msg)
-
-
 def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:
     typename_token = next(context.tokenizer, None)
     if not typename_token:
@@ -268,10 +253,10 @@ def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:
         raise NotImplementedError
     assert isinstance(typename_token.value, str)
 
-    typename = WORD_TO_GOFRA_TYPE.get(typename_token.text)
+    typename = parse_type(typename_token.text)
     if not typename:
         msg = "Unknown typecast typename"
-        raise ValueError(msg)
+        raise ValueError(msg, typename_token.location)
     context.push_new_operator(
         OperatorType.TYPECAST,
         token,
@@ -326,9 +311,7 @@ def _unpack_function_definition_from_token(
     ) = definition
 
     assert len(type_contract_out) in (0, 1)
-    type_contract_out = (
-        GofraType.VOID if len(type_contract_out) == 0 else type_contract_out[0]
-    )
+    type_contract_out = VoidType() if not type_contract_out else type_contract_out[0]
     external_definition_link_to = function_name if modifier_is_extern else None
 
     for additional_modifier in additional_modifiers:

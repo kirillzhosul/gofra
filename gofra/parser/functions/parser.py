@@ -7,7 +7,7 @@ For example:
 ```
 func my_func[] void ... end
 inline func do_something[int, int] int ... end
-extern func puts[ptr] int
+extern func puts[*char[]] int
 ```
 
 Extern functions cannot have a body so they do not have `end` block (assuming that - does not have any body block).
@@ -17,7 +17,8 @@ from gofra.lexer import Token
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
-from gofra.typecheck.types import WORD_TO_GOFRA_TYPE, GofraType
+from gofra.parser.types import parse_type
+from gofra.types import Type, VoidType
 
 from .exceptions import (
     ParserExpectedFunctionAfterFunctionModifiersError,
@@ -33,7 +34,7 @@ from .exceptions import (
 def consume_function_definition(
     context: ParserContext,
     token: Token,
-) -> tuple[Token, str, list[GofraType], list[GofraType], list[str], bool, bool, bool]:
+) -> tuple[Token, str, list[Type], list[Type], list[str], bool, bool, bool]:
     token, (modifier_is_inline, modifier_is_extern, modifier_is_global) = (
         consume_function_modifiers(
             context,
@@ -127,7 +128,7 @@ def consume_function_modifiers(
 def consume_function_signature(
     context: ParserContext,
     token: Token,
-) -> tuple[str, list[GofraType], list[GofraType], list[str]]:
+) -> tuple[str, list[Type], list[Type], list[str]]:
     """Consume parser context into function signature assuming given token is `function` keyword.
 
     Returns function name and signature types (`in` and `out).
@@ -162,7 +163,8 @@ def consume_function_signature(
     signature, *additional_modifiers = signature.split("@")
     if "[" in signature and "]" in signature:
         function_name = function_name.split("[")[0].strip()
-        contract = signature.split("[")[1].strip()[:-1]
+
+        contract = signature.split("[", maxsplit=1)[1].split("@")[0][:-1]
 
         type_contract_in = _parse_function_type_contract(
             token=signature_token,
@@ -172,26 +174,24 @@ def consume_function_signature(
     return function_name, type_contract_in, type_contract_out, additional_modifiers
 
 
-def _parse_function_type_contract(token: Token, contract: str) -> list[GofraType]:
+def _parse_function_type_contract(token: Token, contract: str) -> list[Type]:
     """Parse function type contract from string.
 
-    Expected contract to be like: `[ptr,int,int]`
+    Expected contract to be like: `[char*,int,int]`
     """
     assert contract.startswith("[")
     assert contract.endswith("]")
 
     raw_contract_types = [t.strip() for t in contract[1:-1].split(",") if t != ""]
 
+    type_contract: list[Type] = []
     for raw_contract_type in raw_contract_types:
-        if raw_contract_type not in WORD_TO_GOFRA_TYPE:
+        t = parse_type(raw_contract_type)
+        if t is None:
             raise ParserFunctionInvalidTypeError(
                 type_token=token,
                 requested_type=raw_contract_type,
             )
+        type_contract.append(t)
 
-    return [
-        WORD_TO_GOFRA_TYPE[raw_contract_type]
-        for raw_contract_type in raw_contract_types
-        if raw_contract_type != ""
-        and WORD_TO_GOFRA_TYPE[raw_contract_type] != GofraType.VOID
-    ]
+    return [t for t in type_contract if not isinstance(t, VoidType)]

@@ -4,13 +4,14 @@ from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from typing import TYPE_CHECKING
 
+from gofra.types import Type
+
 from .intrinsics import Intrinsic
 
 if TYPE_CHECKING:
     from gofra.lexer import Token
-    from gofra.typecheck.types import GofraType
 
-type OperatorOperand = int | str | None | Intrinsic | GofraType
+type OperatorOperand = int | str | None | Intrinsic | Type | tuple[str, Type]
 
 
 class OperatorType(IntEnum):
@@ -43,7 +44,7 @@ class Operator:
     syscall_optimization_injected_args: list[int | None] | None = None
 
     has_optimizations: bool = field(default=False)
-    infer_type_after_optimization: GofraType | None = field(default=None)
+    infer_type_after_optimization: None = field(default=None)
 
     def __repr__(self) -> str:
         return f"OP<{self.type.name}>"

@@ -79,5 +79,5 @@ numbers 0 + ?> print // Load and print numbers[0]
 ```gofra
 var b char    // 1 byte
 var i int     // 4 or 8 bytes (architecture-dependent)
-var p ptr     // 4 or 8 bytes (pointer width)
+var p *int     // 4 or 8 bytes (pointer width)
 ```

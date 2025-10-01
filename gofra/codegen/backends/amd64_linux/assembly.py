@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import TYPE_CHECKING, assert_never
-
-from gofra.parser.variables import ArrayType, Variable
-from gofra.targets.target import Target
-from gofra.typecheck.types import GofraType
 
 from .registers import (
     AMD64_LINUX_ABI_ARGUMENTS_REGISTERS,
@@ -17,7 +12,10 @@ from .registers import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
+    from gofra.parser.variables import Variable
 
     from ._context import AMD64CodegenContext
     from .registers import AMD64_GP_REGISTERS
@@ -103,25 +101,10 @@ def initialize_static_data_section(
     """
     context.fd.write("section .data\n")
 
-    target = Target.from_triplet("amd64-unknown-linux")
-    cpu_typesize = {
-        GofraType.VOID: 0,
-        GofraType.BOOLEAN: target.cpu_word_size,
-        GofraType.INTEGER: target.cpu_word_size,
-        GofraType.POINTER: target.cpu_word_size,
-    }
-
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, variable in static_variables.items():
-        if variable.type == GofraType.ANY:
-            raise ValueError
-
-        if isinstance(variable.type, ArrayType):
-            base_t = variable.type
-            typesize = cpu_typesize[base_t.primitive_type] * base_t.size_in_elements
-        else:
-            typesize = cpu_typesize[variable.type]
+        typesize = variable.type.size_in_bytes
         if typesize != 0:
             context.fd.write(f"{name}: .space {typesize}\n")
 
