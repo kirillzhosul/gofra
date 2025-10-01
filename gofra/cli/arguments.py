@@ -35,7 +35,8 @@ class CLIArguments:
     include_paths: list[Path]
     definitions: dict[str, str]
 
-    ir: bool
+    hir: bool
+    lir: bool
     preprocess_only: bool
 
     linker_flags: list[str]
@@ -97,7 +98,8 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
     optimizer = merge_into_optimizer_config(optimizer, args, prefix="optimizer")
     return CLIArguments(
         debug_symbols=bool(args.debug_symbols),
-        ir=bool(args.ir),
+        hir=bool(args.hir),
+        lir=bool(args.lir),
         source_filepaths=source_filepaths,
         output_filepath=output_filepath,
         output_format=args.output_format,
@@ -210,10 +212,17 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     )
 
     parser.add_argument(
-        "-ir",
+        "-hir",
         required=False,
         action="store_true",
-        help="If passed will just emit IR of provided file(s) into stdin.",
+        help="If passed will just emit IR (high-level) of provided file(s) into stdin.",
+    )
+
+    parser.add_argument(
+        "-lir",
+        required=False,
+        action="store_true",
+        help="If passed will just emit IR (low-level, codegen specific) of provided file(s) into stdin.",
     )
 
     parser.add_argument(

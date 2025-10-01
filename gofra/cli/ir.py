@@ -3,6 +3,12 @@
 Allows to view IR from CLI.
 """
 
+from gofra.codegen.lir import translate_hir_to_lir
+from gofra.codegen.lir.registers import LIRVirtualRegisterAllocator
+from gofra.codegen.lir.static import (
+    LIRStaticSegmentCString,
+    LIRStaticSegmentGlobalVariable,
+)
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.context import ProgramContext
 from gofra.parser.functions.function import Function
@@ -10,7 +16,7 @@ from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
 
 
-def emit_ir_into_stdout(context: ProgramContext) -> None:
+def emit_hir_into_stdout(context: ProgramContext) -> None:
     """Display IR via stdout."""
     functions = {**context.functions, GOFRA_ENTRY_POINT: context.entry_point}
     for function in functions.values():
@@ -22,6 +28,54 @@ def emit_ir_into_stdout(context: ProgramContext) -> None:
             emit_ir_operator(operator, context_block_shift=context_block_shift)
             if operator.type in (OperatorType.DO, OperatorType.IF, OperatorType.WHILE):
                 context_block_shift += 1
+
+
+def emit_lir_into_stdout(context: ProgramContext) -> None:
+    lir = translate_hir_to_lir(
+        context,
+        system_entry_point_name="TARGET_SPECIFIC_ENTRY_POINT",
+        virtual_register_allocator=LIRVirtualRegisterAllocator(
+            list(map(str, range(100))),
+        ),
+    )
+
+    print("--- LIR static segment start --- ")
+    sizeof_static = 0
+    for seg in lir.static_segment.values():
+        if isinstance(seg, LIRStaticSegmentCString):
+            print("\t Static C-String", f"'{seg.name}'")
+            sizeof_static += len(seg.text)
+    for seg in lir.static_segment.values():
+        if isinstance(seg, LIRStaticSegmentGlobalVariable):
+            print(
+                f"\t Global Var '{seg.type}'",
+                f"'{seg.name}'",
+                f"{seg.type.size_in_bytes} bytes",
+            )
+            sizeof_static += seg.type.size_in_bytes
+
+    print(f"--- LIR static segment end {sizeof_static} bytes total --- ")
+    print("--- LIR externs declaration start --- ")
+    for e in lir.externs.values():
+        print(
+            "\t",
+            f"'{e.return_type} {e.name}({', '.join(repr(p.type) for p in e.parameters)})'",
+            f"real_name='{e.real_name}'" if e.real_name != e.name else "",
+        )
+    print("--- LIR externs declaration end --- ")
+    print("--- LIR internal functions declaration start --- ")
+    instr_counter = 0
+    for f in lir.functions.values():
+        print(
+            "\t",
+            f"'{f.return_type} {f.name}({', '.join(repr(p.type) for p in f.parameters)})'",
+            f"{len(f.locals)} locals",
+        )
+        for op in f.operations:
+            print("\t\t", repr(op))
+            instr_counter += 1
+    print("--- LIR internal functions declaration end --- ")
+    print(f"[Total LIR instructions: {instr_counter}]")
 
 
 def emit_ir_operator(operator: Operator, context_block_shift: int) -> None:  # noqa: PLR0911

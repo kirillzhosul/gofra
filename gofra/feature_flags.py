@@ -18,3 +18,8 @@ You can enable them to try or to develop.
 #
 # Disabled due to current prototyping and improvement process
 FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT = False
+
+# Translate to LIR from HIR at codegen level instead of HIR to machine code translation
+# Disabled due to current in-progress implementation and bugs
+FEATURE_USE_LIR_CODEGEN_IR = False
+

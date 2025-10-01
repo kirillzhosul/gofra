@@ -20,7 +20,7 @@ from gofra.typecheck import validate_type_safety
 from .arguments import CLIArguments, parse_cli_arguments
 from .errors import cli_gofra_error_handler
 from .helpers import cli_get_executable_program
-from .ir import emit_ir_into_stdout
+from .ir import emit_hir_into_stdout, emit_lir_into_stdout
 from .output import cli_message
 
 if TYPE_CHECKING:
@@ -37,7 +37,8 @@ def cli_entry_point(prog: str | None = None) -> None:
 
         cli_process_toolchain_on_input_files(args)
 
-        if args.execute_after_compilation and not args.preprocess_only and not args.ir:
+        has_artifact = not args.preprocess_only and not args.hir and not args.lir
+        if args.execute_after_compilation and has_artifact:
             if args.output_format != "executable":
                 cli_message(
                     level="ERROR",
@@ -118,8 +119,12 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
 
     cli_process_optimization_pipeline(context, args)
 
-    if args.ir:
-        emit_ir_into_stdout(context)
+    if args.hir:
+        emit_hir_into_stdout(context)
+        sys.exit(0)
+
+    if args.lir:
+        emit_lir_into_stdout(context)
         sys.exit(0)
 
     cli_message(
