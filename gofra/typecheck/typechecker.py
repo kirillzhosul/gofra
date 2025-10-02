@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 # TODO(@kirillzhosul): Probably be something like an debug flag
 # Traces each operation on stack to search bugs in typechecker
-DEBUG_TRACE_TYPESTACK = True
+DEBUG_TRACE_TYPESTACK = False
 
 
 def validate_type_safety(functions: MutableMapping[str, Function]) -> None:
