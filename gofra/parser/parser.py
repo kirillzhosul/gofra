@@ -16,6 +16,7 @@ from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.types import parse_type
 from gofra.parser.validator import validate_and_pop_entry_point
 from gofra.parser.variables import Variable
+from gofra.types.composite.array import ArrayType
 from gofra.types.primitive.void import VoidType
 
 from ._context import ParserContext
@@ -148,44 +149,22 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     varname = token.text
 
-    if FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT:
-        if varname.startswith("&"):
-            # By default, all variables has implicit dereference
-            # by marking them with & that behaviour is disabled and we obtain just an addr
-            varname = varname.removeprefix("&")
-            variable = _search_variable_in_context_parents(context, varname)
-            if not variable:
-                return False
+    is_reference = not FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
+    array_index_at = None
 
-            context.push_new_operator(
-                type=OperatorType.PUSH_MEMORY_POINTER,
-                token=token,
-                operand=(varname, variable.type),
-                is_contextual=False,
-            )
-            return True
+    if varname.startswith("&"):
+        is_reference = True
+        varname = varname.removeprefix("&")
 
-        variable = _search_variable_in_context_parents(context, varname)
-        if not variable:
-            return False
-
-        context.push_new_operator(
-            type=OperatorType.PUSH_MEMORY_POINTER,
-            token=token,
-            operand=(varname, variable.type),
-            is_contextual=False,
-        )
-        context.push_new_operator(
-            type=OperatorType.INTRINSIC,
-            token=token,
-            operand=Intrinsic.MEMORY_LOAD,
-            is_contextual=False,
-        )
-        return True
+    if varname.endswith("]"):
+        varname, size = varname.split("[")
+        idx = int(size.removesuffix("]"))
+        array_index_at = idx
 
     variable = _search_variable_in_context_parents(context, varname)
     if not variable:
         return False
+
     context.push_new_operator(
         type=OperatorType.PUSH_MEMORY_POINTER,
         token=token,
@@ -193,6 +172,42 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         is_contextual=False,
     )
 
+    if array_index_at is not None:
+        if not isinstance(variable.type, ArrayType):
+            msg = "cannot get index-of (e.g []) for non-array types."
+            raise ValueError(msg)
+
+        if array_index_at < 0:
+            msg = "Negatitive indexing inside arrays is prohibited"
+            raise ValueError(msg)
+
+        if array_index_at >= variable.type.elements_count:
+            msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements"
+            raise ValueError(msg)
+
+        element_sizeof = variable.type.element_type.size_in_bytes
+        shift_in_bytes = element_sizeof * array_index_at
+        if shift_in_bytes:
+            context.push_new_operator(
+                type=OperatorType.PUSH_INTEGER,
+                token=token,
+                operand=shift_in_bytes,
+                is_contextual=False,
+            )
+            context.push_new_operator(
+                type=OperatorType.INTRINSIC,
+                token=token,
+                operand=Intrinsic.PLUS,
+                is_contextual=False,
+            )
+
+    if not is_reference:
+        context.push_new_operator(
+            type=OperatorType.INTRINSIC,
+            token=token,
+            operand=Intrinsic.MEMORY_LOAD,
+            is_contextual=False,
+        )
     return True
 
 
