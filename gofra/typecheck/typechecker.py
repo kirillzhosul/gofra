@@ -246,8 +246,14 @@ def emulate_type_stack_for_operators(
                             operator=operator,
                         )
                         ptr_t = context.pop_type_from_stack()
-                        assert isinstance(ptr_t, PointerType)
-                        context.push_types(ptr_t.points_to)
+                        if not isinstance(ptr_t, PointerType):
+                            msg = f"Memory load (?>) is used to dereference an pointer but got {ptr_t} at {operator.token.location} (dereferencing-an-non-pointer-type)"
+                            raise TypeError(msg)
+
+                        revealed_type = ptr_t.points_to
+                        if isinstance(revealed_type, ArrayType):
+                            revealed_type = revealed_type.element_type
+                        context.push_types(revealed_type)
                     case Intrinsic.COPY:
                         context.raise_for_enough_arguments(
                             operator,
