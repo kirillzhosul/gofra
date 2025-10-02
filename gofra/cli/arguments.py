@@ -35,6 +35,8 @@ class CLIArguments:
     include_paths: list[Path]
     definitions: dict[str, str]
 
+    version: bool
+
     hir: bool
     lir: bool
     preprocess_only: bool
@@ -58,12 +60,6 @@ class CLIArguments:
 def parse_cli_arguments(prog: str) -> CLIArguments:
     """Parse CLI arguments from argparse into custom DTO."""
     args = _construct_argument_parser(prog=prog).parse_args()
-    if len(args.source_files) > 1:
-        cli_message(
-            level="ERROR",
-            text="Compiling several files not implemented.",
-        )
-        sys.exit(1)
 
     if None in args.include:
         cli_message(
@@ -103,6 +99,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         source_filepaths=source_filepaths,
         output_filepath=output_filepath,
         output_format=args.output_format,
+        version=bool(args.version),
         execute_after_compilation=bool(args.execute),
         delete_build_cache=bool(args.delete_cache),
         build_cache_dir=Path(args.cache_dir),
@@ -173,7 +170,8 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         "source_files",
         type=str,
         help="Input source code files in Gofra to process (`.gof` files)",
-        nargs="+",
+        nargs="*",
+        default=[],
     )
 
     parser.add_argument(
@@ -183,7 +181,12 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         action="store_true",
         help="If passed will emit preprocessed text of an source",
     )
-
+    parser.add_argument(
+        "--version",
+        default=False,
+        action="store_true",
+        help="If passed will just emit system and toolchain information",
+    )
     parser.add_argument(
         "--output",
         "-o",
@@ -418,10 +421,6 @@ def infer_output_filename(
     target: Target,
 ) -> Path:
     """Try to infer filename for output from input source files."""
-    assert source_filepaths
-
-    source_filepath = source_filepaths[0]
-
     match output_format:
         case "library":
             is_dynamic = False
@@ -435,6 +434,11 @@ def infer_output_filename(
             suffix = target.file_assembly_suffix
         case "executable":
             suffix = target.file_executable_suffix
+
+    if not source_filepaths:
+        return Path("out").with_suffix(suffix)
+
+    source_filepath = source_filepaths[0]
 
     if source_filepath.suffix == suffix:
         suffix = source_filepath.suffix + suffix

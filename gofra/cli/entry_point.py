@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from platform import platform, python_implementation, python_version
 from typing import TYPE_CHECKING
 
 from gofra.assembler import assemble_program
@@ -33,8 +34,21 @@ def cli_entry_point(prog: str | None = None) -> None:
     with cli_gofra_error_handler():
         args = parse_cli_arguments(prog)
 
-        assert len(args.source_filepaths) == 1
+        if len(args.source_filepaths) == 0 and not args.version:
+            cli_message("ERROR", "Expected atleast one source files given!")
+            sys.exit(1)
 
+        if len(args.source_filepaths) > 1 and not args.version:
+            cli_message(
+                level="ERROR",
+                text="Compiling several files not implemented.",
+            )
+            sys.exit(1)
+        if args.version:
+            cli_emit_system_host_version(args)
+            sys.exit(0)
+
+        assert len(args.source_filepaths) == 1
         cli_process_toolchain_on_input_files(args)
 
         has_artifact = not args.preprocess_only and not args.hir and not args.lir
@@ -46,6 +60,20 @@ def cli_entry_point(prog: str | None = None) -> None:
                 )
                 sys.exit(1)
             cli_execute_after_compilation(args)
+
+
+def cli_emit_system_host_version(args: CLIArguments) -> None:
+    print("[Gofra toolchain]")
+    print()
+    print("Toolchain target (may be unavailable on host machine):")
+    print(f"\tTriplet: {args.target.triplet}")
+    print(f"\tArchitecture: {args.target.architecture}")
+    print(f"\tOS: {args.target.operating_system}")
+    print()
+    print("Host machine:")
+    print(f"\tPlatform: {platform()}")
+    print(f"\tPython: {python_implementation()} {python_version()}")
+    print()
 
 
 def cli_process_optimization_pipeline(

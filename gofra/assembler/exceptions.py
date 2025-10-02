@@ -11,7 +11,7 @@ class NoToolkitForAssemblingError(GofraError):
         self.toolkit_required = toolkit_required
 
     def __repr__(self) -> str:
-        return f"Unable to assemble program due to not all toolkit installed, required: {','.join(self.toolkit_required)}"
+        return f"Unable to assemble program due to not all toolkit installed, required (missing ones): {','.join(self.toolkit_required)}"
 
 
 class UnsupportedBuilderOperatingSystemError(GofraError):
