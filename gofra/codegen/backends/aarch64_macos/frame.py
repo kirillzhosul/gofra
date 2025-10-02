@@ -10,6 +10,8 @@ from gofra.parser.variables import Variable
 # Size of frame head (FP, LR registers)
 FRAME_HEAD_SIZE = 8 * 2
 
+STORE_PAIR_MAX_RANGE = 8 * 64 - 8
+
 
 class LocalVariablesFrameOffsets(NamedTuple):
     """Offsets within frame for local variables."""
@@ -49,6 +51,12 @@ def build_local_variables_frame_offsets(
 
     # Alignment is required on AARCH64
     local_space_size = align_to_highest_size(current_offset)
+
+    if local_space_size > STORE_PAIR_MAX_RANGE:  # [-512, 504] STP limitations
+        # TODO(@kirillzhosul): Add proper auto relocation / fix STP limitations
+        msg = f"Cannot locate current local variables on a frame or relocate them, please locate big local variables in global space! Max local frame size: {STORE_PAIR_MAX_RANGE}, but currently it is: {local_space_size} bytes (aligned)!"
+        raise NotImplementedError(msg)
+
     return LocalVariablesFrameOffsets(
         offsets=offsets,
         local_space_size=local_space_size,
@@ -73,6 +81,9 @@ def preserve_calee_frame(
         f"Frame in total must be aligned by 16 bytes, got {frame_size}"
     )
 
+    assert local_space_size < STORE_PAIR_MAX_RANGE, (
+        f"Cannot locate current local frame without relocation, auto relocation is not implemented [lsp: {local_space_size}]"
+    )
     context.comment(f"; Preserve frame ({FRAME_HEAD_SIZE}b + {local_space_size}b)")
     context.write(f"sub SP, SP, #{frame_size}")
     context.write(f"stp X29, X30, [SP, #{local_space_size}]")
