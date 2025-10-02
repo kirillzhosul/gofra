@@ -9,10 +9,12 @@ from shutil import which
 from subprocess import CalledProcessError, check_output
 from typing import TYPE_CHECKING, Literal
 
+from gofra.assembler.pkgconfig import get_pkg_config_libraries_linker_flags
 from gofra.cli.output import cli_message
 from gofra.codegen import generate_code_for_assembler
 from gofra.codegen.backends.general import CODEGEN_ENTRY_POINT_SYMBOL
 from gofra.codegen.get_backend import get_backend_for_target
+from gofra.feature_flags import FEATURE_RESOLVE_LINKER_LIBS_WITH_PKG_CONFIG
 
 from .exceptions import (
     NoToolkitForAssemblingError,
@@ -130,10 +132,25 @@ def _link_final_output(  # noqa: PLR0913
     verbose: bool,
 ) -> None:
     """Use linker to link object file into executable."""
+    target_linker_flags: list[str] = []
+
+    if FEATURE_RESOLVE_LINKER_LIBS_WITH_PKG_CONFIG:
+        libraries = [
+            f.removeprefix("-l") for f in additional_linker_flags if f.startswith("-l")
+        ]
+
+        for library in libraries:
+            pkconfig_result = get_pkg_config_libraries_linker_flags(
+                library,
+                verbose=verbose,
+            )
+            if not pkconfig_result:
+                continue
+            additional_linker_flags.extend(pkconfig_result)
     match current_platform_system():
         case "Darwin":
             assert target.triplet == "arm64-apple-darwin"
-            target_linker_flags = ["-arch", "arm64"]
+            target_linker_flags += ["-arch", "arm64"]
 
             # TODO(@kirillzhosul): Review default linkage with system library (libc by default)
             if link_with_system_libraries:
@@ -152,7 +169,6 @@ def _link_final_output(  # noqa: PLR0913
             assert not link_with_system_libraries, (
                 "`--link-system is not supported on Linux target, consider removing that flag for now."
             )
-            target_linker_flags = []
             assert output_format == "executable", (
                 "Libraries on Linux is not implemented"
             )

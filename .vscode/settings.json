@@ -12,6 +12,7 @@
         "preprocessor",
         "docs",
         "examples",
-        "types"
+        "types",
+        "assembler"
     ],
 }

@@ -23,3 +23,7 @@ FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT = False
 # Disabled due to current in-progress implementation and bugs
 FEATURE_USE_LIR_CODEGEN_IR = False
 
+# Automatically resolve additional linker flags when passing something like `-L=-lraylib`
+# that `raylib` is passed to `pkg-config` if installed and resolved for additional required search paths
+FEATURE_RESOLVE_LINKER_LIBS_WITH_PKG_CONFIG = False
+
