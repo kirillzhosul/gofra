@@ -116,7 +116,7 @@ def emulate_type_stack_for_operators(
                     current_function=current_function,
                 )
 
-                if type_stack != context.emulated_stack_types:
+                if not is_typestack_same(type_stack, context.emulated_stack_types):
                     raise TypecheckBlockStackMismatchError(
                         operator_begin=operator,
                         operator_end=operators[jumps_to_idx],
@@ -358,3 +358,7 @@ def emulate_type_stack_for_operators(
                 assert_never(operator.type)
 
     return context.emulated_stack_types
+
+
+def is_typestack_same(a: Sequence[Type], b: Sequence[Type]) -> bool:
+    return list(map(type, a)) == list(map(type, b))
