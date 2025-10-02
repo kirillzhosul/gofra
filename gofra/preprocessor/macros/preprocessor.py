@@ -40,6 +40,24 @@ def consume_macro_definition_from_token(
     return macro
 
 
+def consume_macro_undefine_from_token(token: Token, state: PreprocessorState) -> None:
+    assert token.type == TokenType.KEYWORD
+    assert token.value == PreprocessorKeyword.UNDEFINE
+
+    if not (name_token := next(state.tokenizer, None)):
+        raise PreprocessorNoMacroNameError(location=token.location)
+
+    if name_token.type != TokenType.IDENTIFIER:
+        raise PreprocessorMacroNonIdentifierNameError(token=token)
+
+    name = name_token.text
+    if name not in state.macros:
+        msg = "cannot undefine non-existing macros"
+        raise ValueError(msg)
+
+    state.macros.pop(name)
+
+
 def try_resolve_and_expand_macro_reference_from_token(
     token: Token,
     state: PreprocessorState,

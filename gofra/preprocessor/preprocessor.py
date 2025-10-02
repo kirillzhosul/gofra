@@ -10,6 +10,7 @@ from .conditions import resolve_conditional_block_from_token
 from .include import resolve_include_from_token_into_state
 from .macros.preprocessor import (
     consume_macro_definition_from_token,
+    consume_macro_undefine_from_token,
     try_resolve_and_expand_macro_reference_from_token,
 )
 
@@ -45,6 +46,8 @@ def preprocess_file(
                 consume_macro_definition_from_token(token, state)
             case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.IF_DEFINED):
                 resolve_conditional_block_from_token(token, state)
+            case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.UNDEFINE):
+                consume_macro_undefine_from_token(token, state)
             case Token(type=TokenType.IDENTIFIER):
                 if try_resolve_and_expand_macro_reference_from_token(token, state):
                     continue
