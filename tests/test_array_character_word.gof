@@ -1,0 +1,16 @@
+#include "std.gof"
+
+func void main
+    var hello char[6]
+
+    hello[0] 'H' !<
+    hello[1] 'e' !<
+    hello[2] 'l' !<
+    hello[3] 'l' !<
+    hello[4] 'o' !<
+    hello[5] '\n' !<
+
+    hello 6 print
+    
+    0 exit
+end
