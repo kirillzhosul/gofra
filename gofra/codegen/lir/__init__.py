@@ -414,6 +414,10 @@ def translate_hir_function_to_lir_function(
                             ),
                             LIRPushRegistersOntoStack((vreg_a,)),
                         )
+                    case Intrinsic.BITSHIFT_RIGHT:
+                        raise NotImplementedError
+                    case Intrinsic.BITSHIFT_LEFT:
+                        raise NotImplementedError
                     case Intrinsic.LOGICAL_AND:
                         vreg_a = vreg_alloc()
                         vreg_b = vreg_alloc()

@@ -212,7 +212,7 @@ def perform_operation_onto_stack(
                 f"set{logic_op[operation]} al",  # Set low byte
                 "and rax, 1",  # Ensure only 0 or 1
             )
-        case "&&" | "||" | "|" | "&":
+        case "&&" | "||" | "|" | "&" | ">>" | "<<":
             raise NotImplementedError
         case _:
             assert_never()

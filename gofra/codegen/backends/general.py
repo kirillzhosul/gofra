@@ -22,6 +22,8 @@ type CODEGEN_GOFRA_ON_STACK_OPERATIONS = Literal[
     "++",
     "--",
     "||",
+    "<<",
+    ">>",
     "&&",
     "&",
     "|",
@@ -46,6 +48,8 @@ CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS: dict[
     Intrinsic.EQUAL: "==",
     Intrinsic.LOGICAL_OR: "||",
     Intrinsic.LOGICAL_AND: "&&",
+    Intrinsic.BITSHIFT_LEFT: "<<",
+    Intrinsic.BITSHIFT_RIGHT: ">>",
     Intrinsic.BITWISE_OR: "|",
     Intrinsic.BITWISE_AND: "&",
 }

@@ -283,6 +283,10 @@ def perform_operation_onto_stack(
         case "||" | "|":
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
             context.write("orr X0, X0, X1")
+        case ">>":
+            context.write("lsr X0, X0, X1")
+        case "<<":
+            context.write("lsl X0, X0, X1")
         case "&&" | "&":
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
             context.write("and X0, X0, X1")

@@ -192,6 +192,8 @@ def aarch64_macos_intrinsic_instructions(
             | Intrinsic.LOGICAL_OR
             | Intrinsic.BITWISE_AND
             | Intrinsic.BITWISE_OR
+            | Intrinsic.BITSHIFT_LEFT
+            | Intrinsic.BITSHIFT_RIGHT
         ):
             perform_operation_onto_stack(
                 context,

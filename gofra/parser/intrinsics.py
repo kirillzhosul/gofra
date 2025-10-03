@@ -24,6 +24,9 @@ class Intrinsic(IntEnum):
     BITWISE_OR = auto()
     BITWISE_AND = auto()
 
+    BITSHIFT_LEFT = auto()
+    BITSHIFT_RIGHT = auto()
+
     MEMORY_LOAD = auto()
     MEMORY_STORE = auto()
 
@@ -55,6 +58,8 @@ WORD_TO_INTRINSIC = {
     ">=": Intrinsic.GREATER_EQUAL_THAN,
     "||": Intrinsic.LOGICAL_OR,
     "&&": Intrinsic.LOGICAL_AND,
+    ">>": Intrinsic.BITSHIFT_RIGHT,
+    "<<": Intrinsic.BITSHIFT_LEFT,
     "|": Intrinsic.BITWISE_OR,
     "&": Intrinsic.BITWISE_AND,
     "%": Intrinsic.MODULUS,

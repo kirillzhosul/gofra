@@ -337,7 +337,12 @@ def emulate_type_stack_for_operators(
                             (BoolType,),
                         )
                         context.push_types(BoolType())
-                    case Intrinsic.BITWISE_OR | Intrinsic.BITWISE_AND:
+                    case (
+                        Intrinsic.BITWISE_OR
+                        | Intrinsic.BITWISE_AND
+                        | Intrinsic.BITSHIFT_LEFT
+                        | Intrinsic.BITSHIFT_RIGHT
+                    ):
                         context.raise_for_arguments(
                             operator,
                             current_function,

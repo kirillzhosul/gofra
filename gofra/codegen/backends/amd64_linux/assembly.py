@@ -225,7 +225,7 @@ def perform_operation_onto_stack(
             raise NotImplementedError
         case "%":
             raise NotImplementedError
-        case "&&" | "||" | "|" | "&":
+        case "&&" | "||" | "|" | "&" | ">>" | "<<":
             raise NotImplementedError
         case "++":
             context.write("incq rax")
