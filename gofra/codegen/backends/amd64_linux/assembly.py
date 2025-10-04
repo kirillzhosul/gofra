@@ -99,7 +99,7 @@ def initialize_static_data_section(
     Data is an string (raw ASCII) or number (zeroed memory blob)
     TODO(@kirillzhosul, @stepanzubkov): Review alignment for data sections.
     """
-    context.fd.write("section .data\n")
+    context.fd.write(".section .data\n")
 
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')

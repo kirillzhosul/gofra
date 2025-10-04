@@ -7,5 +7,5 @@
 #include "std.gof"
 
 func void main
-    "Hello, World!\n" print
+    "Hello World!\n" print
 end

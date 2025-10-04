@@ -29,20 +29,21 @@
 #endif // OS_LINUX
 
 // Print an string into given file descriptor / handle and return bytes written
-#ifdef OS_DARWIN  inline func int print_fd[int,*int,int] sc_write  end #endif
-#ifdef OS_LINUX   inline func int print_fd[int,*int,int] sc_write  end #endif
-#ifdef OS_WINDOWS inline func int print_fd[int,*int,int] win_write end #endif
+#ifdef OS_DARWIN  inline func int print_fd[int,*char[],int] sc_write  end #endif
+#ifdef OS_LINUX   inline func int print_fd[int,*char[],int] sc_write  end #endif
+#ifdef OS_WINDOWS inline func int print_fd[int,*char[],int] win_write end #endif
 
-// Print an string into standart console error stream
+
+// Print an string into standart console output stream
 var print_length_temp int
 func void print[*char[],int]
     print_length_temp swap !<
     STD_OUT swap
-    print_length_temp ?> 
+    print_length_temp ?>
     print_fd drop
 end
 
-// Print an string into standart console output stream
+// Print an string into standart console error stream
 func void eprint[*char[],int]
     print_length_temp swap !<
     STD_ERR swap
