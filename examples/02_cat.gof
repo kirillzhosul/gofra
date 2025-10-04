@@ -8,14 +8,13 @@
 // ==============================================
 
 #include "std.gof"
-#include "_cpu.gof"
 
 // Currently, this example doesnt work with arguments, so we hardcode path
 #define PATH "test.txt" to_cstr_ptr
 
 // Some segment in memory so we can store conent of the file
 #define CAPACITY 1024 // 1KiB
-var BUFFER char[CAPACITY]
+var BUFFER char[1024]
 
 // Store an FD of that files somewhere
 var fd int
