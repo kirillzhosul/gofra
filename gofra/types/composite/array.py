@@ -20,4 +20,4 @@ class ArrayType(CompositeType):
         return self.size_in_bytes * index
 
     def __repr__(self) -> str:
-        return f"Array of {self.element_type}[{self.elements_count}]"
+        return f"{self.element_type}[{self.elements_count}]"

@@ -39,28 +39,6 @@ Actual type stack is: {type_stack}
 Did you miss the types?"""
 
 
-class TypecheckInvalidFunctionArgumentTypeError(GofraError):
-    def __init__(
-        self,
-        *args: object,
-        expected_contract: Sequence[type[Type]],
-        actual_type: Type,
-        function: Function,
-    ) -> None:
-        super().__init__(*args)
-        self.expected_contract = expected_contract
-        self.actual_type = actual_type
-        self.function = function
-
-    def __repr__(self) -> str:
-        return f"""Type safety check failed!
-
-Expected {", ".join(map(repr, self.expected_contract))} but got {self.actual_type}
- for function '{self.function.name}' at {self.function.location}
-
-Did you miss the types?"""
-
-
 class TypecheckInvalidBinaryMathArithmeticsError(GofraError):
     def __init__(
         self,
@@ -150,34 +128,6 @@ class TypecheckNotEnoughOperatorArgumentsError(GofraError):
 
 Expected {self.required_args} arguments on stack but got {len(self.types_on_stack)}
  for '{self.operator.token.text}' at {self.operator.token.location}
-
-Did you miss some arguments?"""
-
-
-class TypecheckNotEnoughFunctionArgumentsError(GofraError):
-    def __init__(
-        self,
-        *args: object,
-        types_on_stack: Sequence[Type],
-        function: Function,
-        callee_function: Function,
-        called_from_operator: Operator,
-    ) -> None:
-        super().__init__(*args)
-        self.types_on_stack = types_on_stack
-        self.function = function
-        self.callee_function = callee_function
-        self.called_from_operator = called_from_operator
-
-    def __repr__(self) -> str:
-        return f"""Type safety check failed!
-
-Expected {len(self.function.type_contract_in)} arguments on stack but got {len(self.types_on_stack)}
-For function '{self.function.name}' defined at {self.function.location}
-Called from function `{self.callee_function.name}` with `{self.called_from_operator.token.text}` at `{self.called_from_operator.token.location}`
-
-Function type contract in: {self.function.type_contract_in}
-But types on stack is: {self.types_on_stack}
 
 Did you miss some arguments?"""
 

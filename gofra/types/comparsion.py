@@ -1,0 +1,58 @@
+from typing import Literal
+
+from gofra.types.composite.array import ArrayType
+from gofra.types.composite.pointer import PointerType
+
+from ._base import PrimitiveType, Type
+
+
+def is_primitive_type(a: Type) -> bool:
+    return isinstance(a, PrimitiveType)
+
+
+def is_types_same(
+    a: Type,
+    b: Type,
+    *,
+    strategy: Literal["strict-same-type", "implicit-byte-size"] = "strict-same-type",
+) -> bool:
+    match strategy:
+        case "strict-same-type":
+            return _compare_types_strict_same_type(a, b)
+        case "implicit-byte-size":
+            return a.size_in_bytes == b.size_in_bytes
+
+
+def _compare_types_strict_same_type(a: Type, b: Type) -> bool:
+    if is_primitive_type(a) and is_primitive_type(b):
+        # primitives types without narrowing is just check of equality
+        return type(a) is type(b)
+
+    # when one type is an primitive it is never comparable to other, complex type
+    # e.g pointer and integer is never comparable beside explicit typecast
+
+    if is_primitive_type(a):
+        # a -> primitive
+        # b -> complex
+        return False
+
+    if is_primitive_type(b):
+        # a -> complex
+        # b -> primitive
+        return False
+
+    # Both are complex types
+
+    if isinstance(a, PointerType) and isinstance(b, PointerType):
+        return is_types_same(a.points_to, b.points_to)
+
+    if isinstance(a, ArrayType) and isinstance(b, ArrayType):
+        return (
+            a.elements_count == b.elements_count
+            or (a.elements_count == 0 or b.elements_count == 0)
+        ) and is_types_same(
+            a.element_type,
+            b.element_type,
+        )
+
+    return False

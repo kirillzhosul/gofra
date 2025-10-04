@@ -4,10 +4,13 @@ from typing import TYPE_CHECKING, assert_never
 
 from gofra.parser import Operator, OperatorType
 from gofra.parser.intrinsics import Intrinsic
+from gofra.typecheck.errors.return_value_missing import ReturnValueMissingTypecheckError
 from gofra.types import Type
+from gofra.types.comparsion import is_types_same
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.primitive.boolean import BoolType
+from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
 
@@ -54,28 +57,30 @@ def validate_function_type_safety(
     )
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
-    has_retval = not isinstance(function.type_contract_out, VoidType)
+    has_retval = not is_types_same(function.type_contract_out, VoidType())
     if not has_retval and emulated_type_stack:
         # function must not return any
         raise TypecheckFunctionTypeContractOutViolatedError(
             function=function,
             type_stack=list(emulated_type_stack),
         )
-    if has_retval and len(emulated_type_stack) != 1:
-        # function must return something
-        raise TypecheckFunctionTypeContractOutViolatedError(
-            function=function,
-            type_stack=list(emulated_type_stack),
-        )
-    if has_retval and not isinstance(
-        emulated_type_stack[0],
-        type(function.type_contract_out),
-    ):
-        # type mismatch.
-        raise TypecheckFunctionTypeContractOutViolatedError(
-            function=function,
-            type_stack=list(emulated_type_stack),
-        )
+    if has_retval:
+        if len(emulated_type_stack) == 0:
+            raise ReturnValueMissingTypecheckError(owner=function)
+
+        if len(emulated_type_stack) > 1:
+            raise ValueError("ambigious stack size at function end")
+
+        if not is_types_same(
+            a=emulated_type_stack[0],
+            b=function.type_contract_out,
+            strategy="strict-same-type",
+        ):
+            # type mismatch.
+            raise TypecheckFunctionTypeContractOutViolatedError(
+                function=function,
+                type_stack=list(emulated_type_stack),
+            )
 
 
 def emulate_type_stack_for_operators(
@@ -89,7 +94,9 @@ def emulate_type_stack_for_operators(
 
     Functions are provided so calling it will dereference new emulation type stack.
     """
-    context = TypecheckContext(emulated_stack_types=list(initial_type_stack))
+    context = TypecheckContext(
+        emulated_stack_types=list(initial_type_stack),
+    )
 
     idx_max, idx = len(operators), 0
     while idx < idx_max:
@@ -100,7 +107,7 @@ def emulate_type_stack_for_operators(
             case OperatorType.WHILE | OperatorType.END:
                 ...  # Nothing here as there nothing to typecheck
             case OperatorType.DO | OperatorType.IF:
-                context.raise_for_arguments(operator, current_function, (BoolType,))
+                context.raise_for_operator_arguments(operator, (BoolType,))
 
                 # Acquire where this block jumps, shift due to emulation layers
                 assert operator.jumps_to_operator_idx
@@ -129,7 +136,7 @@ def emulate_type_stack_for_operators(
             case OperatorType.PUSH_STRING:
                 assert isinstance(operator.operand, str)
                 string = ArrayType(
-                    element_type=I64Type(),
+                    element_type=CharType(),
                     elements_count=len(operator.operand),
                 )
                 string_ptr = PointerType(points_to=string)
@@ -151,11 +158,10 @@ def emulate_type_stack_for_operators(
                 type_contract_in = function.type_contract_in
 
                 if type_contract_in:
-                    context.raise_for_arguments(
-                        function,
-                        current_function,
-                        *((type(t),) for t in type_contract_in),
-                        operator=operator,
+                    context.raise_for_function_arguments(
+                        callee=function,
+                        caller=current_function,
+                        at=operator,
                     )
 
                     # TODO(@kirillzhosul): Pointers are for now not type-checked at function call level
@@ -163,13 +169,13 @@ def emulate_type_stack_for_operators(
 
                 if not isinstance(function.type_contract_out, VoidType):
                     context.push_types(function.type_contract_out)
+
             case OperatorType.INTRINSIC:
                 assert isinstance(operator.operand, Intrinsic)
                 match operator.operand:
                     case Intrinsic.INCREMENT | Intrinsic.DECREMENT:
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (I64Type,),
                         )
                         context.push_types(I64Type())
@@ -179,7 +185,6 @@ def emulate_type_stack_for_operators(
 
                         context.raise_for_enough_arguments(
                             operator,
-                            current_function,
                             required_args=2,
                         )
                         b, a = (
@@ -201,7 +206,6 @@ def emulate_type_stack_for_operators(
                     case Intrinsic.MINUS | Intrinsic.PLUS:
                         context.raise_for_enough_arguments(
                             operator,
-                            current_function,
                             required_args=2,
                         )
 
@@ -223,27 +227,23 @@ def emulate_type_stack_for_operators(
 
                         # Integer math
                         context.push_types(b, a)
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (I64Type,),
                             (I64Type,),
                         )
                         context.push_types(I64Type())
 
                     case Intrinsic.MEMORY_STORE:
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (PointerType,),
                             (I64Type, PointerType),
                         )
                     case Intrinsic.MEMORY_LOAD:
                         context.raise_for_enough_arguments(
                             operator,
-                            current_function,
                             1,
-                            operator=operator,
                         )
                         ptr_t = context.pop_type_from_stack()
                         if not isinstance(ptr_t, PointerType):
@@ -257,16 +257,14 @@ def emulate_type_stack_for_operators(
                     case Intrinsic.COPY:
                         context.raise_for_enough_arguments(
                             operator,
-                            current_function,
                             required_args=1,
                         )
 
                         argument_type = context.pop_type_from_stack()
                         context.push_types(argument_type, argument_type)
                     case Intrinsic.EQUAL | Intrinsic.NOT_EQUAL:
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (I64Type, BoolType),
                             (I64Type, BoolType),
                         )
@@ -277,17 +275,15 @@ def emulate_type_stack_for_operators(
                         | Intrinsic.GREATER_EQUAL_THAN
                         | Intrinsic.GREATER_THAN
                     ):
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (I64Type,),
                             (I64Type,),
                         )
                         context.push_types(BoolType())
                     case Intrinsic.DROP:
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (I64Type, PointerType),
                         )
                     case (
@@ -310,16 +306,14 @@ def emulate_type_stack_for_operators(
                             )
                             for _ in range(args_count)
                         )
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             *argument_types,
                         )
                         context.push_types(I64Type())
                     case Intrinsic.SWAP:
                         context.raise_for_enough_arguments(
                             operator,
-                            current_function,
                             required_args=2,
                         )
                         b, a = (
@@ -330,9 +324,8 @@ def emulate_type_stack_for_operators(
                     case Intrinsic.BREAKPOINT:
                         ...
                     case Intrinsic.LOGICAL_OR | Intrinsic.LOGICAL_AND:
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (BoolType,),
                             (BoolType,),
                         )
@@ -343,9 +336,8 @@ def emulate_type_stack_for_operators(
                         | Intrinsic.BITSHIFT_LEFT
                         | Intrinsic.BITSHIFT_RIGHT
                     ):
-                        context.raise_for_arguments(
+                        context.raise_for_operator_arguments(
                             operator,
-                            current_function,
                             (I64Type,),
                             (I64Type,),
                         )
@@ -357,9 +349,7 @@ def emulate_type_stack_for_operators(
                 to_type_cast = operator.operand
                 context.raise_for_enough_arguments(
                     operator,
-                    current_function,
                     required_args=1,
-                    operator=operator,
                 )
                 context.pop_type_from_stack()
                 context.push_types(to_type_cast)

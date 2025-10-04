@@ -35,7 +35,7 @@
 
 // Print an string into standart console error stream
 var print_length_temp int
-func void print[*int,int]
+func void print[*char[],int]
     print_length_temp swap !<
     STD_OUT swap
     print_length_temp ?> 
@@ -43,7 +43,7 @@ func void print[*int,int]
 end
 
 // Print an string into standart console output stream
-func void eprint[*int,int]
+func void eprint[*char[],int]
     print_length_temp swap !<
     STD_ERR swap
     print_length_temp ?> 
@@ -51,7 +51,7 @@ func void eprint[*int,int]
 end
 
 // Print an string into standart error console stream and abort execution
-func void eprint_fatal[*int,int]
+func void eprint_fatal[*char[],int]
     "FATAL: " eprint
     eprint abort
 end

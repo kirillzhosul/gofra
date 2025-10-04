@@ -5,6 +5,7 @@ from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
+from gofra.types.registry import PRIMITIVE_TYPE_REGISTRY
 
 _PRIMITIVE_TYPES_CLS: dict[str, type[Type]] = {
     "int": I64Type,
@@ -15,8 +16,8 @@ _PRIMITIVE_TYPES_CLS: dict[str, type[Type]] = {
 
 
 def parse_type(typename: str) -> Type | None:
-    if typename in _PRIMITIVE_TYPES_CLS:
-        return _PRIMITIVE_TYPES_CLS[typename]()
+    if primitive_registry_type := PRIMITIVE_TYPE_REGISTRY.get(typename, None):
+        return primitive_registry_type
 
     if typename.startswith("*"):
         poins_to = parse_type(typename.removeprefix("*"))

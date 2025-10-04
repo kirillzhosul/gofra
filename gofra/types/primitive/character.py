@@ -7,4 +7,4 @@ class CharType(PrimitiveType):
     size_in_bytes = 1
 
     def __repr__(self) -> str:
-        return "Character"
+        return "char"

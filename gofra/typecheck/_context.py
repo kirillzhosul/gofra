@@ -3,12 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from gofra.parser.operators import Operator
+from gofra.typecheck.errors import (
+    MissingFunctionArgumentsTypecheckError,
+    ParameterTypeMismatchTypecheckError,
+)
+from gofra.types.comparsion import is_types_same
 
 from .exceptions import (
-    TypecheckInvalidFunctionArgumentTypeError,
     TypecheckInvalidOperatorArgumentTypeError,
-    TypecheckNotEnoughFunctionArgumentsError,
     TypecheckNotEnoughOperatorArgumentsError,
 )
 
@@ -16,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import MutableSequence
 
     from gofra.parser.functions.function import Function
+    from gofra.parser.operators import Operator
     from gofra.types import Type
 
 
@@ -32,26 +35,16 @@ class TypecheckContext:
 
     def raise_for_enough_arguments(
         self,
-        operator_or_function: Operator | Function,
-        inside_function: Function,
+        operator: Operator,
         required_args: int,
-        operator: Operator | None = None,
     ) -> None:
         """Expect that stack has N arguments."""
         stack_size = len(self.emulated_stack_types)
         if stack_size < required_args:
-            if isinstance(operator_or_function, Operator):
-                raise TypecheckNotEnoughOperatorArgumentsError(
-                    operator=operator_or_function,
-                    types_on_stack=self.emulated_stack_types,
-                    required_args=required_args,
-                )
-            assert operator, "Expected call operator"
-            raise TypecheckNotEnoughFunctionArgumentsError(
-                function=operator_or_function,
-                callee_function=inside_function,
+            raise TypecheckNotEnoughOperatorArgumentsError(
+                operator=operator,
                 types_on_stack=self.emulated_stack_types,
-                called_from_operator=operator,
+                required_args=required_args,
             )
 
     def pop_type_from_stack(self) -> Type:
@@ -63,26 +56,56 @@ class TypecheckContext:
         for _ in range(args_to_consume):
             self.pop_type_from_stack()
 
-    def raise_for_arguments(
+    def raise_for_function_arguments(
         self,
-        operator_or_function: Operator | Function,
-        inside_function: Function,
+        callee: Function,
+        caller: Function,
+        at: Operator,
+    ) -> None:
+        """Expect given arguments and count and their types should match.
+
+        Types are reversed so call will look like original stack.
+        """
+        stack_size = len(self.emulated_stack_types)
+        if stack_size < len(callee.type_contract_in):
+            raise MissingFunctionArgumentsTypecheckError(
+                typestack=self.emulated_stack_types,
+                callee=callee,
+                caller=caller,
+                at=at.token.location,
+            )
+
+        for expected_type in callee.type_contract_in[::-1]:
+            argument_type = self.pop_type_from_stack()
+
+            if is_types_same(
+                argument_type,
+                expected_type,
+                strategy="strict-same-type",
+            ):
+                continue
+
+            raise ParameterTypeMismatchTypecheckError(
+                expected_type=expected_type,
+                actual_type=argument_type,
+                caller=caller,
+                callee=callee,
+                at=at.token.location,
+            )
+
+    def raise_for_operator_arguments(
+        self,
+        operator: Operator,
         *expected_types: tuple[type[Type], ...],
-        operator: Operator | None = None,
     ) -> None:
         """Expect given arguments and count and their types should match.
 
         Types are reversed so call will look like original stack.
         """
         assert expected_types, "Expected at least one type to expect"
-        assert isinstance(operator_or_function, Operator) or operator is not None, (
-            "Expecting arguments from an function requires call operator"
-        )
         self.raise_for_enough_arguments(
-            operator_or_function,
-            inside_function,
+            operator,
             len(expected_types),
-            operator=operator,
         )
 
         # Store shallow copy as we mutate that but want to display proper error with stack before our manipulations
@@ -94,16 +117,10 @@ class TypecheckContext:
             if isinstance(argument_type, expected_type):
                 continue
 
-            if isinstance(operator_or_function, Operator):
-                raise TypecheckInvalidOperatorArgumentTypeError(
-                    operator=operator_or_function,
-                    actual_type=argument_type,
-                    expected_type=expected_type,
-                    type_stack=_reference_type_stack,
-                    contract=expected_types,
-                )
-            raise TypecheckInvalidFunctionArgumentTypeError(
-                function=operator_or_function,
+            raise TypecheckInvalidOperatorArgumentTypeError(
+                operator=operator,
                 actual_type=argument_type,
-                expected_contract=expected_type,
+                expected_type=expected_type,
+                type_stack=_reference_type_stack,
+                contract=expected_types,
             )
