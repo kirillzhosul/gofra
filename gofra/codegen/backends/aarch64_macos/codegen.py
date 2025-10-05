@@ -29,11 +29,11 @@ from gofra.codegen.backends.aarch64_macos.registers import (
     AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
 )
 from gofra.codegen.backends.general import (
-    CODEGEN_ENTRY_POINT_SYMBOL,
     CODEGEN_GOFRA_CONTEXT_LABEL,
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
 )
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
@@ -268,8 +268,8 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
     # This is an executable entry point
     function_begin_with_prologue(
         context,
-        name=CODEGEN_ENTRY_POINT_SYMBOL,
-        global_name=CODEGEN_ENTRY_POINT_SYMBOL,
+        name=LINKER_EXPECTED_ENTRY_POINT,
+        global_name=LINKER_EXPECTED_ENTRY_POINT,
         preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
         local_variables=OrderedDict(),
         arguments_count=0,

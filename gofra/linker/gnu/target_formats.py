@@ -1,0 +1,25 @@
+from typing import Literal
+
+type GNU_LINKERTARGET_FORMAT = Literal[
+    "elf64-x86-64",
+    "elf32-i386",
+    "elf32-iamcu",
+    "elf32-x86-64",
+    "elf64-little",
+    "elf64-big",
+    "elf32-little",
+    "elf32-big",
+    "pe-x86-64",
+    "pei-x86-64",
+    "pe-bigobj-x86-64",
+    "pe-i386",
+    "pei-i386",
+    "pdb",
+    "srec",
+    "symbolsrec",
+    "verilog",
+    "tekhex",
+    "binary",
+    "ihex",
+    "plugin",
+]

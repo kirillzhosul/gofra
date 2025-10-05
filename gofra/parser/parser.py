@@ -158,8 +158,10 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     if varname.endswith("]"):
         varname, size = varname.split("[")
-        if not size.removeprefix("]").isdigit():
-            msg = f"Non-digit size for array member access at {token.location}"
+        if not size.removesuffix("]").isdigit():
+            msg = (
+                f"Non-digit size for array member access at {token.location}: `{size=}`"
+            )
             raise ValueError(msg)
         idx = int(size.removesuffix("]"))
         array_index_at = idx

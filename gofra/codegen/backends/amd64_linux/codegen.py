@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.backends.general import (
-    CODEGEN_ENTRY_POINT_SYMBOL,
     CODEGEN_GOFRA_CONTEXT_LABEL,
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
 )
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
@@ -244,7 +244,7 @@ def amd64_linux_program_entry_point(context: AMD64CodegenContext) -> None:
     # This is an executable entry point
     function_begin_with_prologue(
         context,
-        function_name=CODEGEN_ENTRY_POINT_SYMBOL,
+        function_name=LINKER_EXPECTED_ENTRY_POINT,
         as_global_linker_symbol=True,
     )
 

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import sys
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
-from platform import system as current_platform_system
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from gofra.cli.distribution import infer_distribution_library_paths
+from gofra.cli.infer import infer_output_filename, infer_target
 from gofra.optimizer.config import (
     OptimizerConfig,
     build_default_optimizer_config_from_level,
@@ -41,18 +40,25 @@ class CLIArguments:
     lir: bool
     preprocess_only: bool
 
-    linker_flags: list[str]
     assembler_flags: list[str]
 
     verbose: bool
 
     target: Target
-    link_with_system_libraries: bool
 
     skip_typecheck: bool
 
     build_cache_dir: Path
     delete_build_cache: bool
+
+    profile: Literal["debug", "production"]
+
+    linker_additional_flags: list[str]
+    linker_libraries: list[str]
+    linker_libraries_search_paths: list[Path]
+    linker_backend: Literal["gnu-ld", "apple-ld"] | None
+    linker_resolve_libraries_with_pkconfig: bool
+    linker_executable: Path | None
 
     optimizer: OptimizerConfig
 
@@ -72,7 +78,9 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
             text="Skipping typecheck is unsafe, ensure that you know what you doing",
         )
 
-    # args.target infer that
+    assert args.linker_backend in ("gnu-ld", "apple-ld", None)
+    assert args.profile in ("debug", "production")
+
     assert args.target in (
         "amd64-unknown-linux",
         "arm64-apple-darwin",
@@ -90,6 +98,11 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
     if bool(args.debug_symbols):
         assembler_flags += ["-g"]
 
+    linker_executable = Path(args.linker_executable) if args.linker_executable else None
+    linker_libraries_search_paths = [
+        Path(f) for f in args.linker_libraries_search_paths
+    ]
+
     optimizer = build_default_optimizer_config_from_level(level=args.optimizer_level)
     optimizer = merge_into_optimizer_config(optimizer, args, prefix="optimizer")
     return CLIArguments(
@@ -103,16 +116,23 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         execute_after_compilation=bool(args.execute),
         delete_build_cache=bool(args.delete_cache),
         build_cache_dir=Path(args.cache_dir),
+        linker_resolve_libraries_with_pkconfig=args.linker_resolve_libraries_with_pkconfig,
         target=target,
         definitions=definitions,
         preprocess_only=bool(args.preprocess_only),
         skip_typecheck=bool(args.skip_typecheck),
         include_paths=include_paths,
         verbose=bool(args.verbose),
-        linker_flags=args.linker,
         assembler_flags=assembler_flags,
-        link_with_system_libraries=args.link_with_system_libraries,
+        profile=args.profile,
+        # Optimizer
         optimizer=optimizer,
+        # Linker
+        linker_libraries=args.linker_libraries,
+        linker_backend=args.linker_backend,
+        linker_additional_flags=args.linker_additional_flags,
+        linker_executable=linker_executable,
+        linker_libraries_search_paths=linker_libraries_search_paths,
     )
 
 
@@ -175,13 +195,6 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--preprocess-only",
-        "-pp",
-        default=False,
-        action="store_true",
-        help="If passed will emit preprocessed text of an source",
-    )
-    parser.add_argument(
         "--version",
         default=False,
         action="store_true",
@@ -222,20 +235,11 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     )
 
     parser.add_argument(
-        "-lir",
+        "--display-lir",
+        dest="lir",
         required=False,
         action="store_true",
         help="If passed will just emit IR (low-level, codegen specific) of provided file(s) into stdin.",
-    )
-
-    parser.add_argument(
-        "--no-link-system",
-        "-nlsys",
-        dest="link_with_system_libraries",
-        required=False,
-        action="store_false",
-        default=True,
-        help="If passed will link with system libraries (libc, target/system specific).",
     )
 
     parser.add_argument(
@@ -273,27 +277,6 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--linker",
-        "-Lf",
-        required=False,
-        help="Additional flags passed to linker (`ld`)",
-        action="append",
-        nargs="?",
-        default=[],
-    )
-
-    parser.add_argument(
-        "--define",
-        "-D",
-        required=False,
-        help="Define an macro (default value is '1') and propagate to all input source files",
-        action="append",
-        nargs="?",
-        dest="definitions",
-        default=[],
-    )
-
-    parser.add_argument(
         "--assembler",
         "-Af",
         required=False,
@@ -327,8 +310,113 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         help="If passed, will disable type safety checking",
     )
 
+    parser.add_argument(
+        "--profile",
+        dest="profile",
+        required=False,
+        default="debug",
+        choices=["debug", "production"],
+        help="Configures some underlying tools to use that profile. TBD",
+    )
+
+    _inject_preprocessor_group(parser)
+    _inject_linker_group(parser)
     _inject_optimizer_group(parser)
     return parser
+
+
+def _inject_preprocessor_group(parser: ArgumentParser) -> None:
+    """Construct and inject argument group with preprocessor options into given parser."""
+    group = parser.add_argument_group(
+        title="Preprocessor",
+        description="Flags for the preprocessor.",
+    )
+    group.add_argument(
+        "--preprocess-only",
+        "--pp",
+        "-P",
+        default=False,
+        action="store_true",
+        help="If passed will emit preprocessed text of an source",
+    )
+    group.add_argument(
+        "--define",
+        "-D",
+        required=False,
+        help="Define an macro (default value is '1') and propagate to all input source files",
+        action="append",
+        nargs="?",
+        dest="definitions",
+        default=[],
+    )
+
+
+def _inject_linker_group(parser: ArgumentParser) -> None:
+    """Construct and inject argument group with linker options into given parser."""
+    group = parser.add_argument_group(
+        title="Linker",
+        description="Flags for the linker, granually control how linker links your objects.",
+    )
+
+    group.add_argument(
+        "--library-search-path",
+        "-L",
+        dest="linker_libraries_search_paths",
+        required=False,
+        help="Paths where to search for linker libraries",
+        action="append",
+        nargs="?",
+        default=[],
+    )
+
+    group.add_argument(
+        "--linker-flag",
+        "-alf",
+        dest="linker_additional_flags",
+        required=False,
+        help="Additional flags passed to specified linker",
+        action="append",
+        nargs="?",
+        default=[],
+    )
+
+    group.add_argument(
+        "--no-pkgconfig",
+        dest="linker_resolve_libraries_with_pkconfig",
+        default=True,
+        action="store_false",
+        help="Disable usage of `pkg-confg` to resolve linker search paths if possible",
+    )
+    group.add_argument(
+        "--library",
+        "--lib",
+        "-l",
+        dest="linker_libraries",
+        required=False,
+        help="Libraries against which to link",
+        action="append",
+        nargs="?",
+        default=[],
+    )
+
+    group.add_argument(
+        "--linker-backend",
+        type=str,
+        required=False,
+        default=None,
+        dest="linker_backend",
+        help="Linker backend to use (e.g linker)",
+        choices=["gnu-ld", "apple-ld"],
+    )
+
+    group.add_argument(
+        "--linker-executable",
+        type=str,
+        required=False,
+        default=None,
+        dest="linker_executable",
+        help="Linker backend executable path to use",
+    )
 
 
 def _inject_optimizer_group(parser: ArgumentParser) -> None:
@@ -376,7 +464,7 @@ def _inject_optimizer_group(parser: ArgumentParser) -> None:
         dest="optimizer_do_dead_code_elimination",
         help="[Enabled at -O1 and above] Force disable DCE (dead-code-eliminiation) optimization, see '-fdce' flag for more information.",
     )
-    group.add_argument(
+    group_dce.add_argument(
         "--dce-max-iterations",
         metavar="<N>",
         dest="optimizer_dead_code_elimination_max_iterations",
@@ -386,77 +474,30 @@ def _inject_optimizer_group(parser: ArgumentParser) -> None:
     ###
     # Function inlining
     ###
-    group_dce = group.add_mutually_exclusive_group()
-    group_dce.add_argument(
+    group_inline = group.add_mutually_exclusive_group()
+    group_inline.add_argument(
         "-finline-functions",
         dest="optimizer_do_function_inlining",
         action="store_const",
         const=True,
         help="[Enabled at -O1 and above] Force enable function inlining optimization. Marks small functions as 'inline' (size is controlled with '--inline-functions-threshold') to reduce function overhead.",
     )
-    group_dce.add_argument(
+    group_inline.add_argument(
         "-fno-inline-functions",
         action="store_const",
         const=False,
         dest="optimizer_do_function_inlining",
         help="[Enabled at -O1 and above] Force disable function inlining optimization, see '-finline-functions' flag for more information.",
     )
-    group.add_argument(
+    group_inline.add_argument(
         "--inline-functions-max-operators",
         metavar="<N>",
         dest="optimizer_function_inlining_max_operators",
         help="Max size of an function to be inlined with function inlining optimization in operators",
     )
-    group.add_argument(
+    group_inline.add_argument(
         "--inline-functions-max-iterations",
         metavar="<N>",
         dest="optimizer_function_inlining_max_iterations",
         help="Max iterations for function inlining to search for new inlined function usage in other functions. Low limit will result into unknown function call at assembler stage. This may slightly increase finaly binary size",
     )
-
-
-def infer_output_filename(
-    source_filepaths: list[Path],
-    output_format: OUTPUT_FORMAT_T,
-    target: Target,
-) -> Path:
-    """Try to infer filename for output from input source files."""
-    match output_format:
-        case "library":
-            is_dynamic = False
-            suffix = [
-                target.file_library_static_suffix,
-                target.file_library_dynamic_suffix,
-            ][is_dynamic]
-        case "object":
-            suffix = target.file_object_suffix
-        case "assembly":
-            suffix = target.file_assembly_suffix
-        case "executable":
-            suffix = target.file_executable_suffix
-
-    if not source_filepaths:
-        return Path("out").with_suffix(suffix)
-
-    source_filepath = source_filepaths[0]
-
-    if source_filepath.suffix == suffix:
-        suffix = source_filepath.suffix + suffix
-    return source_filepath.with_suffix(suffix)
-
-
-def infer_target() -> Target:
-    """Try to infer target from current system."""
-    assert current_platform_system() in ["Darwin", "Linux"]
-
-    match current_platform_system():
-        case "Darwin":
-            return Target.from_triplet("arm64-apple-darwin")
-        case "Linux":
-            return Target.from_triplet("amd64-unknown-linux")
-        case _:
-            cli_message(
-                level="ERROR",
-                text="Unable to infer compilation target due to no fallback for current operating system",
-            )
-            sys.exit(1)

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.backends.general import (
-    CODEGEN_ENTRY_POINT_SYMBOL,
     CODEGEN_GOFRA_CONTEXT_LABEL,
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
 )
@@ -44,7 +43,7 @@ def generate_amd64_windows_backend(
     context = AMD64CodegenContext(fd=fd, strings={})
 
     context.fd.write("section .text\n")
-    context.fd.write(f"global {CODEGEN_ENTRY_POINT_SYMBOL}\n")
+    context.fd.write("global main\n")  # LINKER_EXPECTED_ENTRY_POINT
     for func in program.functions.values():
         if not func.external_definition_link_to:
             continue
@@ -238,14 +237,14 @@ def amd64_windows_program_entry_point(context: AMD64CodegenContext) -> None:
     # This is an executable entry point
     function_begin_with_prologue(
         context,
-        function_name="main",  # CODEGEN_ENTRY_POINT_SYMBOL
+        function_name="main",  # LINKER_EXPECTED_ENTRY_POINT
         as_global_linker_symbol=False,
     )
 
     # Prepare and execute main function
     call_function_block(
         context,
-        function_name="gofra_main",  # GOFRA_ENTRY_POINT,
+        function_name="gofra_main",  # LINKER_EXPECTED_ENTRY_POINT,
         abi_ffi_push_retval_onto_stack=False,
         abi_ffi_arguments_count=0,
     )
