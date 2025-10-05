@@ -25,7 +25,7 @@ Minimum optimization level: **1** (`-O1`) <br/>
 Impact: **Reduced binary size**
 Flag: `-fdce`, `fno-dce`
 
-DCE searchs for functions that is not being called atleast once and removes them from final IR so them does not appear in final binary as being unused.
+DCE searches for functions that is not being called at least once and removes them from final IR so them does not appear in final binary as being unused.
 Does not removes `global` functions as their usage is outside of an Gofra program.
 
 
@@ -54,7 +54,7 @@ Flag: `-finline-functions`, `fno-inline-functions`
 
 
 Function inlining automatically marks simple / small functions as inlineable and resolves their usages after that marking.
-Inlining is not performed for recusrive functions, as it will break not only the code but also optimizer itself (while resolving inline function reference infinite amount of iterations until threshold)
+Inlining is not performed for recursive functions, as it will break not only the code but also optimizer itself (while resolving inline function reference infinite amount of iterations until threshold)
 For example:
 ```gofra
 func int reduce_pairs[int,int,int,int]
@@ -80,7 +80,7 @@ end
 ```
 
 `--inline-functions-max-iterations` affects max iterations for function inlining to search for new inlined function usage in other functions. 
-Low limit will result into unknown function call at assembler stage. This may slightly increase finaly binary size
+Low limit will result into unknown function call at assembler stage. This may slightly increase final binary size
 
 `--inline-functions-max-operators` affects max amount of operators to treat function as inlineable. 
 Setting big number will lead to almost all function will be treated as inline ones.

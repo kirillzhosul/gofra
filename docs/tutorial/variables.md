@@ -27,7 +27,7 @@ It must start with `var` then `name` and `type`
 
 Primitive type is such type that only contains an size of memory blob and nothing more inside
 
-Composite type is such type which contains another type inside (may be primitive or complex) that it refers to (e.g array of elements contains primitive type of an single element and pointer is containing type of memory it refers to (pointer to an integer is an complex pointer type referencing integer and string is in general an complex type as it refers to array of characater (contiguous memory blob) as another complex type))
+Composite type is such type which contains another type inside (may be primitive or complex) that it refers to (e.g array of elements contains primitive type of an single element and pointer is containing type of memory it refers to (pointer to an integer is an complex pointer type referencing integer and string is in general an complex type as it refers to array of caricature (contiguous memory blob) as another complex type))
 
 Primitive types:
 - int
@@ -45,7 +45,7 @@ Composite types may contain another complex types so pointer to array of pointer
 
 Static variable is such variable that is defined outside of an function (e.g at top level) while being compiled it located in static memory segment at runtime (e.g data / bss) section, it always initialized and persist it value between function calls (as anyone may modify that variable)
 
-Local variable is such variable that is define inside an function, while being compiled it will be translated into local region on an stack, so with each function call with that variable it will be reseted
+Local variable is such variable that is define inside an function, while being compiled it will be translated into local region on an stack, so with each function call with that variable it will be reset
 
 
 ```gofra

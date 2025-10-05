@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Literal
 
 from gofra.lexer._state import LexerState
 from gofra.lexer.exceptions import (
-    LexerAmbigiousHexadecimalAlphabetError,
+    LexerAmbiguousHexadecimalAlphabetError,
     LexerEmptyCharacterError,
     LexerExcessiveCharacterLengthError,
     LexerUnclosedCharacterQuoteError,
@@ -63,7 +63,7 @@ def _tokenize_line_next_token(state: LexerState) -> Token | None:
 
     :returns token: Token from state or None if state must go to the next line (no tokens).
     """
-    # First symbol of an token, as we exclussivly tokenize character/string tokens due to their fixed/variadic length.
+    # First symbol of an token, as we exclusively tokenize character/string tokens due to their fixed/variadic length.
     symbol = state.line[state.col]
 
     if symbol == CHARACTER_QUOTE:
@@ -145,7 +145,7 @@ def _try_tokenize_numerable_into_token(
     elif word.startswith(HEXADECIMAL_MARK):
         base = 16
         if not is_valid_hexadecimal(word):
-            raise LexerAmbigiousHexadecimalAlphabetError(
+            raise LexerAmbiguousHexadecimalAlphabetError(
                 hexadecimal_raw=word,
                 number_location=location,
             )

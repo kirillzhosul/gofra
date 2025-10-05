@@ -22,12 +22,12 @@ def get_backend_for_target(
             return generate_aarch64_macos_backend
         case "amd64-unknown-linux":
             assert not FEATURE_USE_LIR_CODEGEN_IR, (
-                "FEATURE_USE_LIR_CODEGEN_IR is only avaiable on Darwin target"
+                "FEATURE_USE_LIR_CODEGEN_IR is only available on Darwin target"
             )
             return generate_amd64_linux_backend
         case "amd64-unknown-windows":
             assert not FEATURE_USE_LIR_CODEGEN_IR, (
-                "FEATURE_USE_LIR_CODEGEN_IR is only avaiable on Darwin target"
+                "FEATURE_USE_LIR_CODEGEN_IR is only available on Darwin target"
             )
 
             return generate_amd64_windows_backend

@@ -15,7 +15,7 @@ def create_optimizer_pipeline(
 ) -> OPTIMIZER_PIPELINE_T:
     """Build an optimizer `pipeline` from given config.
 
-    You must apply each optimation pass for program context, they will mutate it.
+    You must apply each optimization pass for program context, they will mutate it.
     Each pass from pipeline contains
     """
     assert not config.do_algebraic_simplification, "TODO: do_algebraic_simplification!"

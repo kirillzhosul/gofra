@@ -17,7 +17,7 @@ from ._context import ParserContext
 
 
 def validate_and_pop_entry_point(context: ParserContext) -> Function:
-    """Validate program entry, check its existance and type contracts."""
+    """Validate program entry, check its existence and type contracts."""
     if GOFRA_ENTRY_POINT not in context.functions:
         raise ParserNoEntryFunctionError
 

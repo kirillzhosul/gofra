@@ -19,7 +19,7 @@ Please open an issue about that undocumented behavior!
 """
 
 
-class LexerAmbigiousHexadecimalAlphabetError(LexerError):
+class LexerAmbiguousHexadecimalAlphabetError(LexerError):
     def __init__(
         self,
         *args: object,
@@ -31,9 +31,9 @@ class LexerAmbigiousHexadecimalAlphabetError(LexerError):
         self.hexadecimal_raw = hexadecimal_raw
 
     def __repr__(self) -> str:
-        return f"""Ambigious hexadecimal alphabet inside '{self.hexadecimal_raw}' at {self.number_location}!
+        return f"""Ambiguous hexadecimal alphabet inside '{self.hexadecimal_raw}' at {self.number_location}!
 
-Hexadecimal numbers ({HEXADECIMAL_MARK}) must consinst of 16-base alphabet ({hexdigits})"""
+Hexadecimal numbers ({HEXADECIMAL_MARK}) must consist of 16-base alphabet ({hexdigits})"""
 
 
 class LexerUnclosedCharacterQuoteError(LexerError):

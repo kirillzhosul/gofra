@@ -9,7 +9,7 @@ from gofra.linker.apple.architectures import (
 from gofra.linker.apple.libraries import (
     APPLE_LINKER_DEFAULT_LIBRARIES_SEARCH_PATHS,
     get_syslibroot_path,
-    syslibroot_is_requred,
+    syslibroot_is_required,
 )
 from gofra.linker.apple.output_format import (
     AppleLinkerOutputFormat,
@@ -56,7 +56,7 @@ def compose_apple_linker_command(  # noqa: PLR0913
         libraries.append("System")
 
     syslibroot = None
-    if syslibroot_is_requred(libraries, macho_format):
+    if syslibroot_is_required(libraries, macho_format):
         syslibroot = get_syslibroot_path()
 
     strip_debug_symbols = profile == LinkerProfile.PRODUCTION
@@ -120,8 +120,8 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
         Required for EXECUTABLE and DYNAMIC, but may be omitted for others
         Obtained via xcrun (`xcrun -sdk macosx --show-sdk-path`) or located in `SYSTEM_LIBRARY_ROOT_DIRECTORY` constant
 
-    :param architecture: Arch of the final output, infered by default from object files but explicit is better than implicit
-    :param output_format_kinds: Additional KIND for output, according to current implemenation must not be passed or default one (DYNAMIC)
+    :param architecture: Arch of the final output, inferred by default from object files but explicit is better than implicit
+    :param output_format_kinds: Additional KIND for output, according to current implementation must not be passed or default one (DYNAMIC)
     :param output_format: Format of output, usable ones is EXECUTABLE, SHARED_LIBRARY, OBJECT_FILE
     :param libraries: List of libraries to link with
     :param libraries_search_paths: Paths to search for libraries
@@ -166,14 +166,14 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
         )
         command.extend(("-syslibroot", path))
 
-    # Do not search standart directories, we will propagate them by own
+    # Do not search standard directories, we will propagate them by own
     command.append("-Z")
 
-    # Treat warnings as errors and addtional warnings
+    # Treat warnings as errors and additional warnings
     command.extend(("-fatal_warnings", "-arch_errors_fatal"))
     command.extend(("-warn_duplicate_libraries",))
 
-    # Architecture, may be infered but we explicitly specify that
+    # Architecture, may be inferred but we explicitly specify that
     # there is possibility of passing multiple architectures for *thin* output but we step away from that at current moment
     if architecture:
         command.extend(("-arch", architecture))

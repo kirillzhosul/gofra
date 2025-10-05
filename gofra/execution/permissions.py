@@ -24,10 +24,10 @@ def apply_file_executable_permissions(filepath: Path) -> None:
         raise OSError(msg)
 
     if filepath.is_symlink():
-        msg = "Cannot securily apply executable permission on symlink, this is security consideration and probably an bug in the toolchain"
+        msg = "Cannot securely apply executable permission on symlink, this is security consideration and probably an bug in the toolchain"
         raise PermissionError(msg)
 
-    # Securily append only execution for current user (owner) and others in his group
+    # Securely append only execution for current user (owner) and others in his group
     executable_mode = stat.S_IXUSR | stat.S_IXGRP
     prohibit_mode = ~stat.S_IXOTH
 

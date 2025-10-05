@@ -1,6 +1,6 @@
 # Stack management intrinsics
 
-For managing an stack you must have some less-or-more complex commands for example like `swap` or `rot`, langauge supports some of them
+For managing an stack you must have some less-or-more complex commands for example like `swap` or `rot`, language supports some of them
 
 
 # SWAP

@@ -22,10 +22,10 @@ def registry_from_raw_definitions(
     location: TokenLocation,
     definitions: Mapping[str, str],
 ) -> MacrosRegistry:
-    """Construct new macros registry from given 'raw' definitions (text, that neeed lexing).
+    """Construct new macros registry from given 'raw' definitions (text, that need lexing).
 
     Definition is implied to be single-line.
-    Location must not be from an `file` source as in that scenario you must use different approches like preprocessing another file.
+    Location must not be from an `file` source as in that scenario you must use different approaches like preprocessing another file.
     """
     if location.source not in ("file", "cli", "toolchain"):
         # Mostly, notice that this place must be modified when introduction new tokens source
@@ -41,7 +41,7 @@ def registry_from_raw_definitions(
     registry = MacrosRegistry()
     for name, definition in definitions.items():
         # Tokenize each definition with propagated source
-        # (as this functions does not imply that definition source is from an file and probably this wont be that scenarion)
+        # (as this functions does not imply that definition source is from an file and probably this wont be that scenario)
         tokenizer = tokenize_from_raw(source=location.source, iterable=[definition])
         tokens = deque(tokenizer)
 

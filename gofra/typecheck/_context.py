@@ -7,7 +7,7 @@ from gofra.typecheck.errors import (
     MissingFunctionArgumentsTypecheckError,
     ParameterTypeMismatchTypecheckError,
 )
-from gofra.types.comparsion import is_types_same
+from gofra.types.comparison import is_types_same
 
 from .exceptions import (
     TypecheckInvalidOperatorArgumentTypeError,

@@ -8,11 +8,11 @@ from typing import Literal
 # Bare AARCH64 related
 ####
 
-# Stack is aligment to specified bytes count
+# Stack is alignment to specified bytes count
 # Each cell of an stack must be within that size
 # Pushing >2 cells onto stack will lead to cell overflow due to language stack nature.
 AARCH64_STACK_ALIGNMENT = 16
-AARCH64_STACK_ALINMENT_BIN = 4  # 2 ** 4 -> AARCH64_STACK_ALIGNMENT
+AARCH64_STACK_ALIGNMENT_BIN = 4  # 2 ** 4 -> AARCH64_STACK_ALIGNMENT
 
 # Bits count (size) for different word types
 AARCH64_HALF_WORD_BITS = 0xFFFF  # 4 bytes (16 bits)

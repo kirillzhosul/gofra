@@ -8,7 +8,7 @@ def infer_distribution_library_paths() -> list[Path]:
     """
     distribution_root = Path(__import__("gofra").__file__).parent
     assert distribution_root.exists(), (
-        "Corrupted distribution (dist parent is non-existant, unable to infer/resolve library paths)"
+        "Corrupted distribution (dist parent is non-existent, unable to infer/resolve library paths)"
     )
     return [
         # default distribution

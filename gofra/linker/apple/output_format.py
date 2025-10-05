@@ -15,7 +15,7 @@ class AppleLinkerOutputFormat(Enum):
 
     # Notice:
     # Only formats above is used (or should be used)
-    # formats below is some non-general and non-crossplatform Darwin/MacOS specific type of shit
+    # formats below is some non-general and non cross-platform Darwin/MacOS specific type of shit
 
     # Mach-O bundle
     # Note (@kirillzhosul): this is some weird type of output

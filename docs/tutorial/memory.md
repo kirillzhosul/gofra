@@ -4,7 +4,7 @@ Memory management is a fundamental aspect of programming. Gofra provides direct 
 
 
 # Critical notice
-Currently, in gofra load and store operatations works with always 8-bytes data, so this will cause some overwriting of memory layout, consider that while using critical to memory operations
+Currently, in gofra load and store operations works with always 8-bytes data, so this will cause some overwriting of memory layout, consider that while using critical to memory operations
 
 # Memory operations
 

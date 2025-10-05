@@ -1,6 +1,6 @@
 """Code generation backend module.
 
-Provides code generation backends (codegens) for emitting assembly from IR.
+Provides code generation backends (codegen) for emitting assembly from IR.
 """
 
 from .aarch64_lir_macos import generate_aarch64_lir_macos_backend

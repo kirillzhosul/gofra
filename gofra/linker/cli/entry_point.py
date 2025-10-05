@@ -14,7 +14,7 @@ def cli_entry_point() -> None:
     with cli_gofra_error_handler():
         args = parse_cli_arguments()
 
-        linker_proccess = link_object_files(
+        linker_process = link_object_files(
             objects=args.files,
             target=infer_target(),
             output=args.output,
@@ -26,9 +26,9 @@ def cli_entry_point() -> None:
             executable_entry_point_symbol=args.executable_entry_point_symbol,
             cache_directory=None,
         )
-        if linker_proccess.returncode != 0:
+        if linker_process.returncode != 0:
             cli_message(
                 "ERROR",
-                f"Linker process faield with exit code {linker_proccess.returncode}!",
+                f"Linker process failed with exit code {linker_process.returncode}!",
             )
-            sys.exit(linker_proccess.returncode)
+            sys.exit(linker_process.returncode)

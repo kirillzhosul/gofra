@@ -2,17 +2,17 @@
 // ==============================================
 // `cat` analogue
 // Opens an text file from PATH and emits it content into stdout
-// Currently, half way crossplatform for Windows
+// Currently, half way cross-platform for Windows
 // Works only on Darwin / Linux
 // TODO: add argc argv
 // ==============================================
 
 #include "std.gof"
 
-// Currently, this example doesnt work with arguments, so we hardcode path
+// Currently, this example doesn't work with arguments, so we hardcode path
 #define PATH "test.txt" to_cstr_ptr
 
-// Some segment in memory so we can store conent of the file
+// Some segment in memory so we can store content of the file
 #define CAPACITY 1024 // 1KiB
 var BUFFER char[1024]
 
@@ -20,7 +20,7 @@ var BUFFER char[1024]
 var fd int
 
 func void main[]
-    // TODO(@kirillzhosul): Research why non-existant file returns STDERR FD
+    // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
     
     // Open file
     fd PATH 0 0 call sc_open !<

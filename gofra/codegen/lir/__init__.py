@@ -210,9 +210,7 @@ def translate_hir_function_to_lir_function(
                 # Skip that as it is typechecker only.
                 pass
             case OperatorType.VARIABLE_DEFINE:
-                msg = (
-                    "Parser must resolve variable definition before LIR-codegeneration"
-                )
+                msg = "Parser must resolve variable definition before LIR-cogeneration"
                 raise ValueError(msg)
             case OperatorType.PUSH_INTEGER:
                 assert isinstance(operator.operand, int)
@@ -457,7 +455,7 @@ def translate_hir_function_to_lir_function(
                                 result_register=vreg_a,
                                 operand_a=vreg_a,
                                 operand_b=vreg_b,
-                                comparsion=comp_map[operator.operand],
+                                comparison=comp_map[operator.operand],
                             ),
                             LIRPushRegistersOntoStack((vreg_a,)),
                         )

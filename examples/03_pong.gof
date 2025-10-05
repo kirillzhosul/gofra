@@ -3,7 +3,7 @@
 // Complex example of an pong game
 //
 // Requires additional CLI toolchain flags to link with raylib
-// MacOS: `-L=-lraylib -L=-L/opt/homebrew/lib`
+// MacOS: `-lraylib`
 // ==============================================
 
 #include "ext/raylib.gof"

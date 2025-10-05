@@ -49,4 +49,4 @@ By using `@` flag you may specify for example against which function to link you
 extern func int _puts[*char[]*]@link[_puts]
 ```
 
-In that case is straighforward same name, but you can change that, and 
+In that case is straightforward same name, but you can change that, and 

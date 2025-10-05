@@ -9,8 +9,6 @@ from gofra.codegen.backends.aarch64_macos.frame import (
     preserve_calee_frame,
     restore_calee_frame,
 )
-from gofra.parser.variables import Variable
-from gofra.types._base import Type
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
@@ -18,7 +16,7 @@ from .registers import (
     AARCH64_GP_REGISTERS,
     AARCH64_HALF_WORD_BITS,
     AARCH64_STACK_ALIGNMENT,
-    AARCH64_STACK_ALINMENT_BIN,
+    AARCH64_STACK_ALIGNMENT_BIN,
 )
 
 if TYPE_CHECKING:
@@ -27,6 +25,8 @@ if TYPE_CHECKING:
 
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
+    from gofra.parser.variables import Variable
+    from gofra.types._base import Type
 
 
 def drop_stack_slots(
@@ -90,9 +90,9 @@ def push_integer_onto_stack(
     """Push given integer onto stack with auto shifting less-significant bytes.
 
     Value must be less than 16 bytes (18_446_744_073_709_551_615).
-    Negative numbers is dissalowed.
+    Negative numbers is disallowed.
 
-    TODO(@kirillzhosul): Negative numbers IS dissalowed:
+    TODO(@kirillzhosul): Negative numbers IS disallowed:
         Consider using signed two complement representation with sign bit (highest bit) set
     """
     assert value >= 0, "Tried to push negative integer onto stack!"
@@ -111,7 +111,7 @@ def push_integer_onto_stack(
     for shift in range(0, 64, 16):
         chunk = hex((value >> shift) & AARCH64_HALF_WORD_BITS)
         if chunk == "0x0":
-            # Zeroed chunk so we dont push it as register is zerod
+            # Zeroed chunk so we dont push it as register is zeroed
             continue
 
         if not preserve_bits:
@@ -130,7 +130,7 @@ def push_static_address_onto_stack(
     context: AARCH64CodegenContext,
     segment: str,
 ) -> None:
-    """Push executable static memory addresss onto stack with page dereference."""
+    """Push executable static memory address onto stack with page dereference."""
     context.write(f"// Load static address (segment: {segment})")
     context.write(
         f"adrp X0, {segment}@PAGE",
@@ -162,7 +162,7 @@ def evaluate_conditional_block_on_stack_with_jump(
     context: AARCH64CodegenContext,
     jump_over_label: str,
 ) -> None:
-    """Evaluate conditional block by popping current value under SP againts zero.
+    """Evaluate conditional block by popping current value under SP against zero.
 
     If condition is false (value on stack) then jump out that conditional block to `jump_over_label`
     """
@@ -184,14 +184,14 @@ def initialize_static_data_section(
     Data is an string (raw ASCII) or number (zeroed memory blob)
     """
     context.fd.write(".section __DATA,__data\n")
-    context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
+    context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
 
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, variable in static_variables.items():
-        typesize = variable.type.size_in_bytes
-        if typesize != 0:
-            context.fd.write(f"{name}: .space {typesize}\n")
+        type_size = variable.type.size_in_bytes
+        if type_size != 0:
+            context.fd.write(f"{name}: .space {type_size}\n")
 
 
 def ipc_syscall_macos(
@@ -219,7 +219,7 @@ def ipc_syscall_macos(
         strict=False,
     ):
         if injected_argument is not None:
-            # Register injected and infered from stack
+            # Register injected and inferred from stack
             store_integer_into_register(
                 context,
                 register=register,
@@ -322,13 +322,13 @@ def function_begin_with_prologue(
     Injects prologue with preparing required state (e.g registers, frame/stack pointers)
 
     :is_global_symbol: Mark that function symbol as global for linker
-    :preserve_frame: If true will preserve function state for proper stack management and return adress
+    :preserve_frame: If true will preserve function state for proper stack management and return address
     """
     local_offsets = build_local_variables_frame_offsets(local_variables)
     if global_name:
         context.fd.write(f".global {global_name}\n")
 
-    context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
+    context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
     context.fd.write(f"{name}:\n")
 
     if preserve_frame:
@@ -376,7 +376,7 @@ def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> Non
     """Place an debugger breakpoint (e.g trace trap).
 
     Will halt execution to the debugger, useful for debugging purposes.
-    Also due to being an trap (e.g execution will be catched) allows to trap some execution places.
+    Also due to being an trap (e.g execution will be caught) allows to trap some execution places.
     (e.g start entry exit failure)
     """
     if not (0 <= number <= AARCH64_HALF_WORD_BITS):

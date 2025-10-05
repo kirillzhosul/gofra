@@ -29,7 +29,7 @@ class PreprocessorMacroRedefinedError(PreprocessorError):
 Original definition found at {self.original}.
 
 Only single definition allowed for macros.
-If it possible scenatio of overriding, please un-define before redefinition."""
+If it possible scenario of overriding, please un-define before redefinition."""
 
 
 class PreprocessorMacroNonIdentifierNameError(PreprocessorError):

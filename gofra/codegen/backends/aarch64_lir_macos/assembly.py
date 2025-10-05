@@ -8,7 +8,6 @@ from gofra.codegen.lir.static import (
     LIRStaticSegmentCString,
     LIRStaticSegmentGlobalVariable,
 )
-from gofra.types import Type
 
 from .frame import (
     build_local_variables_frame_offsets,
@@ -20,7 +19,7 @@ from .registers import (
     AARCH64_GP_REGISTERS,
     AARCH64_HALF_WORD_BITS,
     AARCH64_STACK_ALIGNMENT,
-    AARCH64_STACK_ALINMENT_BIN,
+    AARCH64_STACK_ALIGNMENT_BIN,
 )
 
 if TYPE_CHECKING:
@@ -28,6 +27,7 @@ if TYPE_CHECKING:
 
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
     from gofra.codegen.lir import LIRProgram
+    from gofra.types import Type
 
     from ._context import AARCH64CodegenContext
 
@@ -93,9 +93,9 @@ def push_integer_onto_stack(
     """Push given integer onto stack with auto shifting less-significant bytes.
 
     Value must be less than 16 bytes (18_446_744_073_709_551_615).
-    Negative numbers is dissalowed.
+    Negative numbers is disallowed.
 
-    TODO(@kirillzhosul): Negative numbers IS dissalowed:
+    TODO(@kirillzhosul): Negative numbers IS disallowed:
         Consider using signed two complement representation with sign bit (highest bit) set
     """
     assert value >= 0, "Tried to push negative integer onto stack!"
@@ -132,7 +132,7 @@ def push_static_address_onto_stack(
     context: AARCH64CodegenContext,
     segment: str,
 ) -> None:
-    """Push executable static memory addresss onto stack with page dereference."""
+    """Push executable static memory address onto stack with page dereference."""
     context.write(
         f"adrp X0, {segment}@PAGE",
         f"add X0, X0, {segment}@PAGEOFF",
@@ -167,7 +167,7 @@ def initialize_static_data_section(
     Data is an string (raw ASCII) or number (zeroed memory blob)
     """
     context.fd.write(".section __DATA,__data\n")
-    context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
+    context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
 
     for name, data in lir.static_segment.items():
         match data:
@@ -201,7 +201,7 @@ def syscall_prepare_arguments(
         strict=False,
     ):
         if injected_argument is not None:
-            # Register injected and infered from stack
+            # Register injected and inferred from stack
             store_integer_into_register(
                 context,
                 register=register,
@@ -236,7 +236,7 @@ def ipc_syscall_macos(
         strict=False,
     ):
         if injected_argument is not None:
-            # Register injected and infered from stack
+            # Register injected and inferred from stack
             store_integer_into_register(
                 context,
                 register=register,
@@ -363,7 +363,7 @@ def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> Non
     """Place an debugger breakpoint (e.g trace trap).
 
     Will halt execution to the debugger, useful for debugging purposes.
-    Also due to being an trap (e.g execution will be catched) allows to trap some execution places.
+    Also due to being an trap (e.g execution will be caught) allows to trap some execution places.
     (e.g start entry exit failure)
     """
     if not (0 <= number <= AARCH64_HALF_WORD_BITS):

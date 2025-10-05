@@ -91,8 +91,8 @@ def assemble_program(  # noqa: PLR0913
 
     if delete_build_cache_after_compilation:
         assembly_filepath.unlink()
-        # TODO(@kirillzhosul): After refactoring unlining object file is not more implemented
-        # object_filepath.unlink()
+        # TODO(@kirillzhosul): After refactoring unlinking object file is not more implemented
+        # object_filepath.unlink()  # noqa: ERA001
 
     return [object_filepath]
 
@@ -125,7 +125,7 @@ def _assemble_object_file(  # noqa: PLR0913
 
     runner = CommandExecutor(verbose=verbose)
 
-    # Assembler is not crossplatform so we expect host has same architecture
+    # Assembler is not cross-platform so we expect host has same architecture
     match current_platform_system():
         case "Darwin":
             if target.triplet != "arm64-apple-darwin":
@@ -163,10 +163,10 @@ def _generate_assembly_file_with_codegen(
         target.file_assembly_suffix,
     )
 
-    infered_backend = get_backend_for_target(target).__name__  # type: ignore  # noqa: PGH003
+    inferred_backend = get_backend_for_target(target).__name__  # type: ignore  # noqa: PGH003
     cli_message(
         level="INFO",
-        text=f"Generating assembly using codegen backend (Infered codegen for target `{target}` is `{infered_backend}`)...",
+        text=f"Generating assembly using codegen backend (Inferred codegen for target `{target}` is `{inferred_backend}`)...",
         verbose=verbose,
     )
     generate_code_for_assembler(assembly_filepath, context, target)

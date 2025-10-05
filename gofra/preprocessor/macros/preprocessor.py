@@ -108,7 +108,7 @@ def _consume_macro_definition(
     """Consume current tokenizer state into macro block container tokens."""
     while token := next(state.tokenizer, None):
         if token.type == TokenType.EOL:
-            # Macro deifinition is line-dependant so it consumes until first end-of-line (EOL)
+            # Macro definition is line-dependant so it consumes until first end-of-line (EOL)
             break
 
         if token.type == TokenType.KEYWORD:
@@ -127,7 +127,7 @@ def _consume_macro_definition(
         continue
 
     if not macro.tokens:
-        # We encoutered an empty macro, which must contain default token `1` (preprocessor conditions default)
+        # We encountered an empty macro, which must contain default token `1` (preprocessor conditions default)
         default = 1
         token = Token(
             type=TokenType.INTEGER,

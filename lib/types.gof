@@ -4,7 +4,7 @@
 
 // Boolean bindings for type-safety
 // Under optimizer this resolves into single boolean push onto stack
-// Probably, sometime this will be part of an langauge
+// Probably, sometime this will be part of an language
 #define true    1 1 ==
 #define false   1 0 ==
 #define NULL    0

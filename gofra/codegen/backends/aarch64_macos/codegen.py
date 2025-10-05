@@ -229,7 +229,7 @@ def aarch64_macos_executable_functions(
     context: AARCH64CodegenContext,
     program: ProgramContext,
 ) -> None:
-    """Define all executable functions inside final executable with their executable body respectuflly.
+    """Define all executable functions inside final executable with their executable body respectfully.
 
     Provides an prolog and epilogue.
     """

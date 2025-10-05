@@ -53,7 +53,7 @@ def toolchain_assembly_executable(
         build_cache_dir=cache_directory,
     )
     assert objects
-    linker_proccess = link_object_files(
+    linker_process = link_object_files(
         objects=objects,
         target=build_target,
         output=artifact_path,
@@ -64,7 +64,7 @@ def toolchain_assembly_executable(
         profile=LinkerProfile.DEBUG,
         cache_directory=cache_directory,
     )
-    linker_proccess.check_returncode()
+    linker_process.check_returncode()
     return artifact_path
 
 

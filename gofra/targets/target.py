@@ -12,7 +12,7 @@ type Triplet = Literal[
 class Target:
     """Specifications for target build host."""
 
-    # Conventional triplet for that target for comparsions
+    # Conventional triplet for that target for comparisons
     triplet: Triplet
 
     # Based on triplet

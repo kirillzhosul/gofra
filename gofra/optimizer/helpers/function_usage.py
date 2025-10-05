@@ -7,7 +7,7 @@ from gofra.parser.operators import OperatorType
 
 
 def is_function_has_callers(program: ProgramContext, function_name: str) -> bool:
-    """Check is given function was called atleast once in whole program."""
+    """Check is given function was called at least once in whole program."""
     assert function_name in program.functions, (
         "Expected existing function in `is_function_has_callers`"
     )

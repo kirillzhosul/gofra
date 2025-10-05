@@ -48,7 +48,7 @@ def _construct_argument_parser() -> ArgumentParser:
     parser = ArgumentParser(
         description="Gofra LD - Linker command line interface for Gofra object files. Same linker is used with Gofra toolchain beside it is not called from shell, as `gofra-ld` being only interface for underlying linker API",
         add_help=True,
-        usage=f"{prog} files... [options] [-o outputfile]",
+        usage=f"{prog} files... [options] [-o output_file]",
         allow_abbrev=False,
         prog=prog,
     )

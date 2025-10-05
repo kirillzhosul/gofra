@@ -14,13 +14,13 @@ class TypeStack:
         self._stack = deque(initial)
 
     def push(self, *types: Type) -> None:
-        """Push abritrary amount of types on typestack."""
+        """Push arbitrary amount of types on stack."""
         self._stack.extend(types)
 
     def pop(self) -> Type:
-        """Pop last pushed type from the typestack."""
+        """Pop last pushed type from the stack."""
         return self._stack.pop()
 
     def __len__(self) -> int:
-        """Get length of the typestack."""
+        """Get length of the stack."""
         return len(self._stack)

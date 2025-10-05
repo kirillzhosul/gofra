@@ -34,7 +34,7 @@
 #ifdef OS_WINDOWS inline func int print_fd[int,*char[],int] win_write end #endif
 
 
-// Print an string into standart console output stream
+// Print an string into standard console output stream
 var print_length_temp int
 func void print[*char[],int]
     print_length_temp swap !<
@@ -43,7 +43,7 @@ func void print[*char[],int]
     print_fd drop
 end
 
-// Print an string into standart console error stream
+// Print an string into standard console error stream
 func void eprint[*char[],int]
     print_length_temp swap !<
     STD_ERR swap
@@ -51,7 +51,7 @@ func void eprint[*char[],int]
     print_fd drop
 end
 
-// Print an string into standart error console stream and abort execution
+// Print an string into standard error console stream and abort execution
 func void eprint_fatal[*char[],int]
     "FATAL: " eprint
     eprint abort
@@ -100,7 +100,7 @@ func void print_integer_fd[int,int]
         
         // Write digit as char
         swap 
-        '0' + // `cast` to char (e.g digit + 48 => charcode) 
+        '0' + // `cast` to char (e.g digit + 48 => char code) 
         !<
         
         // Shift number from right to left (drop last digit)
@@ -125,7 +125,7 @@ func void print_integer_fd[int,int]
     end
 end
 
-// Print given number into standart console output
+// Print given number into standard console output
 // Emits '\n' at the end
 // negative numbers is not supported
 func void print_integer[int]

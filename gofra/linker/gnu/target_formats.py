@@ -1,6 +1,6 @@
 from typing import Literal
 
-type GNU_LINKERTARGET_FORMAT = Literal[
+type GNU_LINKER_TARGET_FORMAT = Literal[
     "elf64-x86-64",
     "elf32-i386",
     "elf32-iamcu",

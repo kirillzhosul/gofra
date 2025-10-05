@@ -29,7 +29,7 @@ class OptimizerConfig:
 def build_default_optimizer_config_from_level(
     level: OPTIMIZER_LEVEL,
 ) -> OptimizerConfig:
-    """Construct optimizer config with default settings infered from level."""
+    """Construct optimizer config with default settings inferred from level."""
     if level == 0:
         return OptimizerConfig(
             level=level,

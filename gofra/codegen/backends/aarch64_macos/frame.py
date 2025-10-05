@@ -26,9 +26,9 @@ def build_local_variables_frame_offsets(
     """Construct mapping from local variable name to stack frame offset where that variable should live.
 
     We allocate some space under stack/frame pointer for local variables (beside FP and LR itself).
-    And we need convient mapping for accessing local variables allocated at that space.
+    And we need convenient mapping for accessing local variables allocated at that space.
 
-    That function constucts something like:
+    That function constructs something like:
     {
         'var1': 8, # +8 bytes from frame
         'var2': 16 # +16 bytes from frame
@@ -70,7 +70,7 @@ def preserve_calee_frame(
     """Save callee LR and FP registers on stack as frame head.
 
     Preserving FP (frame-pointer) is required for restoring SP to initial pointer (as may modified in other functions) when function ends so others can override that garbage in *memory*
-    Preserving LR (link-register) is requred for jumping into another functions via branch-with-link (BL) as that will overwrite LR with new value, but in that case we can restore that.
+    Preserving LR (link-register) is required for jumping into another functions via branch-with-link (BL) as that will overwrite LR with new value, but in that case we can restore that.
     """
     assert FRAME_HEAD_SIZE % 16 == 0, (
         f"Frame head must be aligned by 16 bytes, got {FRAME_HEAD_SIZE}"

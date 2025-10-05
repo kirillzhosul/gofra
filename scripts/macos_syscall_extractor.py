@@ -11,11 +11,11 @@ SYSTEM_INCLUDES = [
 
 def extract_raw_kernel_syscall_macro_definitions(
     *,
-    include_maxsyscall: bool = False,
+    include_max_syscall: bool = False,
 ) -> dict[str, int]:
     """Extract all syscall numbers defined inside macros (e.g C/C++ #define) that is included in c stdlib from kernel.
 
-    They are used for making syscalls from C/C++ but we extracting them to fresh real-time mapping of all syscalls
+    They are used for making syscalls from C/C++ but we extracting them for fresh real-time mapping of all syscalls
 
     Implementation:
         Calls to C compiler to preprocess an file with include of syscall header
@@ -46,7 +46,7 @@ def extract_raw_kernel_syscall_macro_definitions(
         name = name.removeprefix(SYSCALL_MACRO_PREFIX)
         syscalls[name] = int(value)
 
-    if not include_maxsyscall:
+    if not include_max_syscall:
         syscalls.pop("MAXSYSCALL")
     return dict(sorted(syscalls.items(), key=lambda x: x[1]))
 

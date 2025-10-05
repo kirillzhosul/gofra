@@ -2,7 +2,7 @@ from collections.abc import Iterable, MutableSequence
 from pathlib import Path
 
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.linker.gnu.target_formats import GNU_LINKERTARGET_FORMAT
+from gofra.linker.gnu.target_formats import GNU_LINKER_TARGET_FORMAT
 from gofra.linker.output_format import LinkerOutputFormat
 from gofra.linker.profile import LinkerProfile
 from gofra.targets.target import Target
@@ -25,6 +25,7 @@ def compose_gnu_linker_command(  # noqa: PLR0913
     cache_directory: Path | None = None,
 ) -> list[str]:
     """General driver for GNU linker."""
+    _ = cache_directory
     if target.operating_system not in ("Linux", "Windows"):
         msg = f"Cannot compose GNU linker driver command for non {target.operating_system} operating system! GNU linker may link only Linux / Windows objects (ELF/PE only)"
         raise ValueError(msg)
@@ -59,7 +60,7 @@ def _compose_raw_gnu_linker_command(  # noqa: PLR0913
     executable_dynamic_libraries: bool = False,
     strip_debug_symbols: bool = False,
     additional_flags: Iterable[str] | None = None,
-    target_format: GNU_LINKERTARGET_FORMAT,
+    target_format: GNU_LINKER_TARGET_FORMAT,
     _linker_executable: Path,
     _absolute_paths: bool = False,
 ) -> list[str]:

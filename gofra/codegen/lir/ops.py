@@ -10,7 +10,7 @@ from gofra.types._base import Type
 class LIRBaseOp(Protocol):
     """Base operation class for LIR.
 
-    Childrens specify additional payload within operation (e.g something like operands).
+    Children specify additional payload within operation (e.g something like operands).
     """
 
     source_location: TokenLocation | None = None
@@ -96,7 +96,7 @@ class LIRFunctionRestoreFrame(LIRBaseOp):
 class LIRPushLocalFrameVariableAddress(LIRBaseOp):
     """Push address of an local variable on a frame to stack.
 
-    Offsets must be calculated/stored when `LIRFunctionSaveFrame` encoutered.
+    Offsets must be calculated/stored when `LIRFunctionSaveFrame` encountered.
     """
 
     name: str
@@ -250,12 +250,12 @@ class LIRFloorDivRegs(LIRBaseRegsThreeAddrsOp):
 class LIRLogicalCompareRegisters(LIRBaseRegsThreeAddrsOp):
     """Compare two registers and store result as bit* (0 or 1) into register."""
 
-    comparsion: Literal["!=", ">", ">=", "<", "<=", "=="]
+    comparison: Literal["!=", ">", ">=", "<", "<=", "=="]
 
 
 @dataclass
 class LIRSystemExit(LIRBaseOp):
-    """Exit an program (stop exection) with 0 exit code.
+    """Exit an program (stop execution) with 0 exit code.
 
     Required for systems to not get segmentation fault and proper exit.
     """

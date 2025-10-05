@@ -20,10 +20,10 @@ def parse_type(typename: str) -> Type | None:
         return primitive_registry_type
 
     if typename.startswith("*"):
-        poins_to = parse_type(typename.removeprefix("*"))
-        if not poins_to:
+        points_to = parse_type(typename.removeprefix("*"))
+        if not points_to:
             return None
-        return PointerType(poins_to)
+        return PointerType(points_to)
 
     if "[" in typename:
         array_type = parse_type(typename.split("[")[0])

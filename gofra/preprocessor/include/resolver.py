@@ -25,7 +25,7 @@ def resolve_include_from_token_into_state(
     include_token: Token,
     state: PreprocessorState,
 ) -> None:
-    """Consume and resolve include construction into real include at preprocessor side, ommiting include if already included."""
+    """Consume and resolve include construction into real include at preprocessor side, omitting include if already included."""
     requested_include_path = _consume_include_raw_path_from_token(include_token, state)
     if requested_include_path.resolve(strict=False) == state.path:
         raise PreprocessorIncludeCurrentFileError(include_path_token=include_token)
@@ -90,10 +90,10 @@ def _try_resolve_and_find_real_include_path(
     for search_path in traversed_paths:
         if (probable_path := search_path.joinpath(path)).exists(follow_symlinks=True):
             if probable_path.is_file():
-                # We found an straighforward file reference
+                # We found an straightforward file reference
                 return probable_path
 
-            # Non-existant file here or directory reference.
+            # Non-existent file here or directory reference.
             if not probable_path.is_dir():
                 continue
 

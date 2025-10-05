@@ -1,5 +1,4 @@
-# noqa: INP001
-"""Build an distrubution for publishing package to PyPi."""
+"""Build an distribution for publishing package to PyPi."""
 
 from __future__ import annotations
 

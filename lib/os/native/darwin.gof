@@ -14,7 +14,7 @@
     #define O_WRONLY   0x0001  // Open for writing only
     #define O_RDWR     0x0002  // Open for reading and writing
 
-    // Standart file descriptors
+    // Standard file descriptors
     #define STD_IN_FD  0
     #define STD_OUT_FD 1
     #define STD_ERR_FD 2
@@ -71,7 +71,7 @@
         inline func int sc_write[int,*int,int] DARWIN_SYSCALL_WRITE syscall3 end
 
         // Opens a file.
-        // Signature: [patr, flags, mode]
+        // Signature: [path, flags, mode]
         // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
         // Returns file descriptor, or -1 on error.
         inline func int sc_open[*int,int,int] DARWIN_SYSCALL_OPEN syscall3 end

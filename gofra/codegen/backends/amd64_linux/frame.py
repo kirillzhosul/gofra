@@ -23,9 +23,9 @@ def build_local_variables_frame_offsets(
     """Construct mapping from local variable name to stack frame offset where that variable should live.
 
     We allocate some space under stack/frame pointer for local variables (beside FP and LR itself).
-    And we need convient mapping for accessing local variables allocated at that space.
+    And we need convenient mapping for accessing local variables allocated at that space.
 
-    That function constucts something like:
+    That function constructs something like:
     {
         'var1': 8, # +8 bytes from frame
         'var2': 16 # +16 bytes from frame

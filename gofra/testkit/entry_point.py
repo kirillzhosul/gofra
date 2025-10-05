@@ -106,7 +106,7 @@ def evaluate_test_matrix_threaded(
 
 def display_test_errors(matrix: list[Test]) -> None:
     if any(test.error for test in matrix):
-        cli_message("ERROR", "While running tests, some errors were occured:")
+        cli_message("ERROR", "While running tests, some errors were occurred:")
     for test in matrix:
         if test.error is None:
             continue

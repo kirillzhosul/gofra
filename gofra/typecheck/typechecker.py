@@ -6,7 +6,7 @@ from gofra.parser import Operator, OperatorType
 from gofra.parser.intrinsics import Intrinsic
 from gofra.typecheck.errors.return_value_missing import ReturnValueMissingTypecheckError
 from gofra.types import Type
-from gofra.types.comparsion import is_types_same
+from gofra.types.comparison import is_types_same
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.primitive.boolean import BoolType
@@ -69,7 +69,8 @@ def validate_function_type_safety(
             raise ReturnValueMissingTypecheckError(owner=function)
 
         if len(emulated_type_stack) > 1:
-            raise ValueError("ambigious stack size at function end")
+            msg = "Ambiguous stack size at function end"
+            raise ValueError(msg)
 
         if not is_types_same(
             a=emulated_type_stack[0],
@@ -165,7 +166,7 @@ def emulate_type_stack_for_operators(
                     )
 
                     # TODO(@kirillzhosul): Pointers are for now not type-checked at function call level
-                    # so passing an *int to *char[] funciton is valid as they both are an pointer
+                    # so passing an *int to *char[] function is valid as they both are an pointer
 
                 if not isinstance(function.type_contract_out, VoidType):
                     context.push_types(function.type_contract_out)

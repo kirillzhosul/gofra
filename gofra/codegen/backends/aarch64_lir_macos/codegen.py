@@ -62,7 +62,7 @@ from .assembly import (
 from .registers import (
     AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
     AARCH64_STACK_ALIGNMENT,
-    AARCH64_STACK_ALINMENT_BIN,
+    AARCH64_STACK_ALIGNMENT_BIN,
 )
 
 if TYPE_CHECKING:
@@ -184,7 +184,7 @@ def aarch64_macos_operator_instructions(
                         "==": "eq",
                     }
                     context.write(f"cmp {a_reg_or_imm}, {b_reg_or_imm}")
-                    context.write(f"cset {res_reg}, {logic_op[operation.comparsion]}")
+                    context.write(f"cset {res_reg}, {logic_op[operation.comparison]}")
         case LIRUnconditionalJumpToLabel():
             context.write(f"b {operation.label}")
         case LIRFunctionCallPrepareArguments():
@@ -234,7 +234,7 @@ def aarch64_macos_executable_functions(
     context: AARCH64CodegenContext,
     lir: LIRProgram,
 ) -> None:
-    """Define all executable functions inside final executable with their executable body respectuflly.
+    """Define all executable functions inside final executable with their executable body respectfully.
 
     Provides an prolog and epilogue.
     """
@@ -242,7 +242,7 @@ def aarch64_macos_executable_functions(
         if function.is_global_linker_symbol:
             context.fd.write(f".global {function.name}\n")
 
-        context.fd.write(f".align {AARCH64_STACK_ALINMENT_BIN}\n")
+        context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
         context.fd.write(f"{function.name}:\n")
         assert function.operations, "Empty LIR function body"
         for operation in function.operations:

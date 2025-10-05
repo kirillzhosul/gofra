@@ -57,7 +57,7 @@ class CLIArguments:
     linker_libraries: list[str]
     linker_libraries_search_paths: list[Path]
     linker_backend: Literal["gnu-ld", "apple-ld"] | None
-    linker_resolve_libraries_with_pkconfig: bool
+    linker_resolve_libraries_with_pkgconfig: bool
     linker_executable: Path | None
 
     optimizer: OptimizerConfig
@@ -116,7 +116,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         execute_after_compilation=bool(args.execute),
         delete_build_cache=bool(args.delete_cache),
         build_cache_dir=Path(args.cache_dir),
-        linker_resolve_libraries_with_pkconfig=args.linker_resolve_libraries_with_pkconfig,
+        linker_resolve_libraries_with_pkgconfig=args.linker_resolve_libraries_with_pkgconfig,
         target=target,
         definitions=definitions,
         preprocess_only=bool(args.preprocess_only),
@@ -155,7 +155,7 @@ def process_output_path(
     args: Namespace,
     target: Target,
 ) -> Path:
-    infered_output_path = (
+    inferred_output_path = (
         Path(args.output)
         if args.output
         else infer_output_filename(
@@ -164,10 +164,10 @@ def process_output_path(
             target=target,
         )
     )
-    if infered_output_path in source_filepaths:
-        msg = "Infered/specified output file path will rewrite existing input file, please specify another output path."
+    if inferred_output_path in source_filepaths:
+        msg = "Inferred/specified output file path will rewrite existing input file, please specify another output path."
         raise ValueError(msg)
-    return infered_output_path
+    return inferred_output_path
 
 
 def process_include_paths(args: Namespace) -> list[Path]:
@@ -205,7 +205,7 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         "-o",
         type=str,
         required=False,
-        help="Output file path to generate, by default will be infered from first input filename",
+        help="Output file path to generate, by default will be inferred from first input filename",
     )
 
     parser.add_argument(
@@ -213,7 +213,7 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         "-t",
         type=str,
         required=False,
-        help="Target compilation triplet. By default target is infered from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used.",
+        help="Target compilation triplet. By default target is inferred from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used.",
         choices=["amd64-unknown-linux", "arm64-apple-darwin", "amd64-unknown-windows"],
     )
 
@@ -355,7 +355,7 @@ def _inject_linker_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with linker options into given parser."""
     group = parser.add_argument_group(
         title="Linker",
-        description="Flags for the linker, granually control how linker links your objects.",
+        description="Flags for the linker, fine control how linker links your objects.",
     )
 
     group.add_argument(
@@ -382,10 +382,10 @@ def _inject_linker_group(parser: ArgumentParser) -> None:
 
     group.add_argument(
         "--no-pkgconfig",
-        dest="linker_resolve_libraries_with_pkconfig",
+        dest="linker_resolve_libraries_with_pkgconfig",
         default=True,
         action="store_false",
-        help="Disable usage of `pkg-confg` to resolve linker search paths if possible",
+        help="Disable usage of `pkg-config` to resolve linker search paths if possible",
     )
     group.add_argument(
         "--library",
@@ -423,7 +423,7 @@ def _inject_optimizer_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with optimizer options into given parser."""
     group = parser.add_argument_group(
         title="Optimizations",
-        description="Flags for the optimizer, granually control how compiler optimize your code.",
+        description="Flags for the optimizer, fine control how compiler optimize your code.",
     )
 
     ###
@@ -462,7 +462,7 @@ def _inject_optimizer_group(parser: ArgumentParser) -> None:
         action="store_const",
         const=False,
         dest="optimizer_do_dead_code_elimination",
-        help="[Enabled at -O1 and above] Force disable DCE (dead-code-eliminiation) optimization, see '-fdce' flag for more information.",
+        help="[Enabled at -O1 and above] Force disable DCE (dead-code-elimination) optimization, see '-fdce' flag for more information.",
     )
     group_dce.add_argument(
         "--dce-max-iterations",
@@ -499,5 +499,5 @@ def _inject_optimizer_group(parser: ArgumentParser) -> None:
         "--inline-functions-max-iterations",
         metavar="<N>",
         dest="optimizer_function_inlining_max_iterations",
-        help="Max iterations for function inlining to search for new inlined function usage in other functions. Low limit will result into unknown function call at assembler stage. This may slightly increase finaly binary size",
+        help="Max iterations for function inlining to search for new inlined function usage in other functions. Low limit will result into unknown function call at assembler stage. This may slightly increase final binary size",
     )

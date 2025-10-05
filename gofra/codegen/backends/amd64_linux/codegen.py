@@ -231,7 +231,7 @@ def amd64_linux_executable_functions(
     context: AMD64CodegenContext,
     program: ProgramContext,
 ) -> None:
-    """Define all executable functions inside final executable with their executable body respectuflly.
+    """Define all executable functions inside final executable with their executable body respectfully.
 
     Provides an prolog and epilogue.
     """

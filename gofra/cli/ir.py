@@ -1,4 +1,4 @@
-"""Intermidiate representation for CLI.
+"""Intermediate representation for CLI.
 
 Allows to view IR from CLI.
 """

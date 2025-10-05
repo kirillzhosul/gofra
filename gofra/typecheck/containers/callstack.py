@@ -16,7 +16,7 @@ class CallStack:
         self._stack = deque()
 
     def push(self, callee: Function, at: TokenLocation) -> None:
-        """Push abritrary amount of types on stack."""
+        """Push arbitrary amount of types on stack."""
         self._stack.append((callee, at))
 
     def pop(self) -> CALL:

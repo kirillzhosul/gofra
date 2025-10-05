@@ -183,7 +183,7 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             raise ValueError(msg)
 
         if array_index_at < 0:
-            msg = "Negatitive indexing inside arrays is prohibited"
+            msg = "Negative indexing inside arrays is prohibited"
             raise ValueError(msg)
 
         if array_index_at >= variable.type.elements_count:

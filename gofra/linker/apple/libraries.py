@@ -30,7 +30,7 @@ def get_syslibroot_path() -> Path:
     return Path(process.stdout.decode().strip())
 
 
-def syslibroot_is_requred(
+def syslibroot_is_required(
     libraries: Iterable[str],
     output_format: AppleLinkerOutputFormat,
 ) -> bool:

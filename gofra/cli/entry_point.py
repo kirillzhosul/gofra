@@ -18,7 +18,7 @@ from gofra.linker.command_composer import get_linker_command_composer_backend
 from gofra.linker.gnu.command_composer import compose_gnu_linker_command
 from gofra.linker.linker import link_object_files
 from gofra.linker.output_format import LinkerOutputFormat
-from gofra.linker.pkconfig.pkgconfig import pkgconfig_get_library_search_paths
+from gofra.linker.pkgconfig.pkgconfig import pkgconfig_get_library_search_paths
 from gofra.linker.profile import LinkerProfile
 from gofra.optimizer import create_optimizer_pipeline
 from gofra.preprocessor.macros.registry import registry_from_raw_definitions
@@ -42,7 +42,7 @@ def cli_entry_point(prog: str | None = None) -> None:
         args = parse_cli_arguments(prog)
 
         if len(args.source_filepaths) == 0 and not args.version:
-            cli_message("ERROR", "Expected atleast one source files given!")
+            cli_message("ERROR", "Expected source files to compile!")
             sys.exit(1)
 
         if len(args.source_filepaths) > 1 and not args.version:
@@ -164,7 +164,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
 
     cli_message(
         level="INFO",
-        text="Assemblying object file(s)...",
+        text="Assembling object file(s)...",
         verbose=args.verbose,
     )
     objects = assemble_program(
@@ -207,12 +207,12 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         )
 
         libraries_search_paths = args.linker_libraries_search_paths
-        if args.linker_resolve_libraries_with_pkconfig:
+        if args.linker_resolve_libraries_with_pkgconfig:
             for library in args.linker_libraries:
                 paths = pkgconfig_get_library_search_paths(library)
                 if paths:
                     libraries_search_paths += paths
-        linker_proccess = link_object_files(
+        linker_process = link_object_files(
             objects=objects,
             target=args.target,
             output=args.output_filepath,
@@ -225,7 +225,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
             linker_executable=args.linker_executable,
             cache_directory=args.build_cache_dir,
         )
-        linker_proccess.check_returncode()
+        linker_process.check_returncode()
 
     apply_file_executable_permissions(args.output_filepath)
 

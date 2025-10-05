@@ -33,7 +33,7 @@ def drop_cells_from_stack(context: AMD64CodegenContext, *, cells_count: int) -> 
     """
     assert cells_count > 0, "Tried to drop negative cells count from stack"
     for _ in range(cells_count):
-        context.write("popq rax")  # Use zero regiseter?
+        context.write("popq rax")  # Use zero register?
 
 
 def pop_cells_from_stack_into_registers(
@@ -73,9 +73,9 @@ def push_integer_onto_stack(
 ) -> None:
     """Push given integer onto stack.
 
-    Negative numbers is dissalowed.
+    Negative numbers is disallowed.
 
-    TODO(@kirillzhosul, @stepanzubkov): Negative numbers IS dissalowed
+    TODO(@kirillzhosul, @stepanzubkov): Negative numbers IS disallowed
     TODO(@kirillzhosul, @stepanzubkov): Review max and etc like in AARCH64_MacOS
     """
     assert value >= 0, "Tried to push negative integer onto stack!"
@@ -88,7 +88,7 @@ def push_static_address_onto_stack(
     context: AMD64CodegenContext,
     segment: str,
 ) -> None:
-    """Push executable static memory addresss onto stack with page dereference."""
+    """Push executable static memory address onto stack with page dereference."""
     context.write(f"leaq {segment}(rip), rax")
     push_register_onto_stack(context, register="rax")
 
@@ -109,9 +109,9 @@ def initialize_static_data_section(
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, variable in static_variables.items():
-        typesize = variable.type.size_in_bytes
-        if typesize != 0:
-            context.fd.write(f"{name}: .space {typesize}\n")
+        type_size = variable.type.size_in_bytes
+        if type_size != 0:
+            context.fd.write(f"{name}: .space {type_size}\n")
 
 
 def ipc_syscall_linux(
@@ -137,7 +137,7 @@ def ipc_syscall_linux(
         strict=False,
     ):
         if injected_argument is not None:
-            # Register injected and infered from stack
+            # Register injected and inferred from stack
             store_integer_into_register(
                 context,
                 register=register,
@@ -295,7 +295,7 @@ def evaluate_conditional_block_on_stack_with_jump(
     context: AMD64CodegenContext,
     jump_over_label: str,
 ) -> None:
-    """Evaluate conditional block by popping current value under SP againts zero.
+    """Evaluate conditional block by popping current value under SP against zero.
 
     If condition is false (value on stack) then jump out that conditional block to `jump_over_label`
     """
