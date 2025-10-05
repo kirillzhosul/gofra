@@ -4,8 +4,9 @@ import sys
 from platform import platform, python_implementation, python_version
 from typing import TYPE_CHECKING
 
-from gofra.assembler import assemble_program
+from gofra.assembler.assembler import assemble_object, prepare_build_cache_directory
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
+from gofra.codegen.generator import generate_code_for_assembler
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
@@ -19,7 +20,6 @@ from gofra.linker.gnu.command_composer import compose_gnu_linker_command
 from gofra.linker.linker import link_object_files
 from gofra.linker.output_format import LinkerOutputFormat
 from gofra.linker.pkgconfig.pkgconfig import pkgconfig_get_library_search_paths
-from gofra.linker.profile import LinkerProfile
 from gofra.optimizer import create_optimizer_pipeline
 from gofra.preprocessor.macros.registry import registry_from_raw_definitions
 from gofra.preprocessor.preprocessor import preprocess_file
@@ -167,20 +167,34 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         text="Assembling object file(s)...",
         verbose=args.verbose,
     )
-    objects = assemble_program(
+
+    cache_dir = args.build_cache_dir
+    prepare_build_cache_directory(cache_dir)
+
+    output = args.output_filepath
+    assembly_filepath = (cache_dir / output.name).with_suffix(
+        args.target.file_assembly_suffix,
+    )
+
+    generate_code_for_assembler(assembly_filepath, context, args.target)
+
+    object_filepath = (cache_dir / output.name).with_suffix(
+        args.target.file_object_suffix,
+    )
+
+    assemble_object(
+        assembly_file=assembly_filepath,
         verbose=args.verbose,
-        output_format=args.output_format,
-        context=context,
-        output=args.output_filepath,
+        output=object_filepath,
         target=args.target,
         additional_assembler_flags=args.assembler_flags,
         build_cache_dir=args.build_cache_dir,
-        delete_build_cache_after_compilation=args.delete_build_cache,
     )
 
-    if (objects and args.output_format in ("library", "executable")) or (
-        objects and len(objects) > 1 and args.output_format == "object"
-    ):
+    if args.delete_build_cache:
+        assembly_filepath.unlink()
+
+    if args.output_format in ("library", "executable"):
         cli_message(
             level="INFO",
             text=f"Linking final {args.output_format} from object file(s)...",
@@ -196,10 +210,6 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
                 case "gnu-ld":
                     linker_backend = compose_gnu_linker_command
 
-        profile = (
-            LinkerProfile.DEBUG if args.profile == "debug" else LinkerProfile.PRODUCTION
-        )
-
         output_format = (
             LinkerOutputFormat.EXECUTABLE
             if args.output_format == "executable"
@@ -213,19 +223,22 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
                 if paths:
                     libraries_search_paths += paths
         linker_process = link_object_files(
-            objects=objects,
+            objects=[object_filepath],
             target=args.target,
             output=args.output_filepath,
             libraries=args.linker_libraries,
             output_format=output_format,
             additional_flags=args.linker_additional_flags,
             libraries_search_paths=args.linker_libraries_search_paths,
-            profile=profile,
+            profile=args.linker_profile,
             linker_backend=linker_backend,
             linker_executable=args.linker_executable,
             cache_directory=args.build_cache_dir,
         )
         linker_process.check_returncode()
+
+    if args.delete_build_cache:
+        object_filepath.unlink()
 
     apply_file_executable_permissions(args.output_filepath)
 

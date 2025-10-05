@@ -90,11 +90,10 @@ def evaluate_test_matrix_threaded(
             test_path,
             args,
             build_target=target,
-            build_format="executable",
             cache_directory=cache_directory,
         )
 
-    max_workers = min(len(test_paths), THREAD_OPTIMAL_WORKERS_COUNT)
+    max_workers = max(1, min(len(test_paths), THREAD_OPTIMAL_WORKERS_COUNT))
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [

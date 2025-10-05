@@ -3,10 +3,11 @@ from __future__ import annotations
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import Literal, cast
 
 from gofra.cli.distribution import infer_distribution_library_paths
 from gofra.cli.infer import infer_output_filename, infer_target
+from gofra.linker.profile import LinkerProfile
 from gofra.optimizer.config import (
     OptimizerConfig,
     build_default_optimizer_config_from_level,
@@ -16,9 +17,6 @@ from gofra.targets import Target
 
 from .output import cli_message
 
-if TYPE_CHECKING:
-    from gofra.assembler.assembler import OUTPUT_FORMAT_T
-
 
 @dataclass(frozen=True)
 class CLIArguments:
@@ -26,7 +24,7 @@ class CLIArguments:
 
     source_filepaths: list[Path]
     output_filepath: Path
-    output_format: OUTPUT_FORMAT_T
+    output_format: Literal["library", "object", "executable", "assembly"]
 
     execute_after_compilation: bool
     debug_symbols: bool
@@ -51,7 +49,7 @@ class CLIArguments:
     build_cache_dir: Path
     delete_build_cache: bool
 
-    profile: Literal["debug", "production"]
+    linker_profile: LinkerProfile
 
     linker_additional_flags: list[str]
     linker_libraries: list[str]
@@ -103,6 +101,12 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         Path(f) for f in args.linker_libraries_search_paths
     ]
 
+    linker_profile = (
+        LinkerProfile.DEBUG
+        if args.linker_profile == "debug"
+        else LinkerProfile.PRODUCTION
+    )
+
     optimizer = build_default_optimizer_config_from_level(level=args.optimizer_level)
     optimizer = merge_into_optimizer_config(optimizer, args, prefix="optimizer")
     return CLIArguments(
@@ -124,7 +128,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         include_paths=include_paths,
         verbose=bool(args.verbose),
         assembler_flags=assembler_flags,
-        profile=args.profile,
+        linker_profile=linker_profile,
         # Optimizer
         optimizer=optimizer,
         # Linker
@@ -310,15 +314,6 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         help="If passed, will disable type safety checking",
     )
 
-    parser.add_argument(
-        "--profile",
-        dest="profile",
-        required=False,
-        default="debug",
-        choices=["debug", "production"],
-        help="Configures some underlying tools to use that profile. TBD",
-    )
-
     _inject_preprocessor_group(parser)
     _inject_linker_group(parser)
     _inject_optimizer_group(parser)
@@ -367,6 +362,15 @@ def _inject_linker_group(parser: ArgumentParser) -> None:
         action="append",
         nargs="?",
         default=[],
+    )
+
+    group.add_argument(
+        "--linker-profile",
+        dest="linker_profile",
+        required=False,
+        default="debug",
+        choices=["debug", "production"],
+        help="Configures some underlying linker tools to use that profile. Default to DEBUG",
     )
 
     group.add_argument(

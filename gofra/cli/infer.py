@@ -1,15 +1,15 @@
 import sys
 from pathlib import Path
 from platform import system
+from typing import Literal
 
-from gofra.assembler.assembler import OUTPUT_FORMAT_T
 from gofra.cli.output import cli_message
 from gofra.targets.target import Target
 
 
 def infer_output_filename(
     source_filepaths: list[Path],
-    output_format: OUTPUT_FORMAT_T,
+    output_format: Literal["library", "object", "executable", "assembly"],
     target: Target,
 ) -> Path:
     """Try to infer filename for output from input source files."""

@@ -2,9 +2,10 @@ import sys
 from pathlib import Path
 from subprocess import CalledProcessError, TimeoutExpired
 
-from gofra.assembler.assembler import OUTPUT_FORMAT_T, assemble_program
+from gofra.assembler.assembler import assemble_object
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.cli.output import cli_message
+from gofra.codegen.generator import generate_code_for_assembler
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.exceptions import GofraError
 from gofra.execution.execution import execute_binary_executable
@@ -29,7 +30,6 @@ def toolchain_assembly_executable(
     macros: MacrosRegistry,
     build_target: Target,
     cache_directory: Path,
-    build_format: OUTPUT_FORMAT_T,
 ) -> Path:
     context = process_input_file(
         path,
@@ -40,21 +40,23 @@ def toolchain_assembly_executable(
         functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
     )
     artifact_path = cache_directory / f"{path.with_suffix('').name}"
-    objects = assemble_program(
-        context,
-        artifact_path,
-        output_format=build_format,
+    artifact_object_file = artifact_path.with_suffix(".o")
+    artifact_assembly_file = artifact_path.with_suffix(".s")
+
+    generate_code_for_assembler(artifact_assembly_file, context, build_target)
+    assemble_object(
+        assembly_file=artifact_assembly_file,
+        output=artifact_object_file,
         target=build_target,
         verbose=args.verbose,
         # Probably, at some time this may became configurable for more complex tests.
         additional_assembler_flags=[],
         # Artifacts removed by top level, here we delete only build cache.
-        delete_build_cache_after_compilation=args.delete_build_cache,
         build_cache_dir=cache_directory,
     )
-    assert objects
+
     linker_process = link_object_files(
-        objects=objects,
+        objects=[artifact_object_file],
         target=build_target,
         output=artifact_path,
         libraries=[],
@@ -72,7 +74,6 @@ def evaluate_test_case(
     path: Path,
     args: CLIArguments,
     build_target: Target,
-    build_format: OUTPUT_FORMAT_T,
     cache_directory: Path,
 ) -> Test:
     definitions = construct_propagated_toolchain_definitions(target=build_target)
@@ -88,7 +89,6 @@ def evaluate_test_case(
             macros,
             build_target,
             cache_directory,
-            build_format,
         )
     except GofraError as e:
         return Test(
