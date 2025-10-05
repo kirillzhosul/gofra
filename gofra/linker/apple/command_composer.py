@@ -39,6 +39,7 @@ def compose_apple_linker_command(  # noqa: PLR0913
     executable_entry_point_symbol: str = LINKER_EXPECTED_ENTRY_POINT,
     *,
     linker_executable: Path | None = None,
+    cache_directory: Path,
 ) -> list[str]:
     """General driver for Apple linker."""
     if target.operating_system != "Darwin":
@@ -77,7 +78,7 @@ def compose_apple_linker_command(  # noqa: PLR0913
             *libraries_search_paths,
         },
         # Cache
-        cache_path_lto=None,
+        cache_path_lto=cache_directory,
         # Debug
         debug_do_not_optimize=debug_do_not_optimize,
         strip_debug_symbols=strip_debug_symbols,

@@ -20,7 +20,9 @@ def compose_gnu_linker_command(  # noqa: PLR0913
     libraries_search_paths: list[Path],
     profile: LinkerProfile,
     executable_entry_point_symbol: str = LINKER_EXPECTED_ENTRY_POINT,
+    *,
     linker_executable: Path | None = None,
+    cache_directory: Path,
 ) -> list[str]:
     """General driver for GNU linker."""
     if target.operating_system not in ("Linux", "Windows"):

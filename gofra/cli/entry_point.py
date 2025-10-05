@@ -223,6 +223,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
             profile=profile,
             linker_backend=linker_backend,
             linker_executable=args.linker_executable,
+            cache_directory=args.build_cache_dir,
         )
         linker_proccess.check_returncode()
 

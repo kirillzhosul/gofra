@@ -20,6 +20,7 @@ def link_object_files(  # noqa: PLR0913
     additional_flags: list[str],
     libraries_search_paths: list[Path],
     profile: LinkerProfile,
+    cache_directory: Path,
     *,
     linker_backend: LinkerCommandComposer | None = None,
     linker_executable: Path | None = None,
@@ -41,6 +42,7 @@ def link_object_files(  # noqa: PLR0913
         libraries_search_paths=libraries_search_paths,
         profile=profile,
         linker_executable=linker_executable,
+        cache_directory=cache_directory,
     )
 
     return run(

@@ -23,6 +23,7 @@ class LinkerCommandComposer(Protocol):
         profile: LinkerProfile,
         executable_entry_point_symbol: str = ...,
         *,
+        cache_directory: Path,
         linker_executable: Path | None = ...,
     ) -> list[str]: ...
 
