@@ -24,6 +24,8 @@ from gofra.targets.target import Target
 # TODO(@kirillzhosul): Research `lipo` tool and maybe other ones for Mach-O workflow (nm, otool, lipo, arch, dyld, strip, rebase, dyld_info, as, ar)
 # TODO(@kirillzhosul): Add potential use of `-version_details` flag to check for supported architectures
 
+APPLE_LD_DEFAULT_PATH = Path("ld")
+
 
 def compose_apple_linker_command(  # noqa: PLR0913
     objects: Iterable[Path],
@@ -35,6 +37,8 @@ def compose_apple_linker_command(  # noqa: PLR0913
     libraries_search_paths: list[Path],
     profile: LinkerProfile,
     executable_entry_point_symbol: str = LINKER_EXPECTED_ENTRY_POINT,
+    *,
+    linker_executable: Path | None = None,
 ) -> list[str]:
     """General driver for Apple linker."""
     if target.operating_system != "Darwin":
@@ -54,7 +58,7 @@ def compose_apple_linker_command(  # noqa: PLR0913
     if syslibroot_is_requred(libraries, macho_format):
         syslibroot = get_syslibroot_path()
 
-    debug_remove_info = profile == LinkerProfile.PRODUCTION
+    strip_debug_symbols = profile == LinkerProfile.PRODUCTION
     debug_do_not_optimize = profile == LinkerProfile.DEBUG
 
     architecture = apple_linker_architecture_from_target(target)
@@ -76,8 +80,9 @@ def compose_apple_linker_command(  # noqa: PLR0913
         cache_path_lto=None,
         # Debug
         debug_do_not_optimize=debug_do_not_optimize,
-        debug_remove_info=debug_remove_info,
+        strip_debug_symbols=strip_debug_symbols,
         # TODO(@kirillzhosul): Implement platform_version
+        _linker_executable=linker_executable or APPLE_LD_DEFAULT_PATH,
     )
 
 
@@ -94,7 +99,7 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
     frameworks_search_paths: Iterable[Path] | None = None,
     dtrace_script: Path | None = None,
     debug_do_not_optimize: bool = False,
-    debug_remove_info: bool = False,
+    strip_debug_symbols: bool = False,
     optim_dead_strip: bool = True,
     additional_flags: Iterable[str] | None = None,
     macos_version_min: float | None = None,
@@ -190,7 +195,8 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
         command.extend(f"-F{p}" for p in frameworks_search_paths)
 
     # Actual output path
-    command.extend(("-o", str(output.absolute())))
+    path = str(output.absolute()) if _absolute_paths else str(output)
+    command.extend(("-o", path))
 
     if cache_path_lto:
         path = str(cache_path_lto.absolute() if _absolute_paths else cache_path_lto)
@@ -210,8 +216,8 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
     if debug_do_not_optimize:
         command.append("-O0")
 
-    # Skips DFARF/STABS informatio
-    if debug_remove_info:
+    # Skips DFARF/STABS information
+    if strip_debug_symbols:
         command.append("-S")
 
     # Specification of version to assume features of that OS/SDK

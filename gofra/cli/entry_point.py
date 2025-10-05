@@ -13,8 +13,12 @@ from gofra.gofra import process_input_file
 from gofra.lexer import tokenize_from_raw
 from gofra.lexer.io.io import open_source_file_line_stream
 from gofra.lexer.tokens import TokenLocation
+from gofra.linker.apple.command_composer import compose_apple_linker_command
+from gofra.linker.command_composer import get_linker_command_composer_backend
+from gofra.linker.gnu.command_composer import compose_gnu_linker_command
 from gofra.linker.linker import link_object_files
 from gofra.linker.output_format import LinkerOutputFormat
+from gofra.linker.pkconfig.pkgconfig import pkgconfig_get_library_search_paths
 from gofra.linker.profile import LinkerProfile
 from gofra.optimizer import create_optimizer_pipeline
 from gofra.preprocessor.macros.registry import registry_from_raw_definitions
@@ -182,19 +186,43 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
             text=f"Linking final {args.output_format} from object file(s)...",
             verbose=args.verbose,
         )
-        libraries: list[str] = []
 
+        if args.linker_backend is None:
+            linker_backend = get_linker_command_composer_backend(args.target)
+        else:
+            match args.linker_backend:
+                case "apple-ld":
+                    linker_backend = compose_apple_linker_command
+                case "gnu-ld":
+                    linker_backend = compose_gnu_linker_command
+
+        profile = (
+            LinkerProfile.DEBUG if args.profile == "debug" else LinkerProfile.PRODUCTION
+        )
+
+        output_format = (
+            LinkerOutputFormat.EXECUTABLE
+            if args.output_format == "executable"
+            else LinkerOutputFormat.LIBRARY
+        )
+
+        libraries_search_paths = args.linker_libraries_search_paths
+        if args.linker_resolve_libraries_with_pkconfig:
+            for library in args.linker_libraries:
+                paths = pkgconfig_get_library_search_paths(library)
+                if paths:
+                    libraries_search_paths += paths
         linker_proccess = link_object_files(
             objects=objects,
             target=args.target,
             output=args.output_filepath,
-            libraries=libraries,
-            output_format=LinkerOutputFormat.EXECUTABLE
-            if args.output_format == "executable"
-            else LinkerOutputFormat.LIBRARY,
-            additional_flags=args.linker_flags,
-            libraries_search_paths=[],
-            profile=LinkerProfile.DEBUG,
+            libraries=args.linker_libraries,
+            output_format=output_format,
+            additional_flags=args.linker_additional_flags,
+            libraries_search_paths=args.linker_libraries_search_paths,
+            profile=profile,
+            linker_backend=linker_backend,
+            linker_executable=args.linker_executable,
         )
         linker_proccess.check_returncode()
 

@@ -2,7 +2,10 @@ from collections.abc import Iterable, MutableSequence
 from pathlib import Path
 from subprocess import PIPE, CompletedProcess, run
 
-from gofra.linker.command_composer import get_linker_command_composer_backend
+from gofra.linker.command_composer import (
+    LinkerCommandComposer,
+    get_linker_command_composer_backend,
+)
 from gofra.linker.output_format import LinkerOutputFormat
 from gofra.linker.profile import LinkerProfile
 from gofra.targets.target import Target
@@ -17,13 +20,18 @@ def link_object_files(  # noqa: PLR0913
     additional_flags: list[str],
     libraries_search_paths: list[Path],
     profile: LinkerProfile,
+    *,
+    linker_backend: LinkerCommandComposer | None = None,
+    linker_executable: Path | None = None,
 ) -> CompletedProcess[bytes]:
     """Link given objects into another object (executable / library).
 
     Runs an new process with linker, returns it for high-level checks.
     """
-    composer = get_linker_command_composer_backend(target)
-    command = composer(
+    if not linker_backend:
+        linker_backend = get_linker_command_composer_backend(target)
+
+    command = linker_backend(
         objects=objects,
         target=target,
         output=output,
@@ -32,6 +40,7 @@ def link_object_files(  # noqa: PLR0913
         additional_flags=additional_flags,
         libraries_search_paths=libraries_search_paths,
         profile=profile,
+        linker_executable=linker_executable,
     )
 
     return run(

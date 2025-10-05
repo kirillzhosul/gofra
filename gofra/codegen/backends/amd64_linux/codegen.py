@@ -85,8 +85,8 @@ def amd64_linux_operator_instructions(
         case OperatorType.INTRINSIC:
             amd64_linux_intrinsic_instructions(context, operator)
         case OperatorType.PUSH_MEMORY_POINTER:
-            assert isinstance(operator.operand, str)
-            push_static_address_onto_stack(context, operator.operand)
+            assert isinstance(operator.operand, tuple)
+            push_static_address_onto_stack(context, operator.operand[0])
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)

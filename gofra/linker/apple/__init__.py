@@ -1,1 +1,1 @@
-"""Apple Linker (ld on Mac-OS)."""
+"""Apple Linker (ld on MacOS)."""
