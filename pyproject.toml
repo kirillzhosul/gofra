@@ -2,7 +2,7 @@
 name = "gofra"
 version = "0.0.5"
 description = "A Stack-based compiled programming language"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 license = "MIT"
 readme = "README.md"
 authors = [{ name = "Kirill Zhosul", email = "kirillzhosul@yandex.com" }]
@@ -11,6 +11,7 @@ keywords = ["compiler", "language"]
 
 [project.scripts]
 gofra = "gofra.__main__:cli_entry_point"
+gofra-ld = "gofra.linker.__main__:main"
 
 [project.urls]
 documentation = "https://kirillzhosul.github.io/gofra"
@@ -50,8 +51,8 @@ ignore = [
     "S603",
     "D203",
     "D213",
-    "FIX002", # do not warn on TODOs
-    "TD003", # do not warn on TODOs
+    "FIX002",  # do not warn on TODOs
+    "TD003",   # do not warn on TODOs
 ]
 
 [build-system]

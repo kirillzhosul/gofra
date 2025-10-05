@@ -6,6 +6,7 @@ from gofra.linker.command_composer import (
     LinkerCommandComposer,
     get_linker_command_composer_backend,
 )
+from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.linker.output_format import LinkerOutputFormat
 from gofra.linker.profile import LinkerProfile
 from gofra.targets.target import Target
@@ -20,7 +21,8 @@ def link_object_files(  # noqa: PLR0913
     additional_flags: list[str],
     libraries_search_paths: list[Path],
     profile: LinkerProfile,
-    cache_directory: Path,
+    cache_directory: Path | None = None,
+    executable_entry_point_symbol: str = LINKER_EXPECTED_ENTRY_POINT,
     *,
     linker_backend: LinkerCommandComposer | None = None,
     linker_executable: Path | None = None,
@@ -40,6 +42,7 @@ def link_object_files(  # noqa: PLR0913
         output_format=output_format,
         additional_flags=additional_flags,
         libraries_search_paths=libraries_search_paths,
+        executable_entry_point_symbol=executable_entry_point_symbol,
         profile=profile,
         linker_executable=linker_executable,
         cache_directory=cache_directory,

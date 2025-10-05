@@ -13,6 +13,7 @@
         "docs",
         "examples",
         "types",
-        "assembler"
+        "assembler",
+        "linker"
     ],
 }
