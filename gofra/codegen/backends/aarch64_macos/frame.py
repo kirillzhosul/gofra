@@ -4,7 +4,7 @@ from typing import NamedTuple
 from gofra.codegen.backends.aarch64_macos._context import (
     AARCH64CodegenContext,
 )
-from gofra.codegen.backends.aarch64_macos.alignment import align_to_highest_size
+from gofra.codegen.backends.alignment import align_to_highest_size
 from gofra.parser.variables import Variable
 
 # Size of frame head (FP, LR registers)
