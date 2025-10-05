@@ -2,105 +2,95 @@
 
 from __future__ import annotations
 
-import sys
-from platform import system as current_platform_system
-from shutil import which
-from subprocess import CalledProcessError, check_output
-from typing import TYPE_CHECKING
-
-from gofra.cli.output import cli_message
-
-from .exceptions import (
-    NoToolkitForAssemblingError,
-    UnsupportedBuilderOperatingSystemError,
-)
+from pathlib import Path
+from platform import system
+from subprocess import CompletedProcess, run
+from typing import TYPE_CHECKING, assert_never
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from collections.abc import Iterable
 
     from gofra.targets import Target
 
 
-class CommandExecutor:
-    verbose: bool
-
-    def __init__(self, *, verbose: bool) -> None:
-        self.verbose = verbose
-
-    def execute(self, command: list[str], description: str) -> None:
-        cli_message(
-            level="INFO",
-            text=f"{description}: `{' '.join(command)}`...",
-            verbose=self.verbose,
-        )
-        try:
-            check_output(command)
-        except CalledProcessError as e:
-            error_msg = f"Command failed with code {e.returncode}"
-            if description:
-                error_msg = f"{description} failed: {error_msg}"
-            cli_message("ERROR", error_msg)
-            sys.exit(1)
-
-
-def assemble_object(  # noqa: PLR0913
-    assembly_file: Path,
+def assemble_object_from_codegen_assembly(
+    assembly: Path,
     output: Path,
     target: Target,
     *,
-    build_cache_dir: Path,
-    verbose: bool,
+    debug_information: bool,
     additional_assembler_flags: list[str],
-) -> None:
-    """Convert given program into executable/library/etc using assembly and linker."""
-    _validate_toolkit_installation()
-
-    object_filepath = (build_cache_dir / output.name).with_suffix(
-        target.file_object_suffix,
+) -> CompletedProcess[bytes]:
+    """Convert given program into object using assembler for next linkage step."""
+    clang_command = compose_clang_assembler_command(
+        assembly,
+        output,
+        target=target,
+        debug_information=debug_information,
+        additional_assembler_flags=additional_assembler_flags,
     )
+    process = run(
+        clang_command,
+        check=False,
+        capture_output=False,
+    )
+    process.check_returncode()
+    return process
 
-    runner = CommandExecutor(verbose=verbose)
 
-    # Assembler is not cross-platform so we expect host has same architecture
-    match current_platform_system():
-        case "Darwin":
-            if target.triplet != "arm64-apple-darwin":
-                raise UnsupportedBuilderOperatingSystemError
-            assembler_flags = ["-arch", "arm64"]
-        case "Linux":
-            if target.triplet != "amd64-unknown-linux":
-                raise UnsupportedBuilderOperatingSystemError
-            assembler_flags = []
+# Path to binary with clang (e.g `CC`)
+# Both Apple Clang / base Clang is allowed
+CLANG_EXECUTABLE_PATH = Path("/usr/bin/clang")
+
+
+def compose_clang_assembler_command(  # noqa: PLR0913
+    machine_assembly_file: Path,
+    output_object_file: Path,
+    target: Target,
+    *,
+    additional_assembler_flags: Iterable[str],
+    debug_information: bool,
+    verbose: bool = False,
+) -> list[str]:
+    """Compose command for clang driver to be used as assembler."""
+    command = [str(CLANG_EXECUTABLE_PATH)]
+
+    match target.triplet:
+        case "arm64-apple-darwin":
+            command.extend(("-target", "arm64-apple-darwin"))
+        case "amd64-unknown-linux":
+            command.extend(("-target", "arm64-apple-darwin"))
+        case "amd64-unknown-windows":
+            msg = (
+                "Dont know how to assemble with clang for amd64-unknown-windows target"
+            )
+            raise NotImplementedError(msg)
         case _:
-            raise UnsupportedBuilderOperatingSystemError
+            assert_never(target.triplet)
 
-    command = [
-        "/usr/bin/as",
-        "-o",
-        str(object_filepath),
-        str(assembly_file),
-        *assembler_flags,
-        *additional_assembler_flags,
-    ]
-    runner.execute(command, description="Running assemble")
+    # Treat and pass input as an assembly file - we are in assembler module
+    # and use Clang only as assembler
+    command.extend(("-c", "-x", "assembler", str(machine_assembly_file)))
 
+    # Remove
+    command.append("-nostdlib")
 
-def _validate_toolkit_installation() -> None:
-    """Validate that the host system has all requirements installed (linker/assembler)."""
-    required_toolkit = ("as",)
-    toolkit = {(tk, which(tk) is not None) for tk in required_toolkit}
-    missing_toolkit = {tk for (tk, tk_is_installed) in toolkit if not tk_is_installed}
-    if missing_toolkit:
-        raise NoToolkitForAssemblingError(toolkit_required=missing_toolkit)
+    if debug_information:
+        command.append("-g")
+        dwarf_debug_producer = "Gofra with Clang assembler backend"
+        command.extend(("-dwarf-debug-producer", f'"{dwarf_debug_producer}"'))
 
+    # Emit all commands and information that clang runs
+    if verbose:
+        command.append("-v")
 
-def prepare_build_cache_directory(build_cache_directory: Path) -> None:
-    """Try to create and fill cache directory with required files."""
-    if build_cache_directory.exists():
-        return
+    ### Apple Clang specific
+    command.append("-integrated-as")
+    # Quite wrong assumption - but stick to that for now
+    is_apple_clang = system() == "Darwin"
+    if is_apple_clang and target.architecture == "ARM64":
+        command.extend(("-arch", "arm64"))
 
-    build_cache_directory.mkdir(exist_ok=False)
-
-    with (build_cache_directory / ".gitignore").open("w") as f:
-        f.write("# Do not include this newly generated build cache into git VCS\n")
-        f.write("*\n")
+    command.extend(additional_assembler_flags)
+    command.extend(("-o", str(output_object_file)))
+    return command

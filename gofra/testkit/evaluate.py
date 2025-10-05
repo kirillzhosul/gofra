@@ -2,7 +2,9 @@ import sys
 from pathlib import Path
 from subprocess import CalledProcessError, TimeoutExpired
 
-from gofra.assembler.assembler import assemble_object
+from gofra.assembler.assembler import (
+    assemble_object_from_codegen_assembly,
+)
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.cli.output import cli_message
 from gofra.codegen.generator import generate_code_for_assembler
@@ -44,15 +46,13 @@ def toolchain_assembly_executable(
     artifact_assembly_file = artifact_path.with_suffix(".s")
 
     generate_code_for_assembler(artifact_assembly_file, context, build_target)
-    assemble_object(
-        assembly_file=artifact_assembly_file,
+    assemble_object_from_codegen_assembly(
+        assembly=artifact_assembly_file,
         output=artifact_object_file,
+        debug_information=True,
         target=build_target,
-        verbose=args.verbose,
         # Probably, at some time this may became configurable for more complex tests.
         additional_assembler_flags=[],
-        # Artifacts removed by top level, here we delete only build cache.
-        build_cache_dir=cache_directory,
     )
 
     linker_process = link_object_files(

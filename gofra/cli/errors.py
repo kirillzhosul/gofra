@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from contextlib import contextmanager
+from subprocess import CalledProcessError
 
 from gofra.exceptions import GofraError
 
@@ -18,3 +19,9 @@ def cli_gofra_error_handler() -> Generator[None]:
             cli_message("ERROR", repr(ge))
         else:
             raise
+    except CalledProcessError as pe:
+        command = " ".join(pe.cmd)
+        cli_message(
+            "ERROR",
+            f"""Command process with cmd: {command} failed with exit code {pe.returncode}""",
+        )

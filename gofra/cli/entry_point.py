@@ -4,7 +4,10 @@ import sys
 from platform import platform, python_implementation, python_version
 from typing import TYPE_CHECKING
 
-from gofra.assembler.assembler import assemble_object, prepare_build_cache_directory
+from gofra.assembler.assembler import (
+    assemble_object_from_codegen_assembly,
+)
+from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.codegen.generator import generate_code_for_assembler
 from gofra.consts import GOFRA_ENTRY_POINT
@@ -182,13 +185,12 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         args.target.file_object_suffix,
     )
 
-    assemble_object(
-        assembly_file=assembly_filepath,
-        verbose=args.verbose,
+    assemble_object_from_codegen_assembly(
+        assembly=assembly_filepath,
         output=object_filepath,
         target=args.target,
         additional_assembler_flags=args.assembler_flags,
-        build_cache_dir=args.build_cache_dir,
+        debug_information=args.debug_symbols,
     )
 
     if args.delete_build_cache:

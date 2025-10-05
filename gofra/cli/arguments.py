@@ -77,7 +77,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         )
 
     assert args.linker_backend in ("gnu-ld", "apple-ld", None)
-    assert args.profile in ("debug", "production")
+    assert args.linker_profile in ("debug", "production")
 
     assert args.target in (
         "amd64-unknown-linux",
@@ -91,10 +91,6 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
     output_filepath = process_output_path(source_filepaths, args, target)
     include_paths = process_include_paths(args)
     definitions = process_definitions(args)
-
-    assembler_flags = args.assembler
-    if bool(args.debug_symbols):
-        assembler_flags += ["-g"]
 
     linker_executable = Path(args.linker_executable) if args.linker_executable else None
     linker_libraries_search_paths = [
@@ -127,7 +123,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         skip_typecheck=bool(args.skip_typecheck),
         include_paths=include_paths,
         verbose=bool(args.verbose),
-        assembler_flags=assembler_flags,
+        assembler_flags=args.assembler,
         linker_profile=linker_profile,
         # Optimizer
         optimizer=optimizer,

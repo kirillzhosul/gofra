@@ -224,7 +224,7 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
     if debug_do_not_optimize:
         command.append("-O0")
 
-    # Skips DFARF/STABS information
+    # Skips DWARF/STABS information
     if strip_debug_symbols:
         command.append("-S")
 
