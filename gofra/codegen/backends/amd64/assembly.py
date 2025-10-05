@@ -249,7 +249,7 @@ def function_call(
 def store_into_memory_from_stack_arguments(context: AMD64CodegenContext) -> None:
     """Store value from into memory pointer, pointer and value acquired from stack."""
     pop_cells_from_stack_into_registers(context, "rax", "rbx")
-    context.write("movq rax, (rbx)")
+    context.write("movq %rax, (%rbx)")
 
 
 def load_memory_from_stack_arguments(context: AMD64CodegenContext) -> None:
