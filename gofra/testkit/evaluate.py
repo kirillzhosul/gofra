@@ -11,6 +11,9 @@ from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from gofra.gofra import process_input_file
 from gofra.lexer.tokens import TokenLocation
+from gofra.linker.linker import link_object_files
+from gofra.linker.output_format import LinkerOutputFormat
+from gofra.linker.profile import LinkerProfile
 from gofra.preprocessor.macros import registry_from_raw_definitions
 from gofra.preprocessor.macros.registry import MacrosRegistry
 from gofra.targets import Target
@@ -37,7 +40,7 @@ def toolchain_assembly_executable(
         functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
     )
     artifact_path = cache_directory / f"{path.with_suffix('').name}"
-    assemble_program(
+    objects = assemble_program(
         context,
         artifact_path,
         output_format=build_format,
@@ -45,15 +48,22 @@ def toolchain_assembly_executable(
         verbose=args.verbose,
         # Probably, at some time this may became configurable for more complex tests.
         additional_assembler_flags=[],
-        additional_linker_flags=[],
-        # This must not fail, and generally will just decrease binary size
-        # which is not reasonable for testkit.
-        link_with_system_libraries=True,
         # Artifacts removed by top level, here we delete only build cache.
         delete_build_cache_after_compilation=args.delete_build_cache,
         build_cache_dir=cache_directory,
     )
-
+    assert objects
+    linker_proccess = link_object_files(
+        objects=objects,
+        target=build_target,
+        output=artifact_path,
+        libraries=[],
+        output_format=LinkerOutputFormat.EXECUTABLE,
+        additional_flags=[],
+        libraries_search_paths=[],
+        profile=LinkerProfile.DEBUG,
+    )
+    linker_proccess.check_returncode()
     return artifact_path
 
 

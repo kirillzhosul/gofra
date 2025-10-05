@@ -41,6 +41,7 @@ from gofra.codegen.lir.ops import (
     LIRUnconditionalJumpToLabel,
 )
 from gofra.codegen.lir.registers import LIRVirtualRegister
+from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.targets.target import Target
 
 from ._context import AARCH64CodegenContext
@@ -79,7 +80,7 @@ def generate_aarch64_lir_macos_backend(
     context = AARCH64CodegenContext(fd=fd, strings={})
     lir = translate_hir_to_lir(
         program,
-        system_entry_point_name="_start",
+        system_entry_point_name=LINKER_EXPECTED_ENTRY_POINT,
         virtual_register_allocator=context.vreg_allocator,
     )
     aarch64_macos_executable_functions(context, lir)

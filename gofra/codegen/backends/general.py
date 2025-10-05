@@ -4,7 +4,6 @@ from typing import Literal
 
 from gofra.parser.intrinsics import Intrinsic
 
-CODEGEN_ENTRY_POINT_SYMBOL = "_start"
 CODEGEN_GOFRA_CONTEXT_LABEL = ".L_%s_%s"
 
 type CODEGEN_GOFRA_ON_STACK_OPERATIONS = Literal[

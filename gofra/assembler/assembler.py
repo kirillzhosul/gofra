@@ -3,18 +3,14 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from platform import system as current_platform_system
 from shutil import which
 from subprocess import CalledProcessError, check_output
 from typing import TYPE_CHECKING, Literal
 
-from gofra.assembler.pkgconfig import get_pkg_config_libraries_linker_flags
 from gofra.cli.output import cli_message
 from gofra.codegen import generate_code_for_assembler
-from gofra.codegen.backends.general import CODEGEN_ENTRY_POINT_SYMBOL
 from gofra.codegen.get_backend import get_backend_for_target
-from gofra.feature_flags import FEATURE_RESOLVE_LINKER_LIBS_WITH_PKG_CONFIG
 
 from .exceptions import (
     NoToolkitForAssemblingError,
@@ -22,6 +18,8 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from gofra.context import ProgramContext
     from gofra.targets import Target
 
@@ -58,11 +56,9 @@ def assemble_program(  # noqa: PLR0913
     *,
     build_cache_dir: Path,
     verbose: bool,
-    additional_linker_flags: list[str],
     additional_assembler_flags: list[str],
     delete_build_cache_after_compilation: bool,
-    link_with_system_libraries: bool,
-) -> None:
+) -> list[Path] | None:
     """Convert given program into executable/library/etc using assembly and linker."""
     _validate_toolkit_installation()
     _prepare_build_cache_directory(build_cache_dir)
@@ -77,7 +73,7 @@ def assemble_program(  # noqa: PLR0913
 
     if output_format == "assembly":
         assembly_filepath.replace(output)
-        return
+        return None
 
     object_filepath = _assemble_object_file(
         target,
@@ -91,22 +87,14 @@ def assemble_program(  # noqa: PLR0913
         object_filepath.replace(output)
         if delete_build_cache_after_compilation:
             assembly_filepath.unlink()
-        return
-
-    assert output_format in ("executable", "library")
-    _link_final_output(
-        output,
-        target,
-        object_filepath,
-        output_format=output_format,
-        link_with_system_libraries=link_with_system_libraries,
-        additional_linker_flags=additional_linker_flags,
-        verbose=verbose,
-    )
+        return None
 
     if delete_build_cache_after_compilation:
         assembly_filepath.unlink()
-        object_filepath.unlink()
+        # TODO(@kirillzhosul): After refactoring unlining object file is not more implemented
+        # object_filepath.unlink()
+
+    return [object_filepath]
 
 
 def _prepare_build_cache_directory(build_cache_directory: Path) -> None:
@@ -119,77 +107,6 @@ def _prepare_build_cache_directory(build_cache_directory: Path) -> None:
     with (build_cache_directory / ".gitignore").open("w") as f:
         f.write("# Do not include this newly generated build cache into git VCS\n")
         f.write("*\n")
-
-
-def _link_final_output(  # noqa: PLR0913
-    output: Path,
-    target: Target,
-    o_filepath: Path,
-    output_format: Literal["executable", "library"],
-    additional_linker_flags: list[str],
-    *,
-    link_with_system_libraries: bool,
-    verbose: bool,
-) -> None:
-    """Use linker to link object file into executable."""
-    target_linker_flags: list[str] = []
-
-    if FEATURE_RESOLVE_LINKER_LIBS_WITH_PKG_CONFIG:
-        libraries = [
-            f.removeprefix("-l") for f in additional_linker_flags if f.startswith("-l")
-        ]
-
-        for library in libraries:
-            pkconfig_result = get_pkg_config_libraries_linker_flags(
-                library,
-                verbose=verbose,
-            )
-            if not pkconfig_result:
-                continue
-            additional_linker_flags.extend(pkconfig_result)
-    match current_platform_system():
-        case "Darwin":
-            assert target.triplet == "arm64-apple-darwin"
-            target_linker_flags += ["-arch", "arm64"]
-
-            # TODO(@kirillzhosul): Review default linkage with system library (libc by default)
-            if link_with_system_libraries:
-                system_sdk = Path(
-                    check_output(
-                        ["/usr/bin/xcrun", "-sdk", "macosx", "--show-sdk-path"],
-                        text=True,
-                    ).strip(),
-                )
-                target_linker_flags += ["-lSystem", "-syslibroot", str(system_sdk)]
-
-            if output_format == "library":
-                target_linker_flags += ["-dylib"]
-        case "Linux":
-            assert target.triplet == "amd64-unknown-linux"
-            assert not link_with_system_libraries, (
-                "`--link-system is not supported on Linux target, consider removing that flag for now."
-            )
-            assert output_format == "executable", (
-                "Libraries on Linux is not implemented"
-            )
-        case _:
-            raise UnsupportedBuilderOperatingSystemError
-
-    linker_flags = [
-        *target_linker_flags,
-        *additional_linker_flags,
-    ]
-
-    if output_format == "executable":
-        linker_flags += ["-e", CODEGEN_ENTRY_POINT_SYMBOL]
-
-    command = ["/usr/bin/ld", "-o", str(output), str(o_filepath), *linker_flags]
-    cli_message(
-        level="INFO",
-        text=f"Running linker command: `{' '.join(command)}`",
-        verbose=verbose,
-    )
-    check_output(command)
 
 
 def _assemble_object_file(  # noqa: PLR0913
