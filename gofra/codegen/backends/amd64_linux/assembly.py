@@ -162,6 +162,8 @@ def function_end_with_epilogue(
     if has_return_value:
         pop_cells_from_stack_into_registers(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
 
+    context.write("movq %rbp, %rsp")
+    context.write("popq %rbp")
     context.write("retq")
 
 
