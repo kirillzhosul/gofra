@@ -62,6 +62,7 @@ def toolchain_assembly_executable(
         additional_flags=[],
         libraries_search_paths=[],
         profile=LinkerProfile.DEBUG,
+        cache_directory=cache_directory,
     )
     linker_proccess.check_returncode()
     return artifact_path
