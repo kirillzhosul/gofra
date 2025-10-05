@@ -13,13 +13,14 @@ from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
+from gofra.types.primitive.void import VoidType
 
 from ._context import AMD64CodegenContext
 from .assembly import (
-    call_function_block,
     drop_cells_from_stack,
     evaluate_conditional_block_on_stack_with_jump,
     function_begin_with_prologue,
+    function_call,
     function_end_with_epilogue,
     initialize_static_data_section,
     ipc_syscall_linux,
@@ -88,7 +89,9 @@ def amd64_linux_operator_instructions(
             assert isinstance(operator.operand, tuple)
             local_variable, _ = operator.operand
             if local_variable in owner_function.variables:
-                raise NotImplementedError("Local frame variables not implemented on amd64!")
+                raise NotImplementedError(
+                    "Local frame variables not implemented on amd64!"
+                )
             push_static_address_onto_stack(context, local_variable)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
@@ -122,14 +125,20 @@ def amd64_linux_operator_instructions(
 
             function = program.functions[operator.operand]
             function_name = function.external_definition_link_to or function.name
-            call_function_block(
+            function_call(
                 context,
-                function_name=function_name,
-                abi_ffi_push_retval_onto_stack=function.abi_ffi_push_retval_onto_stack(),
-                abi_ffi_arguments_count=function.abi_ffi_arguments_count(),
+                name=function_name,
+                type_contract_in=function.type_contract_in,
+                type_contract_out=function.type_contract_out,
             )
         case OperatorType.FUNCTION_RETURN:
-            function_end_with_epilogue(context)
+            function_end_with_epilogue(
+                context,
+                has_return_value=not isinstance(
+                    owner_function.type_contract_out,
+                    VoidType,
+                ),
+            )
         case OperatorType.TYPECAST:
             # Skip that as it is typechecker only.
             pass
@@ -231,12 +240,16 @@ def amd64_linux_executable_functions(
         ), "Codegen does not supports global linker symbols that has type contracts"
         function_begin_with_prologue(
             context,
+            arguments_count=len(function.type_contract_in),
             function_name=function.name,
             as_global_linker_symbol=function.is_global_linker_symbol,
         )
 
         amd64_linux_instruction_set(context, function.source, program, function)
-        function_end_with_epilogue(context)
+        function_end_with_epilogue(
+            context,
+            has_return_value=not isinstance(function.type_contract_out, VoidType),
+        )
 
 
 def amd64_linux_program_entry_point(context: AMD64CodegenContext) -> None:
@@ -245,15 +258,16 @@ def amd64_linux_program_entry_point(context: AMD64CodegenContext) -> None:
     function_begin_with_prologue(
         context,
         function_name=LINKER_EXPECTED_ENTRY_POINT,
+        arguments_count=0,
         as_global_linker_symbol=True,
     )
 
     # Prepare and execute main function
-    call_function_block(
+    function_call(
         context,
-        function_name=GOFRA_ENTRY_POINT,
-        abi_ffi_push_retval_onto_stack=False,
-        abi_ffi_arguments_count=0,
+        name=GOFRA_ENTRY_POINT,
+        type_contract_in=[],
+        type_contract_out=VoidType(),
     )
 
     # Call syscall to exit without accessing protected system memory.

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, assert_never
+
+from gofra.types._base import Type
+from gofra.types.primitive.void import VoidType
 
 from .registers import (
     AMD64_LINUX_ABI_ARGUMENTS_REGISTERS,
@@ -148,9 +152,17 @@ def ipc_syscall_linux(
         push_register_onto_stack(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
 
 
-def function_end_with_epilogue(context: AMD64CodegenContext) -> None:
+def function_end_with_epilogue(
+    context: AMD64CodegenContext,
+    *,
+    has_return_value: bool,
+) -> None:
     """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
-    context.write("ret")
+    if has_return_value:
+        context.write("// C-FFI retval")
+        pop_cells_from_stack_into_registers(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
+
+    context.write("retq")
 
 
 def function_begin_with_prologue(
@@ -158,6 +170,7 @@ def function_begin_with_prologue(
     *,
     function_name: str,
     as_global_linker_symbol: bool,
+    arguments_count: int,
 ) -> None:
     """Begin an function symbol with prologue with preparing required (like stack-pointer).
 
@@ -166,29 +179,52 @@ def function_begin_with_prologue(
     if as_global_linker_symbol:
         context.fd.write(f".global {function_name}\n")
     context.fd.write(f"{function_name}:\n")
+    if arguments_count:
+        registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:arguments_count]
+        context.write("// C-FFI arguments")
+        for register in registers:
+            push_register_onto_stack(context, register)
 
 
-def call_function_block(
+def function_call(
     context: AMD64CodegenContext,
-    function_name: str,
     *,
-    abi_ffi_push_retval_onto_stack: bool,
-    abi_ffi_arguments_count: int,
+    name: str,
+    type_contract_in: Sequence[Type],
+    type_contract_out: Type,
 ) -> None:
-    """Call an function with preparing required fields (like stack-pointer).
+    """Call an function using C ABI (Gofra native and C-FFI both functions).
 
-    Also allows to call ABI/FFI function with providing arguments and return value (retval) via:
-    `abi_ffi_push_retval_onto_stack` / `abi_ffi_arguments_count`
+    As Gofra under the hood uses C call convention for functions, this simplifies differences between C and Gofra calls.
     """
-    assert abi_ffi_arguments_count >= 0, "FFI arguments count cannot go negative"
-    if abi_ffi_arguments_count:
-        arguments = abi_ffi_arguments_count
-        registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:arguments][::-1]
-        pop_cells_from_stack_into_registers(context, *registers)
+    i64_arguments_count = len(type_contract_in)
+    store_return_value = not isinstance(type_contract_out, VoidType)
 
-    context.write(f"call {function_name}")
+    argument_registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:i64_arguments_count][::-1]
+    if i64_arguments_count > len(argument_registers):
+        msg = (
+            f"C-FFI function call with {i64_arguments_count} arguments not supported. "
+            f"Maximum {len(argument_registers)} register arguments supported. "
+            "Stack argument passing not implemented."
+        )
+        raise NotImplementedError(msg)
 
-    if abi_ffi_push_retval_onto_stack:
+    if i64_arguments_count < 0:
+        msg = f"Tried to call function `{name}` with negative arguments count"
+        raise ValueError(msg)
+
+    if i64_arguments_count:
+        context.write("// C-FFI arguments")
+        pop_cells_from_stack_into_registers(context, *argument_registers)
+
+    context.write(
+        f"callq {name} // C-FFI {'' if store_return_value else 'no retval'}",
+    )
+
+    if store_return_value:
+        context.write(
+            f"// {name} return value (defined as type {type_contract_out})",
+        )
         push_register_onto_stack(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
 
 
