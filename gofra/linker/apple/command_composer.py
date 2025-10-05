@@ -52,7 +52,11 @@ def compose_apple_linker_command(  # noqa: PLR0913
         LinkerOutputFormat.OBJECT: AppleLinkerOutputFormat.OBJECT_FILE,
     }[output_format]
 
-    if macho_format == AppleLinkerOutputFormat.EXECUTABLE:
+    is_system_library_dependant = macho_format in (
+        AppleLinkerOutputFormat.EXECUTABLE,
+        AppleLinkerOutputFormat.SHARED_LIBRARY,
+    )
+    if is_system_library_dependant:
         libraries.append("System")
 
     syslibroot = None
@@ -179,7 +183,10 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
         command.extend(("-arch", architecture))
 
     # Main executable entry point
-    if executable_entry_point_symbol:
+    if (
+        executable_entry_point_symbol
+        and output_format == AppleLinkerOutputFormat.EXECUTABLE
+    ):
         command.extend(("-e", executable_entry_point_symbol))
 
     # Output format
@@ -236,7 +243,7 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
         command.extend(("-macos_version_min", str(round(ios_version_min, 2))))
 
     # Optimizations
-    if optim_dead_strip:
+    if optim_dead_strip and output_format != AppleLinkerOutputFormat.OBJECT_FILE:
         command.append("-dead_strip")  # DCE on Linker stage
 
     return command

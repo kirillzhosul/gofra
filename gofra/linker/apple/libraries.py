@@ -35,4 +35,5 @@ def syslibroot_is_required(
     output_format: AppleLinkerOutputFormat,
 ) -> bool:
     """Syslibroot is not required for non executables and not linking with system."""
-    return "System" in libraries or output_format == AppleLinkerOutputFormat.EXECUTABLE
+    _ = output_format
+    return "System" in libraries
