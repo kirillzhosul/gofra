@@ -97,7 +97,7 @@ def amd64_linux_operator_instructions(
 
                 context.write(
                     "movq %rbp, %rax",
-                    f"subq %rax, #{current_offset}",
+                    f"subq ${current_offset}, rax",
                 )
                 push_register_onto_stack(context, register="rax")
                 return

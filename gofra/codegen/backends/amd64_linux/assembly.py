@@ -255,9 +255,16 @@ def perform_operation_onto_stack(
         case "*":
             context.write("mulq rbx, rax")
         case "//":
-            raise NotImplementedError
+            context.write(
+                "movq $0, rdx",
+                "idivq rbx",
+            )
         case "%":
-            raise NotImplementedError
+            context.write(
+                "movq $0, rdx",
+                "idivq rbx",
+                "movq rdx, rax",
+            )
         case "&&" | "||" | "|" | "&" | ">>" | "<<":
             raise NotImplementedError
         case "++":
