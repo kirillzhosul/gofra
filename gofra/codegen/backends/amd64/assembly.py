@@ -34,7 +34,7 @@ def drop_cells_from_stack(context: AMD64CodegenContext, *, cells_count: int) -> 
     """
     assert cells_count > 0, "Tried to drop negative cells count from stack"
     for _ in range(cells_count):
-        context.write("popq rax")  # Use zero register?
+        context.write("popq %rax")  # Use zero register?
 
 
 def pop_cells_from_stack_into_registers(
@@ -48,7 +48,7 @@ def pop_cells_from_stack_into_registers(
     assert registers, "Expected registers to store popped result into!"
 
     for register in registers:
-        context.write(f"popq {register}")
+        context.write(f"popq %{register}")
 
 
 def push_register_onto_stack(
@@ -56,7 +56,7 @@ def push_register_onto_stack(
     register: AMD64_GP_REGISTERS,
 ) -> None:
     """Store given register onto stack under current stack pointer."""
-    context.write(f"pushq {register}")
+    context.write(f"pushq %{register}")
 
 
 def store_integer_into_register(
@@ -65,7 +65,7 @@ def store_integer_into_register(
     value: int,
 ) -> None:
     """Store given value into given register (as QWORD)."""
-    context.write(f"movq ${value}, {register}")
+    context.write(f"movq ${value}, %{register}")
 
 
 def push_integer_onto_stack(
@@ -90,7 +90,7 @@ def push_static_address_onto_stack(
     segment: str,
 ) -> None:
     """Push executable static memory address onto stack with page dereference."""
-    context.write(f"leaq {segment}(rip), rax")
+    context.write(f"leaq {segment}(%rip), %rax")
     push_register_onto_stack(context, register="rax")
 
 
@@ -255,7 +255,7 @@ def store_into_memory_from_stack_arguments(context: AMD64CodegenContext) -> None
 def load_memory_from_stack_arguments(context: AMD64CodegenContext) -> None:
     """Load memory as value using arguments from stack."""
     pop_cells_from_stack_into_registers(context, "rax")
-    context.write("movq (rax), rax")
+    context.write("movq (%rax), %rax")
     push_register_onto_stack(context, "rax")
 
 
@@ -270,28 +270,28 @@ def perform_operation_onto_stack(
 
     match operation:
         case "+":
-            context.write("addq rbx, rax")
+            context.write("addq %rbx, %rax")
         case "-":
-            context.write("subq rax, rbx")
+            context.write("subq %rax, %rbx")
         case "*":
-            context.write("mulq rbx, rax")
+            context.write("mulq %rbx, %rax")
         case "//":
             context.write(
-                "movq $0, rdx",
-                "idivq rbx",
+                "movq $0, %rdx",
+                "idivq %rbx",
             )
         case "%":
             context.write(
-                "movq $0, rdx",
-                "idivq rbx",
-                "movq rdx, rax",
+                "movq $0, %rdx",
+                "idivq %rbx",
+                "movq %rdx, %rax",
             )
         case "&&" | "||" | "|" | "&" | ">>" | "<<":
             raise NotImplementedError
         case "++":
-            context.write("incq rax")
+            context.write("incq %rax")
         case "--":
-            context.write("decq rax")
+            context.write("decq %rax")
         case "!=" | ">=" | "<=" | "<" | ">" | "==":
             logic_op = {
                 "!=": "ne",
@@ -303,8 +303,8 @@ def perform_operation_onto_stack(
             }
 
             context.write(
-                "cmpq rbx, rax",
-                "xorq rax, rax",
+                "cmpq %rbx, %rax",
+                "xorq %rax, %rax",
                 f"set{logic_op[operation]}b al",
             )
         case _:
@@ -322,6 +322,6 @@ def evaluate_conditional_block_on_stack_with_jump(
     """
     pop_cells_from_stack_into_registers(context, "rax")
     context.write(
-        "cmpq $0, rax",
+        "cmpq $0, %rax",
         f"je {jump_over_label}",
     )
