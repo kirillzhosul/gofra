@@ -56,17 +56,12 @@ def compose_clang_assembler_command(  # noqa: PLR0913
     command = [str(CLANG_EXECUTABLE_PATH)]
 
     match target.triplet:
-        case "arm64-apple-darwin":
-            command.extend(("-target", "arm64-apple-darwin"))
-        case "amd64-unknown-linux":
-            command.extend(("-target", "arm64-apple-darwin"))
-        case "amd64-unknown-windows":
-            msg = (
-                "Dont know how to assemble with clang for amd64-unknown-windows target"
-            )
-            raise NotImplementedError(msg)
+        case "arm64-apple-darwin" | "amd64-unknown-linux" | "amd64-unknown-windows":
+            clang_target = target.triplet
         case _:
             assert_never(target.triplet)
+
+    command.extend(("-target", clang_target))
 
     # Treat and pass input as an assembly file - we are in assembler module
     # and use Clang only as assembler
