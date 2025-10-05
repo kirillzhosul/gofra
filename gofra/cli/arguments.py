@@ -87,7 +87,7 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         "amd64-unknown-windows",
         None,
     )
-    target: Target = Target.from_triplet(args.target) if args.target else infer_target()
+    target = Target.from_triplet(args.target) if args.target else infer_target()
 
     source_filepaths = [Path(f) for f in args.source_files]
     output_filepath = process_output_path(source_filepaths, args, target)
