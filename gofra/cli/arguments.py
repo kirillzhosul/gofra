@@ -195,13 +195,6 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--preprocess-only",
-        "-pp",
-        default=False,
-        action="store_true",
-        help="If passed will emit preprocessed text of an source",
-    )
-    parser.add_argument(
         "--version",
         default=False,
         action="store_true",
@@ -284,17 +277,6 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--define",
-        "-D",
-        required=False,
-        help="Define an macro (default value is '1') and propagate to all input source files",
-        action="append",
-        nargs="?",
-        dest="definitions",
-        default=[],
-    )
-
-    parser.add_argument(
         "--assembler",
         "-Af",
         required=False,
@@ -337,9 +319,36 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         help="Configures some underlying tools to use that profile. TBD",
     )
 
+    _inject_preprocessor_group(parser)
     _inject_linker_group(parser)
     _inject_optimizer_group(parser)
     return parser
+
+
+def _inject_preprocessor_group(parser: ArgumentParser) -> None:
+    """Construct and inject argument group with preprocessor options into given parser."""
+    group = parser.add_argument_group(
+        title="Preprocessor",
+        description="Flags for the preprocessor.",
+    )
+    group.add_argument(
+        "--preprocess-only",
+        "--pp",
+        "-P",
+        default=False,
+        action="store_true",
+        help="If passed will emit preprocessed text of an source",
+    )
+    group.add_argument(
+        "--define",
+        "-D",
+        required=False,
+        help="Define an macro (default value is '1') and propagate to all input source files",
+        action="append",
+        nargs="?",
+        dest="definitions",
+        default=[],
+    )
 
 
 def _inject_linker_group(parser: ArgumentParser) -> None:
@@ -350,11 +359,8 @@ def _inject_linker_group(parser: ArgumentParser) -> None:
     )
 
     group.add_argument(
-        "--linker-library-search-path",
-        "--linker-lib-search-path",
         "--library-search-path",
-        "--lib-search-path",
-        "-Lf",
+        "-L",
         dest="linker_libraries_search_paths",
         required=False,
         help="Paths where to search for linker libraries",
@@ -375,7 +381,6 @@ def _inject_linker_group(parser: ArgumentParser) -> None:
     )
 
     group.add_argument(
-        "--linker-no-pkgconfig",
         "--no-pkgconfig",
         dest="linker_resolve_libraries_with_pkconfig",
         default=True,
@@ -383,11 +388,9 @@ def _inject_linker_group(parser: ArgumentParser) -> None:
         help="Disable usage of `pkg-confg` to resolve linker search paths if possible",
     )
     group.add_argument(
-        "--linker-library",
-        "--linker-lib",
         "--library",
         "--lib",
-        "-lf",
+        "-l",
         dest="linker_libraries",
         required=False,
         help="Libraries against which to link",
