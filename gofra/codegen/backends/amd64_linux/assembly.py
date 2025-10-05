@@ -159,7 +159,6 @@ def function_end_with_epilogue(
 ) -> None:
     """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
     if has_return_value:
-        context.write("// C-FFI retval")
         pop_cells_from_stack_into_registers(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
 
     context.write("retq")
@@ -181,7 +180,6 @@ def function_begin_with_prologue(
     context.fd.write(f"{function_name}:\n")
     if arguments_count:
         registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:arguments_count]
-        context.write("// C-FFI arguments")
         for register in registers:
             push_register_onto_stack(context, register)
 
@@ -214,17 +212,11 @@ def function_call(
         raise ValueError(msg)
 
     if i64_arguments_count:
-        context.write("// C-FFI arguments")
         pop_cells_from_stack_into_registers(context, *argument_registers)
 
-    context.write(
-        f"callq {name} // C-FFI {'' if store_return_value else 'no retval'}",
-    )
+    context.write(f"callq {name}")
 
     if store_return_value:
-        context.write(
-            f"// {name} return value (defined as type {type_contract_out})",
-        )
         push_register_onto_stack(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
 
 
