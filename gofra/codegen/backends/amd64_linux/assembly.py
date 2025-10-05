@@ -162,8 +162,6 @@ def function_end_with_epilogue(
     if has_return_value:
         pop_cells_from_stack_into_registers(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
 
-    context.write("movq %rbp, %rsp")
-    context.write("popq %rbp")
     context.write("retq")
 
 
@@ -188,12 +186,7 @@ def function_begin_with_prologue(
             push_register_onto_stack(context, register)
 
     offsets = build_local_variables_frame_offsets(local_variables)
-    context.write(
-        "pushq %rbp",
-        "movq %rsp, %rbp",
-        "andq $-16, %rsp",
-        f"subq    ${offsets.local_space_size}, %rsp",
-    )
+    _ = offsets
 
 
 def function_call(
