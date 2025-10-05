@@ -59,7 +59,7 @@ def amd64_linux_instruction_set(
     context: AMD64CodegenContext,
     operators: Sequence[Operator],
     program: ProgramContext,
-    owner_function_name: str,
+    owner_function: Function,
 ) -> None:
     """Write executable instructions from given operators."""
     for idx, operator in enumerate(operators):
@@ -68,7 +68,7 @@ def amd64_linux_instruction_set(
             operator,
             program,
             idx,
-            owner_function_name,
+            owner_function,
         )
         if operator.type == OperatorType.FUNCTION_RETURN:
             break
@@ -79,30 +79,33 @@ def amd64_linux_operator_instructions(
     operator: Operator,
     program: ProgramContext,
     idx: int,
-    owner_function_name: str,
+    owner_function: Function,
 ) -> None:
     match operator.type:
         case OperatorType.INTRINSIC:
             amd64_linux_intrinsic_instructions(context, operator)
         case OperatorType.PUSH_MEMORY_POINTER:
             assert isinstance(operator.operand, tuple)
-            push_static_address_onto_stack(context, operator.operand[0])
+            local_variable, _ = operator.operand
+            if local_variable in owner_function.variables:
+                raise NotImplementedError("Local frame variables not implemented on amd64!")
+            push_static_address_onto_stack(context, local_variable)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
         case OperatorType.DO | OperatorType.IF:
             assert isinstance(operator.jumps_to_operator_idx, int)
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (
-                owner_function_name,
+                owner_function.name,
                 operator.jumps_to_operator_idx,
             )
             evaluate_conditional_block_on_stack_with_jump(context, label)
         case OperatorType.END | OperatorType.WHILE:
             # This also should be refactored into `assembly` layer
-            label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function_name, idx)
+            label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
             if isinstance(operator.jumps_to_operator_idx, int):
                 label_to = CODEGEN_GOFRA_CONTEXT_LABEL % (
-                    owner_function_name,
+                    owner_function.name,
                     operator.jumps_to_operator_idx,
                 )
                 context.write(f"jmp {label_to}")
@@ -232,7 +235,7 @@ def amd64_linux_executable_functions(
             as_global_linker_symbol=function.is_global_linker_symbol,
         )
 
-        amd64_linux_instruction_set(context, function.source, program, function.name)
+        amd64_linux_instruction_set(context, function.source, program, function)
         function_end_with_epilogue(context)
 
 
