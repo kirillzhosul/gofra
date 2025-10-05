@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.codegen.backends.amd64_linux.frame import build_local_variables_frame_offsets
 from gofra.types._base import Type
 from gofra.types.primitive.void import VoidType
 
@@ -170,6 +171,7 @@ def function_begin_with_prologue(
     function_name: str,
     as_global_linker_symbol: bool,
     arguments_count: int,
+    local_variables: Mapping[str, Variable],
 ) -> None:
     """Begin an function symbol with prologue with preparing required (like stack-pointer).
 
@@ -182,6 +184,14 @@ def function_begin_with_prologue(
         registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:arguments_count]
         for register in registers:
             push_register_onto_stack(context, register)
+
+    offsets = build_local_variables_frame_offsets(local_variables)
+    context.write(
+        "pushq %rbp",
+        "movq %rsp, %rbp",
+        "andq $-16, %rsp",
+        f"subq    ${offsets.local_space_size}, %rsp",
+    )
 
 
 def function_call(

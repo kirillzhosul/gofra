@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import IO, TYPE_CHECKING, assert_never
 
+from gofra.codegen.backends.amd64_linux.frame import build_local_variables_frame_offsets
 from gofra.codegen.backends.general import (
     CODEGEN_GOFRA_CONTEXT_LABEL,
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
@@ -89,9 +90,17 @@ def amd64_linux_operator_instructions(
             assert isinstance(operator.operand, tuple)
             local_variable, _ = operator.operand
             if local_variable in owner_function.variables:
-                raise NotImplementedError(
-                    "Local frame variables not implemented on amd64!"
+                # Calculate negative offset from X29
+                current_offset = build_local_variables_frame_offsets(
+                    owner_function.variables,
+                ).offsets[local_variable]
+
+                context.write(
+                    "movq %rbp, %rax",
+                    f"subq %rax, #{current_offset}",
                 )
+                push_register_onto_stack(context, register="rax")
+                return
             push_static_address_onto_stack(context, local_variable)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
@@ -232,14 +241,12 @@ def amd64_linux_executable_functions(
         [*program.functions.values(), program.entry_point],
     )
     for function in functions:
-        if function.variables:
-            msg = "That target codegen does not support local variables yet."
-            raise NotImplementedError(msg)
         assert not function.is_global_linker_symbol or (
             not function.type_contract_in and not function.type_contract_out
         ), "Codegen does not supports global linker symbols that has type contracts"
         function_begin_with_prologue(
             context,
+            local_variables=function.variables,
             arguments_count=len(function.type_contract_in),
             function_name=function.name,
             as_global_linker_symbol=function.is_global_linker_symbol,
@@ -260,6 +267,7 @@ def amd64_linux_program_entry_point(context: AMD64CodegenContext) -> None:
         function_name=LINKER_EXPECTED_ENTRY_POINT,
         arguments_count=0,
         as_global_linker_symbol=True,
+        local_variables={},
     )
 
     # Prepare and execute main function
