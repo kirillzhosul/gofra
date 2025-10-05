@@ -117,7 +117,7 @@
 <p>To do that assembler after code generation at linker stage should be acknowledged of external libraries (via CLI linker flags) and Gofra source code should specify which functions being external for FFI.</p>
 <h1 id="extern-marker"><code>extern</code> marker</h1>
 <p>Functions marked with <code>extern</code> keyword/marker will be treated as externally defined via FFI for example external function <code>puts</code> from <code>libc</code> is declared as:</p>
-<pre><code class="language-gofra">extern func int _puts[ptr]
+<pre><code class="language-gofra">extern func int _puts[*char[]]
 </code></pre>
 <p>This is written according to <code>libc</code> library <code>C</code> interface: </p>
 <pre><code class="language-C">int puts(const char *s){ ... }
@@ -135,9 +135,9 @@
 <code>-L=-lraylib -L=-L/opt/homebrew/lib</code></p>
 <h1 id="additional-flags">Additional flags: @</h1>
 <p>By using <code>@</code> flag you may specify for example against which function to link your external:</p>
-<pre><code class="language-gofra">extern func int _puts[ptr]@link[_puts]
+<pre><code class="language-gofra">extern func int _puts[*char[]*]@link[_puts]
 </code></pre>
-<p>In that case is straighforward same name, but you can change that, and </p></div>
+<p>In that case is straightforward same name, but you can change that, and </p></div>
             </div>
         </div>
 

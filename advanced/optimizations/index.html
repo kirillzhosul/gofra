@@ -132,7 +132,7 @@ optimizations may be enabled via CLI using <code>-O{N}</code> flag with desired 
 <p>Minimum optimization level: <strong>1</strong> (<code>-O1</code>) <br/>
 Impact: <strong>Reduced binary size</strong>
 Flag: <code>-fdce</code>, <code>fno-dce</code></p>
-<p>DCE searchs for functions that is not being called atleast once and removes them from final IR so them does not appear in final binary as being unused.
+<p>DCE searches for functions that is not being called at least once and removes them from final IR so them does not appear in final binary as being unused.
 Does not removes <code>global</code> functions as their usage is outside of an Gofra program.</p>
 <p>For example this function may be removed by DCE</p>
 <pre><code class="language-gofra">// [Additionally, most of binary size comes for example from libraries which gives you a lot of functions]
@@ -154,7 +154,7 @@ end
 Impact: <strong>Increased binary size</strong>, <strong>Increased performance</strong>
 Flag: <code>-finline-functions</code>, <code>fno-inline-functions</code></p>
 <p>Function inlining automatically marks simple / small functions as inlineable and resolves their usages after that marking.
-Inlining is not performed for recusrive functions, as it will break not only the code but also optimizer itself (while resolving inline function reference infinite amount of iterations until threshold)
+Inlining is not performed for recursive functions, as it will break not only the code but also optimizer itself (while resolving inline function reference infinite amount of iterations until threshold)
 For example:</p>
 <pre><code class="language-gofra">func int reduce_pairs[int,int,int,int]
     + + +
@@ -178,7 +178,7 @@ end
 
 </code></pre>
 <p><code>--inline-functions-max-iterations</code> affects max iterations for function inlining to search for new inlined function usage in other functions. 
-Low limit will result into unknown function call at assembler stage. This may slightly increase finaly binary size</p>
+Low limit will result into unknown function call at assembler stage. This may slightly increase final binary size</p>
 <p><code>--inline-functions-max-operators</code> affects max amount of operators to treat function as inlineable. 
 Setting big number will lead to almost all function will be treated as inline ones.</p></div>
             </div>

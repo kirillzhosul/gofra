@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Control flow constructions - Gofra</title>
+        <title>Control Flow Constructs - Gofra</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -75,8 +75,16 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#control-flow-constructions" class="nav-link">Control flow constructions</a>
+            <li class="nav-item" data-bs-level="1"><a href="#control-flow-constructs" class="nav-link">Control Flow Constructs</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#if-statement" class="nav-link">if Statement</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#while-statement" class="nav-link">while Statement</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -84,35 +92,61 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="control-flow-constructions">Control flow constructions</h1>
-<h3 id="if">If</h3>
-<p><code>if</code> is an control flow block construction that consumes single boolean type argument and if it is not equals to 0 - jumps into block body, otherwise jumps to own closure <code>end</code> block</p>
-<pre><code class="language-gofra">0 1 == if 
-    // will not happen
+<h1 id="control-flow-constructs">Control Flow Constructs</h1>
+<p>Gofra provides essential control flow constructs for conditional execution and looping.</p>
+<h2 id="if-statement"><code>if</code> Statement</h2>
+<p>The <code>if</code> statement evaluates a boolean condition and executes the block if the condition is non-zero.</p>
+<h4 id="syntax">Syntax</h4>
+<pre><code class="language-gofra">&lt;condition&gt; if
+    // code to execute if condition is true
+end
+</code></pre>
+<h4 id="example">Example</h4>
+<pre><code class="language-gofra">// This block will NOT execute
+0 1 == if 
+    &quot;This will not print&quot; print
 end
 
+// This block WILL execute
 1 1 == if
-    // will fall here
+    &quot;This will print&quot; print
+end
+
+// Using variables
+var is_valid bool
+true is_valid !&lt;
+
+is_valid ?&gt; if
+    &quot;Valid state&quot; print
 end
 </code></pre>
-<h3 id="while-do">While-do</h3>
-<p><code>while</code> is an control flow block construction that consumes single boolean type argument and if it is not equals to 0 - jumps into block body, otherwise jumps to own closure <code>end</code> block, but in difference with if, will always jump back to while after reaching own <code>end</code>, so only way to left that loop is out of that condition</p>
-<pre><code class="language-gofra">var counter int 
-counter 0 !&lt;
-
-while counter &lt; 10 do
-    // Will print 10 times
-    &quot;Hello!&quot; print
-
-    counter copy ?&gt; inc !&lt;
+<h2 id="while-statement"><code>while</code> Statement</h2>
+<p>The <code>while</code> loop repeatedly executes a block of code as long as the condition remains non-zero. The loop continues until the condition evaluates to false (zero).</p>
+<h4 id="syntax_1">Syntax</h4>
+<pre><code class="language-gofra">while &lt;condition&gt; do
+    // code to execute repeatedly
 end
 </code></pre>
-<p>In control-flow reference graph:
-<code>while</code> -&gt; <code>end</code>
-<code>do</code> -&gt; <code>while</code>
-<code>end</code> -&gt; <code>while</code></p>
-<h3 id="additional-notes-on-logic-operators">Additional notes on logic operators</h3>
-<p>Language supports logical AND (<code>&amp;&amp;</code>) and OR (<code>||</code>), read more at operator / intrinsics page.</p></div>
+<h4 id="example_1">Example</h4>
+<pre><code class="language-gofra">var counter int
+counter 0 !&lt;  // Initialize counter to 0
+
+while 
+    counter 10 &lt; // condition
+do
+    &quot;Hello! Iteration: &quot; print
+    counter print_integer  // Print current counter value
+    &quot;\n&quot; print
+
+    counter copy ?&gt; inc !&lt;  // Increment counter
+end
+</code></pre>
+<h4 id="control-flow-pattern">Control flow pattern</h4>
+<pre><code class="language-text">while → (condition check) → do → end → while (loop back)
+                    │
+                    ↓ (condition false)
+               (exit loop)
+</code></pre></div>
             </div>
         </div>
 

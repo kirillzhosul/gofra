@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>IDE (Editor) support - Gofra</title>
+        <title>Memory management - Gofra</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -55,7 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/editor-support.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/memory.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -75,7 +75,35 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#ide-editor-support" class="nav-link">IDE (Editor) support</a>
+            <li class="nav-item" data-bs-level="1"><a href="#memory-management" class="nav-link">Memory management</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#critical-notice" class="nav-link">Critical notice</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#memory-operations" class="nav-link">Memory operations</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#store-into-memory" class="nav-link">Store into memory</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#load-from-memory" class="nav-link">Load from memory</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#memory-size-considerations" class="nav-link">Memory Size Considerations</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#type-size-reference" class="nav-link">Type size reference</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -84,11 +112,69 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="ide-editor-support">IDE (Editor) support</h1>
-<h3 id="vim-github"><a href="https://github.com/stepanzubkov/gofra.vim">VIM (GitHub)</a></h3>
-<h3 id="visual-studio-code">Visual Studio Code</h3>
-<p>Source of an editor extension is located in Gofra source code in <code>editors</code> directory, you can bundle that and use
-(This page should be documented later)</p></div>
+<h1 id="memory-management">Memory management</h1>
+<p>Memory management is a fundamental aspect of programming. Gofra provides direct memory access operations for loading and storing data.</p>
+<h1 id="critical-notice">Critical notice</h1>
+<p>Currently, in gofra load and store operations works with always 8-bytes data, so this will cause some overwriting of memory layout, consider that while using critical to memory operations</p>
+<h1 id="memory-operations">Memory operations</h1>
+<h2 id="store-into-memory">Store into memory</h2>
+<p>Stores a value at a specified memory address.</p>
+<p><strong>Mnemonic: <code>a b -&gt; _ _</code></strong></p>
+<p><strong>Intrinsic: <code>!&lt;</code></strong></p>
+<p>Consumes two values from the stack: <code>[address, value]</code></p>
+<ul>
+<li>Stores value at memory location <code>address</code></li>
+<li>Both values are removed from the stack</li>
+</ul>
+<h3 id="syntax">Syntax</h3>
+<pre><code class="language-gofra">&lt;address&gt; &lt;value&gt; !&lt;
+</code></pre>
+<h3 id="examples">Examples</h3>
+<pre><code class="language-gofra">// Store to a variable
+var somevar int
+somevar 1 !&lt;  // Store 1 into somevar
+
+// Store to calculated address
+var array int[10]
+array 0 + 42 !&lt;  // Store 42 at array[0]
+array 8 + 99 !&lt;  // Store 99 at array[8] (if int is 4 bytes)
+</code></pre>
+<h2 id="load-from-memory">Load from memory</h2>
+<p>Stores a value at a specified memory address.</p>
+<p><strong>Mnemonic: <code>a -&gt; b</code></strong></p>
+<p><strong>Intrinsic: <code>?&gt;</code></strong></p>
+<p>Consumes one value from the stack: <code>[address]</code></p>
+<ul>
+<li>Loads the value from memory location <code>address</code></li>
+<li>Pushes the loaded value onto the stack</li>
+</ul>
+<h3 id="syntax_1">Syntax</h3>
+<pre><code class="language-gofra">&lt;address&gt; ?&gt;
+</code></pre>
+<h3 id="examples_1">Examples</h3>
+<pre><code class="language-gofra">// Load from a variable
+var somevar int
+somevar 1 !&lt;    // Store 1 into somevar
+somevar ?&gt;      // Load value from somevar (pushes 1 onto stack)
+print_integer   // Prints 1
+
+// Load from array element
+var numbers int[3]
+numbers 0 + 10 !&lt;    // numbers[0] = 10
+numbers 8 + 20 !&lt;    // numbers[1] = 20 (assuming 8-byte integers)
+numbers 0 + ?&gt; print // Load and print numbers[0]
+</code></pre>
+<h1 id="memory-size-considerations">Memory Size Considerations</h1>
+<ul>
+<li><strong>Pointer Width</strong>: Determined by CPU architecture (typically 32-bit or 64-bit)</li>
+<li><strong>Word Size</strong>: Architecture-dependent, affects natural memory alignment</li>
+<li><strong>Type Sizes</strong>: Different data types occupy different amounts of memory</li>
+</ul>
+<h1 id="type-size-reference">Type size reference</h1>
+<pre><code class="language-gofra">var b char    // 1 byte
+var i int     // 4 or 8 bytes (architecture-dependent)
+var p *int     // 4 or 8 bytes (pointer width)
+</code></pre></div>
             </div>
         </div>
 

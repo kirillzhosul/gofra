@@ -111,11 +111,14 @@ var {name} {type}
 
 // Composite type
 var array {type}[{size_in_elements}]
+var ptr *{type}
+
+var complex **int[32] // pointer to an pointer containing array of integers
 </code></pre>
 <p>It must start with <code>var</code> then <code>name</code> and <code>type</code></p>
 <h2 id="primitive-and-composite-types-differences">Primitive and composite types: differences</h2>
 <p>Primitive type is such type that only contains an size of memory blob and nothing more inside</p>
-<p>Composite type is such type which contains another type inside (may be primitive or complex) that it refers to (e.g array of elements contains primitive type of an single element and pointer is containing type of memory it refers to (pointer to an integer is an complex pointer type referencing integer and string is in general an complex type as it refers to array of characater (contiguous memory blob) as another complex type))</p>
+<p>Composite type is such type which contains another type inside (may be primitive or complex) that it refers to (e.g array of elements contains primitive type of an single element and pointer is containing type of memory it refers to (pointer to an integer is an complex pointer type referencing integer and string is in general an complex type as it refers to array of caricature (contiguous memory blob) as another complex type))</p>
 <p>Primitive types:
 - int
 - char
@@ -126,7 +129,7 @@ var array {type}[{size_in_elements}]
 <p>Composite types may contain another complex types so pointer to array of pointers to integer is an 2-level complex type</p>
 <h2 id="local-and-static-global-variable-location-differences">Local and static (global) variable location: differences</h2>
 <p>Static variable is such variable that is defined outside of an function (e.g at top level) while being compiled it located in static memory segment at runtime (e.g data / bss) section, it always initialized and persist it value between function calls (as anyone may modify that variable)</p>
-<p>Local variable is such variable that is define inside an function, while being compiled it will be translated into local region on an stack, so with each function call with that variable it will be reseted</p>
+<p>Local variable is such variable that is define inside an function, while being compiled it will be translated into local region on an stack, so with each function call with that variable it will be reset</p>
 <pre><code class="language-gofra">// Global variable
 // located in static binary segment
 var global int

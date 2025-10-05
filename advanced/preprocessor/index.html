@@ -90,10 +90,10 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="preprocessor">Preprocessor</h1>
-<p>Preprocessor is an stage in within compilation (simplified) that works with lexer tokens (e.g raw text) and resolves references to preprocessor itself (e.g <code>#include</code> is preprocessor only directive and will throw an error if occured at next possible stage: parser)</p>
+<p>Preprocessor is an stage in within compilation (simplified) that works with lexer tokens (e.g raw text) and resolves references to preprocessor itself (e.g <code>#include</code> is preprocessor only directive and will throw an error if occurred at next possible stage: parser)</p>
 <p>All preprocessor keywords begins with <code>#</code></p>
 <h1 id="include-system-and-include">Include system and <code>#include</code></h1>
-<p>Most of the time you dont write program in a single file, or require additional code from libraries, in Gofra <code>#inlcude</code> allows to straighforward include whole text of an file (with some additional file path resolving and include-once strategy)</p>
+<p>Most of the time you do not write program in a single file, or require additional code from libraries, in Gofra <code>#include</code> allows to straightforward include whole text of an file (with some additional file path resolving and include-once strategy)</p>
 <pre><code class="language-gofra">
 #include &quot;sum.gof&quot;
 
@@ -101,7 +101,7 @@ func void main
     2 2 sum // sum is defined at sum.gof
 end
 </code></pre>
-<p>Inlcude system is like <em>recursive</em> so all definitions of an preprocessor will be available at include side</p>
+<p>Include system is like <em>recursive</em> so all definitions of an preprocessor will be available at include side</p>
 <h3 id="module-include">Module include</h3>
 <p>In Gofra, there is convention that when you include an directory (e.g <code>#include "dir"</code>) it will search for file in that directory named same as directory itself, e.g <code>dir</code> directory will search for <code>dir/dir.gof</code> file and that is being included, that simplifies layout of directory tree of libraries</p>
 <h3 id="searching-strategy">Searching strategy</h3>
