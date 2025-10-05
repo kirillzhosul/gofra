@@ -75,8 +75,10 @@ target = Target.from_triplet("arm64-apple-darwin")
 def generate_aarch64_lir_macos_backend(
     fd: IO[str],
     program: ProgramContext,
+    target: Target,
 ) -> None:
     """AARCH64 MacOS code generation backend."""
+    _ = target
     context = AARCH64CodegenContext(fd=fd, strings={})
     lir = translate_hir_to_lir(
         program,

@@ -37,6 +37,7 @@ from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
+from gofra.targets.target import Target
 from gofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
@@ -48,8 +49,10 @@ if TYPE_CHECKING:
 def generate_aarch64_macos_backend(
     fd: IO[str],
     program: ProgramContext,
+    target: Target,
 ) -> None:
     """AARCH64 MacOS code generation backend."""
+    _ = target
     context = AARCH64CodegenContext(fd=fd, strings={})
 
     aarch64_macos_executable_functions(context, program)

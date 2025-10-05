@@ -48,3 +48,17 @@ AMD64_LINUX_ABI_ARGUMENTS_REGISTERS: tuple[AMD64_GP_REGISTERS, ...] = (
     "r8",
     "r9",
 )
+
+
+####
+# Windows related
+####
+
+# Epilogue
+AMD64_WINDOWS_ABI_RETVAL_REGISTER: AMD64_GP_REGISTERS = "rax"
+AMD64_WINDOWS_ABI_ARGUMENTS_REGISTERS: tuple[AMD64_GP_REGISTERS, ...] = (
+    "rcx",
+    "rdx",
+    "r8",
+    "r9",
+)

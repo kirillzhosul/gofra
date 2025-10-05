@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, assert_never
 
-from gofra.codegen.backends.amd64_linux.frame import build_local_variables_frame_offsets
-from gofra.types._base import Type
+from gofra.codegen.backends.amd64.frame import build_local_variables_frame_offsets
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
@@ -14,13 +12,16 @@ from .registers import (
     AMD64_LINUX_ABI_RETVAL_REGISTER,
     AMD64_LINUX_SYSCALL_ARGUMENTS_REGISTERS,
     AMD64_LINUX_SYSCALL_NUMBER_REGISTER,
+    AMD64_WINDOWS_ABI_ARGUMENTS_REGISTERS,
+    AMD64_WINDOWS_ABI_RETVAL_REGISTER,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
     from gofra.parser.variables import Variable
+    from gofra.types._base import Type
 
     from ._context import AMD64CodegenContext
     from .registers import AMD64_GP_REGISTERS
@@ -123,6 +124,9 @@ def ipc_syscall_linux(
 ) -> None:
     """Call system (syscall) and apply IPC ABI convention to arguments."""
     assert not injected_args or len(injected_args) == arguments_count + 1
+    assert context.target.operating_system != "Windows", (
+        "Windows Syscall usage is discouraged"
+    )
     registers_to_load = (
         AMD64_LINUX_SYSCALL_NUMBER_REGISTER,
         *AMD64_LINUX_SYSCALL_ARGUMENTS_REGISTERS[:arguments_count][::-1],
@@ -160,7 +164,12 @@ def function_end_with_epilogue(
 ) -> None:
     """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
     if has_return_value:
-        pop_cells_from_stack_into_registers(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
+        abi_retval_register = (
+            AMD64_LINUX_ABI_RETVAL_REGISTER
+            if context.target.operating_system == "Linux"
+            else AMD64_WINDOWS_ABI_RETVAL_REGISTER
+        )
+        pop_cells_from_stack_into_registers(context, abi_retval_register)
 
     context.write("retq")
 
@@ -200,10 +209,22 @@ def function_call(
 
     As Gofra under the hood uses C call convention for functions, this simplifies differences between C and Gofra calls.
     """
+    abi_retval_register = (
+        AMD64_LINUX_ABI_RETVAL_REGISTER
+        if context.target.operating_system == "Linux"
+        else AMD64_WINDOWS_ABI_RETVAL_REGISTER
+    )
+
+    abi_arguments_register = (
+        AMD64_LINUX_ABI_ARGUMENTS_REGISTERS
+        if context.target.operating_system == "Linux"
+        else AMD64_WINDOWS_ABI_ARGUMENTS_REGISTERS
+    )
+
     i64_arguments_count = len(type_contract_in)
     store_return_value = not isinstance(type_contract_out, VoidType)
 
-    argument_registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:i64_arguments_count][::-1]
+    argument_registers = abi_arguments_register[:i64_arguments_count][::-1]
     if i64_arguments_count > len(argument_registers):
         msg = (
             f"C-FFI function call with {i64_arguments_count} arguments not supported. "
@@ -222,7 +243,7 @@ def function_call(
     context.write(f"callq {name}")
 
     if store_return_value:
-        push_register_onto_stack(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
+        push_register_onto_stack(context, abi_retval_register)
 
 
 def store_into_memory_from_stack_arguments(context: AMD64CodegenContext) -> None:

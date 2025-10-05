@@ -2,6 +2,8 @@ from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from typing import IO
 
+from gofra.targets.target import Target
+
 
 @dataclass(frozen=True)
 class AMD64CodegenContext:
@@ -13,6 +15,7 @@ class AMD64CodegenContext:
 
     fd: IO[str]
     strings: MutableMapping[str, str] = field()
+    target: Target
 
     def write(self, *lines: str) -> int:
         return self.fd.write("\t" + "\n\t".join(lines) + "\n")

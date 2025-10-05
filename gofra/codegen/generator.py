@@ -22,4 +22,4 @@ def generate_code_for_assembler(
         newline="",
         encoding="UTF-8",
     ) as fd:
-        return backend(fd, context)
+        return backend(fd, context, target)

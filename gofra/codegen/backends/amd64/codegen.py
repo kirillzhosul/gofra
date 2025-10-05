@@ -1,10 +1,10 @@
-"""Core AARCH64 MacOS codegen."""
+"""Core AMD64 codegen."""
 
 from __future__ import annotations
 
 from typing import IO, TYPE_CHECKING, assert_never
 
-from gofra.codegen.backends.amd64_linux.frame import build_local_variables_frame_offsets
+from gofra.codegen.backends.amd64.frame import build_local_variables_frame_offsets
 from gofra.codegen.backends.general import (
     CODEGEN_GOFRA_CONTEXT_LABEL,
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
@@ -42,22 +42,23 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from gofra.context import ProgramContext
+    from gofra.targets.target import Target
 
 
-def generate_amd64_linux_backend(
+def generate_amd64_backend(
     fd: IO[str],
     program: ProgramContext,
+    target: Target,
 ) -> None:
-    """AMD64 Linux code generation backend."""
-    context = AMD64CodegenContext(fd=fd, strings={})
+    """AMD64 code generation backend."""
+    context = AMD64CodegenContext(fd=fd, strings={}, target=target)
 
-    context.write(".att_syntax noprefix")
-    amd64_linux_executable_functions(context, program)
-    amd64_linux_program_entry_point(context)
-    amd64_linux_data_section(context, program)
+    amd64_executable_functions(context, program)
+    amd64_program_entry_point(context)
+    amd64_data_section(context, program)
 
 
-def amd64_linux_instruction_set(
+def amd64_instruction_set(
     context: AMD64CodegenContext,
     operators: Sequence[Operator],
     program: ProgramContext,
@@ -65,7 +66,7 @@ def amd64_linux_instruction_set(
 ) -> None:
     """Write executable instructions from given operators."""
     for idx, operator in enumerate(operators):
-        amd64_linux_operator_instructions(
+        amd64_operator_instructions(
             context,
             operator,
             program,
@@ -76,7 +77,7 @@ def amd64_linux_instruction_set(
             break
 
 
-def amd64_linux_operator_instructions(
+def amd64_operator_instructions(
     context: AMD64CodegenContext,
     operator: Operator,
     program: ProgramContext,
@@ -85,7 +86,7 @@ def amd64_linux_operator_instructions(
 ) -> None:
     match operator.type:
         case OperatorType.INTRINSIC:
-            amd64_linux_intrinsic_instructions(context, operator)
+            amd64_intrinsic_instructions(context, operator)
         case OperatorType.PUSH_MEMORY_POINTER:
             assert isinstance(operator.operand, tuple)
             local_variable, _ = operator.operand
@@ -158,7 +159,7 @@ def amd64_linux_operator_instructions(
             assert_never(operator.type)
 
 
-def amd64_linux_intrinsic_instructions(
+def amd64_intrinsic_instructions(
     context: AMD64CodegenContext,
     operator: Operator,
 ) -> None:
@@ -210,6 +211,9 @@ def amd64_linux_intrinsic_instructions(
             | Intrinsic.SYSCALL5
             | Intrinsic.SYSCALL6
         ):
+            if context.target.operating_system == "Windows":
+                msg = "Usage of syscalls is discouraged on Windows, use WINAPI"
+                raise ValueError(msg)
             assert operator.syscall_optimization_injected_args is None, "TODO: Optimize"
             ipc_syscall_linux(
                 context,
@@ -227,7 +231,7 @@ def amd64_linux_intrinsic_instructions(
             assert_never(operator.operand)
 
 
-def amd64_linux_executable_functions(
+def amd64_executable_functions(
     context: AMD64CodegenContext,
     program: ProgramContext,
 ) -> None:
@@ -252,14 +256,14 @@ def amd64_linux_executable_functions(
             as_global_linker_symbol=function.is_global_linker_symbol,
         )
 
-        amd64_linux_instruction_set(context, function.source, program, function)
+        amd64_instruction_set(context, function.source, program, function)
         function_end_with_epilogue(
             context,
             has_return_value=not isinstance(function.type_contract_out, VoidType),
         )
 
 
-def amd64_linux_program_entry_point(context: AMD64CodegenContext) -> None:
+def amd64_program_entry_point(context: AMD64CodegenContext) -> None:
     """Write program entry, used to not segfault due to returning into protected system memory."""
     # This is an executable entry point
     function_begin_with_prologue(
@@ -278,20 +282,24 @@ def amd64_linux_program_entry_point(context: AMD64CodegenContext) -> None:
         type_contract_out=VoidType(),
     )
 
-    # Call syscall to exit without accessing protected system memory.
-    # `ret` into return-address will fail with segfault
-    ipc_syscall_linux(
-        context,
-        arguments_count=1,
-        store_retval_onto_stack=False,
-        injected_args=[
-            AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER,
-            AMD64_LINUX_EPILOGUE_EXIT_CODE,
-        ],
-    )
+    if context.target.operating_system == "Windows":
+        ...
+        # TODO(@kirillzhosul): review exit code on Windows
+    else:
+        # Call syscall to exit without accessing protected system memory.
+        # `ret` into return-address will fail with segfault
+        ipc_syscall_linux(
+            context,
+            arguments_count=1,
+            store_retval_onto_stack=False,
+            injected_args=[
+                AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER,
+                AMD64_LINUX_EPILOGUE_EXIT_CODE,
+            ],
+        )
 
 
-def amd64_linux_data_section(
+def amd64_data_section(
     context: AMD64CodegenContext,
     program: ProgramContext,
 ) -> None:

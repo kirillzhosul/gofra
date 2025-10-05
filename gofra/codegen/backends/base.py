@@ -1,6 +1,7 @@
 from typing import IO, Protocol
 
 from gofra.context import ProgramContext
+from gofra.targets.target import Target
 
 
 class CodeGeneratorBackend(Protocol):
@@ -13,4 +14,5 @@ class CodeGeneratorBackend(Protocol):
         self,
         fd: IO[str],
         program: ProgramContext,
+        target: Target,
     ) -> None: ...
