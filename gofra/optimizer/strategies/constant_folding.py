@@ -162,7 +162,8 @@ def _fold_binary_integer_math_operator(
     *,
     fold_predicate: BinaryIntFoldPredicate,
 ) -> bool:
-    raise NotImplementedError("infer_type_after_optimization")
+    msg = "infer_type_after_optimization"
+    raise NotImplementedError(msg)
     operators = [unoptimized[idx - 1], unoptimized[idx - 2]]
 
     if not (operators[0].type == operators[1].type == OperatorType.PUSH_INTEGER):
@@ -175,7 +176,7 @@ def _fold_binary_integer_math_operator(
     infer_type = I64Type()
     folded_value = fold_predicate(operands[0], operands[1])
     if isinstance(folded_value, bool):
-        infer_type = I64Type()  # bool
+        infer_type = I64Type()  # bool  # noqa: F841
 
     folded_value = int(folded_value)
 

@@ -37,13 +37,13 @@ from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
-from gofra.targets.target import Target
 from gofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from gofra.context import ProgramContext
+    from gofra.targets.target import Target
 
 
 def generate_aarch64_macos_backend(

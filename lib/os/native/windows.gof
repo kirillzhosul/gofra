@@ -42,11 +42,11 @@
     #define FILE_TYPE_PIPE     0x0003
 
     // --- External symbols from kernel libraries (WINAPI) ---
-    extern func void winapi_exit_process[int]@link[ExitProcess]
-    extern func int  winapi_get_std_handle[int]@link[GetStdHandle]
-    extern func bool winapi_write_console_a[int,*char[],int,*char[],int]@link[WriteConsoleA]
-    extern func bool winapi_write_file[int,*char[],int,*char[],int]@link[WriteFile]
-    extern func int  winapi_get_file_type[int]@link[GetFileType]
+    extern func void winapi_exit_process[int]                            #define ExitProcess winapi_exit_process
+    extern func int  winapi_get_std_handle[int]                          #define GetStdHandle winapi_get_std_handle
+    extern func bool winapi_write_console_a[int,*char[],int,*char[],int] #define WriteConsoleA winapi_write_console_a
+    extern func bool winapi_write_file[int,*char[],int,*char[],int]       #define WriteFile winapi_write_file
+    extern func int  winapi_get_file_type[int]                            #define GetFileType winapi_get_file_type
 
     // -- Windows API simple wrappers --
     inline func void win_exit[int]                                               call winapi_exit_process    end

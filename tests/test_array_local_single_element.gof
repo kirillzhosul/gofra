@@ -4,7 +4,7 @@
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 
 
-func void main
+func void main[]
     var exit_code int[1]
 
     exit_code[0] TESTKIT_EXPECTED_EXIT_CODE !<

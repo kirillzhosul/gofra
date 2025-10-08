@@ -6,6 +6,6 @@
 
 #include "std.gof"
 
-func void main
+func void main[]
     "Hello, World!\n" print
 end

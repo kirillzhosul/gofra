@@ -38,7 +38,7 @@ def tokenize_from_raw(
 
     :returns tokenizer: Generator of tokens, in order from top to bottom of an file (default order)
     """
-    state = LexerState(path=source)
+    state = LexerState(path=source, tokens_buffer=[])
 
     for row, line in enumerate(iterable, start=0):
         state.line = line
@@ -56,6 +56,13 @@ def tokenize_from_raw(
             value=0,
             location=state.current_location(),
         )
+
+    yield Token(
+        type=TokenType.EOF,
+        text="\n",
+        value=0,
+        location=state.current_location(),
+    )
 
 
 def _tokenize_line_next_token(state: LexerState) -> Token | None:
@@ -161,7 +168,11 @@ def _try_tokenize_numerable_into_token(
     )
 
 
-def _tokenize_word_or_keyword_into_token(word: str, location: TokenLocation) -> Token:
+def _tokenize_word_or_keyword_into_tokens(
+    state: LexerState,
+    word: str,
+    location: TokenLocation,
+) -> Token:
     """Tokenize base word symbol into an word or keyword."""
     if keyword := WORD_TO_KEYWORD.get(word):
         return Token(
@@ -169,6 +180,52 @@ def _tokenize_word_or_keyword_into_token(word: str, location: TokenLocation) -> 
             text=word,
             location=location,
             value=keyword,
+        )
+
+    # From that moment we have straightforward identifier (e.g an word) or an composite identifier
+    # for example parenthesised identifier(s): identifier(identifier) where () can be [] as parenthesis
+
+    single_symbols_mapping = {
+        "[": TokenType.LBRACKET,
+        "]": TokenType.RBRACKET,
+        "(": TokenType.LPAREN,
+        ")": TokenType.RPAREN,
+        ",": TokenType.COMMA,
+        ".": TokenType.DOT,
+        ";": TokenType.SEMICOLON,
+        ":": TokenType.COLON,
+        "{": TokenType.LCURLY,
+        "}": TokenType.RCURLY,
+        "*": TokenType.STAR,
+    }
+    symbols = "".join(single_symbols_mapping.keys())
+    if any(c in symbols for c in word):
+        symbol_idx = min(word.index(c) for c in symbols if c in word)
+
+        if symbol_idx == 0:
+            # Skip beginning with symbol to next symbol - single symbol
+            state.col = find_word_start(state.line, location.col_number + 1)
+            char = word[0]
+
+            return Token(
+                type=single_symbols_mapping[char],
+                location=location,
+                text=char,
+                value=char,
+                has_trailing_whitespace=False,
+            )
+
+        word = word[:symbol_idx]
+        state.col = find_word_start(state.line, location.col_number + symbol_idx)
+
+        if token := _try_tokenize_numerable_into_token(word, location):
+            return token
+
+        return Token(
+            type=TokenType.IDENTIFIER,
+            location=location,
+            text=word,
+            value=word,
         )
 
     return Token(
@@ -198,4 +255,4 @@ def _tokenize_word_into_token(state: LexerState) -> Token | None:
     if token := _try_tokenize_numerable_into_token(word, location):
         return token
 
-    return _tokenize_word_or_keyword_into_token(word, location)
+    return _tokenize_word_or_keyword_into_tokens(state, word, location)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
 
 from gofra.lexer import Token
 from gofra.lexer.keywords import PreprocessorKeyword
@@ -113,15 +113,6 @@ def _consume_macro_definition(
 
         if token.type == TokenType.KEYWORD:
             raise PreprocessorMacroContainsKeywordError(macro=macro, keyword=token)
-
-        # Ensure that there is no lexer level new token types.
-        if token.type not in (
-            TokenType.INTEGER,
-            TokenType.CHARACTER,
-            TokenType.STRING,
-            TokenType.IDENTIFIER,
-        ):
-            assert_never(token.type)
 
         macro.tokens.append(token)
         continue

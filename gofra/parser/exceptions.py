@@ -267,15 +267,6 @@ Entry point function cannot be external or inlined!
 """
 
 
-class ParserExpectedTypecastTypeError(GofraError):
-    def __init__(self, *args: object, token: Token) -> None:
-        super().__init__(*args)
-        self.token = token
-
-    def __repr__(self) -> str:
-        return f"""Expected typename after `typecast` at {self.token.location} but found nothing"""
-
-
 class ParserVariableNameAlreadyDefinedAsVariableError(GofraError):
     def __init__(self, *args: object, token: Token, name: str) -> None:
         super().__init__(*args)

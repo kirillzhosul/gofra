@@ -1,6 +1,6 @@
 #include "std.gof"
 
-func void main
+func void main[]
     var hello char[6]
 
     hello[0] 'H' !<

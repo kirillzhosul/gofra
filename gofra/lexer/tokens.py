@@ -32,6 +32,14 @@ class TokenLocation:
         assert self.filepath is not None
         return f"'{self.filepath.name}:{self.line_number + 1}:{self.col_number + 1}'"
 
+    def shift_col_number(self, by: int) -> TokenLocation:
+        return TokenLocation(
+            line_number=self.line_number,
+            col_number=self.col_number + by,
+            filepath=self.filepath,
+            source=self.source,
+        )
+
     @classmethod
     def cli(cls) -> TokenLocation:
         """Create a location for command-line originated tokens."""
@@ -59,14 +67,33 @@ class TokenType(IntEnum):
     https://en.wikipedia.org/wiki/Lexical_analysis
     """
 
+    # Numerical
     INTEGER = auto()
 
+    # Text
     CHARACTER = auto()
     STRING = auto()
 
+    # Language
     IDENTIFIER = auto()
     KEYWORD = auto()
 
+    # Brackets and parentheses
+    LBRACKET = auto()  # [
+    RBRACKET = auto()  # ]
+    LPAREN = auto()  # (
+    RPAREN = auto()  # )
+    LCURLY = auto()  # {
+    RCURLY = auto()  # }
+
+    # Punctuation
+    DOT = auto()  # .
+    COMMA = auto()  # ,
+    STAR = auto()  # *
+    SEMICOLON = auto()  # ;  (you might need this too)
+    COLON = auto()  # :  (you might need this too)
+    # Content
+    EOF = auto()
     EOL = auto()
 
 
@@ -85,3 +112,5 @@ class Token:
 
     # Location within file
     location: TokenLocation
+
+    has_trailing_whitespace: bool = True

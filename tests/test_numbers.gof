@@ -1,6 +1,6 @@
 #include "std.gof"
 
-func void main
+func void main[]
     0        drop
     128      drop
     1024     drop

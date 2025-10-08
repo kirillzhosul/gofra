@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +60,7 @@ class CLIArguments:
     linker_executable: Path | None
 
     optimizer: OptimizerConfig
+    lexer_debug_emit_lexemes: bool
 
 
 def parse_cli_arguments(prog: str) -> CLIArguments:
@@ -133,6 +135,8 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         linker_additional_flags=args.linker_additional_flags,
         linker_executable=linker_executable,
         linker_libraries_search_paths=linker_libraries_search_paths,
+        # Lexer
+        lexer_debug_emit_lexemes=args.lexer_debug_emit_lexemes,
     )
 
 
@@ -308,6 +312,13 @@ def _construct_argument_parser(prog: str) -> ArgumentParser:
         action="store_true",
         required=False,
         help="If passed, will disable type safety checking",
+    )
+
+    parser.add_argument(
+        "--debug-emit-lexemes",
+        dest="lexer_debug_emit_lexemes",
+        action="store_true",
+        help=argparse.SUPPRESS,
     )
 
     _inject_preprocessor_group(parser)

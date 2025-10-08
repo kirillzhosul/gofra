@@ -11,24 +11,23 @@ from gofra.lexer import (
     TokenType,
 )
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorKeyword
+from gofra.parser.conditional_blocks import consume_conditional_block_keyword_from_token
 from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
-from gofra.parser.types import parse_type
+from gofra.parser.typecast import unpack_typecast_from_token
+from gofra.parser.types import parser_type_from_tokenizer
 from gofra.parser.validator import validate_and_pop_entry_point
-from gofra.parser.variables import Variable
+from gofra.parser.variables import (
+    Variable,
+    get_all_scopes_variables,
+    search_variable_in_context_parents,
+)
 from gofra.types.composite.array import ArrayType
-from gofra.types.primitive.void import VoidType
 
 from ._context import ParserContext
 from .exceptions import (
     ParserDirtyNonPreprocessedTokenError,
-    ParserEmptyIfBodyError,
-    ParserEndAfterWhileError,
-    ParserEndWithoutContextError,
     ParserExhaustiveContextStackError,
-    ParserExpectedTypecastTypeError,
-    ParserNoWhileBeforeDoError,
-    ParserNoWhileConditionOperatorsError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
     ParserUnknownFunctionError,
@@ -42,18 +41,46 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
+def wrapped_tokenizer(
+    tokenizer: Generator[Token, None, None],
+) -> Generator[Token, Token | None]:
+    token_buffer: list[Token] = []
+
+    for token in tokenizer:
+        # Yield buffered tokens first
+        while token_buffer:
+            received = yield token_buffer.pop(0)
+            if received is not None:
+                token_buffer.append(received)
+
+        # Yield from original tokenizer
+        received = yield token
+        if received is not None:
+            token_buffer.append(received)
+
+    # Yield any remaining buffered tokens
+    while token_buffer:
+        received = yield token_buffer.pop(0)
+        if received is not None:
+            token_buffer.append(received)
+
+
 def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
     """Load file for parsing into operators."""
     context = _parse_from_context_into_operators(
         context=ParserContext(
             parent=None,
-            tokenizer=tokenizer,
+            _tokenizer=wrapped_tokenizer(tokenizer),
             functions={},
         ),
     )
 
-    assert context.is_top_level
-    assert not context.operators
+    assert context.is_top_level, (
+        "Parser context in result of parsing must an top level, bug in a parser"
+    )
+    assert not context.operators, (
+        f"Expected NO operators on top level, first one is at {context.operators[0].token.location}"
+    )
 
     entry_point = validate_and_pop_entry_point(context)
     return context, entry_point
@@ -61,11 +88,14 @@ def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
 
 def _parse_from_context_into_operators(context: ParserContext) -> ParserContext:
     """Consumes token stream into language operators."""
-    while token := next(context.tokenizer, None):
-        _consume_token_for_parsing(
-            token=token,
-            context=context,
-        )
+    try:
+        while token := context.next_token():
+            _consume_token_for_parsing(
+                token=token,
+                context=context,
+            )
+    except StopIteration:
+        pass
 
     if context.context_stack:
         _, unclosed_operator = context.pop_context_stack()
@@ -90,8 +120,33 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
             return _consume_word_token(token, context)
         case TokenType.KEYWORD:
             return _consume_keyword_token(context, token)
-        case TokenType.EOL:
+        case TokenType.EOL | TokenType.EOF:
             return None
+        case TokenType.STAR:
+            if context.is_top_level:
+                msg = "expected STAR with meaning of multiply intrinsic to be at top level."
+                raise ValueError(msg)
+            context.push_new_operator(
+                OperatorType.INTRINSIC,
+                token=token,
+                operand=Intrinsic.MULTIPLY,
+                is_contextual=False,
+            )
+            return None
+        case (
+            TokenType.LBRACKET
+            | TokenType.RBRACKET
+            | TokenType.LPAREN
+            | TokenType.RPAREN
+            | TokenType.DOT
+            | TokenType.COMMA
+            | TokenType.SEMICOLON
+            | TokenType.COLON
+            | TokenType.RCURLY
+            | TokenType.LCURLY
+        ):
+            msg = f"Got {token.type.name} ({token.location}) in form of an single parser-expression (non-composite). This token (as other symbol-defined ones) must occur only in composite expressions (e.g function signature, type constructions)."
+            raise ValueError(msg)
 
 
 def _consume_word_token(token: Token, context: ParserContext) -> None:
@@ -104,44 +159,14 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
     if _try_push_variable_reference(context, token):
         return
 
+    names_available = context.functions.keys() | [
+        v.name for v in get_all_scopes_variables(context)
+    ]
     raise ParserUnknownIdentifierError(
         word_token=token,
-        names_available=context.functions.keys()
-        | [v.name for v in _get_all_scopes_variables(context)],
+        names_available=names_available,
         best_match=_best_match_for_word(context, token.text),
     )
-
-
-def _search_variable_in_context_parents(
-    child: ParserContext,
-    variable: str,
-) -> Variable | None:
-    context_ref = child
-
-    while True:
-        if variable in context_ref.variables:
-            return context_ref.variables[variable]
-
-        if context_ref.parent:
-            context_ref = context_ref.parent
-            continue
-
-        return None
-
-
-def _get_all_scopes_variables(
-    child: ParserContext,
-) -> list[Variable]:
-    context_ref = child
-    variables: list[Variable] = []
-    while True:
-        variables.extend(context_ref.variables.values())
-
-        if context_ref.parent:
-            context_ref = context_ref.parent
-            continue
-
-        return variables
 
 
 def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
@@ -156,17 +181,25 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         is_reference = True
         varname = varname.removeprefix("&")
 
-    if varname.endswith("]"):
-        varname, size = varname.split("[")
-        if not size.removesuffix("]").isdigit():
+    if context.peek_token().type == TokenType.LBRACKET:
+        _ = context.next_token()  # Consume LBRACKET
+
+        elements_token = context.next_token()
+        if elements_token.type != TokenType.INTEGER:
             msg = (
-                f"Non-digit size for array member access at {token.location}: `{size=}`"
+                f"Expected array index inside of [], but got {elements_token.type.name}"
             )
             raise ValueError(msg)
-        idx = int(size.removesuffix("]"))
-        array_index_at = idx
 
-    variable = _search_variable_in_context_parents(context, varname)
+        rbracket = context.next_token()
+        if rbracket.type != TokenType.RBRACKET:
+            msg = f"Expected RBRACKET after array index element qualifier but got {rbracket.type.name}"
+            raise ValueError(msg)
+
+        assert isinstance(elements_token.value, int)
+        array_index_at = elements_token.value
+
+    variable = search_variable_in_context_parents(context, varname)
     if not variable:
         return False
 
@@ -247,7 +280,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         raise NotImplementedError(msg, token.location)
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END:
-            return _consume_conditional_keyword_from_token(context, token)
+            return consume_conditional_block_keyword_from_token(context, token)
         case Keyword.INLINE | Keyword.EXTERN | Keyword.FUNCTION | Keyword.GLOBAL:
             return _unpack_function_definition_from_token(context, token)
         case Keyword.FUNCTION_CALL:
@@ -260,36 +293,24 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
                 is_contextual=False,
             )
         case Keyword.TYPECAST:
-            return _unpack_typecast_from_token(context, token)
+            return unpack_typecast_from_token(context, token)
         case Keyword.VARIABLE_DEFINE:
             return _unpack_variable_definition_from_token(context)
         case _:
             assert_never(token.value)
-            return None
 
 
 def _unpack_variable_definition_from_token(
     context: ParserContext,
 ) -> None:
-    varname_token = next(context.tokenizer, None)
+    varname_token = context.next_token()
     if not varname_token:
         raise NotImplementedError
     if varname_token.type != TokenType.IDENTIFIER:
         raise NotImplementedError
     assert isinstance(varname_token.value, str)
 
-    typename_token = next(context.tokenizer, None)
-    if not typename_token:
-        raise NotImplementedError
-    if typename_token.type != TokenType.IDENTIFIER:
-        msg = f"expected identifier as typename but got {typename_token.type.name}"
-        raise NotImplementedError(msg)
-    assert isinstance(varname_token.value, str)
-
-    typename = parse_type(typename_token.text)
-    if not typename:
-        msg = "Unknown typecast typename"
-        raise ValueError(msg, typename_token.location)
+    typename = parser_type_from_tokenizer(context)
 
     varname = varname_token.text
     if varname in context.variables:
@@ -297,31 +318,12 @@ def _unpack_variable_definition_from_token(
             token=varname_token,
             name=varname,
         )
+
     context.variables[varname] = Variable(name=varname, type=typename)
 
 
-def _unpack_typecast_from_token(context: ParserContext, token: Token) -> None:
-    typename_token = next(context.tokenizer, None)
-    if not typename_token:
-        raise ParserExpectedTypecastTypeError(token=token)
-    if typename_token.type != TokenType.IDENTIFIER:
-        raise NotImplementedError
-    assert isinstance(typename_token.value, str)
-
-    typename = parse_type(typename_token.text)
-    if not typename:
-        msg = "Unknown typecast typename"
-        raise ValueError(msg, typename_token.location)
-    context.push_new_operator(
-        OperatorType.TYPECAST,
-        token,
-        typename,
-        is_contextual=False,
-    )
-
-
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:
-    name_token = next(context.tokenizer, None)
+    name_token = context.next_token()
     if not name_token:
         raise NotImplementedError
     if name_token.type != TokenType.IDENTIFIER:
@@ -357,42 +359,22 @@ def _unpack_function_definition_from_token(
     (
         token,
         function_name,
-        type_contract_in,
-        type_contract_out,
-        additional_modifiers,
+        parameters,
+        return_type,
         modifier_is_inline,
         modifier_is_extern,
         modifier_is_global,
     ) = definition
 
-    assert len(type_contract_out) in (0, 1)
-    type_contract_out = VoidType() if not type_contract_out else type_contract_out[0]
     external_definition_link_to = function_name if modifier_is_extern else None
 
-    for additional_modifier in additional_modifiers:
-        if additional_modifier.startswith("link[") and additional_modifier.endswith(
-            "]",
-        ):
-            if not modifier_is_extern or external_definition_link_to is None:
-                msg = "Cannot specify link to modifier for non-extern function"
-                raise ValueError(msg)
-
-            if external_definition_link_to != function_name:
-                msg = "External definition already links to another name, did you supply 2 links modifiers?"
-                raise ValueError(msg)
-            external_definition_link_to = additional_modifier.removeprefix(
-                "link[",
-            ).removesuffix("]")
-            continue
-        msg = f"unknown modifier {additional_modifier}"
-        raise ValueError(msg)
     if modifier_is_extern:
         context.add_function(
             Function(
                 location=token.location,
                 name=function_name,
-                type_contract_in=type_contract_in,
-                type_contract_out=type_contract_out,
+                type_contract_in=parameters,
+                type_contract_out=return_type,
                 emit_inline_body=modifier_is_inline,
                 external_definition_link_to=external_definition_link_to,
                 is_global_linker_symbol=modifier_is_global,
@@ -404,21 +386,21 @@ def _unpack_function_definition_from_token(
         return
 
     opened_context_blocks = 0
-    function_was_closed = False
 
     context_keywords = (Keyword.IF, Keyword.DO)
     end_keyword_text = KEYWORD_TO_NAME[Keyword.END]
 
-    original_token = token
     function_body_tokens: list[Token] = []
-    while func_token := next(context.tokenizer, None):
+    while func_token := context.next_token():
+        if func_token.type == TokenType.EOF:
+            msg = "Expected function to be closed but got end of file"
+            raise ValueError(msg)
         if func_token.type != TokenType.KEYWORD:
             function_body_tokens.append(func_token)
             continue
 
         if func_token.text == end_keyword_text:
             if opened_context_blocks <= 0:
-                function_was_closed = True
                 break
             opened_context_blocks -= 1
 
@@ -428,13 +410,8 @@ def _unpack_function_definition_from_token(
 
         function_body_tokens.append(func_token)
 
-    if not func_token:
-        raise NotImplementedError
-    if not function_was_closed:
-        raise ValueError(original_token)
-
     new_context = ParserContext(
-        tokenizer=(t for t in function_body_tokens),
+        _tokenizer=wrapped_tokenizer(t for t in function_body_tokens),
         functions=context.functions,
         parent=context,
     )
@@ -442,8 +419,8 @@ def _unpack_function_definition_from_token(
     function = Function(
         location=func_token.location,
         name=function_name,
-        type_contract_in=type_contract_in,
-        type_contract_out=type_contract_out,
+        type_contract_in=parameters,
+        type_contract_out=return_type,
         emit_inline_body=modifier_is_inline,
         external_definition_link_to=external_definition_link_to,
         is_global_linker_symbol=modifier_is_global,
@@ -451,80 +428,6 @@ def _unpack_function_definition_from_token(
         variables=new_context.variables,
     )
     context.add_function(function)
-
-
-def _consume_conditional_keyword_from_token(
-    context: ParserContext,
-    token: Token,
-) -> None:
-    assert isinstance(token.value, Keyword)
-    match token.value:
-        case Keyword.IF:
-            return context.push_new_operator(
-                type=OperatorType.IF,
-                token=token,
-                operand=None,
-                is_contextual=True,
-            )
-        case Keyword.DO:
-            if not context.has_context_stack():
-                raise ParserNoWhileBeforeDoError(do_token=token)
-
-            operator_while_idx, context_while = context.pop_context_stack()
-            if context_while.type != OperatorType.WHILE:
-                raise ParserNoWhileBeforeDoError(do_token=token)
-
-            while_condition_len = context.current_operator - operator_while_idx - 1
-            if while_condition_len == 0:
-                raise ParserNoWhileConditionOperatorsError(
-                    while_token=context_while.token,
-                )
-
-            operator = context.push_new_operator(
-                type=OperatorType.DO,
-                token=token,
-                operand=None,
-                is_contextual=True,
-            )
-            context.operators[-1].jumps_to_operator_idx = operator_while_idx
-            return operator
-        case Keyword.WHILE:
-            return context.push_new_operator(
-                type=OperatorType.WHILE,
-                token=token,
-                operand=None,
-                is_contextual=True,
-            )
-        case Keyword.END:
-            if not context.has_context_stack():
-                raise ParserEndWithoutContextError(end_token=token)
-
-            context_operator_idx, context_operator = context.pop_context_stack()
-
-            context.push_new_operator(
-                type=OperatorType.END,
-                token=token,
-                operand=None,
-                is_contextual=False,
-            )
-            prev_context_jumps_at = context_operator.jumps_to_operator_idx
-            context_operator.jumps_to_operator_idx = context.current_operator - 1
-
-            match context_operator.type:
-                case OperatorType.DO:
-                    context.operators[-1].jumps_to_operator_idx = prev_context_jumps_at
-                case OperatorType.IF:
-                    if_body_size = context.current_operator - context_operator_idx - 2
-                    if if_body_size == 0:
-                        raise ParserEmptyIfBodyError(if_token=context_operator.token)
-                case OperatorType.WHILE:
-                    raise ParserEndAfterWhileError(end_token=token)
-                case _:
-                    raise AssertionError
-
-            return None
-        case _:
-            raise AssertionError
 
 
 def _try_unpack_function_from_token(

@@ -1,4 +1,3 @@
-
 // ==============================================
 // Complex example of an pong game
 //
@@ -65,14 +64,14 @@ inline func void inverse_speed[*int]
     copy ?> 0 1 - * !<
 end
 
-func void update_difficulty
+func void update_difficulty[]
     ball_speed_x BALL_SPEED difficulty ?> + !<
     ball_speed_y BALL_SPEED difficulty ?> + !<
 
     paddle_enemy_speed PADDLE_DEFAULT_SPEED 2 / difficulty ?> + !<
 end
 
-func void init_game
+func void init_game[]
     ball_x WINDOW_WIDTH  2 / BALL_SIZE - !<
     ball_y WINDOW_HEIGHT 2 / BALL_SIZE - !<
 
@@ -94,7 +93,7 @@ func void init_game
     call update_difficulty
 end
 
-func void init_raylib
+func void init_raylib[]
      WINDOW_WIDTH
      WINDOW_HEIGHT
      WINDOW_NAME to_cstr_ptr
@@ -104,7 +103,7 @@ func void init_raylib
     call SetTargetFPS
 end
 
-func void draw_game
+func void draw_game[]
      BACKGROUND_COLOR
     call ClearBackground
 

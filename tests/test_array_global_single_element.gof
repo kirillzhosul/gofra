@@ -5,7 +5,7 @@
 
 var exit_code int[1]
 
-func void main
+func void main[]
     exit_code[0] TESTKIT_EXPECTED_EXIT_CODE !<
     exit_code[0] ?> 
 

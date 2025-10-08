@@ -3,24 +3,22 @@
 // https://www.raylib.com
 // ==============================================
 
-extern func void InitWindow[int,int,*char[]]@link[_InitWindow]
-extern func bool WindowShouldClose[]@link[_WindowShouldClose]
-extern func void CloseWindow[]@link[_CloseWindow]
-extern func void SetTargetFPS[int]@link[_SetTargetFPS]
-extern func void BeginDrawing[]@link[_BeginDrawing]
-extern func void EndDrawing[]@link[_EndDrawing]
-extern func void ClearBackground[int]@link[_ClearBackground]              // TODO(@kirillzhosul): We cannot pass color struct for now
-extern func void DrawCircle[int,int,int,*int]@link[_DrawCircle]            // TODO(@kirillzhosul): Cannot pass floats into FFI ABI
-extern func void DrawRectangle[int,int,int,int,int]@link[_DrawRectangle]
-extern func void DrawLine[int,int,int,int,int]@link[_DrawLine]
-extern func bool IsKeyPressed[int]@link[_IsKeyPressed]
-extern func bool IsKeyDown[int]@link[_IsKeyDown]
-extern func void DrawText[*char[],int,int,int,int]@link[_DrawText]
-extern func *int TextFormat[*char[],*char[]]@link[_TextFormat]
 
-// module: rtext
-extern func void DrawText[*char[],int,int,int,int]@link[_DrawText]
-extern func void DrawFPS[int,int]@link[_DrawFPS]
+extern func void _InitWindow[int,int,*char[]]          #define InitWindow _InitWindow
+extern func bool _WindowShouldClose[]                  #define WindowShouldClose _WindowShouldClose
+extern func void _CloseWindow[]                        #define CloseWindow _CloseWindow
+extern func void _SetTargetFPS[int]                    #define SetTargetFPS _SetTargetFPS
+extern func void _BeginDrawing[]                       #define BeginDrawing _BeginDrawing
+extern func void _EndDrawing[]                         #define EndDrawing _EndDrawing
+extern func void _ClearBackground[int]                 #define ClearBackground _ClearBackground // TODO(@kirillzhosul): We cannot pass color struct for now
+extern func void _DrawCircle[int,int,int,*int]         #define DrawCircle _DrawCircle // TODO(@kirillzhosul): Cannot pass floats into FFI ABI
+extern func void _DrawRectangle[int,int,int,int,int]   #define DrawRectangle _DrawRectangle
+extern func void _DrawLine[int,int,int,int,int]        #define DrawLine _DrawLine
+extern func bool _IsKeyPressed[int]                    #define IsKeyPressed _IsKeyPressed
+extern func bool _IsKeyDown[int]                       #define IsKeyDown _IsKeyDown
+extern func void _DrawText[*char[],int,int,int,int]    #define DrawText _DrawText
+extern func *int _TextFormat[*char[],*char[]]          #define TextFormat _TextFormat
+extern func void _DrawFPS[int,int]                     #define DrawFPS _DrawFPS
 
 #define WHITE 0xFFFFFFFF
 #define BLACK 0xFF000000

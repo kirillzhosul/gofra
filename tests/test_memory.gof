@@ -3,7 +3,7 @@
 #define NUMBER 32
 var static_blob int
 
-func void main
+func void main[]
     static_blob NUMBER !<
 
     static_blob ?> 

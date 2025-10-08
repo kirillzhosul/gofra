@@ -3,7 +3,6 @@
 // ==============================================
 
 
-
 // Get length of an C-Style string (ends with `\0`)
 // Will cause segmentation fault / infinite loop if string is not an C-style.
 var cstr_len_ptr_temp int
@@ -28,9 +27,9 @@ end
 
 
 // Almost as an alias to `cstr_len`, as in Gofra all string are C-strings by default (except size pushed after)
-func int str_len[*char[],int] drop cstr_len end
+func int str_len[*char[], int] drop cstr_len end
 
-func void int2str[int,*char[]]
+func void int2str[int, *char[]]
     var str *char[]
     var idx int
     var num int

@@ -36,7 +36,7 @@ def find_word_start(text: str, start: int) -> int:
 
 def find_word_end(text: str, start: int) -> int:
     """Find end column index of an word."""
-    return _find_column(text, start, str.isspace)
+    return _find_column(text, start, lambda s: s.isspace())
 
 
 def find_string_end(string: str, start: int) -> int | None:

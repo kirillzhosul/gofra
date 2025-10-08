@@ -115,8 +115,8 @@ class Function:
                 raise ValueError(msg)
 
         if not self.external_definition_link_to and not self.source:
-            msg = "Functions that not marked as `external` must have an body!"
-            raise ValueError(msg)
+            # Internal function without an warning, previously an error - but must be considered as an warning
+            pass
 
     def has_executable_body(self) -> bool:
         return not self.emit_inline_body and not self.external_definition_link_to

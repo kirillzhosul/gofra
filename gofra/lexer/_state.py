@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-from .tokens import TokenLocation
+from .tokens import Token, TokenLocation
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -14,6 +14,7 @@ class LexerState:
     """State for lexical analysis which only required for internal usages."""
 
     path: Path | Literal["cli", "toolchain"]
+    tokens_buffer: list[Token]
 
     row: int = 0
     col: int = 0

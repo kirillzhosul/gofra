@@ -17,50 +17,46 @@ from gofra.lexer import Token
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
-from gofra.parser.types import parse_type
+from gofra.parser.types import parse_type_from_text, parser_type_from_tokenizer
 from gofra.types import Type, VoidType
 
 from .exceptions import (
     ParserExpectedFunctionAfterFunctionModifiersError,
     ParserExpectedFunctionKeywordError,
-    ParserExpectedFunctionReturnTypeError,
     ParserFunctionInvalidTypeError,
     ParserFunctionIsBothInlineAndExternalError,
     ParserFunctionModifierReappliedError,
     ParserFunctionNoNameError,
 )
 
+# TODO(@kirillzhosul): Refactor these ALL errors
+_ = ParserFunctionInvalidTypeError
+
 
 def consume_function_definition(
     context: ParserContext,
     token: Token,
-) -> tuple[Token, str, list[Type], list[Type], list[str], bool, bool, bool]:
-    token, (modifier_is_inline, modifier_is_extern, modifier_is_global) = (
-        consume_function_modifiers(
+) -> tuple[Token, str, list[Type], Type, bool, bool, bool]:
+    token, (qualifier_is_inline, qualifier_is_extern, qualifier_is_global) = (
+        consume_function_qualifiers(
             context,
             token,
         )
     )
-    function_name, type_contract_in, type_contract_out, additional_modifiers = (
-        consume_function_signature(
-            context,
-            token,
-        )
-    )
+    function_name, parameters, return_type = consume_function_signature(context, token)
 
     return (
         token,
         function_name,
-        type_contract_in,
-        type_contract_out,
-        additional_modifiers,
-        modifier_is_inline,
-        modifier_is_extern,
-        modifier_is_global,
+        parameters,
+        return_type,
+        qualifier_is_inline,
+        qualifier_is_extern,
+        qualifier_is_global,
     )
 
 
-def consume_function_modifiers(
+def consume_function_qualifiers(
     context: ParserContext,
     token: Token,
 ) -> tuple[Token, tuple[bool, bool, bool]]:
@@ -78,9 +74,9 @@ def consume_function_modifiers(
         Keyword.GLOBAL,
     )
 
-    mark_is_extern = False
-    mark_is_inline = False
-    mark_is_global = False
+    qualifier_is_extern = False
+    qualifier_is_inline = False
+    qualifier_is_global = False
 
     next_token = token
     while next_token:
@@ -89,109 +85,131 @@ def consume_function_modifiers(
 
         match next_token.value:
             case Keyword.INLINE:
-                if mark_is_inline:
+                if qualifier_is_inline:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
-                mark_is_inline = True
+                qualifier_is_inline = True
             case Keyword.EXTERN:
-                if mark_is_extern:
+                if qualifier_is_extern:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
-                mark_is_extern = True
+                qualifier_is_extern = True
             case Keyword.FUNCTION:
                 break
             case Keyword.GLOBAL:
-                if mark_is_global:
+                if qualifier_is_global:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
-                mark_is_global = True
+                qualifier_is_global = True
             case _:
                 raise ParserExpectedFunctionKeywordError(token=next_token)
 
-        if mark_is_extern and mark_is_inline:
+        if qualifier_is_extern and qualifier_is_inline:
             raise ParserFunctionIsBothInlineAndExternalError(
                 modifier_token=next_token,
             )
-        next_token = next(context.tokenizer, None)
+        next_token = context.next_token()
 
     if not next_token:
         raise NotImplementedError
     if next_token.type != TokenType.KEYWORD or next_token.value != Keyword.FUNCTION:
         raise ParserExpectedFunctionAfterFunctionModifiersError(modifier_token=token)
 
-    return next_token, (mark_is_inline, mark_is_extern, mark_is_global)
+    return next_token, (qualifier_is_inline, qualifier_is_extern, qualifier_is_global)
 
 
 def consume_function_signature(
     context: ParserContext,
     token: Token,
-) -> tuple[str, list[Type], list[Type], list[str]]:
+) -> tuple[str, list[Type], Type]:
     """Consume parser context into function signature assuming given token is `function` keyword.
 
     Returns function name and signature types (`in` and `out).
     """
-    sig_token = next(context.tokenizer, None)
-    if not sig_token:
-        raise ParserExpectedFunctionReturnTypeError(
-            definition_token=token,
-        )
-    if sig_token.type != TokenType.IDENTIFIER:
-        raise ValueError
+    type_contract_out = parser_type_from_tokenizer(context)
 
-    type_contract_out = _parse_function_type_contract(
-        token=sig_token,
-        contract=(
-            sig_token.text
-            if sig_token.text.startswith("[") and sig_token.text.endswith("]")
-            else f"[{sig_token.text}]"
-        ),
-    )
+    name_token = context.next_token()
 
-    signature_token = next(context.tokenizer, None)
-    if not signature_token:
+    if not name_token:
         raise ParserFunctionNoNameError(token=token)
+    if name_token.type != TokenType.IDENTIFIER:
+        msg = f"Expected function name in signature but got {name_token.type.name} at {name_token.location}"
+        raise ValueError(msg)
+    function_name = name_token.text
+    parameters = consume_function_parameters(context)
 
-    signature = signature_token.text
-
-    # Assume for the first time that function has no input contract
-    function_name = signature
-    type_contract_in = []
-
-    signature, *additional_modifiers = signature.split("@")
-    if "[" in signature and "]" in signature:
-        function_name = function_name.split("[")[0].strip()
-
-        contract = signature.split("[", maxsplit=1)[1].split("@")[0][:-1]
-
-        type_contract_in = _parse_function_type_contract(
-            token=signature_token,
-            contract=f"[{contract}]",
-        )
-
-    return function_name, type_contract_in, type_contract_out, additional_modifiers
+    return function_name, parameters, type_contract_out
 
 
-def _parse_function_type_contract(token: Token, contract: str) -> list[Type]:
-    """Parse function type contract from string.
+def consume_function_parameters(context: ParserContext) -> list[Type]:
+    parameters: list[Type] = []
 
-    Expected contract to be like: `[char*,int,int]`
-    """
-    assert contract.startswith("[")
-    assert contract.endswith("]")
+    paren_token = context.next_token()
+    if paren_token.type != TokenType.LBRACKET:
+        msg = f"Expected LBRACKET `[` after function name for parameters but got {paren_token.type.name}"
+        raise ValueError(msg, paren_token.location)
 
-    raw_contract_types = [t.strip() for t in contract[1:-1].split(",") if t != ""]
+    # TODO(@kirillzhosul): allows trailing comma after last typename
+    typename_tokens: list[list[Token]] = [[]]
 
-    type_contract: list[Type] = []
-    for raw_contract_type in raw_contract_types:
-        t = parse_type(raw_contract_type)
-        if t is None:
-            raise ParserFunctionInvalidTypeError(
-                type_token=token,
-                requested_type=raw_contract_type,
-            )
-        type_contract.append(t)
+    unbalanced_brackets = 0
+    while token := context.next_token():
+        if token.type == TokenType.EOL:
+            continue
 
-    return [t for t in type_contract if not isinstance(t, VoidType)]
+        if token.type == TokenType.COMMA:
+            if not typename_tokens:
+                msg = "expected typename for parameter before comma separator"
+                raise ValueError(msg)
+            typename_tokens.append([])
+            continue
+
+        if token.type == TokenType.LBRACKET:
+            unbalanced_brackets += 1
+
+        if token.type == TokenType.RBRACKET:
+            if unbalanced_brackets == 0:
+                break
+            unbalanced_brackets -= 1
+
+        if token.type == TokenType.EOF:
+            msg = "Expected RPAREN `)` after function parameters but got end of file!"
+            raise ValueError(msg)
+
+        if token.type not in (
+            TokenType.IDENTIFIER,
+            TokenType.INTEGER,
+            TokenType.RBRACKET,
+            TokenType.LBRACKET,
+            TokenType.STAR,
+        ):
+            msg = f"Expected only identifiers or typename allowed tokens in function parameters but got {token.type.name} at {token.location}"
+            raise ValueError(msg)
+
+        # Buffering type name tokens for parsing at comma separator
+        typename_tokens[-1].append(token)
+
+    # TODO(@kirillzhosul): refactor into parse_type_from_tokenizer
+    for t_tokens in typename_tokens:
+        if not t_tokens:
+            if len(typename_tokens) == 1:
+                # empty parameters
+                break
+            msg = "expected typename after token"
+            raise ValueError(msg, token.location)
+        typename_text = "".join(t.text for t in t_tokens)
+        parameter_type = parse_type_from_text(typename_text)
+        if not parameter_type:
+            msg = f"unknown parameter type {typename_text}"
+            raise ValueError(msg)
+
+        if isinstance(parameter_type, VoidType):
+            # TODO(@kirillzhosul): Consider an warning
+            pass
+        else:
+            parameters.append(parameter_type)
+
+    return parameters

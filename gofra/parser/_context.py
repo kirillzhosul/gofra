@@ -4,6 +4,8 @@ from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from gofra.parser.functions import Function
+
 from .operators import Operator, OperatorOperand, OperatorType
 
 if TYPE_CHECKING:
@@ -15,7 +17,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from gofra.lexer import Token
-    from gofra.parser.functions import Function
     from gofra.parser.variables import Variable
 
 
@@ -23,15 +24,19 @@ if TYPE_CHECKING:
 class ParserContext:
     """Context for parsing which only required from internal usages."""
 
-    tokenizer: Generator[Token]
+    _tokenizer: Generator[Token, None]
     parent: ParserContext | None
 
-    # Resulting operators from parsing
-    operators: MutableSequence[Operator] = field(default_factory=lambda: list())  # noqa: C408
+    _peeked: Token | None = None
 
-    functions: MutableMapping[str, Function] = field(default_factory=lambda: dict())  # noqa: C408
+    # Resulting operators from parsing
+    operators: MutableSequence[Operator] = field(default_factory=list[Operator])
+
+    functions: MutableMapping[str, Function] = field(
+        default_factory=dict[str, Function],
+    )
     variables: OrderedDict[str, Variable] = field(
-        default_factory=lambda: OrderedDict(),
+        default_factory=OrderedDict[str, "Variable"],
     )
 
     context_stack: deque[tuple[int, Operator]] = field(default_factory=lambda: deque())
@@ -44,11 +49,24 @@ class ParserContext:
 
     def add_function(self, function: Function) -> Function:
         self.functions[function.name] = function
+
         return function
 
     @property
     def is_top_level(self) -> bool:
         return self.parent is None
+
+    def next_token(self) -> Token:
+        if self._peeked is not None:
+            token = self._peeked
+            self._peeked = None
+            return token
+        return next(self._tokenizer)
+
+    def peek_token(self) -> Token:
+        if self._peeked is None:
+            self._peeked = next(self._tokenizer)
+        return self._peeked
 
     def expand_from_inline_block(self, inline_block: Function) -> None:
         if inline_block.external_definition_link_to:

@@ -36,13 +36,28 @@
 
     // --- Syscall Numbers (Partial Table) ---
     #ifdef ARCH_ARM64
-        #define DARWIN_SYSCALL_SYSCALL 0
-        #define DARWIN_SYSCALL_EXIT    1
-        #define DARWIN_SYSCALL_FORK    2
-        #define DARWIN_SYSCALL_READ    3
-        #define DARWIN_SYSCALL_WRITE   4
-        #define DARWIN_SYSCALL_OPEN    5
-        #define DARWIN_SYSCALL_CLOSE   6
+        #define DARWIN_SYSCALL_SYSCALL    0
+        #define DARWIN_SYSCALL_EXIT       1
+        #define DARWIN_SYSCALL_FORK       2
+        #define DARWIN_SYSCALL_READ       3
+        #define DARWIN_SYSCALL_WRITE      4
+        #define DARWIN_SYSCALL_OPEN       5
+        #define DARWIN_SYSCALL_CLOSE      6
+        #define DARWIN_SYSCALL_WAIT4      7
+        #define DARWIN_SYSCALL_LINK       9
+        #define DARWIN_SYSCALL_UNLINK     10
+        #define DARWIN_SYSCALL_CHDIR      12
+        #define DARWIN_SYSCALL_FCHDIR     13
+        #define DARWIN_SYSCALL_MKNOD      14
+        #define DARWIN_SYSCALL_CHMOD      15
+        #define DARWIN_SYSCALL_CHOWN      16
+        #define DARWIN_SYSCALL_ACCEPT     30
+        #define DARWIN_SYSCALL_KILL       37
+        #define DARWIN_SYSCALL_SOCKET     97
+        #define DARWIN_SYSCALL_CONNECT    98
+        #define DARWIN_SYSCALL_BIND       104
+        #define DARWIN_SYSCALL_SETSOCKOPT 105
+        #define DARWIN_SYSCALL_LISTEN     106
     #endif // ARCH_ARM64
 
     // ---  Syscall Wrappers ---
@@ -57,6 +72,10 @@
 
         // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
         inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
+
+        // Creates an socket FD
+        // [domain,type,protocol]
+        inline func int sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
 
         // Reads from a file descriptor.
         // Signature: [fd,buf,count]

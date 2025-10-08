@@ -129,6 +129,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         path = args.source_filepaths[0]
         io = open_source_file_line_stream(path)
         lexer = tokenize_from_raw(path, io)
+
         preprocessor = preprocess_file(
             args.source_filepaths[0],
             lexer,
@@ -143,6 +144,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         args.source_filepaths[0],
         args.include_paths,
         macros=macros_registry,
+        _debug_emit_lexemes=args.lexer_debug_emit_lexemes,
     )
 
     if not args.skip_typecheck:

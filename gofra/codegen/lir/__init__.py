@@ -1,3 +1,5 @@
+"""LIR (low-level-intermediate-representation). For supported codegen."""
+
 from collections.abc import MutableMapping
 from dataclasses import dataclass
 from typing import Literal, assert_never

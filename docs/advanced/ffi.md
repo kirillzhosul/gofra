@@ -38,15 +38,7 @@ For now, there is no way to pass variadic arguments to external function
 
 # Linker stage
 
-For letting linker know about that dependencies (Libraries with FFI), you can pass `-L` flag(s) to the compiler
+For letting linker know about that dependencies (Libraries with FFI), you can pass `-l` flag(s) to the compiler
 
 For example linking with `raylib` and using their functions:
-`-L=-lraylib -L=-L/opt/homebrew/lib`
-
-# Additional flags: @
-By using `@` flag you may specify for example against which function to link your external:
-```gofra
-extern func int _puts[*char[]*]@link[_puts]
-```
-
-In that case is straightforward same name, but you can change that, and 
+`-lraylib` (`-L/opt/homebrew/lib` if search directory was not found with pkgconfig (`--no-pkg-config`))

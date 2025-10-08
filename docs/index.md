@@ -23,7 +23,7 @@ end
 - *Low-level* - Write unsafe, low-level code with direct memory access
 - *Native Compilation* - Generates optimized native assembly code
 - *Type Safety* - Validates stack usage and type correctness at compile time
-- *C FFI* - Seamless integration with **C** libraries (including libc)
+- *C FFI* - Seamless integration with **C** libraries
 
 ## Platform support
 Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target:

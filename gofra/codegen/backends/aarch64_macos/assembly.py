@@ -308,7 +308,7 @@ def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> No
     context.write("str X0, [X1]")
 
 
-def function_begin_with_prologue(
+def function_begin_with_prologue(  # noqa: PLR0913
     context: AARCH64CodegenContext,
     *,
     name: str,

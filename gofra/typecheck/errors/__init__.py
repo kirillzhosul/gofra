@@ -1,3 +1,5 @@
+"""Errors from typechecker for language user."""
+
 from .missing_function_argument import MissingFunctionArgumentsTypecheckError
 from .parameter_type_mismatch import ParameterTypeMismatchTypecheckError
 
