@@ -72,8 +72,6 @@ def compose_clang_assembler_command(  # noqa: PLR0913
 
     if debug_information:
         command.append("-g")
-        dwarf_debug_producer = "Gofra with Clang assembler backend"
-        command.extend(("-dwarf-debug-producer", f'"{dwarf_debug_producer}"'))
 
     # Emit all commands and information that clang runs
     if verbose:
