@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
 from gofra.cli.distribution import infer_distribution_library_paths
-from gofra.cli.infer import infer_output_filename, infer_target
+from gofra.cli.infer import infer_output_filename
 from gofra.linker.profile import LinkerProfile
 from gofra.optimizer.config import (
     OptimizerConfig,
@@ -15,6 +16,7 @@ from gofra.optimizer.config import (
     merge_into_optimizer_config,
 )
 from gofra.targets import Target
+from gofra.targets.infer_host import infer_host_target
 
 from .output import cli_message
 
@@ -87,8 +89,13 @@ def parse_cli_arguments(prog: str) -> CLIArguments:
         "amd64-unknown-windows",
         None,
     )
-    target = Target.from_triplet(args.target) if args.target else infer_target()
-
+    target = Target.from_triplet(args.target) if args.target else infer_host_target()
+    if target is None:
+        cli_message(
+            level="ERROR",
+            text="Unable to infer compilation target due to no fallback for current operating system",
+        )
+        sys.exit(1)
     source_filepaths = [Path(f) for f in args.source_files]
     output_filepath = process_output_path(source_filepaths, args, target)
     include_paths = process_include_paths(args)

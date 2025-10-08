@@ -1,6 +1,5 @@
 from collections import deque
 from collections.abc import Mapping
-from typing import assert_never
 
 from gofra.lexer.lexer import tokenize_from_raw
 from gofra.lexer.tokens import TokenLocation
@@ -27,10 +26,6 @@ def registry_from_raw_definitions(
     Definition is implied to be single-line.
     Location must not be from an `file` source as in that scenario you must use different approaches like preprocessing another file.
     """
-    if location.source not in ("file", "cli", "toolchain"):
-        # Mostly, notice that this place must be modified when introduction new tokens source
-        assert_never(location.source)
-
     if location.source == "file":
         msg = (
             f"`{registry_from_raw_definitions.__name__}` implies raw definitions, but tried to pass parent location with `file` source, which is consider as an fatal error.\n"

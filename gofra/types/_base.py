@@ -12,5 +12,7 @@ class Type(Protocol):
 
 
 # Base class for Primitive | Composite types
-PrimitiveType = type("PrimitiveType", (Type,), {})
-CompositeType = type("CompositeType", (Type,), {})
+class PrimitiveType(Type): ...
+
+
+class CompositeType(Type): ...

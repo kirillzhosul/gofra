@@ -1,9 +1,6 @@
-import sys
 from pathlib import Path
-from platform import system
 from typing import Literal
 
-from gofra.cli.output import cli_message
 from gofra.targets.target import Target
 
 
@@ -13,6 +10,7 @@ def infer_output_filename(
     target: Target,
 ) -> Path:
     """Try to infer filename for output from input source files."""
+    suffix: str
     match output_format:
         case "library":
             is_dynamic = False
@@ -35,20 +33,3 @@ def infer_output_filename(
     if source_filepath.suffix == suffix:
         suffix = source_filepath.suffix + suffix
     return source_filepath.with_suffix(suffix)
-
-
-def infer_target() -> Target:
-    """Try to infer target from current system."""
-    assert system() in ["Darwin", "Linux"]
-
-    match system():
-        case "Darwin":
-            return Target.from_triplet("arm64-apple-darwin")
-        case "Linux":
-            return Target.from_triplet("amd64-unknown-linux")
-        case _:
-            cli_message(
-                level="ERROR",
-                text="Unable to infer compilation target due to no fallback for current operating system",
-            )
-            sys.exit(1)

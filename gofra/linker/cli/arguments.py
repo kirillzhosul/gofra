@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Literal
 
 from gofra.cli.helpers import cli_get_executable_program
-from gofra.cli.infer import infer_target
 from gofra.cli.output import cli_message
 from gofra.linker.apple.libraries import APPLE_LINKER_DEFAULT_LIBRARIES_SEARCH_PATHS
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.linker.output_format import LinkerOutputFormat
 from gofra.linker.profile import LinkerProfile
+from gofra.targets.infer_host import infer_host_target
 from gofra.targets.target import Target
 
 
@@ -54,7 +54,13 @@ def parse_cli_arguments() -> CLIArguments:
         "amd64-unknown-windows",
         None,
     )
-    target = Target.from_triplet(args.target) if args.target else infer_target()
+    target = Target.from_triplet(args.target) if args.target else infer_host_target()
+    if target is None:
+        cli_message(
+            level="ERROR",
+            text="Unable to infer compilation target due to no fallback for current operating system",
+        )
+        sys.exit(1)
 
     if not files:
         cli_message(

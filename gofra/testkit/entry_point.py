@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from subprocess import TimeoutExpired
 from typing import TYPE_CHECKING
 
-from gofra.cli.arguments import infer_target
 from gofra.cli.errors import cli_gofra_error_handler
 from gofra.cli.output import cli_message
 from gofra.exceptions import GofraError
+from gofra.targets.infer_host import infer_host_target
 from gofra.testkit.cli.matrix import display_test_matrix
 
 from .cli.arguments import CLIArguments, parse_cli_arguments
@@ -53,7 +54,13 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     cache_directory = args.build_cache_dir / TESTKIT_CACHE_DIR
     cache_directory.mkdir(parents=True, exist_ok=True)
 
-    target = infer_target()
+    target = infer_host_target()
+    if target is None:
+        cli_message(
+            level="ERROR",
+            text="Unable to infer compilation target due to no fallback for current operating system",
+        )
+        sys.exit(1)
     start_time = time.monotonic_ns()
     test_matrix = evaluate_test_matrix_threaded(
         test_paths,
@@ -68,7 +75,10 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
             text="Removing build artifacts...",
             verbose=args.verbose,
         )
-        [test.artifact_path.unlink() for test in test_matrix if test.artifact_path]
+        for test in test_matrix:
+            if test.artifact_path:
+                test.artifact_path.unlink()
+
     time_taken = (time.monotonic_ns() - start_time) / NANOS_TO_SECONDS
     cli_message(
         level="SUCCESS",

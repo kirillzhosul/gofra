@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 
 class LIRVirtualRegisterAllocator:
+    unused_machine_registers: list[str]
+
     def __init__(self, virtual_temp_machine_registers: list[str]) -> None:
         self.virtual_temp_machine_registers = virtual_temp_machine_registers
         self.unused_machine_registers = []

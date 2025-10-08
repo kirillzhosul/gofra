@@ -45,7 +45,7 @@ def parser_type_from_tokenizer(context: ParserContext) -> Type:
         msg = f"While expecting type expected identifier but got {t.type.name}"
         raise NotImplementedError(msg)
 
-    aggregated_type = PRIMITIVE_TYPE_REGISTRY.get(t.text, None)
+    aggregated_type: Type | None = PRIMITIVE_TYPE_REGISTRY.get(t.text, None)
 
     if not aggregated_type:
         msg = f"Expected primitive registry type but got {t.text}."
@@ -58,8 +58,8 @@ def parser_type_from_tokenizer(context: ParserContext) -> Type:
         elements_or_rbracket = context.next_token()
 
         if elements_or_rbracket.type == TokenType.INTEGER:
+            assert isinstance(elements_or_rbracket.value, int)
             elements = elements_or_rbracket.value
-            assert isinstance(elements, int)
 
             rbracket = context.next_token()
             if rbracket.type != TokenType.RBRACKET:

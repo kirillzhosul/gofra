@@ -41,7 +41,7 @@ WORD_TO_PREPROCESSOR_KEYWORD = {
     "#define": PreprocessorKeyword.DEFINE,
     "#undef": PreprocessorKeyword.UNDEFINE,
 }
-WORD_TO_KEYWORD = {
+WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "if": Keyword.IF,
     "while": Keyword.WHILE,
     "do": Keyword.DO,

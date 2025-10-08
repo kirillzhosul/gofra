@@ -267,9 +267,15 @@ def cli_execute_after_compilation(args: CLIArguments) -> None:
         cli_message("WARNING", "Execution was interrupted by user!")
         sys.exit(0)
 
-    level = "INFO" if exit_code == 0 else "ERROR"
-    cli_message(
-        level,
-        f"Program finished with exit code {exit_code}!",
-        verbose=args.verbose,
-    )
+    if exit_code == 0:
+        cli_message(
+            "INFO",
+            f"Program finished with exit code {exit_code}!",
+            verbose=args.verbose,
+        )
+    else:
+        cli_message(
+            "ERROR",
+            f"Program finished with fail exit code {exit_code}!",
+            verbose=args.verbose,
+        )

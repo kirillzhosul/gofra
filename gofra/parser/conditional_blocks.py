@@ -38,14 +38,14 @@ def consume_conditional_block_keyword_from_token(
                     while_token=context_while.token,
                 )
 
-            operator = context.push_new_operator(
+            context.push_new_operator(
                 type=OperatorType.DO,
                 token=token,
                 operand=None,
                 is_contextual=True,
             )
             context.operators[-1].jumps_to_operator_idx = operator_while_idx
-            return operator
+            return None
         case Keyword.WHILE:
             return context.push_new_operator(
                 type=OperatorType.WHILE,

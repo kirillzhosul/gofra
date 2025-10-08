@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, MutableSequence
 from functools import partial
 
 from gofra.context import ProgramContext
@@ -7,7 +7,7 @@ from gofra.optimizer.config import OptimizerConfig
 from .strategies import optimize_dead_code_elimination, optimize_function_inlining
 
 type OPTIMIZER_PASS_T = Callable[[ProgramContext], None]
-type OPTIMIZER_PIPELINE_T = Iterable[tuple[OPTIMIZER_PASS_T, str]]
+type OPTIMIZER_PIPELINE_T = MutableSequence[tuple[OPTIMIZER_PASS_T, str]]
 
 
 def create_optimizer_pipeline(
