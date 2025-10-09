@@ -4,7 +4,7 @@ from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from gofra.parser.functions import Function
+from gofra.hir.function import Function
 
 from .operators import Operator, OperatorOperand, OperatorType
 
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     )
     from pathlib import Path
 
+    from gofra.hir.variable import Variable
     from gofra.lexer import Token
-    from gofra.parser.variables import Variable
 
 
 @dataclass(frozen=False)
@@ -69,11 +69,11 @@ class ParserContext:
         return self._peeked
 
     def expand_from_inline_block(self, inline_block: Function) -> None:
-        if inline_block.external_definition_link_to:
+        if inline_block.is_external:
             msg = "Cannot expand extern function."
             raise ValueError(msg)
-        self.current_operator += len(inline_block.source)
-        self.operators.extend(inline_block.source)
+        self.current_operator += len(inline_block.operators)
+        self.operators.extend(inline_block.operators)
 
     def pop_context_stack(self) -> tuple[int, Operator]:
         return self.context_stack.pop()

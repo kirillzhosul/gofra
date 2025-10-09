@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from difflib import get_close_matches
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.feature_flags import FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
+from gofra.hir.function import Function
+from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from gofra.lexer import (
     Keyword,
     Token,
@@ -12,13 +13,11 @@ from gofra.lexer import (
 )
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorKeyword
 from gofra.parser.conditional_blocks import consume_conditional_block_keyword_from_token
-from gofra.parser.functions import Function
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.typecast import unpack_typecast_from_token
 from gofra.parser.types import parser_type_from_tokenizer
 from gofra.parser.validator import validate_and_pop_entry_point
 from gofra.parser.variables import (
-    Variable,
     get_all_scopes_variables,
     search_variable_in_context_parents,
 )
@@ -303,6 +302,12 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
 def _unpack_variable_definition_from_token(
     context: ParserContext,
 ) -> None:
+    storage_class = (
+        VariableStorageClass.STATIC
+        if context.is_top_level
+        else VariableStorageClass.STACK
+    )
+
     varname_token = context.next_token()
     if not varname_token:
         raise NotImplementedError
@@ -319,7 +324,18 @@ def _unpack_variable_definition_from_token(
             name=varname,
         )
 
-    context.variables[varname] = Variable(name=varname, type=typename)
+    scope_class = (
+        VariableScopeClass.GLOBAL
+        if context.is_top_level
+        else VariableScopeClass.FUNCTION
+    )
+    context.variables[varname] = Variable(
+        name=varname,
+        type=typename,
+        defined_at=varname_token.location,
+        scope_class=scope_class,
+        storage_class=storage_class,
+    )
 
 
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:
@@ -338,8 +354,8 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
             best_match=_best_match_for_word(context, token.text),
         )
 
-    if function.emit_inline_body:
-        assert not function.external_definition_link_to
+    if function.is_inline:
+        assert not function.is_external
         context.expand_from_inline_block(function)
         return
 
@@ -366,20 +382,18 @@ def _unpack_function_definition_from_token(
         modifier_is_global,
     ) = definition
 
-    external_definition_link_to = function_name if modifier_is_extern else None
-
     if modifier_is_extern:
         context.add_function(
             Function(
-                location=token.location,
                 name=function_name,
-                type_contract_in=parameters,
-                type_contract_out=return_type,
-                emit_inline_body=modifier_is_inline,
-                external_definition_link_to=external_definition_link_to,
-                is_global_linker_symbol=modifier_is_global,
-                source=[],
-                variables=OrderedDict(),
+                defined_at=token.location,
+                operators=[],
+                variables={},
+                parameters=parameters,
+                return_type=return_type,
+                is_inline=modifier_is_inline,
+                is_external=modifier_is_extern,
+                is_global=modifier_is_global,
             ),
         )
 
@@ -417,15 +431,15 @@ def _unpack_function_definition_from_token(
     )
     source = _parse_from_context_into_operators(context=new_context).operators
     function = Function(
-        location=func_token.location,
         name=function_name,
-        type_contract_in=parameters,
-        type_contract_out=return_type,
-        emit_inline_body=modifier_is_inline,
-        external_definition_link_to=external_definition_link_to,
-        is_global_linker_symbol=modifier_is_global,
-        source=source,
+        defined_at=token.location,
+        operators=source,
         variables=new_context.variables,
+        parameters=parameters,
+        return_type=return_type,
+        is_inline=modifier_is_inline,
+        is_external=modifier_is_extern,
+        is_global=modifier_is_global,
     )
     context.add_function(function)
 
@@ -438,7 +452,7 @@ def _try_unpack_function_from_token(
 
     function = context.functions.get(token.text, None)
     if function:
-        if function.emit_inline_body:
+        if function.is_inline:
             context.expand_from_inline_block(function)
             return True
         context.push_new_operator(

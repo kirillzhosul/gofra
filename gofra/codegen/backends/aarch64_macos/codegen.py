@@ -33,8 +33,8 @@ from gofra.codegen.backends.general import (
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
 )
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.hir.variable import VariableStorageClass
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
 from gofra.types.primitive.void import VoidType
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from gofra.context import ProgramContext
+    from gofra.hir.function import Function
     from gofra.targets.target import Target
 
 
@@ -93,6 +94,13 @@ def aarch64_macos_operator_instructions(
             assert isinstance(operator.operand, tuple)
             local_variable, _ = operator.operand
             if local_variable in owner_function.variables:
+                hir_local_variable = owner_function.variables[local_variable]
+                assert hir_local_variable.is_function_scope
+                if hir_local_variable.storage_class != VariableStorageClass.STACK:
+                    msg = (
+                        "Non stack local variables storage class is not implemented yet"
+                    )
+                    raise NotImplementedError(msg)
                 push_local_variable_address_from_frame_offset(
                     context,
                     owner_function.variables,
@@ -131,7 +139,7 @@ def aarch64_macos_operator_instructions(
             )
             push_integer_onto_stack(context, value=len(string_raw))
         case OperatorType.FUNCTION_RETURN:
-            has_retval = not isinstance(owner_function.type_contract_out, VoidType)
+            has_retval = not isinstance(owner_function.return_type, VoidType)
             function_end_with_epilogue(
                 context,
                 has_preserved_frame=True,
@@ -142,12 +150,11 @@ def aarch64_macos_operator_instructions(
 
             function = program.functions[operator.operand]
 
-            function_name = function.external_definition_link_to or function.name
             function_call(
                 context,
-                name=function_name,
-                type_contract_in=function.type_contract_in,
-                type_contract_out=function.type_contract_out,
+                name=function.name,
+                type_contract_in=function.parameters,
+                type_contract_out=function.return_type,
             )
         case OperatorType.TYPECAST:
             # Skip that as it is typechecker only.
@@ -238,27 +245,27 @@ def aarch64_macos_executable_functions(
     """
     # Define only function that contains anything to execute
     functions = filter(
-        Function.has_executable_body,
+        lambda f: bool(f.operators),
         [*program.functions.values(), program.entry_point],
     )
     for function in functions:
-        assert not function.is_global_linker_symbol or (
-            not function.type_contract_in and not function.type_contract_out
+        assert not function.is_global or (
+            not function.parameters and not function.return_type
         ), "Codegen does not supports global linker symbols that has type contracts"
 
         function_begin_with_prologue(
             context,
             name=function.name,
             local_variables=function.variables,
-            global_name=function.name if function.is_global_linker_symbol else None,
+            global_name=function.name if function.is_global else None,
             preserve_frame=True,
-            arguments_count=len(function.type_contract_in),
+            arguments_count=len(function.parameters),
         )
 
-        aarch64_macos_instruction_set(context, function.source, program, function)
+        aarch64_macos_instruction_set(context, function.operators, program, function)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
-        has_retval = not isinstance(function.type_contract_out, VoidType)
+        has_retval = not isinstance(function.return_type, VoidType)
         function_end_with_epilogue(
             context,
             has_preserved_frame=True,

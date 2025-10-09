@@ -1,6 +1,6 @@
 from gofra.exceptions import GofraError
+from gofra.hir.function import Function
 from gofra.lexer.tokens import TokenLocation
-from gofra.parser.functions.function import Function
 from gofra.types import Type
 
 
@@ -23,7 +23,7 @@ class ParameterTypeMismatchTypecheckError(GofraError):
     def __repr__(self) -> str:
         return f"""Parameter type mismatch at {self.at}
 
-Function '{self.callee.name}{self.callee.type_contract_in}' defined at {self.callee.location} 
+Function '{self.callee.name}{self.callee.parameters}' defined at {self.callee.defined_at} 
 parameter type is '{self.expected_type}' but got argument of type '{self.actual_type}'
 
 Called from '{self.caller.name}' at {self.at}

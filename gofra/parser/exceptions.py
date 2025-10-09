@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from gofra.consts import GOFRA_ENTRY_POINT
@@ -9,7 +10,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from gofra.lexer.tokens import Token, TokenLocation
-    from gofra.parser.functions.function import FunctionTypeContract
     from gofra.types import Type
 
 
@@ -231,15 +231,15 @@ class ParserNoEntryFunctionError(GofraError):
 
 
 class ParserEntryPointFunctionTypeContractInError(GofraError):
-    def __init__(self, *args: object, type_contract_in: FunctionTypeContract) -> None:
+    def __init__(self, *args: object, parameters: Sequence[Type]) -> None:
         super().__init__(*args)
-        self.type_contract_in = type_contract_in
+        self.parameters = parameters
 
     def __repr__(self) -> str:
         return f"""Entry point function '{GOFRA_ENTRY_POINT}' violates type contract!
 
-Entry point function cannot have type contract in!
-But currently it have type contract in: {self.type_contract_in}
+Entry point function cannot accept parameters!
+But currently it has parameters: {self.parameters}
 """
 
 

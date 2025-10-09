@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 
 from gofra.exceptions import GofraError
+from gofra.hir.function import Function
 from gofra.lexer.tokens import TokenLocation
-from gofra.parser.functions.function import Function
 from gofra.types import Type
 
 
@@ -22,13 +22,13 @@ class MissingFunctionArgumentsTypecheckError(GofraError):
         self.at = at
 
     def __repr__(self) -> str:
-        missing_count = len(self.callee.type_contract_in) - len(self.typestack)
+        missing_count = len(self.callee.parameters) - len(self.typestack)
         return f"""Not enough function arguments at {self.at}
 
-Function '{self.callee.name}{self.callee.type_contract_in}' defined at {self.callee.location} 
+Function '{self.callee.name}{self.callee.parameters}' defined at {self.callee.defined_at} 
 expects {missing_count} more arguments on stack
 
-Mismatch (stack): {self.typestack} != {self.callee.type_contract_in}
+Mismatch (stack): {self.typestack} != {self.callee.parameters}
 
 Called from '{self.caller.name}' at {self.at}
 

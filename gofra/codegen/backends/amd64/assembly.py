@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
-    from gofra.parser.variables import Variable
+    from gofra.hir.variable import Variable
     from gofra.types._base import Type
 
     from ._context import AMD64CodegenContext
@@ -110,7 +110,7 @@ def initialize_static_data_section(
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, variable in static_variables.items():
-        type_size = variable.type.size_in_bytes
+        type_size = variable.size_in_bytes
         if type_size != 0:
             context.fd.write(f"{name}: .space {type_size}\n")
 

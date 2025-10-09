@@ -4,13 +4,13 @@ Probably should not be here (in parser)
 """
 
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.hir.function import Function
 from gofra.parser.exceptions import (
     ParserEntryPointFunctionModifiersError,
     ParserEntryPointFunctionTypeContractInError,
     ParserEntryPointFunctionTypeContractOutError,
     ParserNoEntryFunctionError,
 )
-from gofra.parser.functions.function import Function
 from gofra.types.primitive.void import VoidType
 
 from ._context import ParserContext
@@ -22,16 +22,16 @@ def validate_and_pop_entry_point(context: ParserContext) -> Function:
         raise ParserNoEntryFunctionError
 
     entry_point = context.functions.pop(GOFRA_ENTRY_POINT)
-    if entry_point.external_definition_link_to or entry_point.emit_inline_body:
+    if entry_point.is_external or entry_point.is_inline:
         raise ParserEntryPointFunctionModifiersError
 
-    if not isinstance(entry_point.type_contract_out, VoidType):
+    if not isinstance(entry_point.return_type, VoidType):
         raise ParserEntryPointFunctionTypeContractOutError(
-            type_contract_out=entry_point.type_contract_out,
+            type_contract_out=entry_point.return_type,
         )
 
-    if entry_point.type_contract_in:
+    if entry_point.parameters:
         raise ParserEntryPointFunctionTypeContractInError(
-            type_contract_in=entry_point.type_contract_in,
+            parameters=entry_point.parameters,
         )
     return entry_point

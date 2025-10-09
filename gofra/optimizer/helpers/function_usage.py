@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from itertools import chain
 
 from gofra.context import ProgramContext
-from gofra.parser.functions.function import Function
+from gofra.hir.function import Function
 from gofra.parser.operators import OperatorType
 
 
@@ -17,7 +17,7 @@ def is_function_has_callers(program: ProgramContext, function_name: str) -> bool
         operator.type == OperatorType.FUNCTION_CALL
         and operator.operand == function.name
         for operator in chain.from_iterable(
-            (f.source for f in (*program.functions.values(), program.entry_point)),
+            (f.operators for f in (*program.functions.values(), program.entry_point)),
         )
     )
 
@@ -27,6 +27,5 @@ def search_unused_functions(program: ProgramContext) -> Iterable[Function]:
     return [
         f
         for f in program.functions.values()
-        if not f.is_global_linker_symbol
-        and not is_function_has_callers(program, f.name)
+        if not f.is_global and not is_function_has_callers(program, f.name)
     ]

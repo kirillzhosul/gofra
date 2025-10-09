@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
+    from gofra.hir.function import Function
+    from gofra.hir.variable import Variable
     from gofra.parser._context import ParserContext
-    from gofra.parser.functions import Function
-    from gofra.parser.variables import Variable
 
 
 @dataclass(frozen=False)

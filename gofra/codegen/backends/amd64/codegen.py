@@ -10,8 +10,8 @@ from gofra.codegen.backends.general import (
     CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
 )
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.hir.function import Function
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.parser.functions.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import Operator, OperatorType
 from gofra.types.primitive.void import VoidType
@@ -134,18 +134,17 @@ def amd64_operator_instructions(
             assert isinstance(operator.operand, str)
 
             function = program.functions[operator.operand]
-            function_name = function.external_definition_link_to or function.name
             function_call(
                 context,
-                name=function_name,
-                type_contract_in=function.type_contract_in,
-                type_contract_out=function.type_contract_out,
+                name=function.name,
+                type_contract_in=function.parameters,
+                type_contract_out=function.return_type,
             )
         case OperatorType.FUNCTION_RETURN:
             function_end_with_epilogue(
                 context,
                 has_return_value=not isinstance(
-                    owner_function.type_contract_out,
+                    owner_function.return_type,
                     VoidType,
                 ),
             )
@@ -241,25 +240,25 @@ def amd64_executable_functions(
     """
     # Define only function that contains anything to execute
     functions = filter(
-        Function.has_executable_body,
+        lambda f: bool(f.operators),
         [*program.functions.values(), program.entry_point],
     )
     for function in functions:
-        assert not function.is_global_linker_symbol or (
-            not function.type_contract_in and not function.type_contract_out
+        assert not function.is_global or (
+            not function.parameters and not function.return_type
         ), "Codegen does not supports global linker symbols that has type contracts"
         function_begin_with_prologue(
             context,
             local_variables=function.variables,
-            arguments_count=len(function.type_contract_in),
+            arguments_count=len(function.parameters),
             function_name=function.name,
-            as_global_linker_symbol=function.is_global_linker_symbol,
+            as_global_linker_symbol=function.is_global,
         )
 
-        amd64_instruction_set(context, function.source, program, function)
+        amd64_instruction_set(context, function.operators, program, function)
         function_end_with_epilogue(
             context,
-            has_return_value=not isinstance(function.type_contract_out, VoidType),
+            has_return_value=not isinstance(function.return_type, VoidType),
         )
 
 

@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 
 from gofra.exceptions import GofraError
-from gofra.parser.functions.function import Function
+from gofra.hir.function import Function
 from gofra.parser.operators import Operator
 from gofra.types._base import Type
 
@@ -105,7 +105,7 @@ class TypecheckFunctionTypeContractOutViolatedError(GofraError):
     def __repr__(self) -> str:
         return f"""Type safety check error!
 
-Function `{self.function.name}` at {self.function.location} has type contract out {self.function.type_contract_out}
+Function `{self.function.name}` at {self.function.defined_at} has type contract out {self.function.return_type}
 
 But actual stack at the end is: {self.type_stack}"""
 

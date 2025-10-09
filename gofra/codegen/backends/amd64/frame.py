@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from typing import NamedTuple
 
 from gofra.codegen.backends.alignment import align_to_highest_size
-from gofra.parser.variables import Variable
+from gofra.hir.variable import Variable
 
 # Size of frame head (FP, LR registers)
 FRAME_HEAD_SIZE = 8 * 2
@@ -44,7 +44,7 @@ def build_local_variables_frame_offsets(
 
     for var_name, var in variables.items():
         offsets[var_name] = current_offset
-        current_offset += var.type.size_in_bytes
+        current_offset += var.size_in_bytes
 
     # Alignment is required on AARCH64
     local_space_size = align_to_highest_size(current_offset)

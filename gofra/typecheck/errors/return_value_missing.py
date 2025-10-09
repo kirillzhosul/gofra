@@ -1,5 +1,5 @@
 from gofra.exceptions import GofraError
-from gofra.parser.functions.function import Function
+from gofra.hir.function import Function
 
 
 class ReturnValueMissingTypecheckError(GofraError):
@@ -13,8 +13,8 @@ class ReturnValueMissingTypecheckError(GofraError):
     def __repr__(self) -> str:
         return f"""Return value missing
 
-Function '{self.owner.name}' defined at {self.owner.location} 
-return value type is '{self.owner.type_contract_out}' but it is missing at the end (empty stack)
+Function '{self.owner.name}' defined at {self.owner.defined_at} 
+return value type is '{self.owner.return_type}' but it is missing at the end (empty stack)
 
 Did you forgot to push return value?
 

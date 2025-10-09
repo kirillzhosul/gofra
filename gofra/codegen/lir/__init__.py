@@ -6,7 +6,7 @@ from typing import Literal, assert_never
 
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from gofra.context import ProgramContext
-from gofra.parser.functions.function import Function
+from gofra.hir.function import Function
 from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import OperatorType
 from gofra.types.primitive.void import VoidType
@@ -98,7 +98,7 @@ def translate_hir_to_lir(
 
     for hir_func in (*hir.functions.values(), hir.entry_point):
         name = hir_func.name
-        if hir_func.external_definition_link_to:
+        if hir_func.is_external:
             lir.externs[name] = hir_external_function_to_lir_extern_function(hir_func)
             continue
         lir.functions[name] = translate_hir_function_to_lir_function(
@@ -137,12 +137,12 @@ def lir_generate_system_entry_point(
 def hir_external_function_to_lir_extern_function(
     hir_function: Function,
 ) -> LIRExternFunction:
-    assert hir_function.external_definition_link_to
-    params = [LIRParameter(t) for t in hir_function.type_contract_in]
+    assert hir_function.is_external
+    params = [LIRParameter(t) for t in hir_function.parameters]
     return LIRExternFunction(
-        name=hir_function.external_definition_link_to,
+        name=hir_function.name,
         real_name=hir_function.name,
-        return_type=hir_function.type_contract_out,
+        return_type=hir_function.return_type,
         parameters=params,
     )
 
@@ -152,20 +152,20 @@ def translate_hir_function_to_lir_function(
     hir_function: Function,
     virtual_register_allocator: LIRVirtualRegisterAllocator,
 ) -> LIRInternalFunction:
-    assert hir_function.external_definition_link_to is None
-    parameters = [LIRParameter(t) for t in hir_function.type_contract_in]
+    assert not hir_function.is_external
+    parameters = [LIRParameter(t) for t in hir_function.parameters]
     f_local_vars = {v.name: v.type for v in hir_function.variables.values()}
 
     lir_function = LIRInternalFunction(
         name=hir_function.name,
-        is_global_linker_symbol=hir_function.is_global_linker_symbol,
-        return_type=hir_function.type_contract_out,
+        is_global_linker_symbol=hir_function.is_global,
+        return_type=hir_function.return_type,
         parameters=parameters,
         locals=f_local_vars,
     )
 
     is_leaf_function = True
-    retval_type = hir_function.type_contract_out
+    retval_type = hir_function.return_type
     has_retval = retval_type.size_in_bytes != 0
 
     lir_function.add_op(LIRFunctionSaveFrame(locals=f_local_vars))
@@ -176,7 +176,7 @@ def translate_hir_function_to_lir_function(
     def vreg_alloc() -> LIRVirtualRegister:
         return LIRVirtualRegister(allocator=virtual_register_allocator)
 
-    for idx, operator in enumerate(hir_function.source):
+    for idx, operator in enumerate(hir_function.operators):
         virtual_register_allocator.reset_virtual_space()
         lir_function.update_location(operator.token.location)
 

@@ -17,7 +17,7 @@ from .exceptions import (
 if TYPE_CHECKING:
     from collections.abc import MutableSequence
 
-    from gofra.parser.functions.function import Function
+    from gofra.hir.function import Function
     from gofra.parser.operators import Operator
     from gofra.types import Type
 
@@ -67,7 +67,7 @@ class TypecheckContext:
         Types are reversed so call will look like original stack.
         """
         stack_size = len(self.emulated_stack_types)
-        if stack_size < len(callee.type_contract_in):
+        if stack_size < len(callee.parameters):
             raise MissingFunctionArgumentsTypecheckError(
                 typestack=self.emulated_stack_types,
                 callee=callee,
@@ -75,7 +75,7 @@ class TypecheckContext:
                 at=at.token.location,
             )
 
-        for expected_type in callee.type_contract_in[::-1]:
+        for expected_type in callee.parameters[::-1]:
             argument_type = self.pop_type_from_stack()
 
             if is_types_same(

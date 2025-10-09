@@ -14,7 +14,8 @@
         "examples",
         "types",
         "assembler",
-        "linker"
+        "linker",
+        "hir"
     ],
     "cSpell.words": [
         "Addrs",

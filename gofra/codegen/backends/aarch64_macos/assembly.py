@@ -20,12 +20,11 @@ from .registers import (
 )
 
 if TYPE_CHECKING:
-    from collections import OrderedDict
     from collections.abc import Mapping, Sequence
 
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
-    from gofra.parser.variables import Variable
+    from gofra.hir.variable import Variable
     from gofra.types._base import Type
 
 
@@ -141,7 +140,7 @@ def push_static_address_onto_stack(
 
 def push_local_variable_address_from_frame_offset(
     context: AARCH64CodegenContext,
-    local_variables: OrderedDict[str, Variable],
+    local_variables: Mapping[str, Variable],
     local_variable: str,
 ) -> None:
     context.write(f"// Load local variable from frame offset ({local_variable})")
@@ -189,7 +188,7 @@ def initialize_static_data_section(
     for name, data in static_strings.items():
         context.fd.write(f'{name}: .asciz "{data}"\n')
     for name, variable in static_variables.items():
-        type_size = variable.type.size_in_bytes
+        type_size = variable.size_in_bytes
         if type_size != 0:
             context.fd.write(f"{name}: .space {type_size}\n")
 
@@ -314,7 +313,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
     name: str,
     global_name: str | None = None,
     preserve_frame: bool = True,
-    local_variables: OrderedDict[str, Variable],
+    local_variables: Mapping[str, Variable],
     arguments_count: int,
 ) -> None:
     """Begin an function symbol.

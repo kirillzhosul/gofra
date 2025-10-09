@@ -25,7 +25,7 @@ from .exceptions import (
 if TYPE_CHECKING:
     from collections.abc import MutableMapping, MutableSequence, Sequence
 
-    from gofra.parser.functions.function import Function
+    from gofra.hir.function import Function
 
 
 # TODO(@kirillzhosul): Probably be something like an debug flag
@@ -36,7 +36,7 @@ DEBUG_TRACE_TYPESTACK = False
 def validate_type_safety(functions: MutableMapping[str, Function]) -> None:
     """Validate type safety of an program by type checking all given functions."""
     for function in functions.values():
-        if function.external_definition_link_to:
+        if function.is_external:
             continue
         validate_function_type_safety(
             function=function,
@@ -50,14 +50,14 @@ def validate_function_type_safety(
 ) -> None:
     """Emulate and validate function type safety inside."""
     emulated_type_stack = emulate_type_stack_for_operators(
-        operators=function.source,
+        operators=function.operators,
         global_functions=global_functions,
-        initial_type_stack=list(function.type_contract_in),
+        initial_type_stack=list(function.parameters),
         current_function=function,
     )
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
-    has_retval = not is_types_same(function.type_contract_out, VoidType())
+    has_retval = not is_types_same(function.return_type, VoidType())
     if not has_retval and emulated_type_stack:
         # function must not return any
         raise TypecheckFunctionTypeContractOutViolatedError(
@@ -74,7 +74,7 @@ def validate_function_type_safety(
 
         if not is_types_same(
             a=emulated_type_stack[0],
-            b=function.type_contract_out,
+            b=function.return_type,
             strategy="strict-same-type",
         ):
             # type mismatch.
@@ -156,9 +156,8 @@ def emulate_type_stack_for_operators(
                 assert isinstance(operator.operand, str)
 
                 function = global_functions[operator.operand]
-                type_contract_in = function.type_contract_in
 
-                if type_contract_in:
+                if function.parameters:
                     context.raise_for_function_arguments(
                         callee=function,
                         caller=current_function,
@@ -168,8 +167,8 @@ def emulate_type_stack_for_operators(
                     # TODO(@kirillzhosul): Pointers are for now not type-checked at function call level
                     # so passing an *int to *char[] function is valid as they both are an pointer
 
-                if not isinstance(function.type_contract_out, VoidType):
-                    context.push_types(function.type_contract_out)
+                if not isinstance(function.return_type, VoidType):
+                    context.push_types(function.return_type)
 
             case OperatorType.INTRINSIC:
                 assert isinstance(operator.operand, Intrinsic)

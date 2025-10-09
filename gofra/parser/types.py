@@ -48,7 +48,7 @@ def parser_type_from_tokenizer(context: ParserContext) -> Type:
     aggregated_type: Type | None = PRIMITIVE_TYPE_REGISTRY.get(t.text, None)
 
     if not aggregated_type:
-        msg = f"Expected primitive registry type but got {t.text}."
+        msg = f"Expected primitive registry type but got {t.text} at {t.location}."
         raise ValueError(msg)
 
     if context.peek_token().type == TokenType.LBRACKET:

@@ -1,13 +1,5 @@
-from dataclasses import dataclass
-
+from gofra.hir.variable import Variable
 from gofra.parser._context import ParserContext
-from gofra.types import Type
-
-
-@dataclass
-class Variable:
-    name: str
-    type: Type
 
 
 def search_variable_in_context_parents(
