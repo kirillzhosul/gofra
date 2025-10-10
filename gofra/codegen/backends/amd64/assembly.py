@@ -317,7 +317,7 @@ def perform_operation_onto_stack(
             context.write(
                 "cmpq %rbx, %rax",
                 "xorq %rax, %rax",
-                f"set{logic_op[operation]}b al",
+                f"set{logic_op[operation]}b %al",
             )
         case _:
             msg = f"{operation} cannot be performed by codegen `{perform_operation_onto_stack.__name__}`"
