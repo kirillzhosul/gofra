@@ -5,15 +5,10 @@ from __future__ import annotations
 from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.backends.amd64.frame import build_local_variables_frame_offsets
-from gofra.codegen.backends.general import (
-    CODEGEN_GOFRA_CONTEXT_LABEL,
-    CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
-)
+from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from gofra.consts import GOFRA_ENTRY_POINT
-from gofra.hir.function import Function
+from gofra.hir.operator import Operator, OperatorType
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.parser.intrinsics import Intrinsic
-from gofra.parser.operators import Operator, OperatorType
 from gofra.types.primitive.void import VoidType
 
 from ._context import AMD64CodegenContext
@@ -42,6 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from gofra.context import ProgramContext
+    from gofra.hir.function import Function
     from gofra.targets.target import Target
 
 
@@ -85,11 +81,9 @@ def amd64_operator_instructions(
     owner_function: Function,
 ) -> None:
     match operator.type:
-        case OperatorType.INTRINSIC:
-            amd64_intrinsic_instructions(context, operator)
-        case OperatorType.PUSH_MEMORY_POINTER:
-            assert isinstance(operator.operand, tuple)
-            local_variable, _ = operator.operand
+        case OperatorType.PUSH_VARIABLE_ADDRESS:
+            assert isinstance(operator.operand, str)
+            local_variable = operator.operand
             if local_variable in owner_function.variables:
                 # Calculate negative offset from X29
                 current_offset = build_local_variables_frame_offsets(
@@ -106,14 +100,14 @@ def amd64_operator_instructions(
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
-        case OperatorType.DO | OperatorType.IF:
+        case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
             assert isinstance(operator.jumps_to_operator_idx, int)
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (
                 owner_function.name,
                 operator.jumps_to_operator_idx,
             )
             evaluate_conditional_block_on_stack_with_jump(context, label)
-        case OperatorType.END | OperatorType.WHILE:
+        case OperatorType.CONDITIONAL_END | OperatorType.CONDITIONAL_WHILE:
             # This also should be refactored into `assembly` layer
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
             if isinstance(operator.jumps_to_operator_idx, int):
@@ -148,86 +142,61 @@ def amd64_operator_instructions(
                     VoidType,
                 ),
             )
-        case OperatorType.TYPECAST:
+        case OperatorType.TYPE_CAST:
             # Skip that as it is typechecker only.
             pass
-        case OperatorType.VARIABLE_DEFINE:
-            msg = "Parser must resolve variable definition before codegen"
-            raise ValueError(msg)
-        case _:
-            assert_never(operator.type)
-
-
-def amd64_intrinsic_instructions(
-    context: AMD64CodegenContext,
-    operator: Operator,
-) -> None:
-    """Write executable body for intrinsic operation."""
-    assert isinstance(operator.operand, Intrinsic)
-    assert operator.type == OperatorType.INTRINSIC
-    match operator.operand:
-        case Intrinsic.DROP:
+        case OperatorType.STACK_DROP:
             drop_cells_from_stack(context, cells_count=1)
-        case Intrinsic.COPY:
+        case OperatorType.STACK_COPY:
             pop_cells_from_stack_into_registers(context, "rax")
             push_register_onto_stack(context, "rax")
             push_register_onto_stack(context, "rax")
-        case Intrinsic.SWAP:
+        case OperatorType.STACK_SWAP:
             pop_cells_from_stack_into_registers(context, "rax", "rbx")
             push_register_onto_stack(context, "rax")
             push_register_onto_stack(context, "rbx")
         case (
-            Intrinsic.PLUS
-            | Intrinsic.MINUS
-            | Intrinsic.MULTIPLY
-            | Intrinsic.DIVIDE
-            | Intrinsic.MODULUS
-            | Intrinsic.INCREMENT
-            | Intrinsic.DECREMENT
-            | Intrinsic.NOT_EQUAL
-            | Intrinsic.GREATER_EQUAL_THAN
-            | Intrinsic.LESS_EQUAL_THAN
-            | Intrinsic.LESS_THAN
-            | Intrinsic.GREATER_THAN
-            | Intrinsic.EQUAL
-            | Intrinsic.LOGICAL_OR
-            | Intrinsic.LOGICAL_AND
-            | Intrinsic.BITWISE_AND
-            | Intrinsic.BITWISE_OR
-            | Intrinsic.BITSHIFT_LEFT
-            | Intrinsic.BITSHIFT_RIGHT
+            OperatorType.ARITHMETIC_PLUS
+            | OperatorType.ARITHMETIC_MINUS
+            | OperatorType.ARITHMETIC_MULTIPLY
+            | OperatorType.ARITHMETIC_DIVIDE
+            | OperatorType.ARITHMETIC_MODULUS
+            | OperatorType.COMPARE_NOT_EQUALS
+            | OperatorType.COMPARE_GREATER_EQUALS
+            | OperatorType.COMPARE_LESS_EQUALS
+            | OperatorType.COMPARE_LESS
+            | OperatorType.COMPARE_GREATER
+            | OperatorType.COMPARE_EQUALS
+            | OperatorType.LOGICAL_OR
+            | OperatorType.LOGICAL_AND
+            | OperatorType.BITWISE_AND
+            | OperatorType.BITWISE_OR
+            | OperatorType.SHIFT_LEFT
+            | OperatorType.SHIFT_RIGHT
         ):
             perform_operation_onto_stack(
                 context,
-                operation=CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS[operator.operand],
+                operation=operator.type,
             )
-        case (
-            Intrinsic.SYSCALL0
-            | Intrinsic.SYSCALL1
-            | Intrinsic.SYSCALL2
-            | Intrinsic.SYSCALL3
-            | Intrinsic.SYSCALL4
-            | Intrinsic.SYSCALL5
-            | Intrinsic.SYSCALL6
-        ):
+        case OperatorType.SYSCALL:
             if context.target.operating_system == "Windows":
                 msg = "Usage of syscalls is discouraged on Windows, use WINAPI"
                 raise ValueError(msg)
-            assert operator.syscall_optimization_injected_args is None, "TODO: Optimize"
+            assert isinstance(operator.operand, int)
             ipc_syscall_linux(
                 context,
-                arguments_count=operator.get_syscall_arguments_count() - 1,
-                store_retval_onto_stack=not operator.syscall_optimization_omit_result,
+                arguments_count=operator.operand,
+                store_retval_onto_stack=True,
                 injected_args=[],
             )
-        case Intrinsic.MEMORY_LOAD:
+        case OperatorType.MEMORY_VARIABLE_READ:
             load_memory_from_stack_arguments(context)
-        case Intrinsic.MEMORY_STORE:
+        case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)
-        case Intrinsic.BREAKPOINT:
+        case OperatorType.DEBUGGER_BREAKPOINT:
             raise NotImplementedError(operator)
         case _:
-            assert_never(operator.operand)
+            assert_never(operator.type)
 
 
 def amd64_executable_functions(
@@ -244,9 +213,6 @@ def amd64_executable_functions(
         [*program.functions.values(), program.entry_point],
     )
     for function in functions:
-        assert not function.is_global or (
-            not function.parameters and not function.return_type
-        ), "Codegen does not supports global linker symbols that has type contracts"
         function_begin_with_prologue(
             context,
             local_variables=function.variables,
@@ -258,7 +224,7 @@ def amd64_executable_functions(
         amd64_instruction_set(context, function.operators, program, function)
         function_end_with_epilogue(
             context,
-            has_return_value=not isinstance(function.return_type, VoidType),
+            has_return_value=function.has_return_value(),
         )
 
 

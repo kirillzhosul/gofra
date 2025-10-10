@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
 
 from gofra.codegen.backends.amd64.frame import build_local_variables_frame_offsets
+from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
@@ -19,7 +20,6 @@ from .registers import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
     from gofra.hir.variable import Variable
     from gofra.types._base import Type
 
@@ -261,54 +261,67 @@ def load_memory_from_stack_arguments(context: AMD64CodegenContext) -> None:
 
 def perform_operation_onto_stack(
     context: AMD64CodegenContext,
-    operation: CODEGEN_GOFRA_ON_STACK_OPERATIONS,
+    operation: OperatorType,
 ) -> None:
     """Perform *math* operation onto stack (pop arguments and push back result)."""
-    is_unary = operation in ("++", "--")
-    registers = ("rax",) if is_unary else ("rax", "rbx")
+    registers = ("rax", "rbx")
     pop_cells_from_stack_into_registers(context, *registers)
+    # TODO(@kirillzhosul): Optimize inc / dec (++, --) when incrementing / decrementing by known values
 
     match operation:
-        case "+":
+        case OperatorType.ARITHMETIC_PLUS:
             context.write("addq %rbx, %rax")
-        case "-":
+
+        case OperatorType.ARITHMETIC_MINUS:
             context.write("subq %rax, %rbx")
-        case "*":
+
+        case OperatorType.ARITHMETIC_MULTIPLY:
             context.write("mulq %rbx, %rax")
-        case "//":
+
+        case OperatorType.ARITHMETIC_DIVIDE:
             context.write(
                 "movq $0, %rdx",
                 "idivq %rbx",
             )
-        case "%":
+        case OperatorType.ARITHMETIC_MODULUS:
             context.write(
                 "movq $0, %rdx",
                 "idivq %rbx",
                 "movq %rdx, %rax",
             )
-        case "&&" | "||" | "|" | "&" | ">>" | "<<":
+        case (
+            OperatorType.LOGICAL_OR
+            | OperatorType.BITWISE_OR
+            | OperatorType.SHIFT_RIGHT
+            | OperatorType.SHIFT_LEFT
+            | OperatorType.BITWISE_AND
+            | OperatorType.LOGICAL_AND
+        ):
             raise NotImplementedError
-        case "++":
-            context.write("incq %rax")
-        case "--":
-            context.write("decq %rax")
-        case "!=" | ">=" | "<=" | "<" | ">" | "==":
+        case (
+            OperatorType.COMPARE_EQUALS
+            | OperatorType.COMPARE_GREATER
+            | OperatorType.COMPARE_GREATER_EQUALS
+            | OperatorType.COMPARE_LESS
+            | OperatorType.COMPARE_NOT_EQUALS
+            | OperatorType.COMPARE_LESS_EQUALS
+        ):
             logic_op = {
-                "!=": "ne",
-                ">=": "ge",
-                "<=": "le",
-                "<": "l",
-                ">": "g",
-                "==": "e",
+                OperatorType.COMPARE_NOT_EQUALS: "ne",
+                OperatorType.COMPARE_GREATER_EQUALS: "ge",
+                OperatorType.COMPARE_LESS_EQUALS: "le",
+                OperatorType.COMPARE_LESS: "l",
+                OperatorType.COMPARE_GREATER: "g",
+                OperatorType.COMPARE_EQUALS: "e",
             }
-
             context.write(
                 "cmpq %rbx, %rax",
                 "xorq %rax, %rax",
                 f"set{logic_op[operation]}b al",
             )
         case _:
-            assert_never()
+            msg = f"{operation} cannot be performed by codegen `{perform_operation_onto_stack.__name__}`"
+            raise ValueError(msg)
     push_register_onto_stack(context, "rax")
 
 

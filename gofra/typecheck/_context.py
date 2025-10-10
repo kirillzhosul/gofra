@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import MutableSequence
 
     from gofra.hir.function import Function
-    from gofra.parser.operators import Operator
+    from gofra.hir.operator import Operator
     from gofra.types import Type
 
 
@@ -72,7 +72,7 @@ class TypecheckContext:
                 typestack=self.emulated_stack_types,
                 callee=callee,
                 caller=caller,
-                at=at.token.location,
+                at=at.location,
             )
 
         for expected_type in callee.parameters[::-1]:
@@ -90,7 +90,7 @@ class TypecheckContext:
                 actual_type=argument_type,
                 caller=caller,
                 callee=callee,
-                at=at.token.location,
+                at=at.location,
             )
 
     def raise_for_operator_arguments(

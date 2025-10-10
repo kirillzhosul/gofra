@@ -1,10 +1,9 @@
 from collections.abc import Mapping
 from typing import NamedTuple
 
+from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
+from gofra.codegen.backends.alignment import align_to_highest_size
 from gofra.types import Type
-
-from ._context import AARCH64CodegenContext
-from .alignment import align_to_highest_size
 
 # Size of frame head (FP, LR registers)
 FRAME_HEAD_SIZE = 8 * 2

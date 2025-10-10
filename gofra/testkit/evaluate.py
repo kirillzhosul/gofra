@@ -40,6 +40,7 @@ def toolchain_assembly_executable(
     )
     validate_type_safety(
         functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
+        global_variables=context.global_variables,
     )
     artifact_path = cache_directory / f"{path.with_suffix('').name}"
     artifact_object_file = artifact_path.with_suffix(".o")

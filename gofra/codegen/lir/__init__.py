@@ -7,7 +7,6 @@ from typing import Literal, assert_never
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from gofra.context import ProgramContext
 from gofra.hir.function import Function
-from gofra.parser.intrinsics import Intrinsic
 from gofra.parser.operators import OperatorType
 from gofra.types.primitive.void import VoidType
 
@@ -51,7 +50,7 @@ from .ops import (
     LIRSystemExit,
     LIRUnconditionalJumpToLabel,
 )
-from .registers import LIRImmediate, LIRVirtualRegister, LIRVirtualRegisterAllocator
+from .registers import LIRVirtualRegister, LIRVirtualRegisterAllocator
 from .static import (
     LIRStaticSegment,
     LIRStaticSegmentCString,
@@ -124,6 +123,7 @@ def lir_generate_system_entry_point(
         name=system_ep_name,
         return_type=VoidType(),
         is_global_linker_symbol=True,
+        hir_function_as_metadata=None,
         locals={},
         parameters=[],
     )
@@ -157,6 +157,7 @@ def translate_hir_function_to_lir_function(
     f_local_vars = {v.name: v.type for v in hir_function.variables.values()}
 
     lir_function = LIRInternalFunction(
+        hir_function_as_metadata=hir_function,
         name=hir_function.name,
         is_global_linker_symbol=hir_function.is_global,
         return_type=hir_function.return_type,
@@ -164,7 +165,6 @@ def translate_hir_function_to_lir_function(
         locals=f_local_vars,
     )
 
-    is_leaf_function = True
     retval_type = hir_function.return_type
     has_retval = retval_type.size_in_bytes != 0
 
@@ -178,7 +178,7 @@ def translate_hir_function_to_lir_function(
 
     for idx, operator in enumerate(hir_function.operators):
         virtual_register_allocator.reset_virtual_space()
-        lir_function.update_location(operator.token.location)
+        lir_function.update_location(operator.location)
 
         match operator.type:
             case OperatorType.FUNCTION_RETURN:
@@ -190,9 +190,6 @@ def translate_hir_function_to_lir_function(
                 lir_function.add_op(LIRFunctionReturn())
             case OperatorType.FUNCTION_CALL:
                 assert isinstance(operator.operand, str)
-
-                # Mark function as leaf one ASAP.
-                is_leaf_function = False
 
                 name = operator.operand
                 func = lir.get_function(name)
@@ -208,23 +205,20 @@ def translate_hir_function_to_lir_function(
                         LIRFunctionCallAcquireRetval(return_type=func.return_type),
                     )
 
-            case OperatorType.TYPECAST:
+            case OperatorType.TYPE_CAST:
                 # Skip that as it is typechecker only.
                 pass
-            case OperatorType.VARIABLE_DEFINE:
-                msg = "Parser must resolve variable definition before LIR-cogeneration"
-                raise ValueError(msg)
             case OperatorType.PUSH_INTEGER:
                 assert isinstance(operator.operand, int)
                 lir_function.add_op(LIRPushInteger32Bits(operator.operand))
-            case OperatorType.PUSH_MEMORY_POINTER:
-                assert isinstance(operator.operand, tuple)
-                name, _ = operator.operand
+            case OperatorType.PUSH_VARIABLE_ADDRESS:
+                assert isinstance(operator.operand, str)
+                name = operator.operand
                 if name in lir_function.locals:
                     lir_function.add_op(LIRPushLocalFrameVariableAddress(name=name))
                 else:
                     lir_function.add_op(LIRPushStaticGlobalVariableAddress(name=name))
-            case OperatorType.DO | OperatorType.IF:
+            case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
                 assert isinstance(operator.jumps_to_operator_idx, int)
                 vreg = vreg_alloc()
 
@@ -239,231 +233,192 @@ def translate_hir_function_to_lir_function(
                     LIRPopFromStackIntoRegisters((vreg,)),
                     LIRJumpIfZero(register=vreg, label=label),
                 )
-            case OperatorType.INTRINSIC:
-                assert isinstance(operator.operand, Intrinsic)
-                assert operator.type == OperatorType.INTRINSIC
-                match operator.operand:
-                    case Intrinsic.DROP:
-                        lir_function.add_op(LIRDropStackSlot())
-                    case Intrinsic.COPY:
-                        vreg = vreg_alloc()
-                        lir_function.add_op(LIRPopFromStackIntoRegisters([vreg]))
-                        lir_function.add_op(LIRPushRegistersOntoStack([vreg, vreg]))
-                    case Intrinsic.SWAP:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters([vreg_a, vreg_b]),
-                            LIRPushRegistersOntoStack([vreg_b, vreg_a]),
-                        )
-                    case (
-                        Intrinsic.SYSCALL0
-                        | Intrinsic.SYSCALL1
-                        | Intrinsic.SYSCALL2
-                        | Intrinsic.SYSCALL3
-                        | Intrinsic.SYSCALL4
-                        | Intrinsic.SYSCALL5
-                        | Intrinsic.SYSCALL6
-                    ):
-                        assert operator.syscall_optimization_injected_args is None
-                        assert operator.syscall_optimization_omit_result is False
-                        syscall_args = operator.get_syscall_arguments_count()
-                        lir_function.add_ops(
-                            LIRSystemCallPrepareArguments(syscall_args),
-                            LIRSystemCall(),
-                        )
-                    case Intrinsic.BREAKPOINT:
-                        lir_function.add_op(LIRDebuggerTraceTrap())
-                    case Intrinsic.MEMORY_LOAD:
-                        vreg = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg,)),
-                            LIRLoadMemoryAddress(
-                                address_register=vreg,
-                                result_register=vreg,
-                            ),
-                            LIRPushRegistersOntoStack((vreg,)),
-                        )
-                    case Intrinsic.MEMORY_STORE:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
+            case OperatorType.STACK_DROP:
+                lir_function.add_op(LIRDropStackSlot())
+            case OperatorType.STACK_COPY:
+                vreg = vreg_alloc()
+                lir_function.add_op(LIRPopFromStackIntoRegisters([vreg]))
+                lir_function.add_op(LIRPushRegistersOntoStack([vreg, vreg]))
+            case OperatorType.STACK_SWAP:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters([vreg_a, vreg_b]),
+                    LIRPushRegistersOntoStack([vreg_b, vreg_a]),
+                )
+            case OperatorType.SYSCALL:
+                assert isinstance(operator.operand, int)
+                syscall_args = operator.operand
+                lir_function.add_ops(
+                    LIRSystemCallPrepareArguments(syscall_args),
+                    LIRSystemCall(),
+                )
+            case OperatorType.DEBUGGER_BREAKPOINT:
+                lir_function.add_op(LIRDebuggerTraceTrap())
+            case OperatorType.MEMORY_VARIABLE_READ:
+                vreg = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg,)),
+                    LIRLoadMemoryAddress(
+                        address_register=vreg,
+                        result_register=vreg,
+                    ),
+                    LIRPushRegistersOntoStack((vreg,)),
+                )
+            case OperatorType.MEMORY_VARIABLE_WRITE:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
 
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRStoreIntoMemoryAddress(
-                                address_register=vreg_a,
-                                value_register=vreg_b,
-                            ),
-                        )
-                    case Intrinsic.INCREMENT:
-                        vreg = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg,)),
-                            LIRAddRegs(
-                                result_register=vreg,
-                                operand_a=vreg,
-                                operand_b=LIRImmediate(value=1),
-                            ),
-                            LIRPushRegistersOntoStack((vreg,)),
-                        )
-                    case Intrinsic.DECREMENT:
-                        vreg = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg,)),
-                            LIRSubRegs(
-                                result_register=vreg,
-                                operand_a=vreg,
-                                operand_b=LIRImmediate(value=1),
-                            ),
-                            LIRPushRegistersOntoStack((vreg,)),
-                        )
-                    case Intrinsic.PLUS:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRStoreIntoMemoryAddress(
+                        address_register=vreg_a,
+                        value_register=vreg_b,
+                    ),
+                )
 
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRAddRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.MINUS:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRSubRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.MULTIPLY:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRMulRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.DIVIDE:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRFloorDivRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.MODULUS:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRModulusRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.BITWISE_AND:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRBitwiseAndRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.BITWISE_OR:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRBitwiseOrRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.LOGICAL_OR:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRBitwiseOrRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case Intrinsic.BITSHIFT_RIGHT:
-                        raise NotImplementedError
-                    case Intrinsic.BITSHIFT_LEFT:
-                        raise NotImplementedError
-                    case Intrinsic.LOGICAL_AND:
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRBitwiseAndRegs(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case (
-                        Intrinsic.NOT_EQUAL
-                        | Intrinsic.GREATER_EQUAL_THAN
-                        | Intrinsic.LESS_EQUAL_THAN
-                        | Intrinsic.LESS_THAN
-                        | Intrinsic.GREATER_THAN
-                        | Intrinsic.EQUAL
-                    ):
-                        vreg_a = vreg_alloc()
-                        vreg_b = vreg_alloc()
-                        comp_map: dict[
-                            Intrinsic,
-                            Literal["!=", ">=", "<=", "<", ">", "=="],
-                        ] = {
-                            Intrinsic.NOT_EQUAL: "!=",
-                            Intrinsic.GREATER_EQUAL_THAN: ">=",
-                            Intrinsic.LESS_EQUAL_THAN: "<=",
-                            Intrinsic.LESS_THAN: "<",
-                            Intrinsic.GREATER_THAN: ">",
-                            Intrinsic.EQUAL: "==",
-                        }
-                        lir_function.add_ops(
-                            LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
-                            LIRLogicalCompareRegisters(
-                                result_register=vreg_a,
-                                operand_a=vreg_a,
-                                operand_b=vreg_b,
-                                comparison=comp_map[operator.operand],
-                            ),
-                            LIRPushRegistersOntoStack((vreg_a,)),
-                        )
-                    case _:
-                        assert_never(operator.operand)
+            case OperatorType.ARITHMETIC_PLUS:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
 
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRAddRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.ARITHMETIC_MINUS:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRSubRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.ARITHMETIC_MULTIPLY:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRMulRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.ARITHMETIC_DIVIDE:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRFloorDivRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.ARITHMETIC_MODULUS:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRModulusRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.BITWISE_AND:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRBitwiseAndRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.BITWISE_OR:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRBitwiseOrRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.LOGICAL_OR:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRBitwiseOrRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case OperatorType.SHIFT_RIGHT | OperatorType.SHIFT_LEFT:
+                raise NotImplementedError(operator.type)
+            case OperatorType.LOGICAL_AND:
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRBitwiseAndRegs(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
+            case (
+                OperatorType.COMPARE_NOT_EQUALS
+                | OperatorType.COMPARE_GREATER_EQUALS
+                | OperatorType.COMPARE_GREATER
+                | OperatorType.COMPARE_LESS
+                | OperatorType.COMPARE_LESS_EQUALS
+                | OperatorType.COMPARE_EQUALS
+            ):
+                vreg_a = vreg_alloc()
+                vreg_b = vreg_alloc()
+                comp_map: dict[
+                    OperatorType,
+                    Literal["!=", ">=", "<=", "<", ">", "=="],
+                ] = {
+                    OperatorType.COMPARE_NOT_EQUALS: "!=",
+                    OperatorType.COMPARE_GREATER_EQUALS: ">=",
+                    OperatorType.COMPARE_LESS_EQUALS: "<=",
+                    OperatorType.COMPARE_LESS: "<",
+                    OperatorType.COMPARE_GREATER: ">",
+                    OperatorType.COMPARE_EQUALS: "==",
+                }
+                lir_function.add_ops(
+                    LIRPopFromStackIntoRegisters((vreg_a, vreg_b)),
+                    LIRLogicalCompareRegisters(
+                        result_register=vreg_a,
+                        operand_a=vreg_a,
+                        operand_b=vreg_b,
+                        comparison=comp_map[operator.type],
+                    ),
+                    LIRPushRegistersOntoStack((vreg_a,)),
+                )
             case OperatorType.PUSH_STRING:
                 assert isinstance(operator.operand, str)
                 string_raw = str(operator.token.text[1:-1])
@@ -487,7 +442,7 @@ def translate_hir_function_to_lir_function(
                     LIRPushStaticStringAddress(segment=segment.name),
                 )
                 lir_function.add_op(LIRPushInteger32Bits(len(string_raw)))
-            case OperatorType.END | OperatorType.WHILE:
+            case OperatorType.CONDITIONAL_END | OperatorType.CONDITIONAL_WHILE:
                 label = CODEGEN_GOFRA_CONTEXT_LABEL % (lir_function.name, idx)
                 if isinstance(operator.jumps_to_operator_idx, int):
                     label_to = CODEGEN_GOFRA_CONTEXT_LABEL % (
@@ -499,14 +454,12 @@ def translate_hir_function_to_lir_function(
             case _:
                 assert_never(operator.type)
 
-    has_to_backpatch_for_leaf_function = is_leaf_function and not f_local_vars
-    has_to_backpatch_for_leaf_function = False
+    no_full_frame_preserve = not lir_function.has_to_save_full_frame and False
 
-    if has_to_backpatch_for_leaf_function:
+    if no_full_frame_preserve:
         save_frame_op = lir_function.operations.pop(0)
         assert isinstance(save_frame_op, LIRFunctionSaveFrame), save_frame_op
-
-    if not has_to_backpatch_for_leaf_function:
+    else:
         lir_function.add_op(LIRFunctionRestoreFrame(locals=list(f_local_vars.values())))
 
     if has_retval:

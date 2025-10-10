@@ -28,15 +28,11 @@ from gofra.codegen.backends.aarch64_macos.registers import (
     AARCH64_MACOS_EPILOGUE_EXIT_CODE,
     AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
 )
-from gofra.codegen.backends.general import (
-    CODEGEN_GOFRA_CONTEXT_LABEL,
-    CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS,
-)
+from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.hir.operator import Operator, OperatorType
 from gofra.hir.variable import VariableStorageClass
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.parser.intrinsics import Intrinsic
-from gofra.parser.operators import Operator, OperatorType
 from gofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
@@ -88,13 +84,11 @@ def aarch64_macos_operator_instructions(
     owner_function: Function,
 ) -> None:
     match operator.type:
-        case OperatorType.INTRINSIC:
-            aarch64_macos_intrinsic_instructions(context, operator)
-        case OperatorType.PUSH_MEMORY_POINTER:
-            assert isinstance(operator.operand, tuple)
-            local_variable, _ = operator.operand
-            if local_variable in owner_function.variables:
-                hir_local_variable = owner_function.variables[local_variable]
+        case OperatorType.PUSH_VARIABLE_ADDRESS:
+            assert isinstance(operator.operand, str)
+
+            if operator.operand in owner_function.variables:
+                hir_local_variable = owner_function.variables[operator.operand]
                 assert hir_local_variable.is_function_scope
                 if hir_local_variable.storage_class != VariableStorageClass.STACK:
                     msg = (
@@ -104,23 +98,23 @@ def aarch64_macos_operator_instructions(
                 push_local_variable_address_from_frame_offset(
                     context,
                     owner_function.variables,
-                    local_variable,
+                    operator.operand,
                 )
                 return
 
             # Global variable or memory
-            push_static_address_onto_stack(context, local_variable)
+            push_static_address_onto_stack(context, operator.operand)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
-        case OperatorType.DO | OperatorType.IF:
+        case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
             assert isinstance(operator.jumps_to_operator_idx, int)
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (
                 owner_function.name,
                 operator.jumps_to_operator_idx,
             )
             evaluate_conditional_block_on_stack_with_jump(context, label)
-        case OperatorType.END | OperatorType.WHILE:
+        case OperatorType.CONDITIONAL_END | OperatorType.CONDITIONAL_WHILE:
             # This also should be refactored into `assembly` layer
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
             if isinstance(operator.jumps_to_operator_idx, int):
@@ -139,11 +133,10 @@ def aarch64_macos_operator_instructions(
             )
             push_integer_onto_stack(context, value=len(string_raw))
         case OperatorType.FUNCTION_RETURN:
-            has_retval = not isinstance(owner_function.return_type, VoidType)
             function_end_with_epilogue(
                 context,
                 has_preserved_frame=True,
-                has_return_value=has_retval,
+                has_return_value=owner_function.has_return_value(),
             )
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
@@ -156,83 +149,58 @@ def aarch64_macos_operator_instructions(
                 type_contract_in=function.parameters,
                 type_contract_out=function.return_type,
             )
-        case OperatorType.TYPECAST:
+        case OperatorType.TYPE_CAST:
             # Skip that as it is typechecker only.
             pass
-        case OperatorType.VARIABLE_DEFINE:
-            msg = "Parser must resolve variable definition before codegen"
-            raise ValueError(msg)
-        case _:
-            assert_never(operator.type)
-
-
-def aarch64_macos_intrinsic_instructions(
-    context: AARCH64CodegenContext,
-    operator: Operator,
-) -> None:
-    """Write executable body for intrinsic operation."""
-    assert isinstance(operator.operand, Intrinsic)
-    assert operator.type == OperatorType.INTRINSIC
-    match operator.operand:
-        case Intrinsic.DROP:
+        case OperatorType.STACK_DROP:
             drop_stack_slots(context, slots_count=1)
-        case Intrinsic.COPY:
+        case OperatorType.STACK_COPY:
             pop_cells_from_stack_into_registers(context, "X0")
             push_register_onto_stack(context, "X0")
             push_register_onto_stack(context, "X0")
-        case Intrinsic.SWAP:
+        case OperatorType.STACK_SWAP:
             pop_cells_from_stack_into_registers(context, "X0", "X1")
             push_register_onto_stack(context, "X0")
             push_register_onto_stack(context, "X1")
         case (
-            Intrinsic.PLUS
-            | Intrinsic.MINUS
-            | Intrinsic.MULTIPLY
-            | Intrinsic.DIVIDE
-            | Intrinsic.MODULUS
-            | Intrinsic.INCREMENT
-            | Intrinsic.DECREMENT
-            | Intrinsic.NOT_EQUAL
-            | Intrinsic.GREATER_EQUAL_THAN
-            | Intrinsic.LESS_EQUAL_THAN
-            | Intrinsic.LESS_THAN
-            | Intrinsic.GREATER_THAN
-            | Intrinsic.EQUAL
-            | Intrinsic.LOGICAL_AND
-            | Intrinsic.LOGICAL_OR
-            | Intrinsic.BITWISE_AND
-            | Intrinsic.BITWISE_OR
-            | Intrinsic.BITSHIFT_LEFT
-            | Intrinsic.BITSHIFT_RIGHT
+            OperatorType.ARITHMETIC_MINUS
+            | OperatorType.ARITHMETIC_PLUS
+            | OperatorType.ARITHMETIC_MULTIPLY
+            | OperatorType.ARITHMETIC_DIVIDE
+            | OperatorType.ARITHMETIC_MODULUS
+            | OperatorType.COMPARE_NOT_EQUALS
+            | OperatorType.COMPARE_GREATER_EQUALS
+            | OperatorType.COMPARE_LESS_EQUALS
+            | OperatorType.COMPARE_LESS
+            | OperatorType.COMPARE_GREATER
+            | OperatorType.COMPARE_EQUALS
+            | OperatorType.LOGICAL_AND
+            | OperatorType.LOGICAL_OR
+            | OperatorType.BITWISE_AND
+            | OperatorType.BITWISE_OR
+            | OperatorType.SHIFT_LEFT
+            | OperatorType.SHIFT_RIGHT
         ):
             perform_operation_onto_stack(
                 context,
-                operation=CODEGEN_INTRINSIC_TO_ASSEMBLY_OPS[operator.operand],
+                operation=operator.type,
             )
-        case (
-            Intrinsic.SYSCALL0
-            | Intrinsic.SYSCALL1
-            | Intrinsic.SYSCALL2
-            | Intrinsic.SYSCALL3
-            | Intrinsic.SYSCALL4
-            | Intrinsic.SYSCALL5
-            | Intrinsic.SYSCALL6
-        ):
-            assert operator.syscall_optimization_injected_args is None, "TODO: Optimize"
+        case OperatorType.SYSCALL:
+            assert isinstance(operator.operand, int)
             ipc_syscall_macos(
                 context,
-                arguments_count=operator.get_syscall_arguments_count() - 1,
-                store_retval_onto_stack=not operator.syscall_optimization_omit_result,
+                arguments_count=operator.operand,
+                store_retval_onto_stack=True,
                 injected_args=None,
             )
-        case Intrinsic.MEMORY_LOAD:
+        case OperatorType.MEMORY_VARIABLE_READ:
             load_memory_from_stack_arguments(context)
-        case Intrinsic.MEMORY_STORE:
+        case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)
-        case Intrinsic.BREAKPOINT:
+        case OperatorType.DEBUGGER_BREAKPOINT:
             debugger_breakpoint_trap(context, number=1)
         case _:
-            assert_never(operator.operand)
+            assert_never(operator.type)
 
 
 def aarch64_macos_executable_functions(
@@ -249,27 +217,22 @@ def aarch64_macos_executable_functions(
         [*program.functions.values(), program.entry_point],
     )
     for function in functions:
-        assert not function.is_global or (
-            not function.parameters and not function.return_type
-        ), "Codegen does not supports global linker symbols that has type contracts"
-
         function_begin_with_prologue(
             context,
             name=function.name,
             local_variables=function.variables,
             global_name=function.name if function.is_global else None,
             preserve_frame=True,
-            arguments_count=len(function.parameters),
+            arguments_count=function.arguments_count,
         )
 
         aarch64_macos_instruction_set(context, function.operators, program, function)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
-        has_retval = not isinstance(function.return_type, VoidType)
         function_end_with_epilogue(
             context,
             has_preserved_frame=True,
-            has_return_value=has_retval,
+            has_return_value=function.has_return_value(),
         )
 
 

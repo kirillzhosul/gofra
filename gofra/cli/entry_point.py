@@ -155,6 +155,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         )
         validate_type_safety(
             functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
+            global_variables=context.global_variables,
         )
 
     cli_process_optimization_pipeline(context, args)

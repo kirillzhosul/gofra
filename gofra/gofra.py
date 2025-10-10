@@ -7,7 +7,7 @@ from gofra.context import ProgramContext
 from gofra.lexer import tokenize_from_raw
 from gofra.lexer.io import open_source_file_line_stream
 from gofra.lexer.tokens import Token
-from gofra.parser import parse_file
+from gofra.parser.parser import parse_file
 from gofra.preprocessor import preprocess_file
 from gofra.preprocessor.macros.registry import MacrosRegistry
 

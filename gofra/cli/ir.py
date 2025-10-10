@@ -12,8 +12,7 @@ from gofra.codegen.lir.static import (
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.context import ProgramContext
 from gofra.hir.function import Function
-from gofra.parser.intrinsics import Intrinsic
-from gofra.parser.operators import Operator, OperatorType
+from gofra.hir.operator import Operator, OperatorType
 
 
 def emit_hir_into_stdout(context: ProgramContext) -> None:
@@ -23,10 +22,17 @@ def emit_hir_into_stdout(context: ProgramContext) -> None:
         emit_ir_function_signature(function, context.entry_point)
         context_block_shift = 0
         for operator in function.operators:
-            if operator.type in (OperatorType.DO, OperatorType.END):
+            if operator.type in (
+                OperatorType.CONDITIONAL_DO,
+                OperatorType.CONDITIONAL_END,
+            ):
                 context_block_shift -= 1
             emit_ir_operator(operator, context_block_shift=context_block_shift)
-            if operator.type in (OperatorType.DO, OperatorType.IF, OperatorType.WHILE):
+            if operator.type in (
+                OperatorType.CONDITIONAL_DO,
+                OperatorType.CONDITIONAL_IF,
+                OperatorType.CONDITIONAL_WHILE,
+            ):
                 context_block_shift += 1
 
 
@@ -78,27 +84,16 @@ def emit_lir_into_stdout(context: ProgramContext) -> None:
     print(f"[Total LIR instructions: {instr_counter}]")
 
 
-def emit_ir_operator(operator: Operator, context_block_shift: int) -> None:  # noqa: PLR0911
+def emit_ir_operator(operator: Operator, context_block_shift: int) -> None:
     shift = " " * (context_block_shift + 3)
-    assert (  # noqa: PT018
-        not operator.has_optimizations
-        and not operator.infer_type_after_optimization
-        and not operator.syscall_optimization_injected_args
-        and not operator.syscall_optimization_omit_result
-    ), "Optimizations are not implemented in IR representation"
     match operator.type:
         case OperatorType.PUSH_INTEGER:
             return print(f"{shift}PUSH {operator.operand}")
-        case OperatorType.INTRINSIC:
-            assert isinstance(operator.operand, Intrinsic)
-            return print(f"{shift}{operator.operand.name}")
-        case OperatorType.PUSH_MEMORY_POINTER:
-            return print(f"{shift}PUSH_MEM '{operator.operand}'")
-        case OperatorType.WHILE | OperatorType.IF:
+        case OperatorType.CONDITIONAL_WHILE | OperatorType.CONDITIONAL_IF:
             return print(f"{shift}{operator.type.name}" + "{")
-        case OperatorType.DO:
+        case OperatorType.CONDITIONAL_DO:
             return print(f"{shift}" + "}" + f"{operator.type.name}" + "{")
-        case OperatorType.END:
+        case OperatorType.CONDITIONAL_END:
             return print(f"{shift}" + "}")
         case OperatorType.FUNCTION_CALL:
             return print(f"{shift}{operator.operand}()")
@@ -117,4 +112,7 @@ def emit_ir_function_signature(function: Function, entry_point: Function) -> Non
     print(f"[function symbol '{function.name}'", end=" ")
     print(f"({function.parameters} -> {function.return_type})", end=" ")
     print(f"(global={function.is_global})]", end=" ")
-    print(f"({len(function.variables)} local variables)")
+    print(f"({len(function.variables)} local variables)", end=" ")
+    if function.is_leaf:
+        print("[has_leaf_property]", end="")
+    print()

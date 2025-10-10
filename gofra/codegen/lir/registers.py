@@ -34,6 +34,7 @@ class LIRMachineRegister(LIRVirtualRegister):
 
 @dataclass
 class LIRImmediate:
+    # TODO(@kirillzhosul): Unused RN
     value: int
 
     def __repr__(self) -> str:

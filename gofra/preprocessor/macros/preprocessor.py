@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 from gofra.lexer import Token
 from gofra.lexer.keywords import PreprocessorKeyword
 from gofra.lexer.tokens import TokenLocation, TokenType
-from gofra.parser.intrinsics import WORD_TO_INTRINSIC
+from gofra.parser.operators import IDENTIFIER_TO_OPERATOR_TYPE
 
 from .exceptions import (
-    PreprocessorMacroContainsKeywordError,
     PreprocessorMacroNonIdentifierNameError,
     PreprocessorMacroRedefinedError,
     PreprocessorMacroRedefinesLanguageWordError,
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
 
 # Macros name can only be an identifier, but this does not adds additional validation
 # that set contains identifiers that considered as prohibited
-PROHIBITED_MACRO_NAMES = WORD_TO_INTRINSIC.keys()
+PROHIBITED_MACRO_NAMES = IDENTIFIER_TO_OPERATOR_TYPE.keys()
 
 
 def consume_macro_definition_from_token(
@@ -110,9 +109,6 @@ def _consume_macro_definition(
         if token.type == TokenType.EOL:
             # Macro definition is line-dependant so it consumes until first end-of-line (EOL)
             break
-
-        if token.type == TokenType.KEYWORD:
-            raise PreprocessorMacroContainsKeywordError(macro=macro, keyword=token)
 
         macro.tokens.append(token)
         continue

@@ -33,8 +33,7 @@ from .exceptions import (
     ParserUnknownIdentifierError,
     ParserVariableNameAlreadyDefinedAsVariableError,
 )
-from .intrinsics import WORD_TO_INTRINSIC, Intrinsic
-from .operators import OperatorType
+from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -78,7 +77,7 @@ def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
         "Parser context in result of parsing must an top level, bug in a parser"
     )
     assert not context.operators, (
-        f"Expected NO operators on top level, first one is at {context.operators[0].token.location}"
+        f"Expected NO operators on top level, first one is at {context.operators[0].location}"
     )
 
     entry_point = validate_and_pop_entry_point(context)
@@ -99,9 +98,9 @@ def _parse_from_context_into_operators(context: ParserContext) -> ParserContext:
     if context.context_stack:
         _, unclosed_operator = context.pop_context_stack()
         match unclosed_operator.type:
-            case OperatorType.DO | OperatorType.WHILE:
+            case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_WHILE:
                 raise ParserUnfinishedWhileDoBlockError(token=unclosed_operator.token)
-            case OperatorType.IF:
+            case OperatorType.CONDITIONAL_IF:
                 raise ParserUnfinishedIfBlockError(if_token=unclosed_operator.token)
             case _:
                 raise ParserExhaustiveContextStackError
@@ -125,12 +124,7 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
             if context.is_top_level:
                 msg = "expected STAR with meaning of multiply intrinsic to be at top level."
                 raise ValueError(msg)
-            context.push_new_operator(
-                OperatorType.INTRINSIC,
-                token=token,
-                operand=Intrinsic.MULTIPLY,
-                is_contextual=False,
-            )
+            context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token=token)
             return None
         case (
             TokenType.LBRACKET
@@ -149,7 +143,7 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
 
 
 def _consume_word_token(token: Token, context: ParserContext) -> None:
-    if _try_unpack_function_from_token(context, token):
+    if _try_unpack_function_call_from_identifier_token(context, token):
         return
 
     if _try_push_intrinsic_operator(context, token):
@@ -203,10 +197,9 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         return False
 
     context.push_new_operator(
-        type=OperatorType.PUSH_MEMORY_POINTER,
+        type=OperatorType.PUSH_VARIABLE_ADDRESS,
         token=token,
-        operand=(varname, variable.type),
-        is_contextual=False,
+        operand=varname,
     )
 
     if array_index_at is not None:
@@ -229,21 +222,16 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
                 type=OperatorType.PUSH_INTEGER,
                 token=token,
                 operand=shift_in_bytes,
-                is_contextual=False,
             )
             context.push_new_operator(
-                type=OperatorType.INTRINSIC,
+                type=OperatorType.ARITHMETIC_PLUS,
                 token=token,
-                operand=Intrinsic.PLUS,
-                is_contextual=False,
             )
 
     if not is_reference:
         context.push_new_operator(
-            type=OperatorType.INTRINSIC,
+            type=OperatorType.MEMORY_VARIABLE_READ,
             token=token,
-            operand=Intrinsic.MEMORY_LOAD,
-            is_contextual=False,
         )
     return True
 
@@ -251,32 +239,37 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 def _best_match_for_word(context: ParserContext, word: str) -> str | None:
     matches = get_close_matches(
         word,
-        WORD_TO_INTRINSIC.keys() | context.functions.keys() | context.variables.keys(),
+        IDENTIFIER_TO_OPERATOR_TYPE.keys()
+        | context.functions.keys()
+        | context.variables.keys(),
     )
     return matches[0] if matches else None
 
 
 def _consume_keyword_token(context: ParserContext, token: Token) -> None:
-    assert isinstance(token.value, Keyword | PreprocessorKeyword)
     if isinstance(token.value, PreprocessorKeyword):
         raise ParserDirtyNonPreprocessedTokenError(token=token)
+    assert isinstance(token.value, Keyword)
+
     TOP_LEVEL_KEYWORD = (  # noqa: N806
         Keyword.INLINE,
         Keyword.EXTERN,
         Keyword.FUNCTION,
         Keyword.GLOBAL,
     )
+
+    BOTH_LEVEL_KEYWORD = (  # noqa: N806
+        Keyword.END,
+        Keyword.VARIABLE_DEFINE,
+    )
     if context.is_top_level:
-        if token.value not in (
-            *TOP_LEVEL_KEYWORD,
-            Keyword.END,
-            Keyword.VARIABLE_DEFINE,
-        ):
-            msg = f"{token.value.name} expected to be not at top level! (temp-assert)"
-            raise NotImplementedError(msg)
+        if token.value not in (*TOP_LEVEL_KEYWORD, *BOTH_LEVEL_KEYWORD):
+            msg = f"{token.value.name} expected to be in functions scope not at global scope!"
+            raise ValueError(msg)
     elif token.value in TOP_LEVEL_KEYWORD:
-        msg = f"{token.value.name} expected to be at top level! (temp-assert)"
-        raise NotImplementedError(msg, token.location)
+        msg = f"{token.value.name} expected to be only inside global scope!"
+        raise ValueError(msg, token.location)
+
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END:
             return consume_conditional_block_keyword_from_token(context, token)
@@ -285,16 +278,27 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         case Keyword.FUNCTION_CALL:
             return _unpack_function_call_from_token(context, token)
         case Keyword.FUNCTION_RETURN:
-            return context.push_new_operator(
-                OperatorType.FUNCTION_RETURN,
-                token,
-                None,
-                is_contextual=False,
-            )
-        case Keyword.TYPECAST:
+            return context.push_new_operator(OperatorType.FUNCTION_RETURN, token=token)
+        case Keyword.TYPE_CAST:
             return unpack_typecast_from_token(context, token)
         case Keyword.VARIABLE_DEFINE:
             return _unpack_variable_definition_from_token(context)
+        case Keyword.SYSCALL:
+            return context.push_new_operator(
+                type=OperatorType.SYSCALL,
+                token=token,
+                operand=int(token.text[-1]),
+            )
+        case Keyword.DEBUGGER_BREAKPOINT | Keyword.COPY | Keyword.DROP | Keyword.SWAP:
+            return context.push_new_operator(
+                type={
+                    Keyword.DEBUGGER_BREAKPOINT: OperatorType.DEBUGGER_BREAKPOINT,
+                    Keyword.COPY: OperatorType.STACK_COPY,
+                    Keyword.DROP: OperatorType.STACK_DROP,
+                    Keyword.SWAP: OperatorType.STACK_SWAP,
+                }[token.value],
+                token=token,
+            )
         case _:
             assert_never(token.value)
 
@@ -302,28 +306,26 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
 def _unpack_variable_definition_from_token(
     context: ParserContext,
 ) -> None:
-    storage_class = (
-        VariableStorageClass.STATIC
-        if context.is_top_level
-        else VariableStorageClass.STACK
-    )
-
     varname_token = context.next_token()
-    if not varname_token:
-        raise NotImplementedError
     if varname_token.type != TokenType.IDENTIFIER:
-        raise NotImplementedError
+        msg = "Expected variable name after variable keyword"
+        raise ValueError(msg)
     assert isinstance(varname_token.value, str)
 
     typename = parser_type_from_tokenizer(context)
-
     varname = varname_token.text
+
     if varname in context.variables:
         raise ParserVariableNameAlreadyDefinedAsVariableError(
             token=varname_token,
             name=varname,
         )
 
+    storage_class = (
+        VariableStorageClass.STATIC
+        if context.is_top_level
+        else VariableStorageClass.STACK
+    )
     scope_class = (
         VariableScopeClass.GLOBAL
         if context.is_top_level
@@ -340,14 +342,14 @@ def _unpack_variable_definition_from_token(
 
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:
     name_token = context.next_token()
-    if not name_token:
-        raise NotImplementedError
     if name_token.type != TokenType.IDENTIFIER:
-        msg = "expected function name as word after `call`"
-        raise NotImplementedError(msg)
-    name = name_token.text
+        msg = "expected function name as identifier after `call`"
+        raise ValueError(msg)
 
-    if not (function := context.functions.get(name)):
+    name = name_token.text
+    function = context.functions.get(name)
+
+    if not function:
         raise ParserUnknownFunctionError(
             token=token,
             functions_available=context.functions.keys(),
@@ -361,9 +363,8 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
 
     context.push_new_operator(
         OperatorType.FUNCTION_CALL,
-        token,
-        name,
-        is_contextual=False,
+        token=token,
+        operand=function.name,
     )
 
 
@@ -371,7 +372,6 @@ def _unpack_function_definition_from_token(
     context: ParserContext,
     token: Token,
 ) -> None:
-    definition = consume_function_definition(context, token)
     (
         token,
         function_name,
@@ -380,7 +380,7 @@ def _unpack_function_definition_from_token(
         modifier_is_inline,
         modifier_is_extern,
         modifier_is_global,
-    ) = definition
+    ) = consume_function_definition(context, token)
 
     if modifier_is_extern:
         context.add_function(
@@ -394,6 +394,7 @@ def _unpack_function_definition_from_token(
                 is_inline=modifier_is_inline,
                 is_external=modifier_is_extern,
                 is_global=modifier_is_global,
+                is_leaf=False,
             ),
         )
 
@@ -440,11 +441,12 @@ def _unpack_function_definition_from_token(
         is_inline=modifier_is_inline,
         is_external=modifier_is_extern,
         is_global=modifier_is_global,
+        is_leaf=new_context.is_leaf_context,
     )
     context.add_function(function)
 
 
-def _try_unpack_function_from_token(
+def _try_unpack_function_call_from_identifier_token(
     context: ParserContext,
     token: Token,
 ) -> bool:
@@ -456,10 +458,9 @@ def _try_unpack_function_from_token(
             context.expand_from_inline_block(function)
             return True
         context.push_new_operator(
-            OperatorType.FUNCTION_CALL,
-            token,
-            function.name,
-            is_contextual=False,
+            type=OperatorType.FUNCTION_CALL,
+            token=token,
+            operand=function.name,
         )
         return True
 
@@ -472,7 +473,6 @@ def _push_string_operator(context: ParserContext, token: Token) -> None:
         type=OperatorType.PUSH_STRING,
         token=token,
         operand=token.value,
-        is_contextual=False,
     )
 
 
@@ -482,21 +482,15 @@ def _push_integer_operator(context: ParserContext, token: Token) -> None:
         type=OperatorType.PUSH_INTEGER,
         token=token,
         operand=token.value,
-        is_contextual=False,
     )
 
 
 def _try_push_intrinsic_operator(context: ParserContext, token: Token) -> bool:
     assert isinstance(token.value, str)
-    intrinsic = WORD_TO_INTRINSIC.get(token.value)
 
-    if intrinsic is None:
-        return False
+    operator_type = IDENTIFIER_TO_OPERATOR_TYPE.get(token.value)
+    if operator_type:
+        context.push_new_operator(type=operator_type, token=token)
+        return True
 
-    context.push_new_operator(
-        type=OperatorType.INTRINSIC,
-        token=token,
-        operand=intrinsic,
-        is_contextual=False,
-    )
-    return True
+    return False

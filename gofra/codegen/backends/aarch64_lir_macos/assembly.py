@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
 
+from gofra.codegen.backends.aarch64_macos.assembly import (
+    pop_cells_from_stack_into_registers,
+    push_register_onto_stack,
+    store_integer_into_register,
+)
 from gofra.codegen.lir.static import (
     LIRStaticSegmentCString,
     LIRStaticSegmentGlobalVariable,
@@ -15,146 +20,16 @@ from .frame import (
     restore_calee_frame,
 )
 from .registers import (
-    AARCH64_DOUBLE_WORD_BITS,
-    AARCH64_GP_REGISTERS,
     AARCH64_HALF_WORD_BITS,
-    AARCH64_STACK_ALIGNMENT,
     AARCH64_STACK_ALIGNMENT_BIN,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
+    from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.codegen.lir import LIRProgram
     from gofra.types import Type
-
-    from ._context import AARCH64CodegenContext
-
-
-def drop_stack_slots(
-    context: AARCH64CodegenContext,
-    *,
-    slots_count: int,
-    slot_size: int = AARCH64_STACK_ALIGNMENT,
-) -> None:
-    """Drop stack slots by shifting stack pointer (SP) by N bytes.
-
-    In ARM64 context, a 'stack slot' typically represents an aligned unit
-    of memory that can hold primitive values, pointers, or parts of larger objects.
-    """
-    if slot_size <= 0:
-        msg = "`slots_count` must be positive, cannot drop zero or less stack slots"
-        raise ValueError(msg)
-
-    shift_in_bits = slot_size * slots_count
-    context.write(f"add SP, SP, #{shift_in_bits}")
-
-
-def pop_cells_from_stack_into_registers(
-    context: AARCH64CodegenContext,
-    *registers: AARCH64_GP_REGISTERS,
-) -> None:
-    """Pop cells from stack and store into given registers.
-
-    Each cell is 8 bytes, but stack pointer is always adjusted by `AARCH64_STACK_ALIGNMENT` bytes
-    to preserve stack alignment.
-    """
-    assert registers, "Expected registers to store popped result into!"
-
-    for register in registers:
-        context.write(
-            f"ldr {register}, [SP]",
-            f"add SP, SP, #{AARCH64_STACK_ALIGNMENT}",
-        )
-
-
-def push_register_onto_stack(
-    context: AARCH64CodegenContext,
-    register: AARCH64_GP_REGISTERS,
-) -> None:
-    """Store given register onto stack under current stack pointer."""
-    context.write(f"str {register}, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
-
-
-def store_integer_into_register(
-    context: AARCH64CodegenContext,
-    register: AARCH64_GP_REGISTERS,
-    value: int,
-) -> None:
-    """Store given value into given register."""
-    context.write(f"mov {register}, #{value}")
-
-
-def push_integer_onto_stack(
-    context: AARCH64CodegenContext,
-    value: int,
-) -> None:
-    """Push given integer onto stack with auto shifting less-significant bytes.
-
-    Value must be less than 16 bytes (18_446_744_073_709_551_615).
-    Negative numbers is disallowed.
-
-    TODO(@kirillzhosul): Negative numbers IS disallowed:
-        Consider using signed two complement representation with sign bit (highest bit) set
-    """
-    assert value >= 0, "Tried to push negative integer onto stack!"
-    assert value <= AARCH64_DOUBLE_WORD_BITS, (
-        "Tried to push integer that exceeding 16 bytes (64 bits register)."
-    )
-
-    if value <= AARCH64_HALF_WORD_BITS:
-        # We have small immediate value which we may just store without shifts
-        context.write(f"mov X0, #{value}")
-        push_register_onto_stack(context, register="X0")
-        return
-
-    preserve_bits = False
-    for shift in range(0, 64, 16):
-        chunk = hex((value >> shift) & AARCH64_HALF_WORD_BITS)
-        if chunk == "0x0":
-            # Zeroed chunk so we dont push it as register is zerod
-            continue
-
-        if not preserve_bits:
-            # Store upper bits
-            context.write(f"movz X0, #{chunk}, lsl #{shift}")
-            preserve_bits = True
-            continue
-
-        # Store lower bits
-        context.write(f"movk X0, #{chunk}, lsl #{shift}")
-
-    push_register_onto_stack(context, register="X0")
-
-
-def push_static_address_onto_stack(
-    context: AARCH64CodegenContext,
-    segment: str,
-) -> None:
-    """Push executable static memory address onto stack with page dereference."""
-    context.write(
-        f"adrp X0, {segment}@PAGE",
-        f"add X0, X0, {segment}@PAGEOFF",
-    )
-    push_register_onto_stack(context, register="X0")
-
-
-def push_local_variable_address_from_frame_offset(
-    context: AARCH64CodegenContext,
-    local_variables: Mapping[str, Type],
-    local_variable: str,
-) -> None:
-    # Calculate negative offset from X29
-    current_offset = build_local_variables_frame_offsets(local_variables).offsets[
-        local_variable
-    ]
-
-    context.write(
-        "mov X0, X29",
-        f"sub X0, X0, #{current_offset} // X0 = FP, X0 = &{local_variable} (offset -{current_offset})",
-    )
-    push_register_onto_stack(context, register="X0")
 
 
 def initialize_static_data_section(
@@ -253,76 +128,6 @@ def ipc_syscall_macos(
         push_register_onto_stack(context, abi.return_value_register)
 
 
-def perform_operation_onto_stack(
-    context: AARCH64CodegenContext,
-    operation: CODEGEN_GOFRA_ON_STACK_OPERATIONS,
-) -> None:
-    """Perform *math* operation onto stack (pop arguments and push back result)."""
-    is_unary = operation in ("++", "--")
-    registers = ("X0",) if is_unary else ("X0", "X1")
-    pop_cells_from_stack_into_registers(context, *registers)
-
-    context.write(f"// OP on-stack {operation}")
-    match operation:
-        case "+":
-            context.write("add X0, X1, X0")
-        case "-":
-            context.write("sub X0, X1, X0")
-        case "*":
-            context.write("mul X0, X1, X0")
-        case "//":
-            context.write("sdiv X0, X1, X0")
-        case "%":
-            context.write(
-                "udiv X2, X1, X0",
-                "mul X2, X2, X0",
-                "sub X0, X1, X2",
-            )
-        case "++":
-            context.write("add X0, X0, #1")
-        case "||" | "|":
-            # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
-            context.write("orr X0, X0, X1")
-        case ">>":
-            context.write("lsr X0, X0, X1")
-        case "<<":
-            context.write("lsl X0, X0, X1")
-        case "&&" | "&":
-            # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
-            context.write("and X0, X0, X1")
-        case "--":
-            context.write("sub X0, X0, #1")
-        case "!=" | ">=" | "<=" | "<" | ">" | "==":
-            logic_op = {
-                "!=": "ne",
-                ">=": "ge",
-                "<=": "le",
-                "<": "lt",
-                ">": "gt",
-                "==": "eq",
-            }
-            context.write(
-                "cmp X1, X0",
-                f"cset X0, {logic_op[operation]}",
-            )
-        case _:
-            assert_never()
-    push_register_onto_stack(context, "X0")
-
-
-def load_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
-    """Load memory as value using arguments from stack."""
-    pop_cells_from_stack_into_registers(context, "X0")
-    context.write("ldr X0, [X0]")
-    push_register_onto_stack(context, "X0")
-
-
-def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
-    """Store value into memory pointer, pointer and value acquired from stack."""
-    pop_cells_from_stack_into_registers(context, "X0", "X1")
-    context.write("str X0, [X1]")
-
-
 def function_save_frame(
     context: AARCH64CodegenContext,
     *,
@@ -370,15 +175,6 @@ def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> Non
         msg = "Expected 16-bit immediate for breakpoint trap number!"
         raise ValueError(msg)
     context.write(f"brk #{number & AARCH64_HALF_WORD_BITS}")
-
-
-def execution_guard_trap(context: AARCH64CodegenContext) -> None:
-    """Place a trap to prevent execution after function return.
-
-    Prevents fatal errors when execution falls through exit call into
-    unbound memory.
-    """
-    debugger_breakpoint_trap(context, number=0)
 
 
 def function_call_prepare_arguments(

@@ -21,7 +21,16 @@ class Keyword(Enum):
 
     VARIABLE_DEFINE = auto()
 
-    TYPECAST = auto()
+    TYPE_CAST = auto()
+
+    SYSCALL = auto()
+
+    COPY = auto()
+    DROP = auto()
+    SWAP = auto()
+
+    # Additional operations that may/or not be an part of language
+    DEBUGGER_BREAKPOINT = auto()
 
 
 class PreprocessorKeyword(Enum):
@@ -53,7 +62,18 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "inline": Keyword.INLINE,
     "global": Keyword.GLOBAL,
     "var": Keyword.VARIABLE_DEFINE,
-    "typecast": Keyword.TYPECAST,
+    "typecast": Keyword.TYPE_CAST,
+    "breakpoint": Keyword.DEBUGGER_BREAKPOINT,
+    "copy": Keyword.COPY,
+    "syscall0": Keyword.SYSCALL,
+    "syscall1": Keyword.SYSCALL,
+    "syscall2": Keyword.SYSCALL,
+    "syscall3": Keyword.SYSCALL,
+    "syscall4": Keyword.SYSCALL,
+    "syscall5": Keyword.SYSCALL,
+    "syscall6": Keyword.SYSCALL,
+    "drop": Keyword.DROP,
+    "swap": Keyword.SWAP,
     **WORD_TO_PREPROCESSOR_KEYWORD,
 }
 KEYWORD_TO_NAME = {v: k for k, v in WORD_TO_KEYWORD.items()}

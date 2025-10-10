@@ -3,8 +3,10 @@ from functools import partial
 
 from gofra.context import ProgramContext
 from gofra.optimizer.config import OptimizerConfig
-
-from .strategies import optimize_dead_code_elimination, optimize_function_inlining
+from gofra.optimizer.strategies.dead_code_elimination import (
+    optimize_dead_code_elimination,
+)
+from gofra.optimizer.strategies.function_inlining import optimize_function_inlining
 
 type OPTIMIZER_PASS_T = Callable[[ProgramContext], None]
 type OPTIMIZER_PIPELINE_T = MutableSequence[tuple[OPTIMIZER_PASS_T, str]]

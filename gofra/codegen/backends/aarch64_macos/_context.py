@@ -2,6 +2,8 @@ from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from typing import IO
 
+from gofra.codegen.lir.registers import LIRVirtualRegisterAllocator
+
 from .abi import DarwinAARCH64ABI
 
 
@@ -16,6 +18,12 @@ class AARCH64CodegenContext:
     fd: IO[str]
     strings: MutableMapping[str, str] = field()
     abi = DarwinAARCH64ABI
+
+    vreg_allocator: LIRVirtualRegisterAllocator = field(
+        default_factory=lambda: LIRVirtualRegisterAllocator(
+            list(DarwinAARCH64ABI.virtual_registers),
+        ),
+    )
 
     def write(self, *lines: str) -> int:
         return self.fd.write("\t" + "\n\t".join(lines) + "\n")

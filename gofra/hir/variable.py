@@ -24,12 +24,6 @@ class Variable:
     # Type of an variable specified in source code
     type: Type
 
-    def __post_init__(self) -> None:
-        """Validate variable container, must not raise any errors as must be handled outside of that."""
-        if self.is_global_scope and self.storage_class != VariableStorageClass.STATIC:
-            msg = "Global scope variables must have static storage class"
-            raise ValueError(msg)
-
     @property
     def is_global_scope(self) -> bool:
         """Is this variable defined in global root scope."""

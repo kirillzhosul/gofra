@@ -1,3 +1,4 @@
+from gofra.hir.operator import OperatorType
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import Token
 from gofra.parser._context import ParserContext
@@ -8,7 +9,6 @@ from gofra.parser.exceptions import (
     ParserNoWhileBeforeDoError,
     ParserNoWhileConditionOperatorsError,
 )
-from gofra.parser.operators import OperatorType
 
 
 def consume_conditional_block_keyword_from_token(
@@ -19,7 +19,7 @@ def consume_conditional_block_keyword_from_token(
     match token.value:
         case Keyword.IF:
             return context.push_new_operator(
-                type=OperatorType.IF,
+                type=OperatorType.CONDITIONAL_IF,
                 token=token,
                 operand=None,
                 is_contextual=True,
@@ -29,7 +29,7 @@ def consume_conditional_block_keyword_from_token(
                 raise ParserNoWhileBeforeDoError(do_token=token)
 
             operator_while_idx, context_while = context.pop_context_stack()
-            if context_while.type != OperatorType.WHILE:
+            if context_while.type != OperatorType.CONDITIONAL_WHILE:
                 raise ParserNoWhileBeforeDoError(do_token=token)
 
             while_condition_len = context.current_operator - operator_while_idx - 1
@@ -39,7 +39,7 @@ def consume_conditional_block_keyword_from_token(
                 )
 
             context.push_new_operator(
-                type=OperatorType.DO,
+                type=OperatorType.CONDITIONAL_DO,
                 token=token,
                 operand=None,
                 is_contextual=True,
@@ -48,7 +48,7 @@ def consume_conditional_block_keyword_from_token(
             return None
         case Keyword.WHILE:
             return context.push_new_operator(
-                type=OperatorType.WHILE,
+                type=OperatorType.CONDITIONAL_WHILE,
                 token=token,
                 operand=None,
                 is_contextual=True,
@@ -60,7 +60,7 @@ def consume_conditional_block_keyword_from_token(
             context_operator_idx, context_operator = context.pop_context_stack()
 
             context.push_new_operator(
-                type=OperatorType.END,
+                type=OperatorType.CONDITIONAL_END,
                 token=token,
                 operand=None,
                 is_contextual=False,
@@ -69,13 +69,13 @@ def consume_conditional_block_keyword_from_token(
             context_operator.jumps_to_operator_idx = context.current_operator - 1
 
             match context_operator.type:
-                case OperatorType.DO:
+                case OperatorType.CONDITIONAL_DO:
                     context.operators[-1].jumps_to_operator_idx = prev_context_jumps_at
-                case OperatorType.IF:
+                case OperatorType.CONDITIONAL_IF:
                     if_body_size = context.current_operator - context_operator_idx - 2
                     if if_body_size == 0:
                         raise ParserEmptyIfBodyError(if_token=context_operator.token)
-                case OperatorType.WHILE:
+                case OperatorType.CONDITIONAL_WHILE:
                     raise ParserEndAfterWhileError(end_token=token)
                 case _:
                     raise AssertionError

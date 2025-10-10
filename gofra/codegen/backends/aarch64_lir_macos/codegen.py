@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from typing import IO, TYPE_CHECKING
 
+from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
+from gofra.codegen.backends.aarch64_macos.assembly import (
+    drop_stack_slots,
+    push_integer_onto_stack,
+    push_static_address_onto_stack,
+)
 from gofra.codegen.lir import LIRProgram, translate_hir_to_lir
 from gofra.codegen.lir.ops import (
     LIRAddRegs,
@@ -44,9 +50,7 @@ from gofra.codegen.lir.registers import LIRVirtualRegister
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.targets.target import Target
 
-from ._context import AARCH64CodegenContext
 from .assembly import (
-    drop_stack_slots,
     function_acquire_arguments,
     function_call_prepare_arguments,
     function_prepare_retval,
@@ -54,9 +58,7 @@ from .assembly import (
     function_save_frame,
     initialize_static_data_section,
     ipc_syscall_macos,
-    push_integer_onto_stack,
     push_register_onto_stack,
-    push_static_address_onto_stack,
     syscall_prepare_arguments,
 )
 from .registers import (
@@ -204,7 +206,6 @@ def aarch64_macos_operator_instructions(
             context.write(f"bl {operation.function}")
         case LIRPushLocalFrameVariableAddress():
             # name
-            return
             raise NotImplementedError
         case LIRFunctionCallAcquireRetval():
             push_register_onto_stack(context, "X0")

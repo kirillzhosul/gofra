@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from gofra.exceptions import GofraError
 from gofra.hir.function import Function
-from gofra.parser.operators import Operator
+from gofra.hir.operator import Operator
 from gofra.types._base import Type
 
 
@@ -31,7 +31,7 @@ class TypecheckInvalidOperatorArgumentTypeError(GofraError):
         return f"""Type safety check failed!
 
 Expected [{" | ".join(map(repr, self.expected_type))}] but got {self.actual_type}
- for '{self.operator.token.text}' at {self.operator.token.location}
+ for '{self.operator.token.text}' at {self.operator.location}
 
 '{self.operator.token.text}' contract is: [{contract}]
 Actual type stack is: {type_stack}
@@ -55,7 +55,7 @@ class TypecheckInvalidBinaryMathArithmeticsError(GofraError):
     def __repr__(self) -> str:
         return f"""Type safety check failed!
 
-Binary math operator '{self.operator.token.text}' at {self.operator.token.location} expected both INT operands, 
+Binary math operator '{self.operator.token.text}' at {self.operator.location} expected both INT operands, 
 but got {self.actual_lhs_type} on the left and {self.actual_rhs_type} on the right.
 
 Expected contract: [INT, INT]
@@ -83,7 +83,7 @@ class TypecheckInvalidPointerArithmeticsError(GofraError):
     def __repr__(self) -> str:
         return f"""Type safety check failed!
 
-Invalid pointer arithmetics for operator '{self.operator.token.text}' at {self.operator.token.location}
+Invalid pointer arithmetics for operator '{self.operator.token.text}' at {self.operator.location}
 
 Expected contract: [PTR*, INT]
 Actual contract: [{self.actual_lhs_type}, {self.actual_rhs_type}]
@@ -127,7 +127,7 @@ class TypecheckNotEnoughOperatorArgumentsError(GofraError):
         return f"""Type safety check failed!
 
 Expected {self.required_args} arguments on stack but got {len(self.types_on_stack)}
- for '{self.operator.token.text}' at {self.operator.token.location}
+ for '{self.operator.token.text}' at {self.operator.location}
 
 Did you miss some arguments?"""
 
@@ -150,8 +150,8 @@ class TypecheckBlockStackMismatchError(GofraError):
     def __repr__(self) -> str:
         return f"""Stack mismatch!
 
-Expected that `{self.operator_begin.token.text}` block at {self.operator_begin.token.location} will not modify stack state!
-(Block ends with `{self.operator_end.token.text}` at {self.operator_end.token.location})
+Expected that `{self.operator_begin.token.text}` block at {self.operator_begin.location} will not modify stack state!
+(Block ends with `{self.operator_end.token.text}` at {self.operator_end.location})
 
 Before block stack types was: {self.stack_before_block}
 After block stack types become: {self.stack_after_block}

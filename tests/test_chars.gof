@@ -1,6 +1,6 @@
 #include "std.gof"
 
-func void main
+func void main[]
     'i'  105 "Characters must resolve to their char code" assert
     '0'  48  "Characters must resolve to their char code" assert
     '\n' 10  "Characters must resolve to their char code" assert

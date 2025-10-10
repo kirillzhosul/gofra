@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
 
 from gofra.codegen.backends.aarch64_macos.frame import (
     build_local_variables_frame_offsets,
     preserve_calee_frame,
     restore_calee_frame,
 )
+from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
-    from gofra.codegen.backends.general import CODEGEN_GOFRA_ON_STACK_OPERATIONS
     from gofra.hir.variable import Variable
     from gofra.types._base import Type
 
@@ -143,8 +143,6 @@ def push_local_variable_address_from_frame_offset(
     local_variables: Mapping[str, Variable],
     local_variable: str,
 ) -> None:
-    context.write(f"// Load local variable from frame offset ({local_variable})")
-
     # Calculate negative offset from X29
     current_offset = build_local_variables_frame_offsets(local_variables).offsets[
         local_variable
@@ -237,71 +235,73 @@ def ipc_syscall_macos(
 
 def perform_operation_onto_stack(
     context: AARCH64CodegenContext,
-    operation: CODEGEN_GOFRA_ON_STACK_OPERATIONS,
+    operation: OperatorType,
 ) -> None:
     """Perform *math* operation onto stack (pop arguments and push back result)."""
-    is_unary = operation in ("++", "--")
-    registers = ("X0",) if is_unary else ("X0", "X1")
+    registers = ("X0", "X1")
     pop_cells_from_stack_into_registers(context, *registers)
 
+    # TODO(@kirillzhosul): Optimize inc / dec (++, --) when incrementing / decrementing by known values
     context.write(f"// OP on-stack {operation}")
     match operation:
-        case "+":
+        case OperatorType.ARITHMETIC_PLUS:
             context.write("add X0, X1, X0")
-        case "-":
+        case OperatorType.ARITHMETIC_MINUS:
             context.write("sub X0, X1, X0")
-        case "*":
+        case OperatorType.ARITHMETIC_MULTIPLY:
             context.write("mul X0, X1, X0")
-        case "//":
+        case OperatorType.ARITHMETIC_DIVIDE:
             context.write("sdiv X0, X1, X0")
-        case "%":
+        case OperatorType.ARITHMETIC_MODULUS:
             context.write(
                 "udiv X2, X1, X0",
                 "mul X2, X2, X0",
                 "sub X0, X1, X2",
             )
-        case "++":
-            context.write("add X0, X0, #1")
-        case "||" | "|":
+        case OperatorType.LOGICAL_OR | OperatorType.BITWISE_OR:
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
             context.write("orr X0, X0, X1")
-        case ">>":
+        case OperatorType.SHIFT_RIGHT:
             context.write("lsr X0, X1, X0")
-        case "<<":
+        case OperatorType.SHIFT_LEFT:
             context.write("lsl X0, X1, X0")
-        case "&&" | "&":
+        case OperatorType.BITWISE_AND | OperatorType.LOGICAL_AND:
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
             context.write("and X0, X0, X1")
-        case "--":
-            context.write("sub X0, X0, #1")
-        case "!=" | ">=" | "<=" | "<" | ">" | "==":
+        case (
+            OperatorType.COMPARE_EQUALS
+            | OperatorType.COMPARE_GREATER
+            | OperatorType.COMPARE_GREATER_EQUALS
+            | OperatorType.COMPARE_LESS
+            | OperatorType.COMPARE_NOT_EQUALS
+            | OperatorType.COMPARE_LESS_EQUALS
+        ):
             logic_op = {
-                "!=": "ne",
-                ">=": "ge",
-                "<=": "le",
-                "<": "lt",
-                ">": "gt",
-                "==": "eq",
+                OperatorType.COMPARE_NOT_EQUALS: "ne",
+                OperatorType.COMPARE_GREATER_EQUALS: "ge",
+                OperatorType.COMPARE_LESS_EQUALS: "le",
+                OperatorType.COMPARE_LESS: "lt",
+                OperatorType.COMPARE_GREATER: "gt",
+                OperatorType.COMPARE_EQUALS: "eq",
             }
             context.write(
                 "cmp X1, X0",
                 f"cset X0, {logic_op[operation]}",
             )
         case _:
-            assert_never()
+            msg = f"{operation} cannot be performed by codegen `{perform_operation_onto_stack.__name__}`"
+            raise ValueError(msg)
     push_register_onto_stack(context, "X0")
 
 
 def load_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
     """Load memory as value using arguments from stack."""
-    context.write("// Load memory from stack")
     pop_cells_from_stack_into_registers(context, "X0")
     context.write("ldr X0, [X0]")
     push_register_onto_stack(context, "X0")
 
 
 def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
-    context.write("// store into memory from stack")
     """Store value into memory pointer, pointer and value acquired from stack."""
     pop_cells_from_stack_into_registers(context, "X0", "X1")
     context.write("str X0, [X1]")

@@ -11,7 +11,6 @@ from gofra.parser.exceptions import (
     ParserEntryPointFunctionTypeContractOutError,
     ParserNoEntryFunctionError,
 )
-from gofra.types.primitive.void import VoidType
 
 from ._context import ParserContext
 
@@ -25,7 +24,7 @@ def validate_and_pop_entry_point(context: ParserContext) -> Function:
     if entry_point.is_external or entry_point.is_inline:
         raise ParserEntryPointFunctionModifiersError
 
-    if not isinstance(entry_point.return_type, VoidType):
+    if entry_point.has_return_value():
         raise ParserEntryPointFunctionTypeContractOutError(
             type_contract_out=entry_point.return_type,
         )

@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from gofra.types.primitive.void import VoidType
+
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from gofra.hir.operator import Operator
     from gofra.hir.variable import Variable
     from gofra.lexer.tokens import TokenLocation
-    from gofra.parser.operators import Operator
     from gofra.types import Type
 
 
@@ -46,10 +48,6 @@ class Function:
     # e.g type contract-in
     parameters: Sequence[Type]
 
-    # Value type for retval (e.g type of the value which function returns)
-    # Void type means function has no return value
-    return_type: Type
-
     # If true, calling that function instead of actual calling into that function
     # just expands body of the function inside call location
     is_inline: bool
@@ -62,3 +60,26 @@ class Function:
     # If true, marks that function as *global* for linkage with another objects
     # Global functions can be linked with other binary files after compilation (e.g for libraries development)
     is_global: bool
+
+    # If true, means function has no calls to other functions
+    # Allows some HIR (but mostly treated as metadata for LIR optimizations)
+    is_leaf: bool
+
+    # Value type for retval (e.g type of the value which function returns)
+    # Void type means function has no return value and codegen must omit storing retval
+    return_type: Type
+
+    def has_return_value(self) -> bool:
+        """Check is given function returns an void type (e.g no return type)."""
+        # This meant to be something like generic function class / type guards but Python is shi...
+        return not isinstance(self.return_type, VoidType)
+
+    @property
+    def has_local_variables(self) -> bool:
+        """Function has one or more local variables."""
+        return bool(self.variables)
+
+    @property
+    def arguments_count(self) -> int:
+        """Arguments (parameters) amount which this function expects."""
+        return len(self.parameters)

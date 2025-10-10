@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from gofra.hir.function import Function
-
-from .operators import Operator, OperatorOperand, OperatorType
+from gofra.hir.operator import Operator, OperatorType
+from gofra.types._base import Type
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -41,6 +41,10 @@ class ParserContext:
 
     context_stack: deque[tuple[int, Operator]] = field(default_factory=lambda: deque())
     included_source_paths: set[Path] = field(default_factory=lambda: set())
+
+    # No function calls in that context
+    # Maybe should be refactored
+    is_leaf_context: bool = True
 
     current_operator: int = field(default=0)
 
@@ -82,15 +86,17 @@ class ParserContext:
         self,
         type: OperatorType,  # noqa: A002
         token: Token,
-        operand: OperatorOperand,
+        operand: int | str | Type | None = None,
         *,
-        is_contextual: bool,
+        is_contextual: bool = False,
     ) -> None:
+        if type == OperatorType.FUNCTION_CALL:
+            self.is_leaf_context = False
+
         operator = Operator(
             type=type,
             token=token,
             operand=operand,
-            has_optimizations=False,
         )
         self.operators.append(operator)
         if is_contextual:

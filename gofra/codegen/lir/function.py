@@ -2,6 +2,7 @@ from abc import ABC
 from collections.abc import Mapping, MutableSequence, Sequence
 from dataclasses import dataclass, field
 
+from gofra.hir.function import Function
 from gofra.lexer.tokens import TokenLocation
 from gofra.types._base import Type
 
@@ -26,6 +27,7 @@ class LIRFunction(ABC):
 @dataclass
 class LIRInternalFunction(LIRFunction):
     is_global_linker_symbol: bool
+    hir_function_as_metadata: Function | None
     locals: Mapping[str, Type] = field(default_factory=lambda: dict())  # noqa: C408
     operations: MutableSequence[LIRBaseOp] = field(default_factory=lambda: list())  # noqa: C408
 
@@ -40,6 +42,15 @@ class LIRInternalFunction(LIRFunction):
 
     def add_ops(self, *ops: LIRBaseOp) -> None:
         self.operations.extend(ops)
+
+    @property
+    def has_to_save_full_frame(self) -> bool:
+        if self.hir_function_as_metadata is None:
+            return True
+        return (
+            self.hir_function_as_metadata.is_leaf
+            and not self.hir_function_as_metadata.has_local_variables
+        )
 
 
 @dataclass

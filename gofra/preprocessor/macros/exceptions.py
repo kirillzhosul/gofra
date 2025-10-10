@@ -1,6 +1,5 @@
-from gofra.lexer.tokens import Token, TokenLocation, TokenType
+from gofra.lexer.tokens import Token, TokenLocation
 from gofra.preprocessor.exceptions import PreprocessorError
-from gofra.preprocessor.macros.macro import Macro
 
 
 class PreprocessorMacroRedefinesLanguageWordError(PreprocessorError):
@@ -50,16 +49,3 @@ class PreprocessorNoMacroNameError(PreprocessorError):
         return f"""No macro name specified at {self.location}!
 
 Do you have unfinished macro definition?"""
-
-
-class PreprocessorMacroContainsKeywordError(PreprocessorError):
-    def __init__(self, macro: Macro, keyword: Token) -> None:
-        self.macro = macro
-        self.keyword = keyword
-        assert self.keyword.type == TokenType.KEYWORD
-
-    def __repr__(self) -> str:
-        return f"""Macro '{self.macro.name}' at {self.macro.location} contains keyword `{self.keyword.text}` inside, at {self.keyword.location}!
-
-Macro cannot contain keywords inside their bodies.
-Alternative possible approach is to use `inline` functions."""

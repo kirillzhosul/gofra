@@ -58,6 +58,7 @@
         "lraylib",
         "MAXSYSCALL",
         "mkdocs",
+        "movk",
         "movq",
         "movz",
         "NANOS",
