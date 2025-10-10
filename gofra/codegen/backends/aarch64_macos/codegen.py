@@ -216,7 +216,7 @@ def aarch64_macos_executable_functions(
     """
     # Define only function that contains anything to execute
     functions = filter(
-        lambda f: f.has_executable_operators,
+        lambda f: f.has_executable_operators or f.is_global,
         program.functions.values(),
     )
     for function in functions:
