@@ -3,6 +3,7 @@ from __future__ import annotations
 from difflib import get_close_matches
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.feature_flags import FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
 from gofra.hir.function import Function
 from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
@@ -16,7 +17,6 @@ from gofra.parser.conditional_blocks import consume_conditional_block_keyword_fr
 from gofra.parser.functions.parser import consume_function_definition
 from gofra.parser.typecast import unpack_typecast_from_token
 from gofra.parser.types import parser_type_from_tokenizer
-from gofra.parser.validator import validate_and_pop_entry_point
 from gofra.parser.variables import (
     get_all_scopes_variables,
     search_variable_in_context_parents,
@@ -39,38 +39,10 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-def wrapped_tokenizer(
-    tokenizer: Generator[Token, None, None],
-) -> Generator[Token, Token | None]:
-    token_buffer: list[Token] = []
-
-    for token in tokenizer:
-        # Yield buffered tokens first
-        while token_buffer:
-            received = yield token_buffer.pop(0)
-            if received is not None:
-                token_buffer.append(received)
-
-        # Yield from original tokenizer
-        received = yield token
-        if received is not None:
-            token_buffer.append(received)
-
-    # Yield any remaining buffered tokens
-    while token_buffer:
-        received = yield token_buffer.pop(0)
-        if received is not None:
-            token_buffer.append(received)
-
-
-def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
+def parse_file(tokenizer: Generator[Token]) -> ParserContext:
     """Load file for parsing into operators."""
     context = _parse_from_context_into_operators(
-        context=ParserContext(
-            parent=None,
-            _tokenizer=wrapped_tokenizer(tokenizer),
-            functions={},
-        ),
+        context=ParserContext(_tokenizer=tokenizer),
     )
 
     assert context.is_top_level, (
@@ -80,8 +52,7 @@ def parse_file(tokenizer: Generator[Token]) -> tuple[ParserContext, Function]:
         f"Expected NO operators on top level, first one is at {context.operators[0].location}"
     )
 
-    entry_point = validate_and_pop_entry_point(context)
-    return context, entry_point
+    return context
 
 
 def _parse_from_context_into_operators(context: ParserContext) -> ParserContext:
@@ -211,12 +182,11 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             msg = "Negative indexing inside arrays is prohibited"
             raise ValueError(msg)
 
-        if array_index_at >= variable.type.elements_count:
+        if variable.type.is_index_oob(array_index_at):
             msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements"
             raise ValueError(msg)
 
-        element_sizeof = variable.type.element_type.size_in_bytes
-        shift_in_bytes = element_sizeof * array_index_at
+        shift_in_bytes = variable.type.get_index_offset(array_index_at)
         if shift_in_bytes:
             context.push_new_operator(
                 type=OperatorType.PUSH_INTEGER,
@@ -383,21 +353,13 @@ def _unpack_function_definition_from_token(
     ) = consume_function_definition(context, token)
 
     if modifier_is_extern:
-        context.add_function(
-            Function(
-                name=function_name,
-                defined_at=token.location,
-                operators=[],
-                variables={},
-                parameters=parameters,
-                return_type=return_type,
-                is_inline=modifier_is_inline,
-                is_external=modifier_is_extern,
-                is_global=modifier_is_global,
-                is_leaf=False,
-            ),
+        function = Function.create_external(
+            name=function_name,
+            defined_at=token.location,
+            parameters=parameters,
+            return_type=return_type,
         )
-
+        context.add_function(function)
         return
 
     opened_context_blocks = 0
@@ -426,20 +388,34 @@ def _unpack_function_definition_from_token(
         function_body_tokens.append(func_token)
 
     new_context = ParserContext(
-        _tokenizer=wrapped_tokenizer(t for t in function_body_tokens),
+        _tokenizer=(t for t in function_body_tokens),
+        _peeked=None,
         functions=context.functions,
         parent=context,
     )
+
     source = _parse_from_context_into_operators(context=new_context).operators
-    function = Function(
+    if modifier_is_inline:
+        assert not new_context.variables, "Inline functions cannot have local variables"
+        function = Function.create_internal_inline(
+            name=function_name,
+            defined_at=token.location,
+            operators=source,
+            return_type=return_type,
+            parameters=parameters,
+        )
+        context.add_function(function)
+        return
+    if function_name == GOFRA_ENTRY_POINT:
+        modifier_is_global = True
+
+    function = Function.create_internal(
         name=function_name,
         defined_at=token.location,
         operators=source,
         variables=new_context.variables,
         parameters=parameters,
         return_type=return_type,
-        is_inline=modifier_is_inline,
-        is_external=modifier_is_extern,
         is_global=modifier_is_global,
         is_leaf=new_context.is_leaf_context,
     )

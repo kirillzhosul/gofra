@@ -8,7 +8,6 @@ from gofra.assembler.assembler import (
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.cli.output import cli_message
 from gofra.codegen.generator import generate_code_for_assembler
-from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.exceptions import GofraError
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
@@ -39,7 +38,7 @@ def toolchain_assembly_executable(
         macros=macros,
     )
     validate_type_safety(
-        functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
+        functions=context.functions,
         global_variables=context.global_variables,
     )
     artifact_path = cache_directory / f"{path.with_suffix('').name}"

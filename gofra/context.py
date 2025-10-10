@@ -20,15 +20,12 @@ class ProgramContext:
 
     functions: MutableMapping[str, Function]
     global_variables: MutableMapping[str, Variable]
-    entry_point: Function
 
     @staticmethod
     def from_parser_context(
         parser_context: ParserContext,
-        entry_point: Function,
     ) -> ProgramContext:
         return ProgramContext(
             functions=parser_context.functions,
             global_variables=parser_context.variables,
-            entry_point=entry_point,
         )

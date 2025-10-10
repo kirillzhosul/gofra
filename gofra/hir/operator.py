@@ -18,7 +18,7 @@ class OperatorType(Enum):
     PUSH_INTEGER = auto()
 
     # Push address of string (static) and its size onto stack
-    # TODO(@kirillzhosul): Review C-Strings and maybe stick to always c-string
+    # TODO(@kirillzhosul): Review C-Strings - https://github.com/kirillzhosul/gofra/issues/27
     PUSH_STRING = auto()
 
     # Push address of variable (local or global one, storage class is not specified)
@@ -31,7 +31,7 @@ class OperatorType(Enum):
     FUNCTION_CALL = auto()
 
     # Typechecker mark to treat current (type) stack value as specified type
-    TYPE_CAST = auto()
+    STATIC_TYPE_CAST = auto()
 
     # Conditional blocks
     # Transformed at LIR into proper JUMP_IF_ZERO instructions

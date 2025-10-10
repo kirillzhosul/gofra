@@ -38,8 +38,8 @@ def process_input_file(
     if _debug_emit_lexemes:
         preprocessor = _debug_lexer_wrapper(preprocessor)
 
-    parser_context, entry_point = parse_file(preprocessor)
-    return ProgramContext.from_parser_context(parser_context, entry_point)
+    parser_context = parse_file(preprocessor)
+    return ProgramContext.from_parser_context(parser_context)
 
 
 def _debug_lexer_wrapper(lexer: Generator[Token]) -> Generator[Token]:

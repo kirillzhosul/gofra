@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Literal, assert_never
 
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
+from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.context import ProgramContext
 from gofra.hir.function import Function
 from gofra.parser.operators import OperatorType
@@ -95,7 +96,7 @@ def translate_hir_to_lir(
         externs={},
     )
 
-    for hir_func in (*hir.functions.values(), hir.entry_point):
+    for hir_func in hir.functions.values():
         name = hir_func.name
         if hir_func.is_external:
             lir.externs[name] = hir_external_function_to_lir_extern_function(hir_func)
@@ -110,7 +111,7 @@ def translate_hir_to_lir(
         assert system_entry_point_name not in lir.functions
         lir.functions[system_entry_point_name] = lir_generate_system_entry_point(
             system_ep_name=system_entry_point_name,
-            internal_ep_name=hir.entry_point.name,
+            internal_ep_name=GOFRA_ENTRY_POINT,
         )
     return lir
 
@@ -205,7 +206,7 @@ def translate_hir_function_to_lir_function(
                         LIRFunctionCallAcquireRetval(return_type=func.return_type),
                     )
 
-            case OperatorType.TYPE_CAST:
+            case OperatorType.STATIC_TYPE_CAST:
                 # Skip that as it is typechecker only.
                 pass
             case OperatorType.PUSH_INTEGER:

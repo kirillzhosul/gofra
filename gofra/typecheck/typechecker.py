@@ -2,7 +2,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import OperatorType
+from gofra.parser.exceptions import (
+    ParserEntryPointFunctionModifiersError,
+    ParserNoEntryFunctionError,
+)
+from gofra.typecheck.errors.entry_point_parameters_mismatch import (
+    EntryPointParametersMismatchTypecheckError,
+)
+from gofra.typecheck.errors.entry_point_return_type_mismatch import (
+    EntryPointReturnTypeMismatchTypecheckError,
+)
 from gofra.typecheck.errors.return_value_missing import ReturnValueMissingTypecheckError
 from gofra.types import Type
 from gofra.types.comparison import is_types_same
@@ -38,7 +49,25 @@ def validate_type_safety(
     global_variables: Mapping[str, Variable],
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
-    for function in functions.values():
+    if GOFRA_ENTRY_POINT not in functions:
+        raise ParserNoEntryFunctionError
+
+    # TODO(@kirillzhosul): these parser errors comes from legacy entry point validation, must be reworked later - https://github.com/kirillzhosul/gofra/issues/28
+    entry_point = functions[GOFRA_ENTRY_POINT]
+    if entry_point.is_external or entry_point.is_inline:
+        raise ParserEntryPointFunctionModifiersError
+
+    if entry_point.has_return_value():
+        raise EntryPointReturnTypeMismatchTypecheckError(
+            return_type=entry_point.return_type,
+        )
+
+    if entry_point.parameters:
+        raise EntryPointParametersMismatchTypecheckError(
+            parameters=entry_point.parameters,
+        )
+
+    for function in (*functions.values(), entry_point):
         if function.is_external:
             continue
         validate_function_type_safety(
@@ -335,7 +364,7 @@ def emulate_type_stack_for_operators(
                 )
                 context.push_types(I64Type())
 
-            case OperatorType.TYPE_CAST:
+            case OperatorType.STATIC_TYPE_CAST:
                 assert isinstance(operator.operand, Type)
                 to_type_cast = operator.operand
                 context.raise_for_enough_arguments(

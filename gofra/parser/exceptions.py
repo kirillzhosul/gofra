@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from gofra.consts import GOFRA_ENTRY_POINT
@@ -9,8 +8,7 @@ from gofra.exceptions import GofraError
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from gofra.lexer.tokens import Token, TokenLocation
-    from gofra.types import Type
+    from gofra.lexer.tokens import Token
 
 
 class ParserDirtyNonPreprocessedTokenError(GofraError):
@@ -153,65 +151,6 @@ Please use 'while true do .. end' if this is your intense.
 Did you forgot to add condition?"""
 
 
-class ExternNoFunctionNameError(GofraError):
-    def __init__(self, *args: object, macro_token: Token) -> None:
-        super().__init__(*args)
-        self.macro_token = macro_token
-
-    def __repr__(self) -> str:
-        return f"""No 'extern' function name specified at {self.macro_token.location}!
-Extern functions should have name after 'extern' keyword
-
-Do you have unfinished extern function definition?"""
-
-
-class ParserExternNonWordNameError(GofraError):
-    def __init__(self, *args: object, function_name_token: Token) -> None:
-        super().__init__(*args)
-        self.function_name_token = function_name_token
-
-    def __repr__(self) -> str:
-        return f"""Non word name for extern function name at {self.function_name_token.location}!
-Extern function signature should have name as word after 'extern' keyword but got '{self.function_name_token.type.name}'!"""
-
-
-class ParserExternRedefinesMacroError(GofraError):
-    def __init__(
-        self,
-        *args: object,
-        redefine_extern_function_name_token: Token,
-        original_macro_location: TokenLocation,
-        original_macro_name: str,
-    ) -> None:
-        super().__init__(*args)
-        self.redefine_extern_function_name_token = redefine_extern_function_name_token
-        self.original_macro_location = original_macro_location
-        self.original_macro_name = original_macro_name
-
-    def __repr__(self) -> str:
-        return f"""Redefinition of an macro '{self.original_macro_name}' at {self.redefine_extern_function_name_token.location} inside extern function!
-Original definition found at {self.original_macro_location}!
-Extern cannot redefine macro names!"""
-
-
-class ParserExternRedefinesLanguageDefinitionError(GofraError):
-    def __init__(
-        self,
-        *args: object,
-        extern_token: Token,
-        extern_function_name: str,
-    ) -> None:
-        super().__init__(*args)
-        self.extern_token = extern_token
-        self.extern_function_name = extern_function_name
-
-    def __repr__(self) -> str:
-        return (
-            f"Extern function '{self.extern_function_name}' at {self.extern_token.location}"
-            " tries to redefine language definition!"
-        )
-
-
 class ParserEmptyIfBodyError(GofraError):
     def __init__(self, *args: object, if_token: Token) -> None:
         super().__init__(*args)
@@ -228,32 +167,6 @@ class ParserNoEntryFunctionError(GofraError):
 
     def __repr__(self) -> str:
         return f"""Expected entry point function '{GOFRA_ENTRY_POINT}' but it does not exists!"""
-
-
-class ParserEntryPointFunctionTypeContractInError(GofraError):
-    def __init__(self, *args: object, parameters: Sequence[Type]) -> None:
-        super().__init__(*args)
-        self.parameters = parameters
-
-    def __repr__(self) -> str:
-        return f"""Entry point function '{GOFRA_ENTRY_POINT}' violates type contract!
-
-Entry point function cannot accept parameters!
-But currently it has parameters: {self.parameters}
-"""
-
-
-class ParserEntryPointFunctionTypeContractOutError(GofraError):
-    def __init__(self, *args: object, type_contract_out: Type) -> None:
-        super().__init__(*args)
-        self.type_contract_out = type_contract_out
-
-    def __repr__(self) -> str:
-        return f"""Entry point function '{GOFRA_ENTRY_POINT}' violates type contract!
-
-Entry point function cannot have type contract out!
-But currently it have type contract out: {self.type_contract_out}
-"""
 
 
 class ParserEntryPointFunctionModifiersError(GofraError):

@@ -53,7 +53,10 @@ def generate_aarch64_macos_backend(
     context = AARCH64CodegenContext(fd=fd, strings={})
 
     aarch64_macos_executable_functions(context, program)
-    aarch64_macos_program_entry_point(context)
+    if GOFRA_ENTRY_POINT in program.functions:
+        # TODO(@kirillzhosul): Treat entry point as separate concept, and probably treat as an warning for executables
+        entry_point = program.functions[GOFRA_ENTRY_POINT]
+        aarch64_macos_program_entry_point(context, entry_point)
     aarch64_macos_data_section(context, program)
 
 
@@ -149,7 +152,7 @@ def aarch64_macos_operator_instructions(
                 type_contract_in=function.parameters,
                 type_contract_out=function.return_type,
             )
-        case OperatorType.TYPE_CAST:
+        case OperatorType.STATIC_TYPE_CAST:
             # Skip that as it is typechecker only.
             pass
         case OperatorType.STACK_DROP:
@@ -213,8 +216,8 @@ def aarch64_macos_executable_functions(
     """
     # Define only function that contains anything to execute
     functions = filter(
-        lambda f: bool(f.operators),
-        [*program.functions.values(), program.entry_point],
+        lambda f: f.has_executable_operators,
+        program.functions.values(),
     )
     for function in functions:
         function_begin_with_prologue(
@@ -236,7 +239,10 @@ def aarch64_macos_executable_functions(
         )
 
 
-def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
+def aarch64_macos_program_entry_point(
+    context: AARCH64CodegenContext,
+    entry_point: Function,
+) -> None:
     """Write program entry, used to not segfault due to returning into protected system memory."""
     # This is an executable entry point
     function_begin_with_prologue(
@@ -249,9 +255,11 @@ def aarch64_macos_program_entry_point(context: AARCH64CodegenContext) -> None:
     )
 
     # Prepare and execute main function
+    assert isinstance(entry_point.return_type, VoidType)
+    assert not entry_point.has_return_value()
     function_call(
         context,
-        name=GOFRA_ENTRY_POINT,
+        name=entry_point.name,
         type_contract_in=[],
         type_contract_out=VoidType(),
     )

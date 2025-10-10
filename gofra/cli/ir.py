@@ -9,7 +9,6 @@ from gofra.codegen.lir.static import (
     LIRStaticSegmentCString,
     LIRStaticSegmentGlobalVariable,
 )
-from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.context import ProgramContext
 from gofra.hir.function import Function
 from gofra.hir.operator import Operator, OperatorType
@@ -17,9 +16,8 @@ from gofra.hir.operator import Operator, OperatorType
 
 def emit_hir_into_stdout(context: ProgramContext) -> None:
     """Display IR via stdout."""
-    functions = {**context.functions, GOFRA_ENTRY_POINT: context.entry_point}
-    for function in functions.values():
-        emit_ir_function_signature(function, context.entry_point)
+    for function in context.functions.values():
+        emit_ir_function_signature(function)
         context_block_shift = 0
         for operator in function.operators:
             if operator.type in (
@@ -101,13 +99,10 @@ def emit_ir_operator(operator: Operator, context_block_shift: int) -> None:
             return print(f"{shift}{operator.type.name}<{operator.operand}>")
 
 
-def emit_ir_function_signature(function: Function, entry_point: Function) -> None:
+def emit_ir_function_signature(function: Function) -> None:
     if function.is_external:
         print(f"[external function symbol '{function.name}'", end=" ")
         print(f"({function.parameters} -> {function.return_type})")
-        return
-    if function == entry_point:
-        print(f"[entry point symbol '{function.name}']")
         return
     print(f"[function symbol '{function.name}'", end=" ")
     print(f"({function.parameters} -> {function.return_type})", end=" ")

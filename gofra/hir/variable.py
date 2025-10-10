@@ -49,11 +49,14 @@ class VariableStorageClass(Enum):
     # static - locate globally in data section, globals only
     STATIC = auto()
 
+    # TODO(@kirillzhosul): Static class for local variables - https://github.com/kirillzhosul/gofra/issues/25
+    # TODO(@kirillzhosul): Register class for local variables - https://github.com/kirillzhosul/gofra/issues/26
+
 
 class VariableScopeClass(Enum):
-    """Location of definition for that variable (e.g owner scope)."""
+    """Location of the definition of that variable (e.g owner scope/context)."""
 
-    # Top level scope - global in root of the program
+    # Top level scope - global in root of the program (no owner function)
     GLOBAL = auto()
 
     # Function scope - owner is an function and mostly has VariableStorageClass.STACK

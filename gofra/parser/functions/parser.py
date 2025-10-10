@@ -176,7 +176,7 @@ def consume_function_parameters(context: ParserContext) -> list[Type]:
             unbalanced_brackets -= 1
 
         if token.type == TokenType.EOF:
-            msg = "Expected RPAREN `)` after function parameters but got end of file!"
+            msg = "Expected RBRACKET `]` after function parameters but got end of file!"
             raise ValueError(msg)
 
         if token.type not in (

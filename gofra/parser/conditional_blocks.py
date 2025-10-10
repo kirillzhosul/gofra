@@ -21,7 +21,6 @@ def consume_conditional_block_keyword_from_token(
             return context.push_new_operator(
                 type=OperatorType.CONDITIONAL_IF,
                 token=token,
-                operand=None,
                 is_contextual=True,
             )
         case Keyword.DO:
@@ -41,7 +40,6 @@ def consume_conditional_block_keyword_from_token(
             context.push_new_operator(
                 type=OperatorType.CONDITIONAL_DO,
                 token=token,
-                operand=None,
                 is_contextual=True,
             )
             context.operators[-1].jumps_to_operator_idx = operator_while_idx
@@ -50,7 +48,6 @@ def consume_conditional_block_keyword_from_token(
             return context.push_new_operator(
                 type=OperatorType.CONDITIONAL_WHILE,
                 token=token,
-                operand=None,
                 is_contextual=True,
             )
         case Keyword.END:
@@ -62,7 +59,6 @@ def consume_conditional_block_keyword_from_token(
             context.push_new_operator(
                 type=OperatorType.CONDITIONAL_END,
                 token=token,
-                operand=None,
                 is_contextual=False,
             )
             prev_context_jumps_at = context_operator.jumps_to_operator_idx

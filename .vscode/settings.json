@@ -66,6 +66,7 @@
         "nostdlib",
         "otool",
         "PAGEOFF",
+        "Peekable",
         "popq",
         "Prerequirements",
         "pushq",

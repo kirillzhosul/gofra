@@ -10,7 +10,6 @@ from gofra.assembler.assembler import (
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.codegen.generator import generate_code_for_assembler
-from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from gofra.gofra import process_input_file
@@ -154,7 +153,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
             verbose=args.verbose,
         )
         validate_type_safety(
-            functions={**context.functions, GOFRA_ENTRY_POINT: context.entry_point},
+            functions=context.functions,
             global_variables=context.global_variables,
         )
 

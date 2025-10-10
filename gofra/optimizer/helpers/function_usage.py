@@ -13,11 +13,12 @@ def is_function_has_callers(program: ProgramContext, function_name: str) -> bool
     )
 
     function = program.functions[function_name]
+
     return any(
         operator.type == OperatorType.FUNCTION_CALL
         and operator.operand == function.name
         for operator in chain.from_iterable(
-            (f.operators for f in (*program.functions.values(), program.entry_point)),
+            (f.operators for f in program.functions.values() if not f.is_leaf),
         )
     )
 

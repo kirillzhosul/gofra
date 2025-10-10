@@ -50,7 +50,9 @@ def generate_amd64_backend(
     context = AMD64CodegenContext(fd=fd, strings={}, target=target)
 
     amd64_executable_functions(context, program)
-    amd64_program_entry_point(context)
+    if GOFRA_ENTRY_POINT in program.functions:
+        entry_point = program.functions[GOFRA_ENTRY_POINT]
+        amd64_program_entry_point(context, entry_point)
     amd64_data_section(context, program)
 
 
@@ -137,12 +139,9 @@ def amd64_operator_instructions(
         case OperatorType.FUNCTION_RETURN:
             function_end_with_epilogue(
                 context,
-                has_return_value=not isinstance(
-                    owner_function.return_type,
-                    VoidType,
-                ),
+                has_return_value=owner_function.has_return_value(),
             )
-        case OperatorType.TYPE_CAST:
+        case OperatorType.STATIC_TYPE_CAST:
             # Skip that as it is typechecker only.
             pass
         case OperatorType.STACK_DROP:
@@ -209,14 +208,14 @@ def amd64_executable_functions(
     """
     # Define only function that contains anything to execute
     functions = filter(
-        lambda f: bool(f.operators),
-        [*program.functions.values(), program.entry_point],
+        lambda f: f.has_executable_operators,
+        program.functions.values(),
     )
     for function in functions:
         function_begin_with_prologue(
             context,
             local_variables=function.variables,
-            arguments_count=len(function.parameters),
+            arguments_count=function.arguments_count,
             function_name=function.name,
             as_global_linker_symbol=function.is_global,
         )
@@ -228,7 +227,10 @@ def amd64_executable_functions(
         )
 
 
-def amd64_program_entry_point(context: AMD64CodegenContext) -> None:
+def amd64_program_entry_point(
+    context: AMD64CodegenContext,
+    entry_point: Function,
+) -> None:
     """Write program entry, used to not segfault due to returning into protected system memory."""
     # This is an executable entry point
     function_begin_with_prologue(
@@ -240,9 +242,11 @@ def amd64_program_entry_point(context: AMD64CodegenContext) -> None:
     )
 
     # Prepare and execute main function
+    assert isinstance(entry_point.return_type, VoidType)
+    assert not entry_point.has_return_value()
     function_call(
         context,
-        name=GOFRA_ENTRY_POINT,
+        name=entry_point.name,
         type_contract_in=[],
         type_contract_out=VoidType(),
     )

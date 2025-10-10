@@ -6,7 +6,6 @@ from gofra.parser.operators import OperatorType
 
 if TYPE_CHECKING:
     from gofra.context import ProgramContext
-    from gofra.hir.function import Function
 
 
 def optimize_function_inlining(
@@ -17,7 +16,7 @@ def optimize_function_inlining(
     """Optimize function inlining (mark small functions less than 'max_operators' as inline and resolve old reference as code block'."""
     _mark_inlineable_functions_as_inline(program, max_operators=max_operators)
 
-    for function in (*program.functions.values(), program.entry_point):
+    for function in program.functions.values():
         for _ in range(max_iterations):
             iteration_has_fold = False
             for idx, operator in enumerate(function.operators):
@@ -52,16 +51,7 @@ def _mark_inlineable_functions_as_inline(
     )
 
     for function in inlineable_functions:
-        if _is_function_has_recursion(function):
+        if function.is_recursive:
             # do NOT inline functions which has self-recursion as this will lead to broken program and infinite optimizer pass.
             continue
         function.is_inline = True
-
-
-def _is_function_has_recursion(function: Function) -> bool:
-    """Check is given function has self-recursion."""
-    return any(
-        operator.type == OperatorType.FUNCTION_CALL
-        and operator.operand == function.name
-        for operator in function.operators
-    )

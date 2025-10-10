@@ -8,7 +8,7 @@ def unpack_typecast_from_token(context: ParserContext, typecast_token: Token) ->
     typename = parser_type_from_tokenizer(context)
 
     context.push_new_operator(
-        OperatorType.TYPE_CAST,
+        OperatorType.STATIC_TYPE_CAST,
         typecast_token,
         typename,
         is_contextual=False,
