@@ -356,17 +356,17 @@ def function_end_with_epilogue(
     :has_preserved_frame: If true, will restore that to jump out and proper stack management
     :execution_trap_instead_return: Internal, if true, will replace simple return with execution guard trap to raise from execution
     """
+    if has_return_value:
+        abi = context.abi
+        context.write("// C-FFI retval")
+        pop_cells_from_stack_into_registers(context, abi.return_value_register)
+
     if has_preserved_frame:
         restore_calee_frame(context)
 
     if execution_trap_instead_return:
         execution_guard_trap(context)
         return
-
-    if has_return_value:
-        abi = context.abi
-        context.write("// C-FFI retval")
-        pop_cells_from_stack_into_registers(context, abi.return_value_register)
 
     context.write("ret")
 
