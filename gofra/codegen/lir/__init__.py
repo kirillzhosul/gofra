@@ -375,7 +375,11 @@ def translate_hir_function_to_lir_function(
                     ),
                     LIRPushRegistersOntoStack((vreg_a,)),
                 )
-            case OperatorType.SHIFT_RIGHT | OperatorType.SHIFT_LEFT:
+            case (
+                OperatorType.SHIFT_RIGHT
+                | OperatorType.SHIFT_LEFT
+                | OperatorType.BITWISE_XOR
+            ):
                 raise NotImplementedError(operator.type)
             case OperatorType.LOGICAL_AND:
                 vreg_a = vreg_alloc()

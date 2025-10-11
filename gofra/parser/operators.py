@@ -20,6 +20,7 @@ IDENTIFIER_TO_OPERATOR_TYPE = {
     "<<": OperatorType.SHIFT_LEFT,
     "|": OperatorType.BITWISE_OR,
     "&": OperatorType.BITWISE_AND,
+    "^": OperatorType.BITWISE_XOR,
     "?>": OperatorType.MEMORY_VARIABLE_READ,
     "!<": OperatorType.MEMORY_VARIABLE_WRITE,
 }

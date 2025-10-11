@@ -73,6 +73,7 @@ class OperatorType(Enum):
     # On-stack bitwise operations
     BITWISE_OR = auto()
     BITWISE_AND = auto()
+    BITWISE_XOR = auto()
 
     # On-stack bit shift operations.
     # Shift semantic: arithmetic / logical type is not clarified

@@ -183,6 +183,7 @@ def aarch64_macos_operator_instructions(
             | OperatorType.BITWISE_OR
             | OperatorType.SHIFT_LEFT
             | OperatorType.SHIFT_RIGHT
+            | OperatorType.BITWISE_XOR
         ):
             perform_operation_onto_stack(
                 context,

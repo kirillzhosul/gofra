@@ -170,6 +170,7 @@ def amd64_operator_instructions(
             | OperatorType.LOGICAL_AND
             | OperatorType.BITWISE_AND
             | OperatorType.BITWISE_OR
+            | OperatorType.BITWISE_XOR
             | OperatorType.SHIFT_LEFT
             | OperatorType.SHIFT_RIGHT
         ):

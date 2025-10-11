@@ -268,6 +268,9 @@ def perform_operation_onto_stack(
         case OperatorType.BITWISE_AND | OperatorType.LOGICAL_AND:
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
             context.write("and X0, X0, X1")
+        case OperatorType.BITWISE_XOR:
+            context.write("eor X0, X0, X1")
+
         case (
             OperatorType.COMPARE_EQUALS
             | OperatorType.COMPARE_GREATER
