@@ -289,15 +289,20 @@ def perform_operation_onto_stack(
                 "idivq %rbx",
                 "movq %rdx, %rax",
             )
-        case (
-            OperatorType.LOGICAL_OR
-            | OperatorType.BITWISE_OR
-            | OperatorType.SHIFT_RIGHT
-            | OperatorType.SHIFT_LEFT
-            | OperatorType.BITWISE_AND
-            | OperatorType.LOGICAL_AND
-        ):
-            raise NotImplementedError
+        case OperatorType.LOGICAL_OR | OperatorType.BITWISE_OR:
+            context.write("xorq %rbx, %rax")
+        case OperatorType.SHIFT_RIGHT:
+            context.write(
+                "shrq %rax, %rbx",
+                "movq %rbx, %rax",
+            )
+        case OperatorType.SHIFT_LEFT:
+            context.write(
+                "shlq %rax, %rbx",
+                "movq %rbx, %rax",
+            )
+        case OperatorType.BITWISE_AND | OperatorType.LOGICAL_AND:
+            context.write("andq %rbx, %rax")
         case (
             OperatorType.COMPARE_EQUALS
             | OperatorType.COMPARE_GREATER
