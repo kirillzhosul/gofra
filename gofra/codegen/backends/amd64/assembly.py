@@ -276,7 +276,7 @@ def perform_operation_onto_stack(
             context.write("subq %rax, %rbx")
 
         case OperatorType.ARITHMETIC_MULTIPLY:
-            context.write("mulq %rbx, %rax")
+            context.write("mulq %rbx")
 
         case OperatorType.ARITHMETIC_DIVIDE:
             context.write(
