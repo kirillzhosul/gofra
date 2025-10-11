@@ -1,0 +1,51 @@
+
+
+// Static global state of randomizer
+var std_random_state int
+
+
+// Set an given number as seed (random state)
+func void set_random_seed[int]
+    &std_random_state swap !<
+end
+
+
+func void randomize_state[] 
+    //rs rs ?> rs ?> 13 << ^ !<
+    //rs rs ?> rs ?> 17 << ^ !<
+    //rs rs ?> rs ?> 5  << ^ !<
+    &std_random_state
+        &std_random_state ?> 
+            &std_random_state ?>
+            13
+            <<
+        ^
+    !<
+
+    &std_random_state
+        &std_random_state ?>
+            &std_random_state ?>
+            17
+            <<
+        ^
+    !<
+
+    &std_random_state
+        &std_random_state ?>
+            &std_random_state ?>
+            5
+            <<
+        ^
+    !<
+end
+
+
+func int random[]
+    randomize_state
+
+    &std_random_state ?>
+end
+
+func int random_range[int]
+    random swap %
+end
