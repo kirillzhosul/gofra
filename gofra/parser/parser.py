@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 from difflib import get_close_matches
+from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.feature_flags import FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
 from gofra.hir.function import Function
+from gofra.hir.module import Module
 from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from gofra.lexer import (
     Keyword,
     Token,
     TokenType,
 )
-from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, PreprocessorKeyword
+from gofra.lexer.keywords import PreprocessorKeyword
 from gofra.parser.conditional_blocks import consume_conditional_block_keyword_from_token
-from gofra.parser.functions.parser import consume_function_definition
+from gofra.parser.functions.parser import (
+    consume_function_body_tokens,
+    consume_function_definition,
+)
 from gofra.parser.typecast import unpack_typecast_from_token
 from gofra.parser.types import parser_type_from_tokenizer
 from gofra.parser.variables import (
@@ -39,11 +44,10 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-def parse_file(tokenizer: Generator[Token]) -> ParserContext:
+def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Module:
     """Load file for parsing into operators."""
-    context = _parse_from_context_into_operators(
-        context=ParserContext(_tokenizer=tokenizer),
-    )
+    context = ParserContext(_tokenizer=tokenizer)
+    _parse_from_context_into_operators(context=context)
 
     assert context.is_top_level, (
         "Parser context in result of parsing must an top level, bug in a parser"
@@ -52,10 +56,14 @@ def parse_file(tokenizer: Generator[Token]) -> ParserContext:
         f"Expected NO operators on top level, first one is at {context.operators[0].location}"
     )
 
-    return context
+    return Module(
+        path=path,
+        functions=context.functions,
+        variables=context.variables,
+    )
 
 
-def _parse_from_context_into_operators(context: ParserContext) -> ParserContext:
+def _parse_from_context_into_operators(context: ParserContext) -> None:
     """Consumes token stream into language operators."""
     try:
         while token := context.next_token():
@@ -75,8 +83,6 @@ def _parse_from_context_into_operators(context: ParserContext) -> ParserContext:
                 raise ParserUnfinishedIfBlockError(if_token=unclosed_operator.token)
             case _:
                 raise ParserExhaustiveContextStackError
-
-    return context
 
 
 def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
@@ -321,7 +327,7 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
 
     if not function:
         raise ParserUnknownFunctionError(
-            token=token,
+            token=name_token,
             functions_available=context.functions.keys(),
             best_match=_best_match_for_word(context, token.text),
         )
@@ -362,45 +368,19 @@ def _unpack_function_definition_from_token(
         context.add_function(function)
         return
 
-    opened_context_blocks = 0
-
-    context_keywords = (Keyword.IF, Keyword.DO)
-    end_keyword_text = KEYWORD_TO_NAME[Keyword.END]
-
-    function_body_tokens: list[Token] = []
-    while func_token := context.next_token():
-        if func_token.type == TokenType.EOF:
-            msg = "Expected function to be closed but got end of file"
-            raise ValueError(msg)
-        if func_token.type != TokenType.KEYWORD:
-            function_body_tokens.append(func_token)
-            continue
-
-        if func_token.text == end_keyword_text:
-            if opened_context_blocks <= 0:
-                break
-            opened_context_blocks -= 1
-
-        is_context_keyword = WORD_TO_KEYWORD[func_token.text] in context_keywords
-        if is_context_keyword:
-            opened_context_blocks += 1
-
-        function_body_tokens.append(func_token)
-
     new_context = ParserContext(
-        _tokenizer=(t for t in function_body_tokens),
-        _peeked=None,
+        _tokenizer=consume_function_body_tokens(context),
         functions=context.functions,
         parent=context,
     )
 
-    source = _parse_from_context_into_operators(context=new_context).operators
+    _parse_from_context_into_operators(context=new_context)
     if modifier_is_inline:
         assert not new_context.variables, "Inline functions cannot have local variables"
         function = Function.create_internal_inline(
             name=function_name,
             defined_at=token.location,
-            operators=source,
+            operators=new_context.operators,
             return_type=return_type,
             parameters=parameters,
         )
@@ -412,7 +392,7 @@ def _unpack_function_definition_from_token(
     function = Function.create_internal(
         name=function_name,
         defined_at=token.location,
-        operators=source,
+        operators=new_context.operators,
         variables=new_context.variables,
         parameters=parameters,
         return_type=return_type,

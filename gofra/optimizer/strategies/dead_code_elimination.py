@@ -1,9 +1,9 @@
-from gofra.context import ProgramContext
+from gofra.hir.module import Module
 from gofra.optimizer.helpers.function_usage import search_unused_functions
 
 
 def optimize_dead_code_elimination(
-    program: ProgramContext,
+    program: Module,
     max_iterations: int,
 ) -> None:
     """Perform DCE (dead-code-elimination) optimization onto program.

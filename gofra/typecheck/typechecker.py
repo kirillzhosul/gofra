@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.hir.module import Module
 from gofra.hir.operator import OperatorType
 from gofra.parser.exceptions import (
     ParserEntryPointFunctionModifiersError,
@@ -45,15 +46,14 @@ DEBUG_TRACE_TYPESTACK = False
 
 
 def validate_type_safety(
-    functions: MutableMapping[str, Function],
-    global_variables: Mapping[str, Variable],
+    module: Module,
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
-    if GOFRA_ENTRY_POINT not in functions:
+    if GOFRA_ENTRY_POINT not in module.functions:
         raise ParserNoEntryFunctionError
 
     # TODO(@kirillzhosul): these parser errors comes from legacy entry point validation, must be reworked later - https://github.com/kirillzhosul/gofra/issues/28
-    entry_point = functions[GOFRA_ENTRY_POINT]
+    entry_point = module.functions[GOFRA_ENTRY_POINT]
     if entry_point.is_external or entry_point.is_inline:
         raise ParserEntryPointFunctionModifiersError
 
@@ -67,13 +67,13 @@ def validate_type_safety(
             parameters=entry_point.parameters,
         )
 
-    for function in (*functions.values(), entry_point):
+    for function in (*module.functions.values(), entry_point):
         if function.is_external:
             continue
         validate_function_type_safety(
             function=function,
-            global_functions=functions,
-            global_variables=global_variables,
+            global_functions=module.functions,
+            global_variables=module.variables,
         )
 
 

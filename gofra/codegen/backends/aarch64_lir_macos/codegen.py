@@ -68,7 +68,7 @@ from .registers import (
 )
 
 if TYPE_CHECKING:
-    from gofra.context import ProgramContext
+    from gofra.hir.module import Module
 
 
 target = Target.from_triplet("arm64-apple-darwin")
@@ -76,7 +76,7 @@ target = Target.from_triplet("arm64-apple-darwin")
 
 def generate_aarch64_lir_macos_backend(
     fd: IO[str],
-    program: ProgramContext,
+    program: Module,
     target: Target,
 ) -> None:
     """AARCH64 MacOS code generation backend."""

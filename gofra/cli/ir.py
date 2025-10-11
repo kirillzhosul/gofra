@@ -9,14 +9,14 @@ from gofra.codegen.lir.static import (
     LIRStaticSegmentCString,
     LIRStaticSegmentGlobalVariable,
 )
-from gofra.context import ProgramContext
 from gofra.hir.function import Function
+from gofra.hir.module import Module
 from gofra.hir.operator import Operator, OperatorType
 
 
-def emit_hir_into_stdout(context: ProgramContext) -> None:
+def emit_hir_into_stdout(module: Module) -> None:
     """Display IR via stdout."""
-    for function in context.functions.values():
+    for function in module.functions.values():
         emit_ir_function_signature(function)
         context_block_shift = 0
         for operator in function.operators:
@@ -34,9 +34,9 @@ def emit_hir_into_stdout(context: ProgramContext) -> None:
                 context_block_shift += 1
 
 
-def emit_lir_into_stdout(context: ProgramContext) -> None:
+def emit_lir_into_stdout(module: Module) -> None:
     lir = translate_hir_to_lir(
-        context,
+        module,
         system_entry_point_name="TARGET_SPECIFIC_ENTRY_POINT",
         virtual_register_allocator=LIRVirtualRegisterAllocator(
             list(map(str, range(100))),

@@ -97,7 +97,7 @@ func void init_raylib[]
      WINDOW_WIDTH
      WINDOW_HEIGHT
      WINDOW_NAME to_cstr_ptr
-    call InitWindow
+    InitWindow
 
      WINDOW_FPS
     call SetTargetFPS
@@ -250,9 +250,11 @@ func void main[]
     call init_game
     call init_raylib
 
-    while WindowShouldClose false == do BeginDrawing
+    while call WindowShouldClose true != do 
+        call BeginDrawing
         call game_loop
-    EndDrawing end
+        call EndDrawing 
+    end
 
     call finalize_game
 end

@@ -1,6 +1,6 @@
 from typing import IO, Protocol
 
-from gofra.context import ProgramContext
+from gofra.hir.module import Module
 from gofra.targets.target import Target
 
 
@@ -13,6 +13,6 @@ class CodeGeneratorBackend(Protocol):
     def __call__(
         self,
         fd: IO[str],
-        program: ProgramContext,
+        program: Module,
         target: Target,
     ) -> None: ...

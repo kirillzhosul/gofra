@@ -34,7 +34,7 @@ from .ir import emit_hir_into_stdout, emit_lir_into_stdout
 from .output import cli_message
 
 if TYPE_CHECKING:
-    from gofra.context import ProgramContext
+    from gofra.hir.module import Module
 
 
 def cli_entry_point(prog: str | None = None) -> None:
@@ -86,7 +86,7 @@ def cli_emit_system_host_version(args: CLIArguments) -> None:
 
 
 def cli_process_optimization_pipeline(
-    program: ProgramContext,
+    program: Module,
     args: CLIArguments,
 ) -> None:
     """Apply optimization pipeline for program according to CLI arguments."""
@@ -139,7 +139,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
             print(str(token.text), end=" ")
         return
 
-    context = process_input_file(
+    module = process_input_file(
         args.source_filepaths[0],
         args.include_paths,
         macros=macros_registry,
@@ -152,19 +152,16 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
             text="Validating type safety...",
             verbose=args.verbose,
         )
-        validate_type_safety(
-            functions=context.functions,
-            global_variables=context.global_variables,
-        )
+        validate_type_safety(module)
 
-    cli_process_optimization_pipeline(context, args)
+    cli_process_optimization_pipeline(module, args)
 
     if args.hir:
-        emit_hir_into_stdout(context)
+        emit_hir_into_stdout(module)
         sys.exit(0)
 
     if args.lir:
-        emit_lir_into_stdout(context)
+        emit_lir_into_stdout(module)
         sys.exit(0)
 
     cli_message(
@@ -181,7 +178,7 @@ def cli_process_toolchain_on_input_files(args: CLIArguments) -> None:
         args.target.file_assembly_suffix,
     )
 
-    generate_code_for_assembler(assembly_filepath, context, args.target)
+    generate_code_for_assembler(assembly_filepath, module, args.target)
 
     object_filepath = (cache_dir / output.name).with_suffix(
         args.target.file_object_suffix,

@@ -32,20 +32,17 @@ def toolchain_assembly_executable(
     build_target: Target,
     cache_directory: Path,
 ) -> Path:
-    context = process_input_file(
+    module = process_input_file(
         path,
         include_paths=args.include_paths,
         macros=macros,
     )
-    validate_type_safety(
-        functions=context.functions,
-        global_variables=context.global_variables,
-    )
+    validate_type_safety(module)
     artifact_path = cache_directory / f"{path.with_suffix('').name}"
     artifact_object_file = artifact_path.with_suffix(".o")
     artifact_assembly_file = artifact_path.with_suffix(".s")
 
-    generate_code_for_assembler(artifact_assembly_file, context, build_target)
+    generate_code_for_assembler(artifact_assembly_file, module, build_target)
     assemble_object_from_codegen_assembly(
         assembly=artifact_assembly_file,
         output=artifact_object_file,

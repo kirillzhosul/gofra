@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from gofra.context import ProgramContext
+from gofra.hir.module import Module
 from gofra.targets import Target
 
 from .get_backend import get_backend_for_target
@@ -8,7 +8,7 @@ from .get_backend import get_backend_for_target
 
 def generate_code_for_assembler(
     output_path: Path,
-    context: ProgramContext,
+    module: Module,
     target: Target,
 ) -> None:
     """Generate assembly from given program context and specified ARCHxOS pair into given file."""
@@ -22,4 +22,4 @@ def generate_code_for_assembler(
         newline="",
         encoding="UTF-8",
     ) as fd:
-        return backend(fd, context, target)
+        return backend(fd, module, target)

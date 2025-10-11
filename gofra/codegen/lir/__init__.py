@@ -6,8 +6,8 @@ from typing import Literal, assert_never
 
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from gofra.consts import GOFRA_ENTRY_POINT
-from gofra.context import ProgramContext
 from gofra.hir.function import Function
+from gofra.hir.module import Module
 from gofra.parser.operators import OperatorType
 from gofra.types.primitive.void import VoidType
 
@@ -73,19 +73,19 @@ class LIRProgram:
 
 
 def hir_global_variables_to_lir_static_variables(
-    hir: ProgramContext,
+    hir: Module,
 ) -> MutableMapping[str, LIRStaticSegment]:
     return {
         var.name: LIRStaticSegmentGlobalVariable(
             name=var.name,
             type=var.type,
         )
-        for var in hir.global_variables.values()
+        for var in hir.variables.values()
     }
 
 
 def translate_hir_to_lir(
-    hir: ProgramContext,
+    hir: Module,
     system_entry_point_name: str | None,
     virtual_register_allocator: LIRVirtualRegisterAllocator,
 ) -> LIRProgram:

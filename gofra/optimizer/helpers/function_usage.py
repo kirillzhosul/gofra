@@ -1,12 +1,12 @@
 from collections.abc import Iterable
 from itertools import chain
 
-from gofra.context import ProgramContext
 from gofra.hir.function import Function
+from gofra.hir.module import Module
 from gofra.parser.operators import OperatorType
 
 
-def is_function_has_callers(program: ProgramContext, function_name: str) -> bool:
+def is_function_has_callers(program: Module, function_name: str) -> bool:
     """Check is given function was called at least once in whole program."""
     assert function_name in program.functions, (
         "Expected existing function in `is_function_has_callers`"
@@ -23,7 +23,7 @@ def is_function_has_callers(program: ProgramContext, function_name: str) -> bool
     )
 
 
-def search_unused_functions(program: ProgramContext) -> Iterable[Function]:
+def search_unused_functions(program: Module) -> Iterable[Function]:
     """Search unused functions without any usage (excluding global function symbols)."""
     return [
         f

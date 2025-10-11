@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 from gofra.parser.operators import OperatorType
 
 if TYPE_CHECKING:
-    from gofra.context import ProgramContext
+    from gofra.hir.module import Module
 
 
 def optimize_function_inlining(
-    program: ProgramContext,
+    program: Module,
     max_operators: int,
     max_iterations: int,
 ) -> None:
@@ -40,7 +40,7 @@ def optimize_function_inlining(
 
 
 def _mark_inlineable_functions_as_inline(
-    program: ProgramContext,
+    program: Module,
     max_operators: int,
 ) -> None:
     """Mark all functions that is not inlined as inlined if they may be inlined due to 'max_operators' threshold."""

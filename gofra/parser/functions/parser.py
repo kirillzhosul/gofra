@@ -13,8 +13,10 @@ extern func puts[*char[]] int
 Extern functions cannot have a body so they do not have `end` block (assuming that - does not have any body block).
 """
 
+from collections.abc import Generator
+
 from gofra.lexer import Token
-from gofra.lexer.keywords import Keyword
+from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
 from gofra.parser.types import parse_type_from_text, parser_type_from_tokenizer
@@ -213,3 +215,29 @@ def consume_function_parameters(context: ParserContext) -> list[Type]:
             parameters.append(parameter_type)
 
     return parameters
+
+
+def consume_function_body_tokens(context: ParserContext) -> Generator[Token]:
+    opened_context_blocks = 0
+
+    context_keywords = (Keyword.IF, Keyword.DO)
+    end_keyword_text = KEYWORD_TO_NAME[Keyword.END]
+
+    while token := context.next_token():
+        if token.type == TokenType.EOF:
+            msg = "Expected function to be closed but got end of file"
+            raise ValueError(msg)
+        if token.type != TokenType.KEYWORD:
+            yield token
+            continue
+
+        if token.text == end_keyword_text:
+            if opened_context_blocks <= 0:
+                break
+            opened_context_blocks -= 1
+
+        is_context_keyword = WORD_TO_KEYWORD[token.text] in context_keywords
+        if is_context_keyword:
+            opened_context_blocks += 1
+
+        yield token

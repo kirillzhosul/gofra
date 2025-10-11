@@ -36,14 +36,14 @@ from .registers import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from gofra.context import ProgramContext
     from gofra.hir.function import Function
+    from gofra.hir.module import Module
     from gofra.targets.target import Target
 
 
 def generate_amd64_backend(
     fd: IO[str],
-    program: ProgramContext,
+    program: Module,
     target: Target,
 ) -> None:
     """AMD64 code generation backend."""
@@ -59,7 +59,7 @@ def generate_amd64_backend(
 def amd64_instruction_set(
     context: AMD64CodegenContext,
     operators: Sequence[Operator],
-    program: ProgramContext,
+    program: Module,
     owner_function: Function,
 ) -> None:
     """Write executable instructions from given operators."""
@@ -78,7 +78,7 @@ def amd64_instruction_set(
 def amd64_operator_instructions(
     context: AMD64CodegenContext,
     operator: Operator,
-    program: ProgramContext,
+    program: Module,
     idx: int,
     owner_function: Function,
 ) -> None:
@@ -200,7 +200,7 @@ def amd64_operator_instructions(
 
 def amd64_executable_functions(
     context: AMD64CodegenContext,
-    program: ProgramContext,
+    program: Module,
 ) -> None:
     """Define all executable functions inside final executable with their executable body respectfully.
 
@@ -270,11 +270,11 @@ def amd64_program_entry_point(
 
 def amd64_data_section(
     context: AMD64CodegenContext,
-    program: ProgramContext,
+    program: Module,
 ) -> None:
     """Write program static data section filled with static strings and memory blobs."""
     initialize_static_data_section(
         context,
         static_strings=context.strings,
-        static_variables=program.global_variables,
+        static_variables=program.variables,
     )
