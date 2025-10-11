@@ -1,0 +1,5 @@
+func int get_time_of_day[]
+    var tv int[2] // timeval struct
+    tv NULL sc_gettimeofday
+    tv 0 + ?> 
+end
