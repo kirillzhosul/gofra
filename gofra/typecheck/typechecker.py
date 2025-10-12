@@ -356,6 +356,7 @@ def emulate_type_stack_for_operators(
                 | OperatorType.BITWISE_AND
                 | OperatorType.SHIFT_LEFT
                 | OperatorType.SHIFT_RIGHT
+                | OperatorType.BITWISE_XOR
             ):
                 context.raise_for_operator_arguments(
                     operator,
