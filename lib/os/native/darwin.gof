@@ -99,6 +99,9 @@
         // Closes a file descriptor.
         inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
 
+        // Get current time of day
+        // Signature: [timeval, timezone]
+        // Notice that timezone usage is discouraged so pass NULL always
         inline func void sc_gettimeofday[*char[16], *char[16]] DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
     #endif // ARCH_ARM64
 #endif // OS_DARWIN

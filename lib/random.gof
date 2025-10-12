@@ -1,38 +1,43 @@
+// ==============================================
+// Random number generator (PRNG)
+// ==============================================
 
 
 // Static global state of randomizer
-var std_random_state int
+var std_prng_random_state int
 
 
-// Set an given number as seed (random state)
+// Set an given number as seed (PRNG random state)
 func void set_random_seed[int]
-    &std_random_state swap !<
+    &std_prng_random_state swap !<
 end
 
-
-func void randomize_state[] 
+// Randomize current PRNG random state
+func void prng_randomize_state_xorshift[] 
+    // Uses Xorshift generator algorithm
+    
     //rs rs ?> rs ?> 13 << ^ !<
     //rs rs ?> rs ?> 17 << ^ !<
     //rs rs ?> rs ?> 5  << ^ !<
-    &std_random_state
-        &std_random_state ?> 
-            &std_random_state ?>
+    &std_prng_random_state
+        &std_prng_random_state ?> 
+            &std_prng_random_state ?>
             13
             <<
         ^
     !<
 
-    &std_random_state
-        &std_random_state ?>
-            &std_random_state ?>
+    &std_prng_random_state
+        &std_prng_random_state ?>
+            &std_prng_random_state ?>
             17
             <<
         ^
     !<
 
-    &std_random_state
-        &std_random_state ?>
-            &std_random_state ?>
+    &std_prng_random_state
+        &std_prng_random_state ?>
+            &std_prng_random_state ?>
             5
             <<
         ^
@@ -40,12 +45,14 @@ func void randomize_state[]
 end
 
 
+// Get random number from PRNG
 func int random[]
-    randomize_state
+    prng_randomize_state_xorshift
 
-    &std_random_state ?>
+    &std_prng_random_state ?>
 end
 
+// Get random number from PRNG withing range from 0 to argument
 func int random_range[int]
     random swap %
 end

@@ -1,5 +1,14 @@
-func int get_time_of_day[]
-    var tv int[2] // timeval struct
-    tv NULL sc_gettimeofday
-    tv 0 + ?> 
-end
+
+// ==============================================
+// Time interaction wrapper
+// ==============================================
+
+#ifdef OS_DARWIN
+    // Get current time of day as seconds from epoch
+    func int time_seconds_since_epoch[]
+        var tv int[2] // timeval struct
+        tv NULL sc_gettimeofday
+
+        tv ?>
+    end
+#endif
