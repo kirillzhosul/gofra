@@ -1,5 +1,13 @@
-func int get_time_of_day[]
+
+// ==============================================
+// Time interaction wrapper
+// ==============================================
+
+
+// Get current time of day as seconds from epoch
+func int time_seconds_since_epoch[]
     var tv int[2] // timeval struct
     tv NULL sc_gettimeofday
-    tv 0 + ?> 
+
+    tv ?>
 end
