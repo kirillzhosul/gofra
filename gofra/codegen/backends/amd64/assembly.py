@@ -290,10 +290,9 @@ def perform_operation_onto_stack(
                 "movq %rdx, %rax",
             )
         case OperatorType.BITWISE_XOR:
-            msg = "Bitwise XOR is not implemented in AMD64 codegen."
-            raise NotImplementedError(msg)
-        case OperatorType.LOGICAL_OR | OperatorType.BITWISE_OR:
             context.write("xorq %rbx, %rax")
+        case OperatorType.LOGICAL_OR | OperatorType.BITWISE_OR:
+            context.write("orq %rbx, %rax")
         case OperatorType.SHIFT_RIGHT:
             context.write(
                 "shrq %rax, %rbx",
