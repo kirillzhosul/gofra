@@ -295,12 +295,14 @@ def perform_operation_onto_stack(
             context.write("orq %rbx, %rax")
         case OperatorType.SHIFT_RIGHT:
             context.write(
-                "shrq %rax, %rbx",
+                "movq %rax, %rcx",
+                "shrq %cl, %rbx",
                 "movq %rbx, %rax",
             )
         case OperatorType.SHIFT_LEFT:
             context.write(
-                "shlq %rax, %rbx",
+                "movq %rax, %rcx",
+                "shlq %cl, %rbx",
                 "movq %rbx, %rax",
             )
         case OperatorType.BITWISE_AND | OperatorType.LOGICAL_AND:
