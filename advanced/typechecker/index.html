@@ -103,7 +103,7 @@ It validates all stack usages and function calls</p>
 <p>Type checker is implemented as type-stack machine which behaves like stack based machine but operates on types
 So for example <code>2</code> will resolve into <code>typestack = [INT]</code></p>
 <p>Typechecker will perform type safety validation even for unused functions (expect function calls, as there is no calls for unused functions)
-Unless you apply <a href="/advanced/optimizations">DCE</a> optimization at compile-time (as it performed before type checker stage)</p>
+Unless you apply <a href="./optimizations">DCE</a> optimization at compile-time (as it performed before type checker stage)</p>
 <p>Type checker will go into each function and validate its return type and stack usage and emit an error if something weird is found</p>
 <p>When typechecker found an call inside current function, it will consume desired parameters as arguments from type stack and push return type unless it not <code>void</code> type</p>
 <h2 id="type-comparison">Type comparison</h2>
