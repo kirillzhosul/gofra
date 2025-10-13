@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from difflib import get_close_matches
-from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.consts import GOFRA_ENTRY_POINT
-from gofra.feature_flags import FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
 from gofra.hir.function import Function
 from gofra.hir.module import Module
-from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from gofra.lexer import (
     Keyword,
     Token,
@@ -20,14 +17,13 @@ from gofra.parser.functions.parser import (
     consume_function_body_tokens,
     consume_function_definition,
 )
+from gofra.parser.structures import unpack_structure_definition_from_token
 from gofra.parser.typecast import unpack_typecast_from_token
-from gofra.parser.types import parser_type_from_tokenizer
 from gofra.parser.variables import (
     get_all_scopes_variables,
-    search_variable_in_context_parents,
+    try_push_variable_reference,
+    unpack_variable_definition_from_token,
 )
-from gofra.types.composite.array import ArrayType
-from gofra.types.composite.structure import StructureType
 
 from ._context import ParserContext
 from .exceptions import (
@@ -37,14 +33,12 @@ from .exceptions import (
     ParserUnfinishedWhileDoBlockError,
     ParserUnknownFunctionError,
     ParserUnknownIdentifierError,
-    ParserVariableNameAlreadyDefinedAsVariableError,
 )
 from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-    from gofra.types._base import Type
+    from pathlib import Path
 
 
 def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Module:
@@ -130,7 +124,7 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
     if _try_push_intrinsic_operator(context, token):
         return
 
-    if _try_push_variable_reference(context, token):
+    if try_push_variable_reference(context, token):
         return
 
     names_available = context.functions.keys() | [
@@ -141,113 +135,6 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
         names_available=names_available,
         best_match=_best_match_for_word(context, token.text),
     )
-
-
-def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
-    assert token.type == TokenType.IDENTIFIER
-
-    varname = token.text
-
-    is_reference = not FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
-    array_index_at = None
-    struct_field_accessor = None
-
-    if varname.startswith("&"):
-        is_reference = True
-        varname = varname.removeprefix("&")
-
-    if context.peek_token().type == TokenType.LBRACKET:
-        _ = context.next_token()  # Consume LBRACKET
-
-        elements_token = context.next_token()
-        if elements_token.type != TokenType.INTEGER:
-            msg = (
-                f"Expected array index inside of [], but got {elements_token.type.name}"
-            )
-            raise ValueError(msg)
-
-        rbracket = context.next_token()
-        if rbracket.type != TokenType.RBRACKET:
-            msg = f"Expected RBRACKET after array index element qualifier but got {rbracket.type.name}"
-            raise ValueError(msg)
-
-        assert isinstance(elements_token.value, int)
-        array_index_at = elements_token.value
-
-    accessor_token = context.peek_token()
-    if (
-        accessor_token.type == TokenType.DOT
-        and not accessor_token.has_trailing_whitespace
-    ):
-        _ = context.next_token()  # Consume DOT
-        if array_index_at is not None:
-            msg = "Referencing an field from an struct within array accessor is not implemented yet."
-            raise NotImplementedError(msg)
-        struct_field_accessor = context.next_token()
-        if struct_field_accessor.type != TokenType.IDENTIFIER:
-            msg = f"Expected struct field accessor to be an identifier, but got {struct_field_accessor.type.name}"
-            raise ValueError(msg)
-
-    variable = search_variable_in_context_parents(context, varname)
-    if not variable:
-        return False
-
-    context.push_new_operator(
-        type=OperatorType.PUSH_VARIABLE_ADDRESS,
-        token=token,
-        operand=varname,
-    )
-
-    if struct_field_accessor:
-        if not is_reference:
-            msg = "Struct field accessors are implemented only for references."
-            raise NotImplementedError(msg)
-        if not isinstance(variable.type, StructureType):
-            msg = "cannot get field-offset-of (e.g .field) for non-structure types."
-            raise ValueError(msg)
-
-        field = struct_field_accessor.text
-        if field not in variable.type.fields:
-            msg = f"Field accessor {field} at {token.location} is unknown for structure {variable.type.name}"
-            raise ValueError(msg)
-
-        context.push_new_operator(
-            type=OperatorType.STRUCT_FIELD_OFFSET,
-            token=token,
-            operand=f"{variable.type.name}.{field}",
-        )
-
-    if array_index_at is not None:
-        if not isinstance(variable.type, ArrayType):
-            msg = "cannot get index-of (e.g []) for non-array types."
-            raise ValueError(msg)
-
-        if array_index_at < 0:
-            msg = "Negative indexing inside arrays is prohibited"
-            raise ValueError(msg)
-
-        if variable.type.is_index_oob(array_index_at):
-            msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements"
-            raise ValueError(msg)
-
-        shift_in_bytes = variable.type.get_index_offset(array_index_at)
-        if shift_in_bytes:
-            context.push_new_operator(
-                type=OperatorType.PUSH_INTEGER,
-                token=token,
-                operand=shift_in_bytes,
-            )
-            context.push_new_operator(
-                type=OperatorType.ARITHMETIC_PLUS,
-                token=token,
-            )
-
-    if not is_reference:
-        context.push_new_operator(
-            type=OperatorType.MEMORY_VARIABLE_READ,
-            token=token,
-        )
-    return True
 
 
 def _best_match_for_word(context: ParserContext, word: str) -> str | None:
@@ -297,7 +184,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         case Keyword.TYPE_CAST:
             return unpack_typecast_from_token(context, token)
         case Keyword.VARIABLE_DEFINE:
-            return _unpack_variable_definition_from_token(context)
+            return unpack_variable_definition_from_token(context)
         case Keyword.SYSCALL:
             return context.push_new_operator(
                 type=OperatorType.SYSCALL,
@@ -305,7 +192,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
                 operand=int(token.text[-1]),
             )
         case Keyword.STRUCT:
-            return _unpack_structure_definition_from_token(context)
+            return unpack_structure_definition_from_token(context)
         case Keyword.DEBUGGER_BREAKPOINT | Keyword.COPY | Keyword.DROP | Keyword.SWAP:
             return context.push_new_operator(
                 type={
@@ -318,84 +205,6 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             )
         case _:
             assert_never(token.value)
-
-
-def _unpack_structure_definition_from_token(context: ParserContext) -> None:
-    name_token = context.next_token()
-    if name_token.type != TokenType.IDENTIFIER:
-        msg = f"Expected structure name at {name_token.location} to be an identifier but got {name_token.type.name}"
-        raise ValueError(msg)
-
-    name = name_token.text
-
-    if context.name_is_already_taken(name):
-        msg = f"Structure name {name} is already taken by other definition"
-        raise ValueError(msg)
-
-    fields: dict[str, Type] = {}
-    fields_ordering: list[str] = []
-    while token := context.next_token():
-        if token.type == TokenType.KEYWORD and token.value == Keyword.END:
-            # End of structure block definition
-            break
-        field_name_token = token
-
-        if field_name_token.type != TokenType.IDENTIFIER:
-            msg = f"Expected structure field name at {field_name_token.location} to be an identifier but got {field_name_token.type.name}"
-            raise ValueError(msg)
-        field_name = field_name_token.text
-        field_type = parser_type_from_tokenizer(context)
-        fields_ordering.append(field_name)
-        fields[field_name] = field_type
-
-    struct = StructureType(
-        name=name,
-        fields=fields,
-        cpu_alignment_in_bytes=8,  # assume we always on 64 bit machine (TODO)
-        fields_ordering=fields_ordering,
-    )
-    context.structs[name] = struct
-
-
-def _unpack_variable_definition_from_token(
-    context: ParserContext,
-) -> None:
-    varname_token = context.next_token()
-    if varname_token.type != TokenType.IDENTIFIER:
-        msg = "Expected variable name after variable keyword"
-        raise ValueError(msg)
-    assert isinstance(varname_token.value, str)
-
-    typename = parser_type_from_tokenizer(context)
-    varname = varname_token.text
-
-    if varname in context.variables:
-        raise ParserVariableNameAlreadyDefinedAsVariableError(
-            token=varname_token,
-            name=varname,
-        )
-
-    if context.name_is_already_taken(varname):
-        msg = f"Variable name {varname} is already taken by other definition"
-        raise ValueError(msg)
-
-    storage_class = (
-        VariableStorageClass.STATIC
-        if context.is_top_level
-        else VariableStorageClass.STACK
-    )
-    scope_class = (
-        VariableScopeClass.GLOBAL
-        if context.is_top_level
-        else VariableScopeClass.FUNCTION
-    )
-    context.variables[varname] = Variable(
-        name=varname,
-        type=typename,
-        defined_at=varname_token.location,
-        scope_class=scope_class,
-        storage_class=storage_class,
-    )
 
 
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:

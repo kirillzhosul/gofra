@@ -203,7 +203,7 @@ def consume_function_parameters(context: ParserContext) -> list[Type]:
             msg = "expected typename after token"
             raise ValueError(msg, token.location)
         typename_text = "".join(t.text for t in t_tokens)
-        parameter_type = parse_type_from_text(typename_text)
+        parameter_type = parse_type_from_text(context, typename_text)
         if not parameter_type:
             msg = f"unknown parameter type {typename_text}"
             raise ValueError(msg)
