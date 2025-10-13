@@ -101,7 +101,7 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="variables">Variables</h1>
-<p><strong>That page is being writed, and only may be used as quick-overview</strong></p>
+<p><strong>That page is being written, and only may be used as quick-overview</strong></p>
 <p>Variables is an container for your arbitrary data (within variable type size), they can be <em>static</em> (<em>global</em>) and <em>local</em> (to functions)</p>
 <h2 id="variable-definitions">Variable definitions</h2>
 <p>Variable definitions looks like that:</p>
@@ -125,8 +125,9 @@ var complex **int[32] // pointer to an pointer containing array of integers
 - byte</p>
 <p>Composite type
 - Array of {primitive|complex type}
-- Pointer to {primitive|complex type}</p>
-<p>Composite types may contain another complex types so pointer to array of pointers to integer is an 2-level complex type</p>
+- Pointer to {primitive|complex type}
+- Structure with set of {primitive|complex} type inside
+Composite types may contain another complex types so pointer to array of pointers to integer is an 2-level complex type</p>
 <h2 id="local-and-static-global-variable-location-differences">Local and static (global) variable location: differences</h2>
 <p>Static variable is such variable that is defined outside of an function (e.g at top level) while being compiled it located in static memory segment at runtime (e.g data / bss) section, it always initialized and persist it value between function calls (as anyone may modify that variable)</p>
 <p>Local variable is such variable that is define inside an function, while being compiled it will be translated into local region on an stack, so with each function call with that variable it will be reset</p>

@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Tutorial - Gofra</title>
+        <title>Gofra Linker (gofra-ld) - Gofra</title>
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/fontawesome.min.css" rel="stylesheet">
         <link href="../css/brands.min.css" rel="stylesheet">
@@ -41,7 +41,7 @@
                                 <a href="../installation/" class="nav-link">Installation</a>
                             </li>
                             <li class="nav-item">
-                                <a href="./" class="nav-link active" aria-current="page">Tutorial</a>
+                                <a href="../tutorial/" class="nav-link">Tutorial</a>
                             </li>
                             <li class="nav-item">
                                 <a href="../advanced/" class="nav-link">Advanced</a>
@@ -55,17 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../installation/" class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="../advanced/" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/index.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/linker/index.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -85,8 +75,16 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#usage-and-tutorials" class="nav-link">Usage and tutorials</a>
+            <li class="nav-item" data-bs-level="1"><a href="#gofra-linker-gofra-ld" class="nav-link">Gofra Linker (gofra-ld)</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#installation" class="nav-link">Installation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#linker-backends" class="nav-link">Linker backends</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -94,14 +92,15 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="usage-and-tutorials">Usage and tutorials</h1>
-<h3 id="ide-and-editor-support"><a href="/editors">IDE and Editor support</a></h3>
-<h3 id="control-flow"><a href="./control-flow">Control flow</a></h3>
-<h3 id="memory-management"><a href="./memory">Memory management</a></h3>
-<h3 id="stack-management-intrinsics"><a href="stack-management-intrinsics/">Stack management intrinsics</a></h3>
-<h3 id="variables"><a href="variables/">Variables</a></h3>
-<h3 id="structures"><a href="structures/">Structures</a></h3>
-<h3 id="type-casts"><a href="typecasts/">Type casts</a></h3></div>
+<h1 id="gofra-linker-gofra-ld">Gofra Linker (gofra-ld)</h1>
+<p>Gofra Linker is a cross-platform tool that links multiple object files and libraries to produce output in various formats including executables, shared libraries, and static objects. 
+It serves as a unified interface to underlying system linkers while providing consistent behavior across different platforms.</p>
+<h2 id="installation">Installation</h2>
+<p>Gofra Linker is distributed as part of the Gofra toolchain and is available system-wide as <code>gofra-ld</code>after installation.</p>
+<h2 id="linker-backends">Linker backends</h2>
+<p>Gofra Linker is uses what is called <em>backend</em> under the hood - after selecting appropriate backend it composes proper linker command and executes it.
+At current moment there is only 2 backends: <code>gnu-ld</code> and <code>apple-ld</code> (shares almost same philosophy and interface)
+By default backend is inferred by host machine and target but can be overridden by passing <code>--linker-backend</code> argument to the CLI.</p></div>
             </div>
         </div>
 

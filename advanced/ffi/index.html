@@ -99,11 +99,6 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            
-            <li class="nav-item" data-bs-level="1"><a href="#additional-flags" class="nav-link">Additional flags: @</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
         </ul>
     </div>
 </div></div>
@@ -130,14 +125,9 @@
 <p>For now, there is no way to pass variadic arguments to external function
 (Hack or workaround for that is only to create non-variadic wrappers with different number of arguments to pass to underlying external function which type contract is expanded for max required amount of arguments)</p>
 <h1 id="linker-stage">Linker stage</h1>
-<p>For letting linker know about that dependencies (Libraries with FFI), you can pass <code>-L</code> flag(s) to the compiler</p>
+<p>For letting linker know about that dependencies (Libraries with FFI), you can pass <code>-l</code> flag(s) to the compiler</p>
 <p>For example linking with <code>raylib</code> and using their functions:
-<code>-L=-lraylib -L=-L/opt/homebrew/lib</code></p>
-<h1 id="additional-flags">Additional flags: @</h1>
-<p>By using <code>@</code> flag you may specify for example against which function to link your external:</p>
-<pre><code class="language-gofra">extern func int _puts[*char[]*]@link[_puts]
-</code></pre>
-<p>In that case is straightforward same name, but you can change that, and </p></div>
+<code>-lraylib</code> (<code>-L/opt/homebrew/lib</code> if search directory was not found with pkgconfig (<code>--no-pkg-config</code>))</p></div>
             </div>
         </div>
 

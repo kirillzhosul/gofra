@@ -7,14 +7,14 @@
         
         
         
-        <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Tutorial - Gofra</title>
-        <link href="../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../css/fontawesome.min.css" rel="stylesheet">
-        <link href="../css/brands.min.css" rel="stylesheet">
-        <link href="../css/solid.min.css" rel="stylesheet">
-        <link href="../css/v4-font-face.min.css" rel="stylesheet">
-        <link href="../css/base.css" rel="stylesheet">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Type checker - Gofra</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
         <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
         <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
@@ -24,7 +24,7 @@
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
-                <a class="navbar-brand" href="..">Gofra</a>
+                <a class="navbar-brand" href="../..">Gofra</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -35,16 +35,16 @@
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
                             <li class="nav-item">
-                                <a href=".." class="nav-link">About</a>
+                                <a href="../.." class="nav-link">About</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../installation/" class="nav-link">Installation</a>
+                                <a href="../../installation/" class="nav-link">Installation</a>
                             </li>
                             <li class="nav-item">
-                                <a href="./" class="nav-link active" aria-current="page">Tutorial</a>
+                                <a href="../../tutorial/" class="nav-link">Tutorial</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../advanced/" class="nav-link">Advanced</a>
+                                <a href="../" class="nav-link">Advanced</a>
                             </li>
                         </ul>
 
@@ -55,17 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../installation/" class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="../advanced/" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/index.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/typechecker.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -85,8 +75,20 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#usage-and-tutorials" class="nav-link">Usage and tutorials</a>
+            <li class="nav-item" data-bs-level="1"><a href="#type-checker" class="nav-link">Type checker</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#implementation" class="nav-link">Implementation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#type-comparison" class="nav-link">Type comparison</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#is-type-checker-affects-runtime-generate-code" class="nav-link">Is type checker affects runtime / generate code?</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -94,14 +96,21 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="usage-and-tutorials">Usage and tutorials</h1>
-<h3 id="ide-and-editor-support"><a href="/editors">IDE and Editor support</a></h3>
-<h3 id="control-flow"><a href="./control-flow">Control flow</a></h3>
-<h3 id="memory-management"><a href="./memory">Memory management</a></h3>
-<h3 id="stack-management-intrinsics"><a href="stack-management-intrinsics/">Stack management intrinsics</a></h3>
-<h3 id="variables"><a href="variables/">Variables</a></h3>
-<h3 id="structures"><a href="structures/">Structures</a></h3>
-<h3 id="type-casts"><a href="typecasts/">Type casts</a></h3></div>
+<h1 id="type-checker">Type checker</h1>
+<p>Type checking is always performed by default at compile-time (unless <code>-nt</code> or <code>--no-typecheck</code> flag is passed)
+It validates all stack usages and function calls</p>
+<h2 id="implementation">Implementation</h2>
+<p>Type checker is implemented as type-stack machine which behaves like stack based machine but operates on types
+So for example <code>2</code> will resolve into <code>typestack = [INT]</code></p>
+<p>Typechecker will perform type safety validation even for unused functions (expect function calls, as there is no calls for unused functions)
+Unless you apply <a href="/advanced/optimizations">DCE</a> optimization at compile-time (as it performed before type checker stage)</p>
+<p>Type checker will go into each function and validate its return type and stack usage and emit an error if something weird is found</p>
+<p>When typechecker found an call inside current function, it will consume desired parameters as arguments from type stack and push return type unless it not <code>void</code> type</p>
+<h2 id="type-comparison">Type comparison</h2>
+<p>Typechecker always uses strategy called <code>strict-same-type</code> which means types must be always same and no inference / type lowering is possible (you must always statically type cast for fixing errors)
+Possible next update will introduce something new, allowing to use <code>implicit-byte-size</code> strategy or any type lowering automatically at typechecker stage</p>
+<h2 id="is-type-checker-affects-runtime-generate-code">Is type checker affects runtime / generate code?</h2>
+<p>Type checker is meant to only type-safety feature, so no generated code is affected by typechecker, even type casts are static ones and only applied to type checker, not anything else</p></div>
             </div>
         </div>
 
@@ -109,13 +118,13 @@
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
-            var base_url = "..",
+            var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js"></script>
-        <script src="../search/main.js"></script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

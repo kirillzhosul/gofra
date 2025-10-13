@@ -7,14 +7,14 @@
         
         
         
-        <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Tutorial - Gofra</title>
-        <link href="../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../css/fontawesome.min.css" rel="stylesheet">
-        <link href="../css/brands.min.css" rel="stylesheet">
-        <link href="../css/solid.min.css" rel="stylesheet">
-        <link href="../css/v4-font-face.min.css" rel="stylesheet">
-        <link href="../css/base.css" rel="stylesheet">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Type casting - Gofra</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
         <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
         <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
@@ -24,7 +24,7 @@
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
-                <a class="navbar-brand" href="..">Gofra</a>
+                <a class="navbar-brand" href="../..">Gofra</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -35,16 +35,16 @@
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
                             <li class="nav-item">
-                                <a href=".." class="nav-link">About</a>
+                                <a href="../.." class="nav-link">About</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../installation/" class="nav-link">Installation</a>
+                                <a href="../../installation/" class="nav-link">Installation</a>
                             </li>
                             <li class="nav-item">
-                                <a href="./" class="nav-link active" aria-current="page">Tutorial</a>
+                                <a href="../" class="nav-link">Tutorial</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../advanced/" class="nav-link">Advanced</a>
+                                <a href="../../advanced/" class="nav-link">Advanced</a>
                             </li>
                         </ul>
 
@@ -55,17 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../installation/" class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="../advanced/" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/index.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/typecasts.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -85,8 +75,12 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#usage-and-tutorials" class="nav-link">Usage and tutorials</a>
+            <li class="nav-item" data-bs-level="1"><a href="#type-casting" class="nav-link">Type casting</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#static-type-cast" class="nav-link">Static type cast</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -94,14 +88,20 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="usage-and-tutorials">Usage and tutorials</h1>
-<h3 id="ide-and-editor-support"><a href="/editors">IDE and Editor support</a></h3>
-<h3 id="control-flow"><a href="./control-flow">Control flow</a></h3>
-<h3 id="memory-management"><a href="./memory">Memory management</a></h3>
-<h3 id="stack-management-intrinsics"><a href="stack-management-intrinsics/">Stack management intrinsics</a></h3>
-<h3 id="variables"><a href="variables/">Variables</a></h3>
-<h3 id="structures"><a href="structures/">Structures</a></h3>
-<h3 id="type-casts"><a href="typecasts/">Type casts</a></h3></div>
+<h1 id="type-casting">Type casting</h1>
+<p>There is always situations when you need to cast one type to another to silence errors from typechecker as it quite dumb and may stay on your way
+For that you have type casting feature (static type casts) only</p>
+<h2 id="static-type-cast">Static type cast</h2>
+<p>Static type cast is an form of casting to an desired type which has no effect on runtime, only compile-time type checking only
+to statically cast to an type you may do following</p>
+<pre><code class="language-gofra">var a char
+
+a typecast int 2 * // by default multiplying an char is not possible
+</code></pre>
+<p>typecasts is always in form of:</p>
+<pre><code class="language-gofra">typecast {type_definition_from_scope}
+</code></pre>
+<p>You may write any arbitrary and composite / complex types inside typecast (e.g cast to an pointer to an struct)</p></div>
             </div>
         </div>
 
@@ -109,13 +109,13 @@
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
-            var base_url = "..",
+            var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js"></script>
-        <script src="../search/main.js"></script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
