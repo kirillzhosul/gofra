@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
     from gofra.hir.function import Function
     from gofra.hir.variable import Variable
+    from gofra.types.composite.structure import StructureType
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,3 +29,5 @@ class Module:
     # Global functions that this module defines (excluding static variables inside function)
     # notice that static variables inside function is held inside functions
     variables: MutableMapping[str, Variable]
+
+    structures: MutableMapping[str, StructureType]

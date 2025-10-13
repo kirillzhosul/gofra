@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from gofra.hir.function import Function
 from gofra.hir.operator import Operator, OperatorType
+from gofra.types.composite.structure import StructureType
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -51,6 +52,9 @@ class ParserContext(PeekableTokenizer):
         default_factory=dict[str, "Variable"],
     )
 
+    structs: MutableMapping[str, StructureType] = field(
+        default_factory=dict[str, StructureType],
+    )
     functions: MutableMapping[str, Function] = field(
         default_factory=dict[str, Function],
     )
@@ -59,8 +63,25 @@ class ParserContext(PeekableTokenizer):
     # Maybe should be refactored
     is_leaf_context: bool = True
 
+    def name_is_already_taken(self, name: str) -> bool:
+        is_taken = any(
+            name in container
+            for container in (self.structs, self.variables, self.functions)
+        )
+
+        if not is_taken and self.parent:
+            return self.parent.name_is_already_taken(name)
+        return is_taken
+
     def has_context_stack(self) -> bool:
         return len(self.context_stack) > 0
+
+    def get_struct(self, name: str) -> StructureType | None:
+        if name in self.structs:
+            return self.structs[name]
+        if self.parent:
+            return self.parent.get_struct(name)
+        return None
 
     def add_function(self, function: Function) -> Function:
         self.functions[function.name] = function

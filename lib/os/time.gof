@@ -4,10 +4,15 @@
 // ==============================================
 
 
+struct timeval
+    tv_sec int
+    tv_usec int
+end
+
 // Get current time of day as seconds from epoch
 func int time_seconds_since_epoch[]
-    var tv int[2] // timeval struct
-    tv NULL sc_gettimeofday
+    var tv timeval
 
-    tv ?>
+    &tv NULL sc_gettimeofday
+    &tv.tv_sec ?>
 end

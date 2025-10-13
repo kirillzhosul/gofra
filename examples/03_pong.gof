@@ -97,7 +97,7 @@ func void init_raylib[]
      WINDOW_WIDTH
      WINDOW_HEIGHT
      WINDOW_NAME to_cstr_ptr
-    InitWindow
+    call InitWindow
 
      WINDOW_FPS
     call SetTargetFPS

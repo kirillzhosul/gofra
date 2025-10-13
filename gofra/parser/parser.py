@@ -27,6 +27,7 @@ from gofra.parser.variables import (
     search_variable_in_context_parents,
 )
 from gofra.types.composite.array import ArrayType
+from gofra.types.composite.structure import StructureType
 
 from ._context import ParserContext
 from .exceptions import (
@@ -42,6 +43,8 @@ from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+    from gofra.types._base import Type
 
 
 def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Module:
@@ -60,6 +63,7 @@ def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Modu
         path=path,
         functions=context.functions,
         variables=context.variables,
+        structures=context.structs,
     )
 
 
@@ -146,6 +150,7 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     is_reference = not FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
     array_index_at = None
+    struct_field_accessor = None
 
     if varname.startswith("&"):
         is_reference = True
@@ -169,6 +174,20 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         assert isinstance(elements_token.value, int)
         array_index_at = elements_token.value
 
+    accessor_token = context.peek_token()
+    if (
+        accessor_token.type == TokenType.DOT
+        and not accessor_token.has_trailing_whitespace
+    ):
+        _ = context.next_token()  # Consume DOT
+        if array_index_at is not None:
+            msg = "Referencing an field from an struct within array accessor is not implemented yet."
+            raise NotImplementedError(msg)
+        struct_field_accessor = context.next_token()
+        if struct_field_accessor.type != TokenType.IDENTIFIER:
+            msg = f"Expected struct field accessor to be an identifier, but got {struct_field_accessor.type.name}"
+            raise ValueError(msg)
+
     variable = search_variable_in_context_parents(context, varname)
     if not variable:
         return False
@@ -178,6 +197,25 @@ def _try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         token=token,
         operand=varname,
     )
+
+    if struct_field_accessor:
+        if not is_reference:
+            msg = "Struct field accessors are implemented only for references."
+            raise NotImplementedError(msg)
+        if not isinstance(variable.type, StructureType):
+            msg = "cannot get field-offset-of (e.g .field) for non-structure types."
+            raise ValueError(msg)
+
+        field = struct_field_accessor.text
+        if field not in variable.type.fields:
+            msg = f"Field accessor {field} at {token.location} is unknown for structure {variable.type.name}"
+            raise ValueError(msg)
+
+        context.push_new_operator(
+            type=OperatorType.STRUCT_FIELD_OFFSET,
+            token=token,
+            operand=f"{variable.type.name}.{field}",
+        )
 
     if array_index_at is not None:
         if not isinstance(variable.type, ArrayType):
@@ -232,6 +270,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         Keyword.EXTERN,
         Keyword.FUNCTION,
         Keyword.GLOBAL,
+        Keyword.STRUCT,
     )
 
     BOTH_LEVEL_KEYWORD = (  # noqa: N806
@@ -265,6 +304,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
                 token=token,
                 operand=int(token.text[-1]),
             )
+        case Keyword.STRUCT:
+            return _unpack_structure_definition_from_token(context)
         case Keyword.DEBUGGER_BREAKPOINT | Keyword.COPY | Keyword.DROP | Keyword.SWAP:
             return context.push_new_operator(
                 type={
@@ -277,6 +318,43 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             )
         case _:
             assert_never(token.value)
+
+
+def _unpack_structure_definition_from_token(context: ParserContext) -> None:
+    name_token = context.next_token()
+    if name_token.type != TokenType.IDENTIFIER:
+        msg = f"Expected structure name at {name_token.location} to be an identifier but got {name_token.type.name}"
+        raise ValueError(msg)
+
+    name = name_token.text
+
+    if context.name_is_already_taken(name):
+        msg = f"Structure name {name} is already taken by other definition"
+        raise ValueError(msg)
+
+    fields: dict[str, Type] = {}
+    fields_ordering: list[str] = []
+    while token := context.next_token():
+        if token.type == TokenType.KEYWORD and token.value == Keyword.END:
+            # End of structure block definition
+            break
+        field_name_token = token
+
+        if field_name_token.type != TokenType.IDENTIFIER:
+            msg = f"Expected structure field name at {field_name_token.location} to be an identifier but got {field_name_token.type.name}"
+            raise ValueError(msg)
+        field_name = field_name_token.text
+        field_type = parser_type_from_tokenizer(context)
+        fields_ordering.append(field_name)
+        fields[field_name] = field_type
+
+    struct = StructureType(
+        name=name,
+        fields=fields,
+        cpu_alignment_in_bytes=0,
+        fields_ordering=fields_ordering,
+    )
+    context.structs[name] = struct
 
 
 def _unpack_variable_definition_from_token(
@@ -296,6 +374,10 @@ def _unpack_variable_definition_from_token(
             token=varname_token,
             name=varname,
         )
+
+    if context.name_is_already_taken(varname):
+        msg = f"Variable name {varname} is already taken by other definition"
+        raise ValueError(msg)
 
     storage_class = (
         VariableStorageClass.STATIC
@@ -367,6 +449,10 @@ def _unpack_function_definition_from_token(
         )
         context.add_function(function)
         return
+
+    if context.name_is_already_taken(function_name):
+        msg = f"Function name {function_name} is already taken by other definition"
+        raise ValueError(msg)
 
     new_context = ParserContext(
         _tokenizer=consume_function_body_tokens(context),

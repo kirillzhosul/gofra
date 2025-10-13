@@ -19,6 +19,8 @@ class Keyword(Enum):
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
 
+    STRUCT = auto()
+
     VARIABLE_DEFINE = auto()
 
     TYPE_CAST = auto()
@@ -59,6 +61,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "call": Keyword.FUNCTION_CALL,
     "return": Keyword.FUNCTION_RETURN,
     "func": Keyword.FUNCTION,
+    "struct": Keyword.STRUCT,
     "inline": Keyword.INLINE,
     "global": Keyword.GLOBAL,
     "var": Keyword.VARIABLE_DEFINE,

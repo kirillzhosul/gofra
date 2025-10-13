@@ -45,7 +45,10 @@ def parser_type_from_tokenizer(context: ParserContext) -> Type:
         msg = f"While expecting type expected identifier but got {t.type.name}"
         raise NotImplementedError(msg)
 
-    aggregated_type: Type | None = PRIMITIVE_TYPE_REGISTRY.get(t.text, None)
+    aggregated_type: Type | None = PRIMITIVE_TYPE_REGISTRY.get(t.text)
+    if not aggregated_type:
+        # Unable to get from primitive registry - probably an structure type definition
+        aggregated_type = context.get_struct(t.text)
 
     if not aggregated_type:
         msg = f"Expected primitive registry type but got {t.text} at {t.location}."

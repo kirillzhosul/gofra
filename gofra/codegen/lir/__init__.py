@@ -379,6 +379,7 @@ def translate_hir_function_to_lir_function(
                 OperatorType.SHIFT_RIGHT
                 | OperatorType.SHIFT_LEFT
                 | OperatorType.BITWISE_XOR
+                | OperatorType.STRUCT_FIELD_OFFSET
             ):
                 raise NotImplementedError(operator.type)
             case OperatorType.LOGICAL_AND:

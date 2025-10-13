@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.consts import GOFRA_ENTRY_POINT
-from gofra.hir.module import Module
 from gofra.hir.operator import OperatorType
 from gofra.parser.exceptions import (
     ParserEntryPointFunctionModifiersError,
@@ -20,6 +19,7 @@ from gofra.types import Type
 from gofra.types.comparison import is_types_same
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
+from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
@@ -33,11 +33,11 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, MutableMapping, MutableSequence, Sequence
+    from collections.abc import Sequence
 
     from gofra.hir.function import Function
+    from gofra.hir.module import Module
     from gofra.hir.operator import Operator
-    from gofra.hir.variable import Variable
 
 
 # TODO(@kirillzhosul): Probably be something like an debug flag
@@ -72,23 +72,20 @@ def validate_type_safety(
             continue
         validate_function_type_safety(
             function=function,
-            global_functions=module.functions,
-            global_variables=module.variables,
+            module=module,
         )
 
 
 def validate_function_type_safety(
     function: Function,
-    global_functions: MutableMapping[str, Function],
-    global_variables: Mapping[str, Variable],
+    module: Module,
 ) -> None:
     """Emulate and validate function type safety inside."""
     emulated_type_stack = emulate_type_stack_for_operators(
         operators=function.operators,
-        global_functions=global_functions,
+        module=module,
         initial_type_stack=list(function.parameters),
         current_function=function,
-        variables={**function.variables, **global_variables},
     )
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
@@ -121,12 +118,11 @@ def validate_function_type_safety(
 
 def emulate_type_stack_for_operators(
     operators: Sequence[Operator],
-    global_functions: MutableMapping[str, Function],
+    module: Module,
     initial_type_stack: Sequence[Type],
     current_function: Function,
-    variables: Mapping[str, Variable],
     blocks_idx_shift: int = 0,
-) -> MutableSequence[Type]:
+) -> Sequence[Type]:
     """Emulate and return resulting type stack from given operators.
 
     Functions are provided so calling it will dereference new emulation type stack.
@@ -154,11 +150,10 @@ def emulate_type_stack_for_operators(
 
                 type_stack = emulate_type_stack_for_operators(
                     operators=operators[idx:jumps_to_idx],
-                    global_functions=global_functions,
+                    module=module,
                     initial_type_stack=context.emulated_stack_types[::],
                     blocks_idx_shift=blocks_idx_shift + idx,
                     current_function=current_function,
-                    variables=variables,
                 )
 
                 if not is_typestack_same(type_stack, context.emulated_stack_types):
@@ -181,7 +176,13 @@ def emulate_type_stack_for_operators(
                 context.push_types(string_ptr, I64Type())
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(operator.operand, str)
-                t = variables[operator.operand].type
+                variable = current_function.variables.get(operator.operand)
+                if variable is None:
+                    variable = module.variables.get(operator.operand)
+                    if variable is None:
+                        msg = f"Typechecker expect variable is known at module level or function level but it is not found in both (variable name - {operator.operand}"
+                        raise ValueError(msg)
+                t = variable.type
                 context.push_types(PointerType(points_to=t))
             case OperatorType.PUSH_INTEGER:
                 context.push_types(I64Type())
@@ -190,7 +191,7 @@ def emulate_type_stack_for_operators(
             case OperatorType.FUNCTION_CALL:
                 assert isinstance(operator.operand, str)
 
-                function = global_functions[operator.operand]
+                function = module.functions[operator.operand]
 
                 if function.parameters:
                     context.raise_for_function_arguments(
@@ -374,6 +375,30 @@ def emulate_type_stack_for_operators(
                 )
                 context.pop_type_from_stack()
                 context.push_types(to_type_cast)
+            case OperatorType.STRUCT_FIELD_OFFSET:
+                context.raise_for_enough_arguments(operator, required_args=1)
+                struct_pointer_type = context.pop_type_from_stack()
+                if not isinstance(struct_pointer_type, PointerType):
+                    msg = f"Expected PUSH_STRUCT_FIELD_OFFSET to have structure pointer type on type stack but got {struct_pointer_type}"
+                    raise TypeError(msg)
+
+                struct_type = struct_pointer_type.points_to
+                assert isinstance(operator.operand, str)
+                _, struct_field = operator.operand.split(".", maxsplit=1)
+                assert isinstance(struct_field, str), (
+                    "Expected struct field as an string in operand"
+                )
+                if not isinstance(struct_type, StructureType):
+                    msg = f"Expected PUSH_STRUCT_FIELD_OFFSET to have structure type on type stack but got {struct_type}"
+                    raise TypeError(msg)
+
+                if struct_field not in struct_type.fields:
+                    msg = f"Unknown field {struct_field} for known-structure {struct_type}"
+                    raise ValueError(msg)
+
+                context.push_types(
+                    PointerType(points_to=struct_type.fields[struct_field]),
+                )
             case _:
                 assert_never(operator.type)
 
@@ -381,4 +406,7 @@ def emulate_type_stack_for_operators(
 
 
 def is_typestack_same(a: Sequence[Type], b: Sequence[Type]) -> bool:
-    return list(map(type, a)) == list(map(type, b))
+    return all(
+        is_types_same(a, b, strategy="strict-same-type")
+        for a, b in zip(a, b, strict=True)
+    )

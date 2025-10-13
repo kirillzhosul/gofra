@@ -193,7 +193,7 @@ def amd64_operator_instructions(
             load_memory_from_stack_arguments(context)
         case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)
-        case OperatorType.DEBUGGER_BREAKPOINT:
+        case OperatorType.DEBUGGER_BREAKPOINT | OperatorType.STRUCT_FIELD_OFFSET:
             raise NotImplementedError(operator)
         case _:
             assert_never(operator.type)
