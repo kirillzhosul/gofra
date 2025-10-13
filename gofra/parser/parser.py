@@ -351,7 +351,7 @@ def _unpack_structure_definition_from_token(context: ParserContext) -> None:
     struct = StructureType(
         name=name,
         fields=fields,
-        cpu_alignment_in_bytes=0,
+        cpu_alignment_in_bytes=8,  # assume we always on 64 bit machine (TODO)
         fields_ordering=fields_ordering,
     )
     context.structs[name] = struct

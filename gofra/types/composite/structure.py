@@ -29,8 +29,9 @@ class StructureType(CompositeType):
         self.size_in_bytes = sum(f.size_in_bytes for f in fields.values())
 
         # Align whole structure by alignment
-        alignment = cpu_alignment_in_bytes + 1
-        self.size_in_bytes = (self.size_in_bytes + alignment) & ~alignment
+        if cpu_alignment_in_bytes != 0:
+            alignment = cpu_alignment_in_bytes + 1
+            self.size_in_bytes = (self.size_in_bytes + alignment) & ~alignment
 
     def __repr__(self) -> str:
         return f"Struct ({', '.join(map(repr, self.fields))})"
