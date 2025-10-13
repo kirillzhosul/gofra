@@ -34,7 +34,7 @@ class StructureType(CompositeType):
             self.size_in_bytes = (self.size_in_bytes + alignment) & ~alignment
 
     def __repr__(self) -> str:
-        return f"Struct ({', '.join(map(repr, self.fields))})"
+        return f"Struct {self.name}"
 
     def get_field_offset(self, field: str) -> int:
         """Get byte offset for given field (to access this field)."""
