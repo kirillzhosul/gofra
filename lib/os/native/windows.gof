@@ -98,7 +98,7 @@
         end
         // [error]
         false == if 
-            win_write_bytes_written 0 1 - !< 
+            win_write_bytes_written -1 !< 
         end
         win_write_bytes_written ?>
     end

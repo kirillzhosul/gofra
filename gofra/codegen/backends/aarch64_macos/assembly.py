@@ -105,6 +105,8 @@ def push_integer_onto_stack(
     if value <= AARCH64_HALF_WORD_BITS:
         # We have small immediate value which we may just store without shifts
         context.write(f"mov X0, #{value}")
+        if is_negative:
+            context.write("sub X0, XZR, X0")
         push_register_onto_stack(context, register="X0")
         return
 
@@ -125,7 +127,7 @@ def push_integer_onto_stack(
         context.write(f"movk X0, #{chunk}, lsl #{shift}")
 
     if is_negative:
-        context.write("sub X0, #0, X0")
+        context.write("sub X0, XZR, X0")
 
     push_register_onto_stack(context, register="X0")
 

@@ -61,7 +61,7 @@ inline func void increase_score[*int]
 end
 
 inline func void inverse_speed[*int]
-    copy ?> 0 1 - * !<
+    copy ?> -1 * !<
 end
 
 func void update_difficulty[]
