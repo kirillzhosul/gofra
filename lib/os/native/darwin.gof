@@ -61,6 +61,14 @@
         #define DARWIN_SYSCALL_GETTIMEOFDAY 116
     #endif // ARCH_ARM64
 
+    // network socket address in structure
+    struct sockaddr_in
+        sin_family char[2]
+        sin_port   char[2]
+        sin_addr   char[4]
+        sin_zero   int   // zero padding
+    end
+
     // ---  Syscall Wrappers ---
     // These are the preferred way to make syscalls.
     #ifdef ARCH_ARM64
@@ -98,6 +106,15 @@
 
         // Closes a file descriptor.
         inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
+
+        // Bind given socket to given address
+        inline func int sc_bind[int, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
+
+        // Listen to an socket with specified backlog
+        inline func int sc_listen[int, int] DARWIN_SYSCALL_LISTEN syscall2 end
+
+        // Accept pending connections on given socket and return client socket
+        inline func int sc_accept[int, *sockaddr_in, int] DARWIN_SYSCALL_ACCEPT syscall3 end
 
         // Get current time of day
         // Signature: [timeval, timezone]
