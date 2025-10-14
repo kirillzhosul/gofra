@@ -28,8 +28,8 @@ Consumes two values from the stack: `[address, value]`
 ### Examples
 ```gofra
 // Store to a variable
-var somevar int
-somevar 1 !<  // Store 1 into somevar
+var name int
+name 1 !<  // Store 1 into name
 
 // Store to calculated address
 var array int[10]
@@ -57,9 +57,9 @@ Consumes one value from the stack: `[address]`
 ### Examples
 ```gofra
 // Load from a variable
-var somevar int
-somevar 1 !<    // Store 1 into somevar
-somevar ?>      // Load value from somevar (pushes 1 onto stack)
+var name int
+name 1 !<    // Store 1 into name
+name ?>      // Load value from name (pushes 1 onto stack)
 print_integer   // Prints 1
 
 // Load from array element

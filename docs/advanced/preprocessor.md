@@ -4,7 +4,7 @@ Preprocessor is an stage in within compilation (simplified) that works with lexe
 
 All preprocessor keywords begins with `#`
 
-# Include system and `#include`
+## Include system and `#include`
 Most of the time you do not write program in a single file, or require additional code from libraries, in Gofra `#include` allows to straightforward include whole text of an file (with some additional file path resolving and include-once strategy)
 
 ```gofra
@@ -31,3 +31,33 @@ Overview:
 1. Parent of an current file (not main)
 2. Parent of an main file
 3. Include search directories
+
+## Macro definitions
+
+To define an macro you can use `#define` preprocessor directive (and `#undef`) correspondingly
+
+```gofra
+#define MACRO 2 // macro containing an token 2
+```
+
+after that you are allowed to inject that macro inside your code
+
+```gofra
+MACRO MACRO + // 4 (2 2 +)
+```
+
+### Propagation via CLI
+You can use `-D` flag to define an macro from CLI which is useful for something like debug flags
+`-Ddebug=1` (define an macro `debug` with value 1)
+
+### Definition checking at preprocessor stage
+You can use `#ifdef` and `#endif` for checking definition of an macro
+```gofra
+#idedef DEBUG
+    // only be compiled if DEBUG macro is present
+#endif
+```
+
+### Toolchain propagated macros and target specific macros
+By default Gofra provides two macros: `OS_{NAME}` and `ARCH_{NAME}`
+For example while compiling to Darwin on ARM64 there will be 2 macros available -> `OS_DARWIN` and `ARCH_ARM64`

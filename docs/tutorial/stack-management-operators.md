@@ -1,4 +1,4 @@
-# Stack management intrinsics
+# Stack management operators
 
 For managing an stack you must have some less-or-more complex commands for example like `swap` or `rot`, language supports some of them
 
@@ -22,4 +22,14 @@ Drops element from stack
 Example:
 ```gofra
 2 2 2 drop + // 4, and empty stack
+```
+
+# COPY
+Mnemonics: `a -> a a`
+
+Copies element from stack
+
+Example:
+```gofra
+2 copy // 2 2 on stack
 ```

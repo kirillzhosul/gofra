@@ -1,6 +1,6 @@
 # Variables
 
-**That page is being writed, and only may be used as quick-overview**
+**That page is being written, and only may be used as quick-overview**
 
 Variables is an container for your arbitrary data (within variable type size), they can be *static* (*global*) and *local* (to functions)
 
@@ -37,7 +37,7 @@ Primitive types:
 Composite type
 - Array of {primitive|complex type}
 - Pointer to {primitive|complex type}
-
+- Structure with set of {primitive|complex} type inside
 Composite types may contain another complex types so pointer to array of pointers to integer is an 2-level complex type
 
 
