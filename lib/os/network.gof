@@ -2,7 +2,7 @@
 // Network (TCP/UDP) helpers and wrappers
 // Caveats: Currently works only on Darwin!
 // ==============================================
-
+#include "os/general.gof"
 
 #ifdef OS_DARWIN
     // System call wrappers

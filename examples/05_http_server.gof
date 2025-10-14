@@ -1,0 +1,121 @@
+#include "std.gof"
+#include "os/network.gof"
+#include "http"
+
+#define HTTP_REQUEST_BUFFER_CAP 4096
+
+struct HTTPServer
+    socket int
+    port int
+    backlog int
+end
+
+struct HTTPRequest
+    socket int
+    request *char[HTTP_REQUEST_BUFFER_CAP]
+end
+
+var server HTTPServer
+var request HTTPRequest
+
+
+var buffer char[HTTP_REQUEST_BUFFER_CAP]
+var addr sockaddr_in // move into HTTPServer after fixing / researching structure problems
+
+func void open_server_socket[]
+    server.socket call net_ipv4_tcp_socket !<
+
+    server.socket ?> 0 < if 
+        "Unable to open HTTP server socket\n" eprint_fatal
+    end
+end
+
+func void bind_server_socket[]
+        server.socket ?> 
+        addr
+        sizeof sockaddr_in
+    call net_bind
+    
+    -1 == if
+        "Unable to bind HTTP server socket\n" eprint_fatal
+    end
+end
+
+func void listen_server_socket[]
+        server.socket ?> 
+        server.backlog ?> 
+    call net_listen 
+
+    -1 == if
+        "Unable to listen to HTTP server socket\n" eprint_fatal
+    end
+end
+
+func void pack_sockaddr[]
+    addr
+        AF_INET 48 <<  // sin_family highest bit -> little endian
+        0x1F90   32 << // sin_port 
+        | 0x7F000001 | // sin_addr
+    !<
+
+    addr.sin_zero 0 !<  // zero padding
+end
+
+
+func void handle_request[]
+    "Got connection!\n" print
+
+    // Read an HTTP request with headers
+        request.socket ?> 
+        buffer 
+        sizeof buffer
+    net_read
+    copy -1 == if
+        "Unable to read response from client socket on HTTP server socket\n" eprint_fatal
+    end
+    "Bytes read: " print
+    print_integer
+
+    request.request buffer !< 
+
+
+    request.socket ?>
+    "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<h1>Hello from Gofra HTTP server!</h1>\r\n"
+    net_write
+
+    copy -1 == if
+        "Unable to send response to client socket on HTTP server socket\n" eprint_fatal
+    end
+
+    "Bytes written: " print
+    print_integer
+
+    "Closed connection!\n" print
+    request.socket ?> net_close  -1 == if
+        "Unable to close client socket on HTTP server socket\n" eprint_fatal
+    end
+end
+
+func void main[]
+    server.port 8080 !< // todo: not used
+    server.backlog 5 !<
+
+    call pack_sockaddr
+    call open_server_socket
+    call bind_server_socket
+    call listen_server_socket
+
+    "Listening...\n" print
+
+    while true do
+        request.socket
+            server.socket ?> 
+        call net_accept_sink !<
+ 
+        request.socket ?> -1 == if
+            "Unable to accept to client socket on HTTP server socket\n" eprint_fatal
+        end
+
+        call handle_request
+    end
+end
