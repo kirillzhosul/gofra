@@ -8,30 +8,31 @@
 #include "ext/raylib.gof"
 #include "std.gof"
 
-#define BALL_COLOR WHITE
-#define BALL_SIZE  20
-#define BALL_SPEED 3
-var ball_speed_x int
-var ball_speed_y int
-
-var ball_x int
-var ball_y int
-
-var player_score int
-var enemy_score int
-
-#define DEFAULT_DIFFICULTY 2
-var difficulty int
-
 #define PADDLE_DEFAULT_SPEED 3
 #define PADDLE_WIDTH 25
 #define PADDLE_HEIGHT 120
-var paddle_player_speed int
-var paddle_player_x int
-var paddle_player_y int
-var paddle_enemy_speed int
-var paddle_enemy_x int
-var paddle_enemy_y int
+struct Paddle
+    speed int
+    score int
+    x int y int
+end
+
+var player Paddle
+var enemy  Paddle
+
+#define BALL_COLOR WHITE
+#define BALL_SIZE  20
+#define BALL_SPEED 3
+struct Ball
+    speed_x int
+    speed_y int 
+    x int y int
+end
+
+var ball Ball
+
+#define DEFAULT_DIFFICULTY 2
+var difficulty int
 
 #define WINDOW_NAME   "Gofra Pong"
 #define WINDOW_WIDTH  1200
@@ -45,8 +46,8 @@ var enemy_score_str  char[32]
 var player_score_str char[32]
 
 inline func void update_ball_movement[]
-    ball_x copy ?> ball_speed_x ?> + !<
-    ball_y copy ?> ball_speed_y ?> + !<
+    ball.x copy ?> ball.speed_x ?> + !<
+    ball.y copy ?> ball.speed_y ?> + !<
 end
 
 inline func void finalize_game[]
@@ -65,29 +66,29 @@ inline func void inverse_speed[*int]
 end
 
 func void update_difficulty[]
-    ball_speed_x BALL_SPEED difficulty ?> + !<
-    ball_speed_y BALL_SPEED difficulty ?> + !<
+    ball.speed_x BALL_SPEED difficulty ?> + !<
+    ball.speed_y BALL_SPEED difficulty ?> + !<
 
-    paddle_enemy_speed PADDLE_DEFAULT_SPEED 2 / difficulty ?> + !<
+    enemy.speed PADDLE_DEFAULT_SPEED 2 / difficulty ?> + !<
 end
 
 func void init_game[]
-    ball_x WINDOW_WIDTH  2 / BALL_SIZE - !<
-    ball_y WINDOW_HEIGHT 2 / BALL_SIZE - !<
+    ball.x WINDOW_WIDTH  2 / BALL_SIZE - !<
+    ball.y WINDOW_HEIGHT 2 / BALL_SIZE - !<
 
-    player_score 0 !<
-    enemy_score  0 !<
+    player.score 0 !<
+    enemy.score  0 !<
 
-    ball_speed_x BALL_SPEED !<
-    ball_speed_y BALL_SPEED !<
+    ball.speed_x BALL_SPEED !<
+    ball.speed_y BALL_SPEED !<
 
-    paddle_player_x WINDOW_WIDTH PADDLE_WIDTH - 10 - !<
-    paddle_player_y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
-    paddle_player_speed PADDLE_DEFAULT_SPEED !<
+    player.x WINDOW_WIDTH PADDLE_WIDTH - 10 - !<
+    player.y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
+    player.speed PADDLE_DEFAULT_SPEED !<
 
-    paddle_enemy_x 10 !<
-    paddle_enemy_y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
-    paddle_enemy_speed PADDLE_DEFAULT_SPEED !<
+    enemy.x 10 !<
+    enemy.y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
+    enemy.speed PADDLE_DEFAULT_SPEED !<
 
     difficulty DEFAULT_DIFFICULTY !<
     call update_difficulty
@@ -128,22 +129,22 @@ func void draw_game[]
      WHITE
     call DrawLine
 
-     ball_x ?> BALL_SIZE 2 / +
-     ball_y ?> BALL_SIZE 2 / +
+     ball.x ?> BALL_SIZE 2 / +
+     ball.y ?> BALL_SIZE 2 / +
      BALL_SIZE
      BALL_SIZE
      BALL_COLOR
     call DrawRectangle
 
-     paddle_player_x ?>
-     paddle_player_y ?>
+     player.x ?>
+     player.y ?>
      PADDLE_WIDTH
      PADDLE_HEIGHT
      WHITE
     call DrawRectangle
 
-     paddle_enemy_x ?>
-     paddle_enemy_y ?>
+     enemy.x ?>
+     enemy.y ?>
      PADDLE_WIDTH
      PADDLE_HEIGHT
      WHITE
@@ -154,86 +155,86 @@ end
 
 func void handle_enemy_ai[]
     // Try to move to ball position
-    paddle_enemy_y ?> ball_y ?> > if
-        paddle_enemy_y copy ?> paddle_enemy_speed ?> - !<
+    enemy.y ?> ball.y ?> > if
+        enemy.y copy ?> enemy.speed ?> - !<
     end
 
-    paddle_enemy_y ?> ball_y ?> < if
-        paddle_enemy_y copy ?> paddle_enemy_speed ?> + !<
+    enemy.y ?> ball.y ?> < if
+        enemy.y copy ?> enemy.speed ?> + !<
     end
 
     // Boundaries for enemy paddle
-    paddle_enemy_y ?> 0 < if
-        paddle_enemy_y 0 !<
+    enemy.y ?> 0 < if
+        enemy.y 0 !<
     end
-    paddle_enemy_y ?> PADDLE_HEIGHT + WINDOW_HEIGHT > if
-        paddle_enemy_y WINDOW_HEIGHT PADDLE_HEIGHT - !<
+    enemy.y ?> PADDLE_HEIGHT + WINDOW_HEIGHT > if
+        enemy.y WINDOW_HEIGHT PADDLE_HEIGHT - !<
     end
 end
 
 func void handle_player_movement[]
     // Movement of an player paddle
     'W' IsKeyDown if
-        paddle_player_y copy ?> paddle_player_speed ?> - !<
+        player.y copy ?> player.speed ?> - !<
     end
     'S' IsKeyDown if
-        paddle_player_y copy ?> paddle_player_speed ?> + !<
+        player.y copy ?> player.speed ?> + !<
     end
 
     // Boundaries for player paddle
-    paddle_player_y ?> 0 < if
-        paddle_player_y 0 !<
+    player.y ?> 0 < if
+        player.y 0 !<
     end
     
-    paddle_player_y ?> PADDLE_HEIGHT + WINDOW_HEIGHT > if
-        paddle_player_y WINDOW_HEIGHT PADDLE_HEIGHT - !<
+    player.y ?> PADDLE_HEIGHT + WINDOW_HEIGHT > if
+        player.y WINDOW_HEIGHT PADDLE_HEIGHT - !<
     end
 end
 
 func void handle_ball_paddle_bounce[]
-    ball_x ?> paddle_player_x ?> PADDLE_WIDTH - >= 
-    ball_y ?> paddle_player_y ?> >=
-    ball_y ?> paddle_player_y ?> PADDLE_HEIGHT + <= 
+    ball.x ?> player.x ?> PADDLE_WIDTH - >= 
+    ball.y ?> player.y ?> >=
+    ball.y ?> player.y ?> PADDLE_HEIGHT + <= 
     && && if
-        ball_speed_x call inverse_speed
-        ball_speed_y call inverse_speed
+        ball.speed_x call inverse_speed
+        ball.speed_y call inverse_speed
     end
 
-    ball_x ?> paddle_enemy_x ?> PADDLE_WIDTH + <=
-    ball_y ?> paddle_enemy_y ?> >=
-    ball_y ?> paddle_enemy_y ?> PADDLE_HEIGHT + <=
+    ball.x ?> enemy.x ?> PADDLE_WIDTH + <=
+    ball.y ?> enemy.y ?> >=
+    ball.y ?> enemy.y ?> PADDLE_HEIGHT + <=
     && && if
-        ball_speed_x call inverse_speed
-        ball_speed_y call inverse_speed
+        ball.speed_x call inverse_speed
+        ball.speed_y call inverse_speed
     end
 end
 
 func void handle_ball_wall_bounce[]
-    ball_x ?> BALL_SIZE 2 * + WINDOW_WIDTH >= if 
+    ball.x ?> BALL_SIZE 2 * + WINDOW_WIDTH >= if 
         // Bounce of right corner
-        enemy_score call increase_score
-        ball_speed_x call inverse_speed
+        enemy.score call increase_score
+        ball.speed_x call inverse_speed
     end
 
-    ball_y ?> BALL_SIZE 2 * + WINDOW_HEIGHT >= if 
+    ball.y ?> BALL_SIZE 2 * + WINDOW_HEIGHT >= if 
         // Bounce of bottom corner
-        ball_speed_y call inverse_speed
+        ball.speed_y call inverse_speed
     end
-    ball_y ?> 0 <= if 
+    ball.y ?> 0 <= if 
         // Bounce of top corner
-        ball_speed_y call inverse_speed
+        ball.speed_y call inverse_speed
     end
 
-    ball_x ?> 0 <= if 
+    ball.x ?> 0 <= if 
         // Bounce of left corner
-        player_score call increase_score
-        ball_speed_x call inverse_speed
+        player.score call increase_score
+        ball.speed_x call inverse_speed
     end
 end
 
 func void update_user_interface[]
-    enemy_score ?> enemy_score_str call int2str
-    player_score ?> player_score_str call int2str
+    enemy.score ?> enemy_score_str call int2str
+    player.score ?> player_score_str call int2str
 end
 
 func void game_loop[]
