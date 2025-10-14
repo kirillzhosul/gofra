@@ -94,10 +94,12 @@ def push_integer_onto_stack(
     TODO(@kirillzhosul): Negative numbers IS disallowed:
         Consider using signed two complement representation with sign bit (highest bit) set
     """
-    assert value >= 0, "Tried to push negative integer onto stack!"
     assert value <= AARCH64_DOUBLE_WORD_BITS, (
         "Tried to push integer that exceeding 16 bytes (64 bits register)."
     )
+
+    is_negative = value < 0
+    value = abs(value)
 
     context.write("// push integer")
     if value <= AARCH64_HALF_WORD_BITS:
@@ -121,6 +123,9 @@ def push_integer_onto_stack(
 
         # Store lower bits
         context.write(f"movk X0, #{chunk}, lsl #{shift}")
+
+    if is_negative:
+        context.write("sub X0, #0, X0")
 
     push_register_onto_stack(context, register="X0")
 
