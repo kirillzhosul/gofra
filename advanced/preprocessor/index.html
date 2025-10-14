@@ -77,11 +77,14 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#preprocessor" class="nav-link">Preprocessor</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#include-system-and-include" class="nav-link">Include system and #include</a>
+              <ul class="nav flex-column">
               </ul>
             </li>
-            
-            <li class="nav-item" data-bs-level="1"><a href="#include-system-and-include" class="nav-link">Include system and #include</a>
+            <li class="nav-item" data-bs-level="2"><a href="#macro-definitions" class="nav-link">Macro definitions</a>
               <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -92,7 +95,7 @@
 <h1 id="preprocessor">Preprocessor</h1>
 <p>Preprocessor is an stage in within compilation (simplified) that works with lexer tokens (e.g raw text) and resolves references to preprocessor itself (e.g <code>#include</code> is preprocessor only directive and will throw an error if occurred at next possible stage: parser)</p>
 <p>All preprocessor keywords begins with <code>#</code></p>
-<h1 id="include-system-and-include">Include system and <code>#include</code></h1>
+<h2 id="include-system-and-include">Include system and <code>#include</code></h2>
 <p>Most of the time you do not write program in a single file, or require additional code from libraries, in Gofra <code>#include</code> allows to straightforward include whole text of an file (with some additional file path resolving and include-once strategy)</p>
 <pre><code class="language-gofra">
 #include &quot;sum.gof&quot;
@@ -111,7 +114,26 @@ And if file is not found there also, it will search against all include search d
 <p>Overview:
 1. Parent of an current file (not main)
 2. Parent of an main file
-3. Include search directories</p></div>
+3. Include search directories</p>
+<h2 id="macro-definitions">Macro definitions</h2>
+<p>To define an macro you can use <code>#define</code> preprocessor directive (and <code>#undef</code>) correspondingly</p>
+<pre><code class="language-gofra">#define MACRO 2 // macro containing an token 2
+</code></pre>
+<p>after that you are allowed to inject that macro inside your code</p>
+<pre><code class="language-gofra">MACRO MACRO + // 4 (2 2 +)
+</code></pre>
+<h3 id="propagation-via-cli">Propagation via CLI</h3>
+<p>You can use <code>-D</code> flag to define an macro from CLI which is useful for something like debug flags
+<code>-Ddebug=1</code> (define an macro <code>debug</code> with value 1)</p>
+<h3 id="definition-checking-at-preprocessor-stage">Definition checking at preprocessor stage</h3>
+<p>You can use <code>#ifdef</code> and <code>#endif</code> for checking definition of an macro</p>
+<pre><code class="language-gofra">#idedef DEBUG
+    // only be compiled if DEBUG macro is present
+#endif
+</code></pre>
+<h3 id="toolchain-propagated-macros-and-target-specific-macros">Toolchain propagated macros and target specific macros</h3>
+<p>By default Gofra provides two macros: <code>OS_{NAME}</code> and <code>ARCH_{NAME}</code>
+For example while compiling to Darwin on ARM64 there will be 2 macros available -&gt; <code>OS_DARWIN</code> and <code>ARCH_ARM64</code></p></div>
             </div>
         </div>
 

@@ -131,8 +131,8 @@
 </code></pre>
 <h3 id="examples">Examples</h3>
 <pre><code class="language-gofra">// Store to a variable
-var somevar int
-somevar 1 !&lt;  // Store 1 into somevar
+var name int
+name 1 !&lt;  // Store 1 into name
 
 // Store to calculated address
 var array int[10]
@@ -153,9 +153,9 @@ array 8 + 99 !&lt;  // Store 99 at array[8] (if int is 4 bytes)
 </code></pre>
 <h3 id="examples_1">Examples</h3>
 <pre><code class="language-gofra">// Load from a variable
-var somevar int
-somevar 1 !&lt;    // Store 1 into somevar
-somevar ?&gt;      // Load value from somevar (pushes 1 onto stack)
+var name int
+name 1 !&lt;    // Store 1 into name
+name ?&gt;      // Load value from name (pushes 1 onto stack)
 print_integer   // Prints 1
 
 // Load from array element
