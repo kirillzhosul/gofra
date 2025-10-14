@@ -1,0 +1,25 @@
+// ==============================================
+// HTTP server implementation
+// ==============================================
+
+#include "os/network.gof"
+
+struct HTTPServer
+    // HTTP Server instance for HTTP library
+
+    socket  int // System socket opened for listening
+    port    int // Port on which server is listening
+    backlog int // Backlog -  maximum length for the queue of pending connections
+
+    // Internal fields
+    net_addr sockaddr_in // Addr as `sockaddr_in` to listen on
+end
+
+struct HTTPIncomingRequest
+    // Request for HTTP server from client
+
+    socket int // System socket bound for that client
+
+    io_rx_buffer *char[] // Buffer for reading request
+    io_tx_buffer *char[] // Buffer for writing request
+end

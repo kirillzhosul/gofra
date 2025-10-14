@@ -56,6 +56,12 @@ func void print[*char[], int]
     print_fd drop
 end
 
+// Print an string into standard console with trailing newline
+func void println[*char[], int]
+    print
+    "\n" print
+end
+
 // Print an string into standard console error stream
 func void eprint[*char[], int]
     print_length_temp swap !<

@@ -15,7 +15,6 @@ end
 // Randomize current PRNG random state
 func void prng_randomize_state_xorshift[] 
     // Uses Xorshift generator algorithm
-    
     //rs rs ?> rs ?> 13 << ^ !<
     //rs rs ?> rs ?> 17 << ^ !<
     //rs rs ?> rs ?> 5  << ^ !<

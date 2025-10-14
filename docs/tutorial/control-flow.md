@@ -56,7 +56,7 @@ do
     counter print_integer  // Print current counter value
     "\n" print
     
-    counter copy ?> inc !<  // Increment counter
+    counter copy ?> 1 + !<  // Increment counter
 end
 ```
 

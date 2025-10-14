@@ -1,26 +1,18 @@
+
+// ==============================================
+// HTTP server complex example
+// Open an HTTP server on localhost that responds with simple HTML page
+// ==============================================
+
 #include "std.gof"
 #include "os/network.gof"
 #include "http"
 
-#define HTTP_REQUEST_BUFFER_CAP 4096
+#define HTTP_IO_BUFFER_CAP 4096
 
-struct HTTPServer
-    socket int
-    port int
-    backlog int
-end
-
-struct HTTPRequest
-    socket int
-    request *char[HTTP_REQUEST_BUFFER_CAP]
-end
-
+var buffer char[HTTP_IO_BUFFER_CAP]
 var server HTTPServer
-var request HTTPRequest
-
-
-var buffer char[HTTP_REQUEST_BUFFER_CAP]
-var addr sockaddr_in // move into HTTPServer after fixing / researching structure problems
+var request HTTPIncomingRequest
 
 func void open_server_socket[]
     server.socket call net_ipv4_tcp_socket !<
@@ -32,7 +24,7 @@ end
 
 func void bind_server_socket[]
         server.socket ?> 
-        addr
+        server.net_addr
         sizeof sockaddr_in
     call net_bind
     
@@ -52,13 +44,13 @@ func void listen_server_socket[]
 end
 
 func void pack_sockaddr[]
-    addr
+    server.net_addr
         AF_INET 48 <<  // sin_family highest bit -> little endian
         0x1F90   32 << // sin_port 
         | 0x7F000001 | // sin_addr
     !<
 
-    addr.sin_zero 0 !<  // zero padding
+    // zero padding by default but add `addr.sin_zero 0 !<` after fix
 end
 
 
@@ -76,7 +68,7 @@ func void handle_request[]
     "Bytes read: " print
     print_integer
 
-    request.request buffer !< 
+    request.io_rx_buffer buffer !< 
 
 
     request.socket ?>

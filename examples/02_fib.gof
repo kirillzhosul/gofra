@@ -1,12 +1,18 @@
+
+// ==============================================
+// Fibonacci sequence
+// Print an series of fibonacci numbers up to N
+// ==============================================
+
 #include "std.gof"
 
 #define N 1024
 var buf char[128]
 
-func void print_int_with_sep[*int]
-    ?> buf int2str 
-    buf 128 print
-     ", " print
+func void print_int_with_sep[int]
+    buf int2str
+    buf sizeof buf print
+    ", " print
 end
 
 func void main[]
@@ -19,12 +25,12 @@ func void main[]
     x a ?> b ?> + !<
 
     "Fibonacci Series: " print
-    a call print_int_with_sep
-    b call print_int_with_sep
+    a ?> print_int_with_sep
+    b ?> print_int_with_sep
 
     while x ?> N <= do
         x ?> buf int2str 
-        buf 128 print
+        buf sizeof buf print
 
         a b ?> !<
         b x ?> !<

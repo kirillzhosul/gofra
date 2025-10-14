@@ -1,43 +1,44 @@
 
 // ==============================================
 // `cat` analogue
-// Opens an text file from PATH and emits it content into stdout
-// Currently, half way cross-platform for Windows
-// Works only on Darwin / Linux
-// TODO: add argc argv
+// Opens an text file from PATH macro and emits it content into standard
 // ==============================================
 
 #include "std.gof"
 
-// Currently, this example doesn't work with arguments, so we hardcode path
+// TODO: add argc argv
 #define PATH "test.txt" to_cstr_ptr
 
 // Some segment in memory so we can store content of the file
 #define CAPACITY 1024 // 1KiB
-var BUFFER char[1024]
 
-// Store an FD of that files somewhere
-var fd int
+// Global one as capacity is too big for stack (heap)
+var buf char[CAPACITY]
 
 func void main[]
-    // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
+    var fd int
     
-    // Open file
-    fd PATH 0 0 call sc_open !<
+    // Open file (TODO: Windows analogue)
+    fd 
+        PATH 0 0 
+        call sc_open 
+    !<
+
+    // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
     fd ?> 0 < if 
-        "Unable to open given file" eprint_fatal 
+        "Unable to open given file\n" eprint_fatal 
     end
 
     // Read file
-    fd ?> 
-    BUFFER CAPACITY
-    call sc_read 1 < if 
-        "Unable to read given file" eprint_fatal 
+    fd ?>
+    buf sizeof buf
+    call sc_read 
+    
+    0 < if 
+        "Unable to read given file\n" eprint_fatal 
     end
 
     // Print whole buffer
-    STD_OUT BUFFER CAPACITY 
+    STD_OUT buf sizeof buf 
     call print_fd drop
-
-    0 exit
 end
