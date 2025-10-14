@@ -61,7 +61,7 @@
         #define DARWIN_SYSCALL_GETTIMEOFDAY 116
     #endif // ARCH_ARM64
 
-    // network socket address in structure
+    // network socket address in structure (posix/unix only)
     struct sockaddr_in
         sin_family char[2]
         sin_port   char[2]
