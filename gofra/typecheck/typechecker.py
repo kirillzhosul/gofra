@@ -406,6 +406,8 @@ def emulate_type_stack_for_operators(
 
 
 def is_typestack_same(a: Sequence[Type], b: Sequence[Type]) -> bool:
+    if len(a) != len(b):
+        return False
     return all(
         is_types_same(a, b, strategy="strict-same-type")
         for a, b in zip(a, b, strict=True)
