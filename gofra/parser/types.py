@@ -34,10 +34,14 @@ def parse_type_from_text(context: ParserContext, typename: str) -> Type | None:
     return None
 
 
-def parser_type_from_tokenizer(context: ParserContext) -> Type:
+def parser_type_from_tokenizer(
+    context: ParserContext,
+    *,
+    allow_inferring_variable_types: bool = False,
+) -> Type:
     # TODO(@kirillzhosul): deep pointer is not allowed
     # TODO(@kirillzhosul): distinguish array-of-pointers and pointer-to-array
-
+    # TODO(@kirillzhosul): Type parsing is weird (especially new allow_inferring_variable_types) must be separated in complex-type parsing system ?
     t = context.next_token()
 
     is_pointer = False
@@ -53,6 +57,11 @@ def parser_type_from_tokenizer(context: ParserContext) -> Type:
     if not aggregated_type:
         # Unable to get from primitive registry - probably an structure type definition
         aggregated_type = context.get_struct(t.text)
+
+    if allow_inferring_variable_types and not aggregated_type:
+        variable = context.search_variable_in_context_parents(t.text)
+        if variable:
+            aggregated_type = variable.type
 
     if not aggregated_type:
         msg = f"Expected primitive registry type but got {t.text} at {t.location}."

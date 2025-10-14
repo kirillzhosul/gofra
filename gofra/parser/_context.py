@@ -88,6 +88,22 @@ class ParserContext(PeekableTokenizer):
 
         return function
 
+    def search_variable_in_context_parents(
+        self,
+        variable: str,
+    ) -> Variable | None:
+        context_ref = self
+
+        while True:
+            if variable in context_ref.variables:
+                return context_ref.variables[variable]
+
+            if context_ref.parent:
+                context_ref = context_ref.parent
+                continue
+
+            return None
+
     @property
     def is_top_level(self) -> bool:
         return self.parent is None

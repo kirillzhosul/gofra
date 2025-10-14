@@ -19,6 +19,7 @@ from gofra.parser.functions.parser import (
 )
 from gofra.parser.structures import unpack_structure_definition_from_token
 from gofra.parser.typecast import unpack_typecast_from_token
+from gofra.parser.types import parser_type_from_tokenizer
 from gofra.parser.variables import (
     get_all_scopes_variables,
     try_push_variable_reference,
@@ -203,8 +204,22 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
                 }[token.value],
                 token=token,
             )
+        case Keyword.SIZEOF:
+            return _unpack_sizeof_from_token(context, token)
         case _:
             assert_never(token.value)
+
+
+def _unpack_sizeof_from_token(context: ParserContext, token: Token) -> None:
+    sizeof_type = parser_type_from_tokenizer(
+        context,
+        allow_inferring_variable_types=True,
+    )
+    context.push_new_operator(
+        OperatorType.PUSH_INTEGER,
+        token=token,
+        operand=sizeof_type.size_in_bytes,
+    )
 
 
 def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:

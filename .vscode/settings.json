@@ -79,6 +79,7 @@
         "RDWR",
         "Regs",
         "sdiv",
+        "sockaddr",
         "SOMAXCONN",
         "srec",
         "stdlib",

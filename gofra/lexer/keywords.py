@@ -24,7 +24,7 @@ class Keyword(Enum):
     VARIABLE_DEFINE = auto()
 
     TYPE_CAST = auto()
-
+    SIZEOF = auto()
     SYSCALL = auto()
 
     COPY = auto()
@@ -64,6 +64,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "struct": Keyword.STRUCT,
     "inline": Keyword.INLINE,
     "global": Keyword.GLOBAL,
+    "sizeof": Keyword.SIZEOF,
     "var": Keyword.VARIABLE_DEFINE,
     "typecast": Keyword.TYPE_CAST,
     "breakpoint": Keyword.DEBUGGER_BREAKPOINT,
