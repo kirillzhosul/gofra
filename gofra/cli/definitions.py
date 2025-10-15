@@ -8,4 +8,5 @@ def construct_propagated_toolchain_definitions(
     return {
         f"ARCH_{target.architecture.upper()}": "1",
         f"OS_{target.operating_system.upper()}": "1",
+        f"IS_{target.endianness.upper()}_ENDIAN": "1",
     }

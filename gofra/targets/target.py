@@ -23,6 +23,8 @@ class Target:
     cpu_word_size: Literal[8]
     cpu_pointer_width: Literal[8]
 
+    endianness: Literal["little", "big"]
+
     file_executable_suffix: Literal["", ".exe"]
     file_library_static_suffix: Literal[".a", ".lib"]
     file_library_dynamic_suffix: Literal[".dylib", ".so", ".dll"]
@@ -45,6 +47,7 @@ class Target:
                     file_library_dynamic_suffix=".dylib",
                     file_object_suffix=".o",
                     file_assembly_suffix=".s",
+                    endianness="little",
                 )
             case "amd64-unknown-windows":
                 return Target(
@@ -59,6 +62,7 @@ class Target:
                     file_library_dynamic_suffix=".dll",
                     file_object_suffix=".obj",
                     file_assembly_suffix=".asm",
+                    endianness="little",
                 )
             case "amd64-unknown-linux":
                 return Target(
@@ -72,5 +76,6 @@ class Target:
                     file_library_static_suffix=".a",
                     file_library_dynamic_suffix=".so",
                     file_object_suffix=".o",
+                    endianness="little",
                     file_assembly_suffix=".s",
                 )
