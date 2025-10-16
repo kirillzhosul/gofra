@@ -125,7 +125,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             msg = "Struct field accessors are implemented only for references."
             raise NotImplementedError(msg)
         if not isinstance(variable.type, StructureType):
-            msg = "cannot get field-offset-of (e.g .field) for non-structure types."
+            msg = f"cannot get field-offset-of (e.g .field) for non-structure types at {token.location}."
             raise ValueError(msg)
 
         field = struct_field_accessor.text

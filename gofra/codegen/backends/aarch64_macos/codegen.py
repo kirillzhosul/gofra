@@ -52,6 +52,9 @@ def generate_aarch64_macos_backend(
     _ = target
     context = AARCH64CodegenContext(fd=fd, strings={})
 
+    # Executable section with instructions only (pure_instructions)
+    context.write(".section __TEXT,__text,regular,pure_instructions")
+
     aarch64_macos_executable_functions(context, program)
     if GOFRA_ENTRY_POINT in program.functions:
         # TODO(@kirillzhosul): Treat entry point as separate concept, and probably treat as an warning for executables
@@ -139,7 +142,7 @@ def aarch64_macos_operator_instructions(
             function_end_with_epilogue(
                 context,
                 has_preserved_frame=True,
-                has_return_value=owner_function.has_return_value(),
+                return_type=owner_function.return_type,
             )
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
@@ -246,7 +249,7 @@ def aarch64_macos_executable_functions(
         function_end_with_epilogue(
             context,
             has_preserved_frame=True,
-            has_return_value=function.has_return_value(),
+            return_type=function.return_type,
         )
 
 
@@ -291,7 +294,7 @@ def aarch64_macos_program_entry_point(
         context=context,
         has_preserved_frame=False,
         execution_trap_instead_return=True,
-        has_return_value=False,
+        return_type=VoidType(),
     )
 
 

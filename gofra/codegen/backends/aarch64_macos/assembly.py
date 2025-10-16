@@ -187,15 +187,21 @@ def initialize_static_data_section(
     Section is an tuple (label, data)
     Data is an string (raw ASCII) or number (zeroed memory blob)
     """
-    context.fd.write(".section __DATA,__data\n")
-    context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
-
-    for name, data in static_strings.items():
-        context.fd.write(f'{name}: .asciz "{data}"\n')
-    for name, variable in static_variables.items():
-        type_size = variable.size_in_bytes
-        if type_size != 0:
-            context.fd.write(f"{name}: .space {type_size}\n")
+    if static_strings:
+        context.fd.write(".section __TEXT,__cstring,cstring_literals\n")
+        for name, data in static_strings.items():
+            context.fd.write(f'{name}: .asciz "{data}"\n')
+    if static_variables:
+        context.fd.write(".section __DATA,__bss\n")
+        for name, variable in static_variables.items():
+            type_size = variable.size_in_bytes
+            if type_size != 0:
+                # TODO(@kirillzhosul): review realignment of static variables
+                if type_size >= 32:  # noqa: PLR2004
+                    context.fd.write(".p2align 4\n")
+                else:
+                    context.fd.write(".p2align 3\n")
+                context.fd.write(f"{name}: .space {type_size}\n")
 
 
 def ipc_syscall_macos(
@@ -356,7 +362,7 @@ def function_end_with_epilogue(
     *,
     has_preserved_frame: bool = True,
     execution_trap_instead_return: bool = False,
-    has_return_value: bool,
+    return_type: Type,
 ) -> None:
     """End function with proper epilogue.
 
@@ -366,9 +372,12 @@ def function_end_with_epilogue(
     :has_preserved_frame: If true, will restore that to jump out and proper stack management
     :execution_trap_instead_return: Internal, if true, will replace simple return with execution guard trap to raise from execution
     """
-    if has_return_value:
+    if not isinstance(return_type, VoidType):
         abi = context.abi
         context.write("// C-FFI retval")
+        if return_type.size_in_bytes > 16:  # noqa: PLR2004
+            msg = "Tried to return value which size in bytes requires indirect return register, NIP!"
+            raise ValueError(msg)
         pop_cells_from_stack_into_registers(context, abi.return_value_register)
 
     if has_preserved_frame:

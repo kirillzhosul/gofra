@@ -23,11 +23,12 @@ class Module:
     # Location of an file which this module initial parsed from (excluding preprocessor stages)
     path: Path
 
-    # Any function that this unit defines (implements, externs, exports)
+    # Any function that this module defines (implements, externs, exports)
     functions: MutableMapping[str, Function]
 
     # Global functions that this module defines (excluding static variables inside function)
     # notice that static variables inside function is held inside functions
     variables: MutableMapping[str, Variable]
 
+    # Structures that this module defines (can be unused)
     structures: MutableMapping[str, StructureType]
