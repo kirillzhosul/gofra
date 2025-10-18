@@ -45,6 +45,14 @@
         #define LINUX_SYSCALL_GETTIMEOFDAY  96
     #endif // ARCH_AMD64
 
+    // network socket address in structure (posix/unix only)
+    struct sockaddr_in
+        sin_family char[2]
+        sin_port   char[2]
+        sin_addr   char[4]
+        sin_zero   int   // zero padding
+    end
+    
     // ---  Syscall Wrappers ---
     // These are the preferred way to make syscalls.
     #ifdef ARCH_AMD64
