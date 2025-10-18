@@ -1,8 +1,13 @@
 from collections import deque
 from collections.abc import Mapping
+from typing import Self
 
 from gofra.lexer.lexer import tokenize_from_raw
 from gofra.lexer.tokens import TokenLocation
+from gofra.preprocessor.macros.defaults import (
+    construct_propagated_toolchain_definitions,
+)
+from gofra.targets.target import Target
 
 from .macro import Macro
 
@@ -15,6 +20,18 @@ class MacrosRegistry(dict[str, Macro]):
         macro = Macro(location=location, name=name)
         self.__setitem__(name, macro)
         return macro
+
+    def inject_propagated_defaults(self, target: Target) -> Self:
+        definitions = construct_propagated_toolchain_definitions(
+            target=target,
+        )
+        injected_registry = registry_from_raw_definitions(
+            location=TokenLocation.toolchain(),
+            definitions=definitions,
+        )
+
+        self.update(injected_registry)
+        return self
 
 
 def registry_from_raw_definitions(

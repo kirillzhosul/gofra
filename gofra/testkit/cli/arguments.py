@@ -4,8 +4,8 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
 
-from gofra.cli.distribution import infer_distribution_library_paths
-from gofra.cli.helpers import cli_get_executable_program
+from gofra.cli.executable import cli_get_executable_program
+from gofra.preprocessor.include.distribution import infer_distribution_library_paths
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from subprocess import TimeoutExpired
 from typing import TYPE_CHECKING
 
-from gofra.cli.errors import cli_gofra_error_handler
+from gofra.cli.errors.error_handler import cli_gofra_error_handler
 from gofra.cli.output import cli_message
 from gofra.exceptions import GofraError
 from gofra.targets.infer_host import infer_host_target
@@ -34,9 +34,12 @@ THREAD_OPTIMAL_WORKERS_COUNT = (os.cpu_count() or 1) * 2
 
 def cli_entry_point() -> None:
     """CLI main entry."""
-    with cli_gofra_error_handler():
+    with cli_gofra_error_handler(
+        debug_user_friendly_errors=False,
+    ):
         args = parse_cli_arguments()
         cli_process_testkit_runner(args)
+        return sys.exit(0)
 
 
 def cli_process_testkit_runner(args: CLIArguments) -> None:

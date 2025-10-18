@@ -5,7 +5,6 @@ from subprocess import CalledProcessError, TimeoutExpired
 from gofra.assembler.assembler import (
     assemble_object_from_codegen_assembly,
 )
-from gofra.cli.definitions import construct_propagated_toolchain_definitions
 from gofra.cli.output import cli_message
 from gofra.codegen.generator import generate_code_for_assembler
 from gofra.exceptions import GofraError
@@ -17,6 +16,9 @@ from gofra.linker.linker import link_object_files
 from gofra.linker.output_format import LinkerOutputFormat
 from gofra.linker.profile import LinkerProfile
 from gofra.preprocessor.macros import registry_from_raw_definitions
+from gofra.preprocessor.macros.defaults import (
+    construct_propagated_toolchain_definitions,
+)
 from gofra.preprocessor.macros.registry import MacrosRegistry
 from gofra.targets import Target
 from gofra.typecheck.typechecker import validate_type_safety

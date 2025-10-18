@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from gofra.cli.helpers import cli_get_executable_program
+from gofra.cli.executable import cli_get_executable_program
 from gofra.cli.output import cli_message
 from gofra.linker.apple.libraries import APPLE_LINKER_DEFAULT_LIBRARIES_SEARCH_PATHS
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT

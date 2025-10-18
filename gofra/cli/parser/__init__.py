@@ -1,0 +1,1 @@
+"""CLI parser of arguments."""

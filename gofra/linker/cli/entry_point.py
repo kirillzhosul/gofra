@@ -1,6 +1,6 @@
 import sys
 
-from gofra.cli.errors import cli_gofra_error_handler
+from gofra.cli.errors.error_handler import cli_gofra_error_handler
 from gofra.cli.output import cli_message
 from gofra.linker.apple.command_composer import compose_apple_linker_command
 from gofra.linker.cli.arguments import parse_cli_arguments
@@ -11,7 +11,9 @@ from gofra.linker.linker import link_object_files
 
 def cli_entry_point() -> None:
     """CLI main entry."""
-    with cli_gofra_error_handler():
+    with cli_gofra_error_handler(
+        debug_user_friendly_errors=False,
+    ):
         args = parse_cli_arguments()
 
         if args.linker_backend is None:
@@ -42,3 +44,4 @@ def cli_entry_point() -> None:
                 f"Linker process failed with exit code {linker_process.returncode}!",
             )
             sys.exit(linker_process.returncode)
+        return sys.exit(0)

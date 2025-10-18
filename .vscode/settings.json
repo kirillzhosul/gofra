@@ -32,6 +32,7 @@
         "CREAT",
         "cset",
         "cstr",
+        "cstring",
         "Ddebug",
         "decq",
         "DFARF",

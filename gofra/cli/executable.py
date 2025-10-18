@@ -6,19 +6,12 @@ from pathlib import Path
 from gofra.cli.output import cli_message
 
 
-def get_executable_program(
-    *,
-    override: str | None = None,
-) -> str:
-    return override if override else Path(sys.argv[0]).name
-
-
 def cli_get_executable_program(
     *,
     override: str | None = None,
     warn_proper_installation: bool,
 ) -> str:
-    executable = get_executable_program(override=override)
+    executable = _get_executable_program(override=override)
 
     if warn_proper_installation and executable == "__main__.py":
         cli_message(
@@ -28,3 +21,10 @@ def cli_get_executable_program(
         )
 
     return executable
+
+
+def _get_executable_program(
+    *,
+    override: str | None = None,
+) -> str:
+    return override if override else Path(sys.argv[0]).name
