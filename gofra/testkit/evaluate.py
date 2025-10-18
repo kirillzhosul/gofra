@@ -1,6 +1,7 @@
+import signal
 import sys
 from pathlib import Path
-from subprocess import CalledProcessError, TimeoutExpired
+from subprocess import PIPE, CalledProcessError, TimeoutExpired
 
 from gofra.assembler.assembler import (
     assemble_object_from_codegen_assembly,
@@ -102,6 +103,12 @@ def evaluate_test_case(
         0 if not expected_exit_code_macro else expected_exit_code_macro.tokens[0].value
     )
 
+    if expected_exit_code in (-signal.SIGSEGV, signal.SIGSEGV):
+        cli_message(
+            "WARNING",
+            f"Expected exit code is equals to SIGSEGV signal ({expected_exit_code}) this will cause invalid error messages when testing",
+        )
+
     if not isinstance(expected_exit_code, int):
         msg = "Expected TESTKIT_EXPECTED_EXIT_CODE to be an integer."
         raise TypeError(msg)
@@ -109,7 +116,14 @@ def evaluate_test_case(
     apply_file_executable_permissions(filepath=artifact_path)
 
     try:
-        exit_code = execute_binary_executable(artifact_path, args=[], timeout=15)
+        exit_code = execute_binary_executable(
+            artifact_path,
+            args=[],
+            timeout=15,
+            stdout=PIPE,
+            stderr=PIPE,
+            stdin=PIPE,
+        )
     except TimeoutExpired as e:
         return Test(
             target=build_target,

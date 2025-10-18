@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from subprocess import run
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TextIO
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -16,6 +16,9 @@ def execute_binary_executable(
     *,
     args: Iterable[str],
     timeout: float | None = None,
+    stdin: TextIO | int = sys.stdin,
+    stdout: TextIO | int = sys.stdout,
+    stderr: TextIO | int = sys.stderr,
 ) -> int:
     """Execute given binary executable in an shell and return its exit code.
 
@@ -30,9 +33,9 @@ def execute_binary_executable(
     process = run(  # noqa: S602
         (executable, *args),
         timeout=timeout,
-        stdin=sys.stdin,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
+        stdin=stdin,
+        stdout=stdout,
+        stderr=stderr,
         # Mostly, we want to execute with shell as less-abstracted real software
         shell=True,
         # Do not raise, we would do that by itself

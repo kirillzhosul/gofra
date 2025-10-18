@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import signal
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -83,6 +84,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     cli_message(
         level="INFO",
         text=f"Completed testkit run for target '{target.triplet}' with {len(test_paths)} cases in {time_taken:.2f}s. (avg {(time_taken / len(test_paths)) if test_paths else 0:.2f}s.)",
+        verbose=args.verbose,
     )
     display_test_matrix(test_matrix)
     display_test_errors(test_matrix)
@@ -90,6 +92,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     has_failing_tests = any(t.status != TestStatus.SUCCESS for t in test_matrix)
     if has_failing_tests:
         # CI mostly:
+        print()
         cli_message("ERROR", "Some test(s) failing, exiting abnormally (exit code 1)")
         return sys.exit(1)
 
@@ -113,6 +116,9 @@ def evaluate_test_matrix_threaded(
 
     max_workers = max(1, min(len(test_paths), args.max_thread_workers))
 
+    if max_workers <= 1:
+        return [evaluate_single_test(test_path) for test_path in test_paths]
+
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(evaluate_single_test, test_path) for test_path in test_paths
@@ -134,10 +140,18 @@ def display_test_errors(matrix: list[Test]) -> None:
         if isinstance(test.error, TimeoutExpired):
             cli_message("ERROR", "Execution timed out (compile OK!)")
             continue
-        cli_message(
-            "ERROR",
-            f"Execution finished with exit code {test.error.returncode} while expected exit code {test.expected_exit_code}!",
-        )
+
+        exit_code = test.error.returncode
+        if exit_code == -signal.SIGSEGV:
+            cli_message(
+                "ERROR",
+                f"Execution failed with segmentation fault (SIGSEGV, {exit_code})!",
+            )
+        else:
+            cli_message(
+                "ERROR",
+                f"Execution finished with exit code {exit_code} while expected exit code {test.expected_exit_code}!",
+            )
 
 
 def search_test_case_files(directory: Path) -> Generator[Path]:
