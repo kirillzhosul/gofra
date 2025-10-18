@@ -207,15 +207,17 @@ def aarch64_macos_operator_instructions(
         case OperatorType.DEBUGGER_BREAKPOINT:
             debugger_breakpoint_trap(context, number=1)
         case OperatorType.STRUCT_FIELD_OFFSET:
-            pop_cells_from_stack_into_registers(
-                context,
-                "X0",
-            )  # struct pointer (*struct)
             assert isinstance(operator.operand, str)
             struct, field = operator.operand.split(".", maxsplit=1)
             field_offset = program.structures[struct].get_field_offset(field)
-            context.write(f"add X0, X0, #{field_offset}")
-            push_register_onto_stack(context, "X0")
+            if field_offset:
+                # only relatable as operation is pointer is not already at first structure field
+                pop_cells_from_stack_into_registers(
+                    context,
+                    "X0",
+                )  # struct pointer (*struct)
+                context.write(f"add X0, X0, #{field_offset}")
+                push_register_onto_stack(context, "X0")
         case _:
             assert_never(operator.type)
 
