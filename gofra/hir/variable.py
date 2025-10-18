@@ -24,6 +24,11 @@ class Variable:
     # Type of an variable specified in source code
     type: Type
 
+    # Value which this variables is filled by default
+    # None means it has not initialized and must be zero-initialized
+    # ints only for now
+    initial_value: int | None = None
+
     @property
     def is_global_scope(self) -> bool:
         """Is this variable defined in global root scope."""

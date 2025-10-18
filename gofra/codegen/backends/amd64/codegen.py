@@ -286,6 +286,9 @@ def amd64_data_section(
     program: Module,
 ) -> None:
     """Write program static data section filled with static strings and memory blobs."""
+    if any(v.initial_value is not None for v in program.variables.values()):
+        raise NotADirectoryError
+
     initialize_static_data_section(
         context,
         static_strings=context.strings,

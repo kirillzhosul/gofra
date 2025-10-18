@@ -155,6 +155,8 @@ def translate_hir_function_to_lir_function(
 ) -> LIRInternalFunction:
     assert not hir_function.is_external
     parameters = [LIRParameter(t) for t in hir_function.parameters]
+    if any(v.initial_value is not None for v in hir_function.variables.values()):
+        raise NotADirectoryError
     f_local_vars = {v.name: v.type for v in hir_function.variables.values()}
 
     lir_function = LIRInternalFunction(

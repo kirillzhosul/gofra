@@ -21,7 +21,6 @@ from gofra.parser.structures import unpack_structure_definition_from_token
 from gofra.parser.typecast import unpack_typecast_from_token
 from gofra.parser.types import parser_type_from_tokenizer
 from gofra.parser.variables import (
-    get_all_scopes_variables,
     try_push_variable_reference,
     unpack_variable_definition_from_token,
 )
@@ -102,6 +101,9 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
                 raise ValueError(msg)
             context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token=token)
             return None
+        case TokenType.SEMICOLON:
+            # Treat semicolon as simple line break should be fine except this may be caught in some complex constructions checks
+            return None
         case (
             TokenType.LBRACKET
             | TokenType.RBRACKET
@@ -109,10 +111,10 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
             | TokenType.RPAREN
             | TokenType.DOT
             | TokenType.COMMA
-            | TokenType.SEMICOLON
             | TokenType.COLON
             | TokenType.RCURLY
             | TokenType.LCURLY
+            | TokenType.ASSIGNMENT
         ):
             msg = f"Got {token.type.name} ({token.location}) in form of an single parser-expression (non-composite). This token (as other symbol-defined ones) must occur only in composite expressions (e.g function signature, type constructions)."
             raise ValueError(msg)
@@ -128,12 +130,8 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
     if try_push_variable_reference(context, token):
         return
 
-    names_available = context.functions.keys() | [
-        v.name for v in get_all_scopes_variables(context)
-    ]
     raise ParserUnknownIdentifierError(
         word_token=token,
-        names_available=names_available,
         best_match=_best_match_for_word(context, token.text),
     )
 

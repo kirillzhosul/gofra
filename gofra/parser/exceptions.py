@@ -64,19 +64,17 @@ class ParserUnknownIdentifierError(GofraError):
         self,
         *args: object,
         word_token: Token,
-        names_available: Iterable[str],
         best_match: str | None = None,
     ) -> None:
         super().__init__(*args)
         self.word_token = word_token
-        self.names_available = names_available
         self.best_match = best_match
 
     def __repr__(self) -> str:
-        return f"""Encountered an unknown identifier '{self.word_token.text}' at {self.word_token.location}!
-
-Available names: {", ".join(self.names_available) or "...":{512}}""" + (
-            f"\nDid you mean '{self.best_match}'?" if self.best_match else ""
+        return (
+            f"""Encountered an unknown identifier '{self.word_token.text}' at {self.word_token.location}!"""
+            + (f"\n\nDid you mean '{self.best_match}'?\n" if self.best_match else "\n")
+            + "\n[parser-unknown-identifier-error]"
         )
 
 

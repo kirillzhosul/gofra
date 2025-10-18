@@ -31,8 +31,7 @@ end
 
 var ball Ball
 
-#define DEFAULT_DIFFICULTY 2
-var difficulty int
+var difficulty int = 2
 
 #define WINDOW_NAME   "Gofra Pong"
 #define WINDOW_WIDTH  1200
@@ -90,7 +89,6 @@ func void init_game[]
     enemy.y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
     enemy.speed PADDLE_DEFAULT_SPEED !<
 
-    difficulty DEFAULT_DIFFICULTY !<
     call update_difficulty
 end
 

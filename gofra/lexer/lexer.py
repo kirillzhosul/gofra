@@ -193,6 +193,7 @@ def _tokenize_word_or_keyword_into_tokens(
         ",": TokenType.COMMA,
         ".": TokenType.DOT,
         ";": TokenType.SEMICOLON,
+        "=": TokenType.ASSIGNMENT,
         ":": TokenType.COLON,
         "{": TokenType.LCURLY,
         "}": TokenType.RCURLY,
@@ -201,6 +202,17 @@ def _tokenize_word_or_keyword_into_tokens(
     symbols = "".join(single_symbols_mapping.keys())
     if any(c in symbols for c in word):
         symbol_idx = min(word.index(c) for c in symbols if c in word)
+
+        if word[symbol_idx] == "=" and word != "=":
+            # Weirdest workaround for assignment composite token construction
+            # should be refactored ASAP
+            # assignment operator
+            return Token(
+                type=TokenType.IDENTIFIER,
+                text=word,
+                location=location,
+                value=word,
+            )
 
         if symbol_idx == 0:
             # Skip beginning with symbol to next symbol - single symbol

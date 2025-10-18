@@ -1,0 +1,10 @@
+// Test that assignment of default to local stack variable works
+#include "std.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 69
+
+
+func void main[]
+    var stack int = 69
+    stack ?> exit
+end

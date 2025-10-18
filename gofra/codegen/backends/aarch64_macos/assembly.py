@@ -191,9 +191,17 @@ def initialize_static_data_section(
         context.fd.write(".section __TEXT,__cstring,cstring_literals\n")
         for name, data in static_strings.items():
             context.fd.write(f'{name}: .asciz "{data}"\n')
-    if static_variables:
+
+    bss_variables = {
+        k: v for k, v in static_variables.items() if v.initial_value is None
+    }
+    data_variables = {
+        k: v for k, v in static_variables.items() if v.initial_value is not None
+    }
+
+    if bss_variables:
         context.fd.write(".section __DATA,__bss\n")
-        for name, variable in static_variables.items():
+        for name, variable in bss_variables.items():
             type_size = variable.size_in_bytes
             if type_size != 0:
                 # TODO(@kirillzhosul): review realignment of static variables
@@ -201,7 +209,31 @@ def initialize_static_data_section(
                     context.fd.write(".p2align 4\n")
                 else:
                     context.fd.write(".p2align 3\n")
+                assert variable.initial_value is None
                 context.fd.write(f"{name}: .space {type_size}\n")
+
+    if data_variables:
+        context.fd.write(".section __DATA,__data\n")
+        for name, variable in data_variables.items():
+            type_size = variable.size_in_bytes
+            if type_size != 0:
+                # TODO(@kirillzhosul): review realignment of static variables
+                if type_size >= 32:  # noqa: PLR2004
+                    context.fd.write(".p2align 4\n")
+                else:
+                    context.fd.write(".p2align 3\n")
+                assert variable.initial_value is not None
+                if type_size <= 1:
+                    context.fd.write(f"{name}: .byte {variable.initial_value}\n")
+                elif type_size <= 2:  # noqa: PLR2004
+                    context.fd.write(f"{name}: .half {variable.initial_value}\n")
+                elif type_size <= 4:  # noqa: PLR2004
+                    context.fd.write(f"{name}: .word {variable.initial_value}\n")
+                elif type_size <= 8:  # noqa: PLR2004
+                    context.fd.write(f"{name}: .quad {variable.initial_value}\n")
+                else:
+                    msg = "Codegen does not supports initial values that out of 8 bytes range"
+                    raise ValueError(msg)
 
 
 def ipc_syscall_macos(
@@ -343,6 +375,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
     if global_name:
         context.fd.write(f".global {global_name}\n")
 
+    push_register_onto_stack(context, register="X0")
     context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
     context.fd.write(f"{name}:\n")
 
@@ -355,6 +388,19 @@ def function_begin_with_prologue(  # noqa: PLR0913
         context.write("// C-FFI arguments")
         for register in registers:
             push_register_onto_stack(context, register)
+
+    for variable in local_variables.values():
+        initial_value = variable.initial_value
+        if initial_value is None:
+            continue
+
+        current_offset = local_offsets.offsets[variable.name]
+        if initial_value != 0:
+            context.write(f"mov X0, #{initial_value}")
+            context.write(f"str X0, [X29, -{current_offset}]")
+        else:
+            # wzr for 32 bits later
+            context.write(f"str XZR, [X29, -{current_offset}]")
 
 
 def function_end_with_epilogue(

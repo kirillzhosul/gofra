@@ -71,6 +71,7 @@ def _construct_argument_parser() -> ArgumentParser:
         dest="excluded_test_files",
         default=[],
         nargs="?",
+        help="File names to be excluded from testing.",
     )
 
     parser.add_argument(

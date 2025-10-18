@@ -1,0 +1,9 @@
+#include "std.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 32
+
+var buffer char[32]
+
+func void main[]
+    sizeof buffer exit
+end

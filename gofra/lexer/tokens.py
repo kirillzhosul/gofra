@@ -86,6 +86,9 @@ class TokenType(IntEnum):
     LCURLY = auto()  # {
     RCURLY = auto()  # }
 
+    # Additional stuff
+    ASSIGNMENT = auto()  # =
+
     # Punctuation
     DOT = auto()  # .
     COMMA = auto()  # ,

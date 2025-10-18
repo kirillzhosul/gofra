@@ -1,0 +1,17 @@
+
+// ==============================================
+// Simple input from user console
+// ==============================================
+
+#include "std.gof"
+
+var buf char[16]
+
+func void main[]
+
+    "Enter something: " print
+    buf sizeof buf input
+
+    "You entered: " print
+    buf sizeof buf println
+end

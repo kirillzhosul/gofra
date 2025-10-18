@@ -4,6 +4,5 @@
 #define TESTKIT_EXPECTED_EXIT_CODE 13
 
 func void main[]
-    "Hello, World!" drop cstr_len
-    sc_exit
+    "Hello, World!" str_len exit
 end

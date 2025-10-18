@@ -7,21 +7,7 @@ from gofra.parser.exceptions import ParserVariableNameAlreadyDefinedAsVariableEr
 from gofra.parser.types import parser_type_from_tokenizer
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.structure import StructureType
-
-
-def get_all_scopes_variables(
-    child: ParserContext,
-) -> list[Variable]:
-    context_ref = child
-    variables: list[Variable] = []
-    while True:
-        variables.extend(context_ref.variables.values())
-
-        if context_ref.parent:
-            context_ref = context_ref.parent
-            continue
-
-        return variables
+from gofra.types.primitive.integers import I64Type
 
 
 def unpack_variable_definition_from_token(
@@ -56,12 +42,32 @@ def unpack_variable_definition_from_token(
         if context.is_top_level
         else VariableScopeClass.FUNCTION
     )
+
+    initial_value = None
+
+    if context.peek_token().type == TokenType.ASSIGNMENT:
+        _ = context.next_token()  # consume =
+        value_token = context.next_token()
+        if value_token.type != TokenType.INTEGER:
+            msg = f"Expected an integer for assignment operation, but got {value_token.type} as {value_token.location}"
+            raise ValueError(msg)
+        if type(typename) not in (I64Type,):
+            msg = "Assignment is allowed only for integer types for now."
+            raise ValueError(msg)
+
+        assert isinstance(value_token.value, int)
+        initial_value = value_token.value
+        if initial_value.bit_count() > typename.size_in_bytes * 8:
+            msg = f"Default value is to big for that type ({typename}) at {value_token.location}"
+            raise ValueError(msg)
+
     context.variables[varname] = Variable(
         name=varname,
         type=typename,
         defined_at=varname_token.location,
         scope_class=scope_class,
         storage_class=storage_class,
+        initial_value=initial_value,
     )
 
 

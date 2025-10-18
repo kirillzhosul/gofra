@@ -26,8 +26,9 @@ end
 ## Platform support
 Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target:
 
-- **x86_64** (Linux)
-- **AArch64** macOS (Darwin)
+- Full: **AArch64** macOS (Darwin)
+- Partial: **x86_64** (Linux)
+- Pending: **x86_64** (Windows)
 
 ## Features
 - *Low-level* - Write unsafe, low-level code with direct memory access
