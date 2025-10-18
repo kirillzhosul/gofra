@@ -106,7 +106,7 @@ def evaluate_test_case(
     if expected_exit_code in (-signal.SIGSEGV, signal.SIGSEGV):
         cli_message(
             "WARNING",
-            f"Expected exit code is equals to SIGSEGV signal ({expected_exit_code}) this will cause invalid error messages when testing",
+            f"Expected exit code is equals to SIGSEGV signal ({expected_exit_code}) this may cause invalid error messages when testing",
         )
 
     if not isinstance(expected_exit_code, int):

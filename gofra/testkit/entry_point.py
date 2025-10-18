@@ -142,7 +142,8 @@ def display_test_errors(matrix: list[Test]) -> None:
             continue
 
         exit_code = test.error.returncode
-        if exit_code == -signal.SIGSEGV:
+        is_sigsegv = exit_code in (signal.SIGSEGV, -signal.SIGSEGV)
+        if is_sigsegv:
             cli_message(
                 "ERROR",
                 f"Execution failed with segmentation fault (SIGSEGV, {exit_code})!",
