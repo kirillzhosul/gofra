@@ -37,15 +37,39 @@
 #ifdef OS_LINUX   inline func int input_fd[int, *char[], int] sc_read end #endif
 #ifdef OS_DARWIN  inline func int input_fd[int, *char[], int] sc_read end #endif
 
-// Input a string from standard console input stream
-var input_length_temp int
-func void input[*char[], int]
-   input_length_temp swap !<
-   STD_IN swap
-   input_length_temp ?>
-   input_fd drop
+// Consume all character bytes from input buffer (e.g `input_fd`)
+// Use as safety method as reading and letting some character leak through 
+func void input_exhaust_buffer[]
+    var buffer char[1]
+
+    buffer[0] 'a' !<
+
+    while 
+        buffer[0] ?> typecast int 
+        '\n' typecast int 
+        != 
+    do
+            STD_IN
+            buffer
+            sizeof buffer
+        input_fd drop
+    end
 end
 
+// Input a string from standard console input stream
+// Safe to buffer overflows, as exhaust all remaining IO buffer
+// unsafe to big buffers (TODO)
+var input_length_temp int
+func void input[*char[], int]
+    input_length_temp swap !<
+    STD_IN swap
+    input_length_temp ?>
+    input_fd drop
+
+    // Safety mechanism:
+    // exhaust leftover buffer after system IO read
+    call input_exhaust_buffer
+end
 
 // Print an string into standard console output stream
 var print_length_temp int
