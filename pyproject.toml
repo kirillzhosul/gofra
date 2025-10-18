@@ -12,6 +12,7 @@ keywords = ["compiler", "language"]
 [project.scripts]
 gofra = "gofra.__main__:cli_entry_point"
 gofra-ld = "gofra.linker.__main__:main"
+gofra-testkit = "gofra.testkit.__main__:main"
 
 [project.urls]
 documentation = "https://kirillzhosul.github.io/gofra"
@@ -25,7 +26,6 @@ exclude = ["gofra/testkit"]
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.6.1"
-
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.13.1"

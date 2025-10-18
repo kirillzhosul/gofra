@@ -5,5 +5,10 @@ Should be exported as something like `gofra-testkit` system-wide.
 
 from .entry_point import cli_entry_point
 
-if __name__ == "__main__":
+
+def main() -> None:
     cli_entry_point()
+
+
+if __name__ == "__main__":
+    main()

@@ -63,8 +63,8 @@ def _construct_argument_parser() -> ArgumentParser:
     parser.add_argument(
         "--directory",
         "-d",
-        default="./",
-        help="Directory from which to search test files for runner. Defaults to `./`",
+        default="./tests",
+        help="Directory from which to search test files for runner. Defaults to `./tests`",
     )
 
     parser.add_argument(
