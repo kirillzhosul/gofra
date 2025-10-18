@@ -11,8 +11,9 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.12']
-        os: [macos-latest, ubuntu-latest] # TODO:  add windows-latest after we finish support for it
-
+        os: [macos-latest, ubuntu-latest, windows-latest]
+      fail-fast: false
+  
     runs-on: ${{ matrix.os }}
     
     steps:
@@ -29,9 +30,16 @@ jobs:
         python -m gofra --version
         
 
+
     - name: Run tests
       # Threads is set to 1 as it affects testing speed, but currently makes display of errors harder as they not linear
       # probably should be fixed at some point
       run: |
         python -m gofra.testkit --keep-artifacts --threads 1 -s
+        
+    - name: Run examples test
+      # Threads is set to 1 as it affects testing speed, but currently makes display of errors harder as they not linear
+      # probably should be fixed at some point
+      run: |
+        python -m gofra.testkit --keep-artifacts --threads 1 -s -d examples --build-only -p -p "*_*.gof" -e 03_pong.gof --fail-with-abnormal-exit-code
         

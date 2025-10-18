@@ -18,14 +18,13 @@ from .cli.arguments import CLIArguments, parse_cli_arguments
 from .evaluate import evaluate_test_case
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
+    from collections.abc import Sequence
     from pathlib import Path
 
     from gofra.targets.target import Target
 
     from .test import Test
 
-TEST_CASE_PATTERN = "test_*.gof"
 TESTKIT_CACHE_DIR = "__testkit__"
 NANOS_TO_SECONDS = 1_000_000_000
 
@@ -44,7 +43,13 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     """Process full testkit toolchain."""
     cli_message(level="INFO", text="Searching test files...", verbose=args.verbose)
 
-    test_paths = tuple(search_test_case_files(args.directory))
+    test_paths = tuple(
+        search_test_case_files(
+            args.directory,
+            args.test_files_pattern,
+            excluded_filenames=args.excluded_test_files,
+        ),
+    )
     cli_message(
         level="INFO",
         text=f"Found {len(test_paths)} test case files.",
@@ -159,5 +164,13 @@ def display_test_errors(matrix: list[Test]) -> None:
             )
 
 
-def search_test_case_files(directory: Path) -> Generator[Path]:
-    return directory.glob(TEST_CASE_PATTERN, case_sensitive=False)
+def search_test_case_files(
+    directory: Path,
+    pattern: str,
+    excluded_filenames: list[str],
+) -> list[Path]:
+    return [
+        p
+        for p in directory.glob(pattern, case_sensitive=False)
+        if p.name not in excluded_filenames
+    ]

@@ -98,6 +98,14 @@ def evaluate_test_case(
             error=e,
         )
 
+    if args.build_only_no_execute:
+        return Test(
+            target=build_target,
+            status=TestStatus.SUCCESS,
+            path=path,
+            artifact_path=artifact_path,
+        )
+
     expected_exit_code_macro = macros.get("TESTKIT_EXPECTED_EXIT_CODE")
     expected_exit_code = (
         0 if not expected_exit_code_macro else expected_exit_code_macro.tokens[0].value

@@ -20,6 +20,11 @@ class CLIArguments:
     verbose: bool
     include_paths: list[Path]
 
+    test_files_pattern: str
+    excluded_test_files: list[str]
+
+    fail_with_abnormal_exit_code: bool
+    build_only_no_execute: bool
     max_thread_workers: int
     delete_build_artifacts: bool
     delete_build_cache: bool = True
@@ -36,7 +41,11 @@ def parse_cli_arguments() -> CLIArguments:
         directory=Path(args.directory),
         max_thread_workers=args.max_thread_workers,
         build_cache_dir=Path(args.cache_dir),
+        build_only_no_execute=bool(args.build_only_no_execute),
         delete_build_artifacts=bool(args.delete_build_artifacts),
+        excluded_test_files=args.excluded_test_files,
+        test_files_pattern=args.test_files_pattern,
+        fail_with_abnormal_exit_code=bool(args.fail_with_abnormal_exit_code),
     )
 
 
@@ -46,6 +55,30 @@ def _construct_argument_parser() -> ArgumentParser:
         description="Gofra Testkit - CLI for testing internals of Gofra programming language",
         add_help=True,
         prog=cli_get_executable_program(override=None, warn_proper_installation=False),
+    )
+
+    parser.add_argument(
+        "--pattern",
+        "-p",
+        dest="test_files_pattern",
+        default="test_*.gof",
+        help="Pattern for file that is treated as test cases, defaults to `test_*.gof`",
+    )
+
+    parser.add_argument(
+        "--exclude",
+        "-e",
+        dest="excluded_test_files",
+        default=[],
+        nargs="?",
+    )
+
+    parser.add_argument(
+        "--fail-with-abnormal-exit-code",
+        dest="fail_with_abnormal_exit_code",
+        default=False,
+        action="store_true",
+        help="If passed will exit abnormally if any test is failing",
     )
 
     parser.add_argument(
@@ -80,6 +113,15 @@ def _construct_argument_parser() -> ArgumentParser:
         required=False,
         help="Path to directory where to store cache (defaults `./.build`)",
     )
+
+    parser.add_argument(
+        "--build-only",
+        "--build-test",
+        dest="build_only_no_execute",
+        action="store_true",
+        help="If specified, will not execute binaries, only tries to build it (e.g suitable for applications build testing)",
+    )
+
     parser.add_argument(
         "--threads",
         type=int,
