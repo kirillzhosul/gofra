@@ -142,7 +142,11 @@ def display_test_errors(matrix: list[Test]) -> None:
             continue
 
         exit_code = test.error.returncode
-        is_sigsegv = exit_code in (signal.SIGSEGV, -signal.SIGSEGV)
+        is_sigsegv = exit_code in (
+            signal.SIGSEGV,
+            -signal.SIGSEGV,
+            128 + signal.SIGSEGV,
+        )
         if is_sigsegv:
             cli_message(
                 "ERROR",

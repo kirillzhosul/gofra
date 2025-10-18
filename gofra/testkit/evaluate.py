@@ -103,7 +103,7 @@ def evaluate_test_case(
         0 if not expected_exit_code_macro else expected_exit_code_macro.tokens[0].value
     )
 
-    if expected_exit_code in (-signal.SIGSEGV, signal.SIGSEGV):
+    if expected_exit_code in (-signal.SIGSEGV, signal.SIGSEGV, 128 + signal.SIGSEGV):
         cli_message(
             "WARNING",
             f"Expected exit code is equals to SIGSEGV signal ({expected_exit_code}) this may cause invalid error messages when testing",
