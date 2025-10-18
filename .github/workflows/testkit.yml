@@ -30,16 +30,19 @@ jobs:
         python -m gofra --version
         
 
+    # TODO: add `--fail-with-abnormal-exit-code` when finish these tests
 
     - name: Run tests
       # Threads is set to 1 as it affects testing speed, but currently makes display of errors harder as they not linear
       # probably should be fixed at some point
       run: |
-        python -m gofra.testkit --keep-artifacts --threads 1 -s
+        python -m gofra.testkit --keep-artifacts --silent --fail-with-abnormal-exit-code --threads 1 -d ./tests
         
     - name: Run examples test
-      # Threads is set to 1 as it affects testing speed, but currently makes display of errors harder as they not linear
-      # probably should be fixed at some point
       run: |
-        python -m gofra.testkit --keep-artifacts --threads 1 -s -d examples --build-only -p "*_*.gof" -e 03_pong.gof --fail-with-abnormal-exit-code
-        
+        python -m gofra.testkit \
+          --build-only \
+          --keep-artifacts --silent \
+          -d ./examples \
+          -p "*_*.gof" \
+          -e 03_pong.gof 
