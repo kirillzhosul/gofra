@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -12,6 +11,7 @@ from gofra.cli.output import cli_message
 from gofra.exceptions import GofraError
 from gofra.targets.infer_host import infer_host_target
 from gofra.testkit.cli.matrix import display_test_matrix
+from gofra.testkit.test import TestStatus
 
 from .cli.arguments import CLIArguments, parse_cli_arguments
 from .evaluate import evaluate_test_case
@@ -27,9 +27,6 @@ if TYPE_CHECKING:
 TEST_CASE_PATTERN = "test_*.gof"
 TESTKIT_CACHE_DIR = "__testkit__"
 NANOS_TO_SECONDS = 1_000_000_000
-
-
-THREAD_OPTIMAL_WORKERS_COUNT = (os.cpu_count() or 1) * 2
 
 
 def cli_entry_point() -> None:
@@ -84,11 +81,19 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
 
     time_taken = (time.monotonic_ns() - start_time) / NANOS_TO_SECONDS
     cli_message(
-        level="SUCCESS",
+        level="INFO",
         text=f"Completed testkit run for target '{target.triplet}' with {len(test_paths)} cases in {time_taken:.2f}s. (avg {(time_taken / len(test_paths)) if test_paths else 0:.2f}s.)",
     )
     display_test_matrix(test_matrix)
     display_test_errors(test_matrix)
+
+    has_failing_tests = any(t.status != TestStatus.SUCCESS for t in test_matrix)
+    if has_failing_tests:
+        # CI mostly:
+        cli_message("ERROR", "Some test(s) failing, exiting abnormally (exit code 1)")
+        return sys.exit(1)
+
+    return sys.exit(0)
 
 
 def evaluate_test_matrix_threaded(
@@ -106,7 +111,7 @@ def evaluate_test_matrix_threaded(
             cache_directory=cache_directory,
         )
 
-    max_workers = max(1, min(len(test_paths), THREAD_OPTIMAL_WORKERS_COUNT))
+    max_workers = max(1, min(len(test_paths), args.max_thread_workers))
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [

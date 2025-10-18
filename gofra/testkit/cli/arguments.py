@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
 
 from gofra.cli.executable import cli_get_executable_program
 from gofra.preprocessor.include.distribution import infer_distribution_library_paths
+
+THREAD_OPTIMAL_WORKERS_COUNT = (os.cpu_count() or 1) * 2
 
 
 @dataclass(frozen=True)
@@ -17,6 +20,7 @@ class CLIArguments:
     verbose: bool
     include_paths: list[Path]
 
+    max_thread_workers: int
     delete_build_artifacts: bool
     delete_build_cache: bool = True
 
@@ -30,6 +34,7 @@ def parse_cli_arguments() -> CLIArguments:
         include_paths=infer_distribution_library_paths(),
         verbose=not bool(args.silent),
         directory=Path(args.directory),
+        max_thread_workers=args.max_thread_workers,
         build_cache_dir=Path(args.cache_dir),
         delete_build_artifacts=bool(args.delete_build_artifacts),
     )
@@ -74,5 +79,12 @@ def _construct_argument_parser() -> ArgumentParser:
         default="./.build",
         required=False,
         help="Path to directory where to store cache (defaults `./.build`)",
+    )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        dest="max_thread_workers",
+        default=THREAD_OPTIMAL_WORKERS_COUNT,
+        help=f"Max thread workers (defaults to {THREAD_OPTIMAL_WORKERS_COUNT} for your host)",
     )
     return parser

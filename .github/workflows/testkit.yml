@@ -28,7 +28,10 @@ jobs:
       run: |
         python -m gofra --version
         
+
     - name: Run tests
+      # Threads is set to 1 as it affects testing speed, but currently makes display of errors harder as they not linear
+      # probably should be fixed at some point
       run: |
-        python -m gofra.testkit
+        python -m gofra.testkit --keep-artifacts --threads 1 
         
