@@ -193,8 +193,18 @@ def amd64_operator_instructions(
             load_memory_from_stack_arguments(context)
         case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)
-        case OperatorType.DEBUGGER_BREAKPOINT | OperatorType.STRUCT_FIELD_OFFSET:
+        case OperatorType.DEBUGGER_BREAKPOINT:
             raise NotImplementedError(operator)
+        case OperatorType.STRUCT_FIELD_OFFSET:
+            pop_cells_from_stack_into_registers(
+                context,
+                "rax",
+            )  # struct pointer (*struct)
+            assert isinstance(operator.operand, str)
+            struct, field = operator.operand.split(".", maxsplit=1)
+            field_offset = program.structures[struct].get_field_offset(field)
+            context.write(f"addq %rax, ${field_offset}")
+            push_register_onto_stack(context, "rax")
         case _:
             assert_never(operator.type)
 
