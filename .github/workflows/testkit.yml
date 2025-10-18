@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.12']
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest] # TODO:  add windows-latest after we finish support for it
 
     runs-on: ${{ matrix.os }}
     
