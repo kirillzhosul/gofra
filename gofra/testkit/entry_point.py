@@ -95,7 +95,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     display_test_errors(test_matrix)
 
     has_failing_tests = any(t.status != TestStatus.SUCCESS for t in test_matrix)
-    if has_failing_tests:
+    if has_failing_tests and args.fail_with_abnormal_exit_code:
         # CI mostly:
         print()
         cli_message("ERROR", "Some test(s) failing, exiting abnormally (exit code 1)")
