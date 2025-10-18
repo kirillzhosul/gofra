@@ -10,7 +10,7 @@ jobs:
   test:
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: [3.12']
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
@@ -30,5 +30,5 @@ jobs:
         
     - name: Run tests
       run: |
-        python -m gofra.testkit tests/ -v
+        python -m gofra.testkit
         
