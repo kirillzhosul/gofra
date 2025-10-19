@@ -228,11 +228,15 @@ def function_begin_with_prologue(
             push_register_onto_stack(context, register)
 
     offsets = build_local_variables_frame_offsets(local_variables)
-    _ = offsets
 
-    if any(v.initial_value is not None for v in local_variables.values()):
-        msg = "local variables with defaults is not implemented yet"
-        raise NotImplementedError(msg)
+    for variable in local_variables.values():
+        initial_value = variable.initial_value
+        if initial_value is None:
+            continue
+
+        current_offset = offsets.offsets[variable.name]
+        context.write(f"movq ${initial_value}, %rax")
+        context.write(f"mov QWORD PTR [rbp - {current_offset}], rax")
 
 
 def function_call(
