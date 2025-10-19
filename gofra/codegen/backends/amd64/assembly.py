@@ -236,7 +236,7 @@ def function_begin_with_prologue(
 
         current_offset = offsets.offsets[variable.name]
         context.write(f"movq ${initial_value}, %rax")
-        context.write(f"mov QWORD PTR [rbp - {current_offset}], rax")
+        context.write(f"mov %rax, {current_offset}(%rbp)")
 
 
 def function_call(
