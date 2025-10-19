@@ -75,4 +75,3 @@ def restore_calee_frame(
     """
     context.write("movq %rbp, %rsp")
     context.write("popq %rbp")
-    context.write("retq")
