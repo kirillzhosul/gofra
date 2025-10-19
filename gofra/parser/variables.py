@@ -6,6 +6,7 @@ from gofra.parser._context import ParserContext
 from gofra.parser.exceptions import ParserVariableNameAlreadyDefinedAsVariableError
 from gofra.parser.types import parser_type_from_tokenizer
 from gofra.types.composite.array import ArrayType
+from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.integers import I64Type
 
@@ -130,19 +131,38 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         if not is_reference:
             msg = "Struct field accessors are implemented only for references."
             raise NotImplementedError(msg)
-        if not isinstance(variable.type, StructureType):
-            msg = f"cannot get field-offset-of (e.g .field) for non-structure types at {token.location}."
+
+        if not isinstance(variable.type, StructureType) and not isinstance(
+            variable.type,
+            PointerType,
+        ):
+            msg = f"cannot get field-offset-of (e.g .field) for non-structure or pointers to structure types at {token.location}."
             raise ValueError(msg)
 
+        struct = variable.type
+        if isinstance(variable.type, PointerType) and isinstance(
+            variable.type.points_to,
+            StructureType,
+        ):
+            # If we have struct field accessor for analogue of `->` (E.g *struct)
+            # we must dereference that struct pointer and deal with direct pointer to it
+            # struct is remapped to pointer holding that type
+            context.push_new_operator(
+                type=OperatorType.MEMORY_VARIABLE_READ,
+                token=token,
+            )
+            struct = variable.type.points_to
+        assert isinstance(struct, StructureType)
+
         field = struct_field_accessor.text
-        if field not in variable.type.fields:
-            msg = f"Field accessor {field} at {token.location} is unknown for structure {variable.type.name}"
+        if field not in struct.fields:
+            msg = f"Field accessor {field} at {token.location} is unknown for structure {struct.name}"
             raise ValueError(msg)
 
         context.push_new_operator(
             type=OperatorType.STRUCT_FIELD_OFFSET,
             token=token,
-            operand=f"{variable.type.name}.{field}",
+            operand=f"{struct.name}.{field}",
         )
 
     if array_index_at is not None:

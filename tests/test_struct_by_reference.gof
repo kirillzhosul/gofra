@@ -1,0 +1,23 @@
+#include "std.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 69
+
+struct struct_
+    field int
+end
+
+var x struct_
+
+func void f[*struct_]
+    var n *struct_
+
+    n swap !<
+
+    &n.field TESTKIT_EXPECTED_EXIT_CODE !<
+end
+
+func void main[]
+    &x call f
+
+    x.field ?> exit
+end
