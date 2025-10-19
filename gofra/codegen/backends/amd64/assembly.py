@@ -85,7 +85,7 @@ def push_integer_onto_stack(
     """
     assert value >= 0, "Tried to push negative integer onto stack!"
 
-    if value.bit_count() >= 8 * 8:
+    if value.bit_count() > 8 * 8:
         msg = "Can push only integers within 64 bits range (8 bytes, x64)"
         raise ValueError(msg)
 
