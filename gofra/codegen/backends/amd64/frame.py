@@ -2,12 +2,11 @@ from collections.abc import Mapping
 from typing import NamedTuple
 
 from gofra.codegen.backends.alignment import align_to_highest_size
+from gofra.codegen.backends.amd64._context import AMD64CodegenContext
 from gofra.hir.variable import Variable
 
-# Size of frame head (FP, LR registers)
-FRAME_HEAD_SIZE = 8 * 2
-
-STORE_PAIR_MAX_RANGE = 8 * 64 - 8
+# Size of frame head (RBP register)
+FRAME_HEAD_SIZE = 8
 
 
 class LocalVariablesFrameOffsets(NamedTuple):
@@ -49,12 +48,31 @@ def build_local_variables_frame_offsets(
     # Alignment is required on AARCH64
     local_space_size = align_to_highest_size(current_offset)
 
-    if local_space_size > STORE_PAIR_MAX_RANGE:  # [-512, 504] STP limitations
-        # TODO(@kirillzhosul): Add proper auto relocation / fix STP limitations
-        msg = f"Cannot locate current local variables on a frame or relocate them, please locate big local variables in global space! Max local frame size: {STORE_PAIR_MAX_RANGE}, but currently it is: {local_space_size} bytes (aligned)!"
-        raise NotImplementedError(msg)
-
     return LocalVariablesFrameOffsets(
         offsets=offsets,
         local_space_size=local_space_size,
     )
+
+
+def preserve_calee_frame(
+    context: AMD64CodegenContext,
+    local_space_size: int,
+) -> None:
+    context.write("pushq %rbp")
+    context.write("movq %rsp, %rbp")
+
+    if local_space_size > 0:
+        aligned_size = align_to_highest_size(local_space_size)
+        context.write(f"subq ${aligned_size}, %rsp")
+
+
+def restore_calee_frame(
+    context: AMD64CodegenContext,
+) -> None:
+    """Restore preserved by callee frame.
+
+    Read more in: `preserve_callee_frame`
+    """
+    context.write("movq %rbp, %rsp")
+    context.write("popq %rbp")
+    context.write("retq")

@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from gofra.codegen.backends.amd64.frame import build_local_variables_frame_offsets
+from gofra.codegen.backends.amd64.frame import (
+    build_local_variables_frame_offsets,
+    preserve_calee_frame,
+    restore_calee_frame,
+)
 from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
 
@@ -80,6 +84,10 @@ def push_integer_onto_stack(
     TODO(@kirillzhosul, @stepanzubkov): Review max and etc like in AARCH64_MacOS
     """
     assert value >= 0, "Tried to push negative integer onto stack!"
+
+    if value.bit_count() >= 8 * 8:
+        msg = "Can push only integers within 64 bits range (8 bytes, x64)"
+        raise ValueError(msg)
 
     store_integer_into_register(context, register="rax", value=value)
     push_register_onto_stack(context, register="rax")
@@ -160,13 +168,14 @@ def ipc_syscall_linux(
     assert context.target.operating_system != "Windows", (
         "Windows Syscall usage is discouraged"
     )
+
+    if not injected_args:
+        injected_args = [None for _ in range(arguments_count + 1)]
+
     registers_to_load = (
         AMD64_LINUX_SYSCALL_NUMBER_REGISTER,
         *AMD64_LINUX_SYSCALL_ARGUMENTS_REGISTERS[:arguments_count][::-1],
     )
-
-    if not injected_args:
-        injected_args = [None for _ in range(arguments_count + 1)]
 
     for injected_argument, register in zip(
         injected_args,
@@ -190,13 +199,34 @@ def ipc_syscall_linux(
         push_register_onto_stack(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
 
 
+def push_local_variable_address_from_frame_offset(
+    context: AMD64CodegenContext,
+    local_variables: Mapping[str, Variable],
+    local_variable: str,
+) -> None:
+    current_offset = build_local_variables_frame_offsets(
+        local_variables,
+    ).offsets[local_variable]
+
+    context.write(
+        "movq %rbp, %rax",
+        f"subq ${current_offset}, %rax",
+    )
+    push_register_onto_stack(context, register="rax")
+
+
 def function_end_with_epilogue(
     context: AMD64CodegenContext,
     *,
-    has_return_value: bool,
+    has_preserved_frame: bool,
+    execution_trap_instead_return: bool = False,
+    return_type: Type,
 ) -> None:
     """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
-    if has_return_value:
+    if not isinstance(return_type, VoidType):
+        if return_type.size_in_bytes > 16:  # noqa: PLR2004
+            msg = "Tried to return value which size in bytes requires indirect return register, NIP!"
+            raise ValueError(msg)
         abi_retval_register = (
             AMD64_LINUX_ABI_RETVAL_REGISTER
             if context.target.operating_system == "Linux"
@@ -204,14 +234,21 @@ def function_end_with_epilogue(
         )
         pop_cells_from_stack_into_registers(context, abi_retval_register)
 
-    context.write("retq")
+    if has_preserved_frame:
+        restore_calee_frame(context)
+
+    if execution_trap_instead_return:
+        context.write("int3")
+    else:
+        context.write("retq")
 
 
-def function_begin_with_prologue(
+def function_begin_with_prologue(  # noqa: PLR0913
     context: AMD64CodegenContext,
     *,
     function_name: str,
     as_global_linker_symbol: bool,
+    preserve_frame: bool,
     arguments_count: int,
     local_variables: Mapping[str, Variable],
 ) -> None:
@@ -219,15 +256,19 @@ def function_begin_with_prologue(
 
     TODO(@kirillzhosul, @stepanzubkov): Review alignment for executable sections.
     """
+    offsets = build_local_variables_frame_offsets(local_variables)
     if as_global_linker_symbol:
         context.fd.write(f".global {function_name}\n")
+
     context.fd.write(f"{function_name}:\n")
+
+    if preserve_frame:
+        preserve_calee_frame(context, offsets.local_space_size)
+
     if arguments_count:
         registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:arguments_count]
         for register in registers:
             push_register_onto_stack(context, register)
-
-    offsets = build_local_variables_frame_offsets(local_variables)
 
     for variable in local_variables.values():
         initial_value = variable.initial_value

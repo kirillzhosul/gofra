@@ -82,6 +82,7 @@
         "RDONLY",
         "RDWR",
         "Regs",
+        "retq",
         "rodata",
         "sdiv",
         "SIGSEGV",

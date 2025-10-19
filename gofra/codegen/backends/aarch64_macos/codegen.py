@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
 from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
@@ -267,7 +266,7 @@ def aarch64_macos_program_entry_point(
         name=LINKER_EXPECTED_ENTRY_POINT,
         global_name=LINKER_EXPECTED_ENTRY_POINT,
         preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
-        local_variables=OrderedDict(),
+        local_variables={},
         arguments_count=0,
     )
 
