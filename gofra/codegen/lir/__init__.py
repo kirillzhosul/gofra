@@ -430,6 +430,7 @@ def translate_hir_function_to_lir_function(
             case OperatorType.PUSH_STRING:
                 assert isinstance(operator.operand, str)
                 string_raw = str(operator.token.text[1:-1])
+                decoded_string = string_raw.encode().decode("unicode_escape")
 
                 next_string_segment_id = len(
                     [
@@ -449,7 +450,7 @@ def translate_hir_function_to_lir_function(
                 lir_function.add_op(
                     LIRPushStaticStringAddress(segment=segment.name),
                 )
-                lir_function.add_op(LIRPushInteger32Bits(len(string_raw)))
+                lir_function.add_op(LIRPushInteger32Bits(len(decoded_string)))
             case OperatorType.CONDITIONAL_END | OperatorType.CONDITIONAL_WHILE:
                 label = CODEGEN_GOFRA_CONTEXT_LABEL % (lir_function.name, idx)
                 if isinstance(operator.jumps_to_operator_idx, int):

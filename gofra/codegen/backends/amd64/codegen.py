@@ -121,11 +121,14 @@ def amd64_operator_instructions(
             context.fd.write(f"{label}:\n")
         case OperatorType.PUSH_STRING:
             assert isinstance(operator.operand, str)
+            string_raw = str(operator.token.text[1:-1])
+            decoded_string = string_raw.encode().decode("unicode_escape")
             push_static_address_onto_stack(
                 context,
-                segment=context.load_string(operator.token.text[1:-1]),
+                segment=context.load_string(string_raw),
             )
-            push_integer_onto_stack(context, value=len(operator.operand))
+
+            push_integer_onto_stack(context, value=len(decoded_string))
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
 
@@ -287,7 +290,7 @@ def amd64_data_section(
 ) -> None:
     """Write program static data section filled with static strings and memory blobs."""
     if any(v.initial_value is not None for v in program.variables.values()):
-        raise NotADirectoryError
+        raise NotImplementedError
 
     initialize_static_data_section(
         context,

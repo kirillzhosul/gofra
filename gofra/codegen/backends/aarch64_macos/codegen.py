@@ -133,11 +133,12 @@ def aarch64_macos_operator_instructions(
         case OperatorType.PUSH_STRING:
             assert isinstance(operator.operand, str)
             string_raw = str(operator.token.text[1:-1])
+            decoded_string = string_raw.encode().decode("unicode_escape")
             push_static_address_onto_stack(
                 context,
                 segment=context.load_string(string_raw),
             )
-            push_integer_onto_stack(context, value=len(string_raw))
+            push_integer_onto_stack(context, value=len(decoded_string))
         case OperatorType.FUNCTION_RETURN:
             function_end_with_epilogue(
                 context,
