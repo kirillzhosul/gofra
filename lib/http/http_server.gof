@@ -120,8 +120,6 @@ func int http_server_read_request[*HTTPIncomingRequest]
         "Unable to read response from client socket on HTTP server socket\n" eprint_fatal
     end
 
-    request.io_rx_buffer buffer !< 
-
     bytes_read ?>
 end
 
