@@ -115,8 +115,6 @@ def consume_function_qualifiers(
             )
         next_token = context.next_token()
 
-    if not next_token:
-        raise NotImplementedError
     if next_token.type != TokenType.KEYWORD or next_token.value != Keyword.FUNCTION:
         raise ParserExpectedFunctionAfterFunctionModifiersError(modifier_token=token)
 

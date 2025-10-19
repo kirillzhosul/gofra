@@ -197,7 +197,7 @@ def amd64_operator_instructions(
         case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)
         case OperatorType.DEBUGGER_BREAKPOINT:
-            raise NotImplementedError(operator)
+            context.write("int3")
         case OperatorType.STRUCT_FIELD_OFFSET:
             assert isinstance(operator.operand, str)
             struct, field = operator.operand.split(".", maxsplit=1)

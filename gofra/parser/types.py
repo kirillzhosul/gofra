@@ -51,7 +51,7 @@ def parser_type_from_tokenizer(
 
     if t.type != TokenType.IDENTIFIER:
         msg = f"While expecting type expected identifier but got {t.type.name}"
-        raise NotImplementedError(msg)
+        raise ValueError(msg)
 
     aggregated_type: Type | None = PRIMITIVE_TYPE_REGISTRY.get(t.text)
     if not aggregated_type:
