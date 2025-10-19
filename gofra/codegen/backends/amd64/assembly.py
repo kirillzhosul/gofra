@@ -128,7 +128,7 @@ def initialize_static_data_section(
 
     if data_variables:
         context.fd.write(".section .data\n")
-        for name, variable in bss_variables.items():
+        for name, variable in data_variables.items():
             type_size = variable.size_in_bytes
             if type_size == 0:
                 continue
