@@ -14,35 +14,6 @@ var buffer char[HTTP_IO_BUFFER_CAP]
 var server HTTPServer
 var request HTTPIncomingRequest
 
-func void open_server_socket[]
-    server.socket call net_ipv4_tcp_socket !<
-
-    server.socket ?> 0 < if 
-        "Unable to open HTTP server socket\n" eprint_fatal
-    end
-end
-
-func void bind_server_socket[]
-        server.socket ?> 
-        server.net_addr
-        sizeof sockaddr_in
-    call net_bind
-    
-    -1 == if
-        "Unable to bind HTTP server socket\n" eprint_fatal
-    end
-end
-
-func void listen_server_socket[]
-        server.socket ?> 
-        server.backlog ?> 
-    call net_listen 
-
-    -1 == if
-        "Unable to listen to HTTP server socket\n" eprint_fatal
-    end
-end
-
 func void pack_sockaddr[]
     server.net_addr
         AF_INET 48 <<  // sin_family highest bit -> little endian
@@ -53,39 +24,22 @@ func void pack_sockaddr[]
     // zero padding by default but add `addr.sin_zero 0 !<` after fix
 end
 
-
 func void handle_request[]
-    "Got connection!\n" print
+    "Got connection!" println
 
-    // Read an HTTP request with headers
-        request.socket ?> 
-        buffer 
-        sizeof buffer
-    net_read
-    copy -1 == if
-        "Unable to read response from client socket on HTTP server socket\n" eprint_fatal
-    end
-    "Bytes read: " print
-    print_integer
+    // Read request
+    request call http_server_read_request
+    "Bytes read: " print print_integer
 
-    request.io_rx_buffer buffer !< 
+    // Send response
+    request 
+    "<h1>Hello from Gofra HTTP server!</h1><i>Built with Gofra and native HTTP library</i>" to_cstr_ptr
+    call http_server_send_html_response
+    "Bytes written: " print print_integer
 
-
-    request.socket ?>
-    "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<h1>Hello from Gofra HTTP server!</h1>\r\n"
-    net_write
-
-    copy -1 == if
-        "Unable to send response to client socket on HTTP server socket\n" eprint_fatal
-    end
-
-    "Bytes written: " print
-    print_integer
-
+    // Finish request
+    request call http_server_close_request
     "Closed connection!\n" print
-    request.socket ?> net_close  -1 == if
-        "Unable to close client socket on HTTP server socket\n" eprint_fatal
-    end
 end
 
 func void main[]
@@ -93,9 +47,7 @@ func void main[]
     server.backlog 5 !<
 
     call pack_sockaddr
-    call open_server_socket
-    call bind_server_socket
-    call listen_server_socket
+    server call http_server_start
 
     "Listening...\n" print
 
