@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import IO, TYPE_CHECKING, assert_never
 
-from gofra.codegen.backends.amd64.frame import build_local_variables_frame_offsets
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import Operator, OperatorType
+from gofra.hir.variable import VariableStorageClass
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.types.primitive.void import VoidType
 
@@ -24,6 +24,7 @@ from .assembly import (
     perform_operation_onto_stack,
     pop_cells_from_stack_into_registers,
     push_integer_onto_stack,
+    push_local_variable_address_from_frame_offset,
     push_register_onto_stack,
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
@@ -85,19 +86,22 @@ def amd64_operator_instructions(
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:
             assert isinstance(operator.operand, str)
+
             variable = operator.operand
             if variable in owner_function.variables:
                 # Local variable
-
-                current_offset = build_local_variables_frame_offsets(
+                hir_local_variable = owner_function.variables[operator.operand]
+                assert hir_local_variable.is_function_scope
+                if hir_local_variable.storage_class != VariableStorageClass.STACK:
+                    msg = (
+                        "Non stack local variables storage class is not implemented yet"
+                    )
+                    raise NotImplementedError(msg)
+                push_local_variable_address_from_frame_offset(
+                    context,
                     owner_function.variables,
-                ).offsets[variable]
-
-                context.write(
-                    "movq %rbp, %rax",
-                    f"subq ${current_offset}, %rax",
+                    operator.operand,
                 )
-                push_register_onto_stack(context, register="rax")
                 return
 
             # Global variable access
@@ -145,7 +149,8 @@ def amd64_operator_instructions(
         case OperatorType.FUNCTION_RETURN:
             function_end_with_epilogue(
                 context,
-                has_return_value=owner_function.has_return_value(),
+                has_preserved_frame=True,
+                return_type=owner_function.return_type,
             )
         case OperatorType.STATIC_TYPE_CAST:
             # Skip that as it is typechecker only.
@@ -236,13 +241,17 @@ def amd64_executable_functions(
             local_variables=function.variables,
             arguments_count=function.arguments_count,
             function_name=function.name,
+            preserve_frame=True,
             as_global_linker_symbol=function.is_global,
         )
 
         amd64_instruction_set(context, function.operators, program, function)
+
+        # TODO(@kirillzhosul): This is included even after explicit return after end
         function_end_with_epilogue(
             context,
-            has_return_value=function.has_return_value(),
+            has_preserved_frame=True,
+            return_type=function.return_type,
         )
 
 
@@ -257,6 +266,7 @@ def amd64_program_entry_point(
         function_name=LINKER_EXPECTED_ENTRY_POINT,
         arguments_count=0,
         as_global_linker_symbol=True,
+        preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
         local_variables={},
     )
 
@@ -272,7 +282,7 @@ def amd64_program_entry_point(
 
     if context.target.operating_system == "Windows":
         ...
-        # TODO(@kirillzhosul): review exit code on Windows
+        # TODO!(@kirillzhosul): review exit code on Windows  # noqa: TD002, TD004
     else:
         # Call syscall to exit without accessing protected system memory.
         # `ret` into return-address will fail with segfault
@@ -285,6 +295,13 @@ def amd64_program_entry_point(
                 AMD64_LINUX_EPILOGUE_EXIT_CODE,
             ],
         )
+
+    function_end_with_epilogue(
+        context=context,
+        has_preserved_frame=False,
+        execution_trap_instead_return=True,
+        return_type=VoidType(),
+    )
 
 
 def amd64_data_section(

@@ -137,7 +137,6 @@ def push_static_address_onto_stack(
     segment: str,
 ) -> None:
     """Push executable static memory address onto stack with page dereference."""
-    context.write(f"// Load static address (segment: {segment})")
     context.write(
         f"adrp X0, {segment}@PAGE",
         f"add X0, X0, {segment}@PAGEOFF",
