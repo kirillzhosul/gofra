@@ -85,12 +85,13 @@ def amd64_operator_instructions(
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:
             assert isinstance(operator.operand, str)
-            local_variable = operator.operand
-            if local_variable in owner_function.variables:
-                # Calculate negative offset from X29
+            variable = operator.operand
+            if variable in owner_function.variables:
+                # Local variable
+
                 current_offset = build_local_variables_frame_offsets(
                     owner_function.variables,
-                ).offsets[local_variable]
+                ).offsets[variable]
 
                 context.write(
                     "movq %rbp, %rax",
@@ -98,7 +99,9 @@ def amd64_operator_instructions(
                 )
                 push_register_onto_stack(context, register="rax")
                 return
-            push_static_address_onto_stack(context, local_variable)
+
+            # Global variable access
+            push_static_address_onto_stack(context, variable)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
@@ -289,9 +292,6 @@ def amd64_data_section(
     program: Module,
 ) -> None:
     """Write program static data section filled with static strings and memory blobs."""
-    if any(v.initial_value is not None for v in program.variables.values()):
-        raise NotImplementedError
-
     initialize_static_data_section(
         context,
         static_strings=context.strings,

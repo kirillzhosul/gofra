@@ -105,14 +105,47 @@ def initialize_static_data_section(
     Data is an string (raw ASCII) or number (zeroed memory blob)
     TODO(@kirillzhosul, @stepanzubkov): Review alignment for data sections.
     """
-    context.fd.write(".section .data\n")
+    if static_strings:
+        context.fd.write(".section .rodata\n")
+        for name, data in static_strings.items():
+            context.write(f'{name}: .asciz "{data}"')
 
-    for name, data in static_strings.items():
-        context.fd.write(f'{name}: .asciz "{data}"\n')
-    for name, variable in static_variables.items():
-        type_size = variable.size_in_bytes
-        if type_size != 0:
-            context.fd.write(f"{name}: .space {type_size}\n")
+    bss_variables = {
+        k: v for k, v in static_variables.items() if v.initial_value is None
+    }
+    data_variables = {
+        k: v for k, v in static_variables.items() if v.initial_value is not None
+    }
+
+    if bss_variables:
+        context.fd.write(".section .bss\n")
+        for name, variable in bss_variables.items():
+            type_size = variable.size_in_bytes
+            if type_size == 0:
+                continue
+            assert variable.initial_value is None
+            context.write(f"{name}: .space {type_size}")
+
+    if data_variables:
+        context.fd.write(".section .data\n")
+        for name, variable in bss_variables.items():
+            type_size = variable.size_in_bytes
+            if type_size == 0:
+                continue
+            assert variable.initial_value is not None
+            if type_size == 1:
+                context.write(f"{name}: .byte {variable.initial_value}")
+            elif type_size == 2:  # noqa: PLR2004
+                context.write(f"{name}: .value {variable.initial_value}")
+            elif type_size <= 4:  # noqa: PLR2004
+                context.write(f"{name}: .long {variable.initial_value}")
+            elif type_size <= 8:  # noqa: PLR2004
+                context.write(f"{name}: .quad {variable.initial_value}")
+            else:
+                msg = (
+                    "Codegen does not supports initial values that out of 8 bytes range"
+                )
+                raise ValueError(msg)
 
 
 def ipc_syscall_linux(
@@ -196,6 +229,10 @@ def function_begin_with_prologue(
 
     offsets = build_local_variables_frame_offsets(local_variables)
     _ = offsets
+
+    if any(v.initial_value is not None for v in local_variables.values()):
+        msg = "local variables with defaults is not implemented yet"
+        raise NotImplementedError(msg)
 
 
 def function_call(

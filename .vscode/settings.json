@@ -82,6 +82,7 @@
         "RDONLY",
         "RDWR",
         "Regs",
+        "rodata",
         "sdiv",
         "SIGSEGV",
         "sockaddr",
