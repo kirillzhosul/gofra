@@ -2,9 +2,14 @@ from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from typing import IO
 
+from gofra.codegen.abi import AARCH64ABI
+from gofra.codegen.backends.aarch64_macos.registers import AARCH64_GP_REGISTERS
 from gofra.codegen.lir.registers import LIRVirtualRegisterAllocator
 
-from .abi import DarwinAARCH64ABI
+_virtual_registers: tuple[AARCH64_GP_REGISTERS, ...] = (
+    "X0",
+    "X1",
+)
 
 
 @dataclass(frozen=True)
@@ -17,11 +22,11 @@ class AARCH64CodegenContext:
 
     fd: IO[str]
     strings: MutableMapping[str, str] = field()
-    abi = DarwinAARCH64ABI
+    abi: AARCH64ABI
 
     vreg_allocator: LIRVirtualRegisterAllocator = field(
         default_factory=lambda: LIRVirtualRegisterAllocator(
-            list(DarwinAARCH64ABI.virtual_registers),
+            list(_virtual_registers),
         ),
     )
 

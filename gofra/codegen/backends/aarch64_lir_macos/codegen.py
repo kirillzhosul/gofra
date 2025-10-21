@@ -4,11 +4,17 @@ from __future__ import annotations
 
 from typing import IO, TYPE_CHECKING
 
+from gofra.codegen.abi import DarwinAARCH64ABI
 from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
 from gofra.codegen.backends.aarch64_macos.assembly import (
     drop_stack_slots,
     push_integer_onto_stack,
     push_static_address_onto_stack,
+)
+from gofra.codegen.backends.aarch64_macos.registers import (
+    AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
+    AARCH64_STACK_ALIGNMENT,
+    AARCH64_STACK_ALIGNMENT_BIN,
 )
 from gofra.codegen.lir import LIRProgram, translate_hir_to_lir
 from gofra.codegen.lir.ops import (
@@ -61,11 +67,6 @@ from .assembly import (
     push_register_onto_stack,
     syscall_prepare_arguments,
 )
-from .registers import (
-    AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
-    AARCH64_STACK_ALIGNMENT,
-    AARCH64_STACK_ALIGNMENT_BIN,
-)
 
 if TYPE_CHECKING:
     from gofra.hir.module import Module
@@ -81,7 +82,7 @@ def generate_aarch64_lir_macos_backend(
 ) -> None:
     """AARCH64 MacOS code generation backend."""
     _ = target
-    context = AARCH64CodegenContext(fd=fd, strings={})
+    context = AARCH64CodegenContext(fd=fd, strings={}, abi=DarwinAARCH64ABI())
     lir = translate_hir_to_lir(
         program,
         system_entry_point_name=LINKER_EXPECTED_ENTRY_POINT,
@@ -211,7 +212,10 @@ def aarch64_macos_operator_instructions(
             push_register_onto_stack(context, "X0")
         case LIRSystemCall():
             context.write("svc #0")
-            push_register_onto_stack(context, context.abi.return_value_register)
+            push_register_onto_stack(
+                context,
+                context.abi.retval_primitive_64bit_register,
+            )
         case LIRPushStaticGlobalVariableAddress():
             push_static_address_onto_stack(context, operation.name)
         case LIRFunctionReturn():

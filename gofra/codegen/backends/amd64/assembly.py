@@ -12,15 +12,6 @@ from gofra.codegen.backends.amd64.frame import (
 from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
 
-from .registers import (
-    AMD64_LINUX_ABI_ARGUMENTS_REGISTERS,
-    AMD64_LINUX_ABI_RETVAL_REGISTER,
-    AMD64_LINUX_SYSCALL_ARGUMENTS_REGISTERS,
-    AMD64_LINUX_SYSCALL_NUMBER_REGISTER,
-    AMD64_WINDOWS_ABI_ARGUMENTS_REGISTERS,
-    AMD64_WINDOWS_ABI_RETVAL_REGISTER,
-)
-
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
@@ -172,9 +163,10 @@ def ipc_syscall_linux(
     if not injected_args:
         injected_args = [None for _ in range(arguments_count + 1)]
 
+    abi = context.abi
     registers_to_load = (
-        AMD64_LINUX_SYSCALL_NUMBER_REGISTER,
-        *AMD64_LINUX_SYSCALL_ARGUMENTS_REGISTERS[:arguments_count][::-1],
+        abi.syscall_number_register,
+        *abi.syscall_arguments_registers[:arguments_count][::-1],
     )
 
     for injected_argument, register in zip(
@@ -196,7 +188,7 @@ def ipc_syscall_linux(
 
     if store_retval_onto_stack:
         # Mostly related to optimizations above if we dont want to store result
-        push_register_onto_stack(context, AMD64_LINUX_ABI_RETVAL_REGISTER)
+        push_register_onto_stack(context, abi.retval_primitive_64bit_register)
 
 
 def push_local_variable_address_from_frame_offset(
@@ -223,16 +215,15 @@ def function_end_with_epilogue(
     return_type: Type,
 ) -> None:
     """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
+    abi = context.abi
     if not isinstance(return_type, VoidType):
         if return_type.size_in_bytes > 16:  # noqa: PLR2004
             msg = "Tried to return value which size in bytes requires indirect return register, NIP!"
             raise ValueError(msg)
-        abi_retval_register = (
-            AMD64_LINUX_ABI_RETVAL_REGISTER
-            if context.target.operating_system == "Linux"
-            else AMD64_WINDOWS_ABI_RETVAL_REGISTER
+        pop_cells_from_stack_into_registers(
+            context,
+            abi.retval_primitive_64bit_register,
         )
-        pop_cells_from_stack_into_registers(context, abi_retval_register)
 
     if has_preserved_frame:
         restore_calee_frame(context)
@@ -266,7 +257,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
         preserve_calee_frame(context, offsets.local_space_size)
 
     if arguments_count:
-        registers = AMD64_LINUX_ABI_ARGUMENTS_REGISTERS[:arguments_count]
+        registers = context.abi.arguments_64bit_registers[:arguments_count]
         for register in registers:
             push_register_onto_stack(context, register)
 
@@ -291,22 +282,12 @@ def function_call(
 
     As Gofra under the hood uses C call convention for functions, this simplifies differences between C and Gofra calls.
     """
-    abi_retval_register = (
-        AMD64_LINUX_ABI_RETVAL_REGISTER
-        if context.target.operating_system == "Linux"
-        else AMD64_WINDOWS_ABI_RETVAL_REGISTER
-    )
-
-    abi_arguments_register = (
-        AMD64_LINUX_ABI_ARGUMENTS_REGISTERS
-        if context.target.operating_system == "Linux"
-        else AMD64_WINDOWS_ABI_ARGUMENTS_REGISTERS
-    )
-
     i64_arguments_count = len(type_contract_in)
     store_return_value = not isinstance(type_contract_out, VoidType)
 
-    argument_registers = abi_arguments_register[:i64_arguments_count][::-1]
+    argument_registers = context.abi.arguments_64bit_registers[:i64_arguments_count][
+        ::-1
+    ]
     if i64_arguments_count > len(argument_registers):
         msg = (
             f"C-FFI function call with {i64_arguments_count} arguments not supported. "
@@ -325,7 +306,7 @@ def function_call(
     context.write(f"callq {name}")
 
     if store_return_value:
-        push_register_onto_stack(context, abi_retval_register)
+        push_register_onto_stack(context, context.abi.retval_primitive_64bit_register)
 
 
 def store_into_memory_from_stack_arguments(context: AMD64CodegenContext) -> None:

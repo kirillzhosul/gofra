@@ -9,6 +9,10 @@ from gofra.codegen.backends.aarch64_macos.assembly import (
     push_register_onto_stack,
     store_integer_into_register,
 )
+from gofra.codegen.backends.aarch64_macos.registers import (
+    AARCH64_HALF_WORD_BITS,
+    AARCH64_STACK_ALIGNMENT_BIN,
+)
 from gofra.codegen.lir.static import (
     LIRStaticSegmentCString,
     LIRStaticSegmentGlobalVariable,
@@ -18,10 +22,6 @@ from .frame import (
     build_local_variables_frame_offsets,
     preserve_calee_frame,
     restore_calee_frame,
-)
-from .registers import (
-    AARCH64_HALF_WORD_BITS,
-    AARCH64_STACK_ALIGNMENT_BIN,
 )
 
 if TYPE_CHECKING:
@@ -67,7 +67,7 @@ def syscall_prepare_arguments(
     abi = context.abi
     registers_to_load = (
         abi.syscall_number_register,
-        *abi.argument_registers[:arguments_count][::-1],
+        *abi.syscall_arguments_registers[:arguments_count][::-1],
     )
 
     for injected_argument, register in zip(
@@ -102,7 +102,7 @@ def ipc_syscall_macos(
     abi = context.abi
     registers_to_load = (
         abi.syscall_number_register,
-        *abi.argument_registers[:arguments_count][::-1],
+        *abi.syscall_arguments_registers[:arguments_count][::-1],
     )
 
     for injected_argument, register in zip(
@@ -125,7 +125,7 @@ def ipc_syscall_macos(
 
     if store_retval_onto_stack:
         # Mostly related to optimizations above if we dont want to store result
-        push_register_onto_stack(context, abi.return_value_register)
+        push_register_onto_stack(context, abi.retval_primitive_64bit_register)
 
 
 def function_save_frame(
@@ -148,7 +148,7 @@ def function_acquire_arguments(
 ) -> None:
     abi = context.abi
     if len(arguments):
-        registers = abi.argument_registers[: len(arguments)]
+        registers = abi.arguments_64bit_registers[: len(arguments)]
         for register in registers:
             push_register_onto_stack(context, register)
 
@@ -157,7 +157,7 @@ def function_prepare_retval(
     context: AARCH64CodegenContext,
 ) -> None:
     abi = context.abi
-    pop_cells_from_stack_into_registers(context, abi.return_value_register)
+    pop_cells_from_stack_into_registers(context, abi.retval_primitive_64bit_register)
 
 
 def function_return(context: AARCH64CodegenContext) -> None:
@@ -192,10 +192,10 @@ def function_call_prepare_arguments(
     Most of the call logic is covered into function own prologue, which unpacks arguments and stores calee stack frame
     """
     abi = context.abi
-    if len(arguments) > len(abi.argument_registers):
+    if len(arguments) > len(abi.arguments_64bit_registers):
         msg = (
             f"C-FFI function call with {len(arguments)} arguments not supported. "
-            f"Maximum {len(context.abi.argument_registers)} register arguments supported. "
+            f"Maximum {len(context.abi.arguments_64bit_registers)} register arguments supported. "
             "Stack argument passing not implemented."
         )
         raise NotImplementedError(msg)
@@ -205,5 +205,5 @@ def function_call_prepare_arguments(
         raise ValueError(msg)
 
     if len(arguments):
-        registers = abi.argument_registers[: len(arguments)][::-1]
+        registers = abi.arguments_64bit_registers[: len(arguments)][::-1]
         pop_cells_from_stack_into_registers(context, *registers)
