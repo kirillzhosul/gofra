@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import IO, TYPE_CHECKING, assert_never
 
+from gofra.codegen.abi import DarwinAARCH64ABI
 from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
 from gofra.codegen.backends.aarch64_macos.assembly import (
     debugger_breakpoint_trap,
@@ -49,7 +50,7 @@ def generate_aarch64_macos_backend(
 ) -> None:
     """AARCH64 MacOS code generation backend."""
     _ = target
-    context = AARCH64CodegenContext(fd=fd, strings={})
+    context = AARCH64CodegenContext(fd=fd, strings={}, abi=DarwinAARCH64ABI())
 
     # Executable section with instructions only (pure_instructions)
     context.write(".section __TEXT,__text,regular,pure_instructions")

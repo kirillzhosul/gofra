@@ -3,9 +3,9 @@
 Provides code generation backends (codegen) for emitting assembly from IR.
 """
 
-from .aarch64_lir_macos import generate_aarch64_lir_macos_backend
-from .aarch64_macos import generate_aarch64_macos_backend
-from .amd64 import generate_amd64_backend
+from .aarch64_lir_macos.codegen import generate_aarch64_lir_macos_backend
+from .aarch64_macos.codegen import generate_aarch64_macos_backend
+from .amd64.codegen import generate_amd64_backend
 from .base import CodeGeneratorBackend
 
 __all__ = [

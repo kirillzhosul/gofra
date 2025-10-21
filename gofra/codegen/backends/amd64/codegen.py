@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import IO, TYPE_CHECKING, assert_never
 
+from gofra.codegen.abi import LinuxAMD64ABI
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import Operator, OperatorType
@@ -48,7 +49,14 @@ def generate_amd64_backend(
     target: Target,
 ) -> None:
     """AMD64 code generation backend."""
-    context = AMD64CodegenContext(fd=fd, strings={}, target=target)
+    match (target.architecture, target.operating_system):
+        case ("AMD64", "Linux"):
+            abi = LinuxAMD64ABI()
+        case _:
+            msg = f"Unknown ABI for {target.architecture}x{target.operating_system}"
+            raise ValueError(msg)
+
+    context = AMD64CodegenContext(fd=fd, strings={}, target=target, abi=abi)
 
     amd64_executable_functions(context, program)
     if GOFRA_ENTRY_POINT in program.functions:

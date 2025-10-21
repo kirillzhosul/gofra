@@ -251,7 +251,7 @@ def ipc_syscall_macos(
     abi = context.abi
     registers_to_load = (
         abi.syscall_number_register,
-        *abi.argument_registers[:arguments_count][::-1],
+        *abi.syscall_arguments_registers[:arguments_count][::-1],
     )
 
     for injected_argument, register in zip(
@@ -274,7 +274,9 @@ def ipc_syscall_macos(
 
     if store_retval_onto_stack:
         # Mostly related to optimizations above if we dont want to store result
-        push_register_onto_stack(context, abi.return_value_register)
+        # TODO: must validate return type as 64 bit.
+        # TODO: add features based on return registers
+        push_register_onto_stack(context, abi.retval_primitive_64bit_register)
 
 
 def perform_operation_onto_stack(
@@ -383,7 +385,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
 
     abi = context.abi
     if arguments_count:
-        registers = abi.argument_registers[:arguments_count]
+        registers = abi.arguments_64bit_registers[:arguments_count]
         context.write("// C-FFI arguments")
         for register in registers:
             push_register_onto_stack(context, register)
@@ -423,7 +425,10 @@ def function_end_with_epilogue(
         if return_type.size_in_bytes > 16:  # noqa: PLR2004
             msg = "Tried to return value which size in bytes requires indirect return register, NIP!"
             raise ValueError(msg)
-        pop_cells_from_stack_into_registers(context, abi.return_value_register)
+        pop_cells_from_stack_into_registers(
+            context,
+            abi.retval_primitive_64bit_register,
+        )
 
     if has_preserved_frame:
         restore_calee_frame(context)
@@ -479,10 +484,10 @@ def function_call(
     integer_arguments_count = len(type_contract_in)
     store_return_value = not isinstance(type_contract_out, VoidType)
 
-    if integer_arguments_count > len(abi.argument_registers):
+    if integer_arguments_count > len(abi.arguments_64bit_registers):
         msg = (
             f"C-FFI function call with {integer_arguments_count} arguments not supported. "
-            f"Maximum {len(context.abi.argument_registers)} register arguments supported. "
+            f"Maximum {len(context.abi.arguments_64bit_registers)} register arguments supported. "
             "Stack argument passing not implemented."
         )
         raise NotImplementedError(msg)
@@ -492,7 +497,7 @@ def function_call(
         raise ValueError(msg)
 
     if integer_arguments_count:
-        registers = abi.argument_registers[:integer_arguments_count][::-1]
+        registers = abi.arguments_64bit_registers[:integer_arguments_count][::-1]
         context.write("// C-FFI arguments")
         pop_cells_from_stack_into_registers(context, *registers)
 
