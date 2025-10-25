@@ -9,7 +9,6 @@ func void main[]
 
     // That *massive* shift must be increased later.
     &exit_code[59] TESTKIT_EXPECTED_EXIT_CODE !<
-    &exit_code[59] ?>
-    
-    exit
+
+    exit_code[59] call exit
 end

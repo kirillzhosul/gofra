@@ -19,5 +19,5 @@ end
 func void main[]
     &x call f
 
-    &x.field ?> exit
+    x.field exit
 end

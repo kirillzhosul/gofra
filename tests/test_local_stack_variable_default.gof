@@ -6,5 +6,5 @@
 
 func void main[]
     var stack int = 69
-    &stack ?> exit
+    stack call exit
 end

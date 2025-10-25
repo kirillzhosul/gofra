@@ -45,7 +45,7 @@ func void input_exhaust_buffer[]
     &buffer[0] 'a' !<
 
     while 
-        &buffer[0] ?> typecast int 
+        buffer[0] typecast int 
         '\n' typecast int 
         != 
     do
@@ -63,7 +63,7 @@ func void input[*char[], int]
     var len int; &len swap !<
 
     STD_IN swap
-    &len ?>
+    len
     call input_fd drop
 
     // Safety mechanism:
@@ -76,7 +76,7 @@ func void print[*char[], int]
     var len int; &len swap !<
 
     STD_OUT swap
-    &len ?>
+    len
     call print_fd drop
 end
 
@@ -91,7 +91,7 @@ func void eprint[*char[], int]
     var len int; &len swap !<
 
     STD_ERR swap
-    &len ?> 
+    len
     print_fd drop
 end
 
@@ -111,29 +111,29 @@ func void print_integer_fd[int, int]
     var fd int; &fd swap !<
     var idx int = 0;
 
-    &number ?> 0 < if
+    number 0 < if
         // TODO: negative numbers is not supported
         "print_integer_fd got negative number!\n" eprint_fatal
     end
 
-    &number ?> 0 == if
+    number 0 == if
         // Straight zero
         &print_integer_fd_buffer 0 + '0'  !<
         &print_integer_fd_buffer 1 + '\n' !<
 
-        &fd ?> 
+        fd
         &print_integer_fd_buffer 
         2 call print_fd drop
     end
 
 
-    while &number ?> 0 > do
+    while number 0 > do
         
         // Get last digit of an number
-        &number ?> 10 %
+        number 10 %
 
         // position to write at
-        &print_integer_fd_buffer &idx ?> + 
+        &print_integer_fd_buffer idx + 
         
         // Write digit as char
         swap 
@@ -141,24 +141,24 @@ func void print_integer_fd[int, int]
         !<
         
         // Shift number from right to left (drop last digit)
-        &number copy ?> 10 / !< 
+        &number number 10 / !< 
 
         // Increment IDX
-        &idx copy ?> inc !<
+        &idx idx 1 + !<
     end
 
     // Number: 1234
     // Buffer [...]
     // After block above buffer will become: [4321]
     // we iterate from right to left so emitting an '1234' string
-    while &idx ?> 1 + 0 > do
+    while idx 1 + 0 > do
         // Print current symbol one-by-one from right to left
-        &fd ?>
-            &print_integer_fd_buffer &idx ?> + 
+        fd
+            &print_integer_fd_buffer idx + 
         1 call print_fd drop
 
         // Decrement IDX
-        &idx copy ?> dec !<
+        &idx idx 1 - !<
     end
 
 end

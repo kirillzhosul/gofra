@@ -14,5 +14,6 @@ func int time_seconds_since_epoch[]
     var tv timeval
 
     &tv NULL sc_gettimeofday
-    &tv.tv_sec ?>
+
+    tv.tv_sec
 end

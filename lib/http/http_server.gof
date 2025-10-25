@@ -32,7 +32,7 @@ func void _http_server_open_socket[*HTTPServer]
     var server *HTTPServer; &server swap !<
 
     &server.socket call net_ipv4_tcp_socket !<
-    &server.socket ?> 0 < if 
+    server.socket 0 < if 
         "Unable to open HTTP server socket\n" eprint_fatal
     end
 end
@@ -55,8 +55,8 @@ end
 func void _http_server_listen_socket[*HTTPServer]
     var server *HTTPServer; &server swap !<
 
-        &server.socket ?> 
-        &server.backlog ?> 
+        server.socket
+        server.backlog
     call net_listen 
 
     -1 == if
@@ -76,9 +76,9 @@ end
 // Bootstrap HTTP server
 func void http_server_start[*HTTPServer]
     var server *HTTPServer; server swap !<
-    &server ?> call _http_server_open_socket
-    &server ?> call _http_server_bind_socket
-    &server ?> call _http_server_listen_socket
+    server call _http_server_open_socket
+    server call _http_server_bind_socket
+    server call _http_server_listen_socket
 end
 
 // Send given string payload as HTML to client
@@ -88,21 +88,21 @@ func int http_server_send_html_response[*HTTPIncomingRequest, *char[], int]
     var request *HTTPIncomingRequest; &request swap !<
     var bytes_written int = 0
 
-    &request.socket ?>
+    request.socket
     "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n"
     call _http_server_net_write_bytes
-    &bytes_written swap &bytes_written ?> + !<
+    &bytes_written swap bytes_written + !<
 
-    &request.socket ?>
-    &payload ?>
-    &payload_len ?>
+    request.socket
+    payload
+    payload_len
     call _http_server_net_write_bytes
-    &bytes_written swap &bytes_written ?> + !<
+    &bytes_written swap bytes_written + !<
 
-    &request.socket ?>
+    request.socket
     "\r\n"
     call _http_server_net_write_bytes
-    &bytes_written swap &bytes_written ?> + !<
+    &bytes_written swap bytes_written + !<
 
     // TODO: use io_tx_buffer
     &bytes_written ?>
@@ -113,12 +113,12 @@ func int http_server_read_request[*HTTPIncomingRequest]
     var request *HTTPIncomingRequest; request swap !<
     var bytes_read int = 0
 
-        &request.socket ?> 
+        request.socket
         &request.io_rx_buffer 
         HTTP_IO_BUFFER_CAP
     net_read &bytes_read swap !<
 
-    &bytes_read ?> -1 == if
+    bytes_read -1 == if
         "Unable to read response from client socket on HTTP server socket\n" eprint_fatal
     end
 
@@ -129,7 +129,7 @@ end
 func void http_server_close_request[*HTTPIncomingRequest]
     var request *HTTPIncomingRequest; request swap !<
 
-    &request.socket ?> call net_close -1 == if
+    request.socket call net_close -1 == if
         "Unable to close client socket on HTTP server socket\n" eprint_fatal
     end
 end

@@ -6,7 +6,7 @@ var static_blob int
 func void main[]
     &static_blob NUMBER !<
 
-    &static_blob ?> 
+    static_blob
     NUMBER
     "Write and read must return same value" assert
 

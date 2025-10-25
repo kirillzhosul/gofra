@@ -21,10 +21,9 @@ func void runtime_assert[
     != if
         "runtime_assert: Assertion failed, " eprint
     
-        &ptr ?>
-        &len ?>
+        ptr len
         call eprint
-        
+
         "\n" call eprint_fatal
     end
 end

@@ -11,17 +11,16 @@ func int cstr_len[*char[]]
     var idx int = 0;
 
     while
-        &ptr ?>
-        &idx ?>
+        ptr
+        idx
         + typecast *int ?>
         '\0' !=
     do
-        &idx
-            &idx ?> inc
-        !<
+        &idx idx 1 + !<
     end
 
     &idx ?>
+    // bug here ?
 end
 
 
@@ -33,19 +32,19 @@ func void int2str[int, *char[]]
     var num int; &num swap !<
     var idx int = 0;
 
-    &num ?> 0 == if
-        &str ?> typecast *char 0 + '0' !<
-        &str ?> typecast *char 1 + '\0' !<
+    num 0 == if
+        &str typecast *char 0 + '0' !<
+        &str typecast *char 1 + '\0' !<
     end
 
-    &num ?> 0 != if 
+    num 0 != if 
         &idx 0 !<
-        while &num ?> 0 > do
-            &str ?> &idx ?> + typecast *char
-            &num ?> 10 % '0' + !<
+        while num 0 > do
+            &str idx + typecast *char
+            num 10 % '0' + !<
 
-            &num copy ?> 10 / !< 
-            &idx copy ?> inc !<
+            &num num 10 / !< 
+            &idx idx 1 + !<
         end
     end
 end

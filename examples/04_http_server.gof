@@ -8,8 +8,6 @@
 #include "os/network.gof"
 #include "http"
 
-
-
 var buffer char[HTTP_IO_BUFFER_CAP]
 var server HTTPServer
 var request HTTPIncomingRequest
@@ -53,8 +51,8 @@ func void main[]
 
     while true do
         &request.socket
-            &server.socket ?> 
-        call net_accept_sink !<
+            &server.socket ?> call net_accept_sink 
+        !<
  
         &request.socket ?> -1 == if
             "Unable to accept to client socket on HTTP server socket\n" eprint_fatal

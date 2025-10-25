@@ -9,7 +9,7 @@ end
 var x struct_
 
 func void main[]
-
     &x.field TESTKIT_EXPECTED_EXIT_CODE !<
-    &x.field ?> exit
+
+    x.field exit
 end

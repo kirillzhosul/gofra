@@ -10,10 +10,8 @@
 #define PATH "test.txt" to_cstr_ptr
 
 // Some segment in memory so we can store content of the file
-#define CAPACITY 1024 // 1KiB
-
 // Global one as capacity is too big for stack (heap)
-var buf char[CAPACITY]
+var buf char[1024]
 
 func void main[]
     var fd int
@@ -25,23 +23,21 @@ func void main[]
     !<
 
     // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
-    &fd ?> 0 < if 
+    fd 0 < if 
         "Unable to open given file\n" eprint_fatal 
     end
 
     // Read file
-    &fd ?>
+    fd
     &buf 
     sizeof buf
-    call sc_read 
-    
-    0 < if 
+    call sc_read; 0 < if 
         "Unable to read given file\n" eprint_fatal 
     end
 
     // Print whole buffer
     STD_OUT 
     &buf 
-    sizeof buf 
+    sizeof buf
     call print_fd drop
 end
