@@ -8,26 +8,24 @@
 
 // Check for equality at runtime with additional message
 // (assert two values same)
-var runtime_assert_ptr_temp *char[]
-var runtime_assert_len_temp int
 func void runtime_assert[
     int,
     int,
     *char[],
     int
 ]
-    // TODO: add proper types to that function, as it may compare not only integers
-    runtime_assert_len_temp swap !<
-    runtime_assert_ptr_temp swap !<
+    var len int; &len swap !<
+    var ptr *char[]; &ptr swap !<
 
+    // TODO: add proper types to that function, as it may compare not only integers
     != if
         "runtime_assert: Assertion failed, " eprint
     
-        runtime_assert_ptr_temp ?>
-        runtime_assert_len_temp ?>
-        eprint
+        &ptr ?>
+        &len ?>
+        call eprint
         
-        "\n" eprint_fatal
+        "\n" call eprint_fatal
     end
 end
 

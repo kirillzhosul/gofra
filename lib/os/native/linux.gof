@@ -1,4 +1,4 @@
-// Provider of an syscall table for convient usage
+// Provider of an syscall table for convenient usage
 
 // ==============================================
 // Linux native system interaction layer and constant (x86-64)
@@ -15,7 +15,7 @@
     #define O_WRONLY   0x0001  // Open for writing only
     #define O_RDWR     0x0002  // Open for reading and writing
 
-    // Standart file descriptors
+    // Standard file descriptors
     #define STD_IN_FD  0
     #define STD_OUT_FD 1
     #define STD_ERR_FD 2

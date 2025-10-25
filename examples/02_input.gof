@@ -10,8 +10,8 @@ var buf char[16]
 func void main[]
 
     "Enter something: " print
-    buf sizeof buf input
+    &buf sizeof buf input
 
     "You entered: " print
-    buf sizeof buf println
+    &buf sizeof buf println
 end

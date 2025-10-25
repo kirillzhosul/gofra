@@ -19,19 +19,20 @@ func void main[]
     var fd int
     
     // Open file (TODO: Windows analogue)
-    fd 
+    &fd 
         PATH 0 0 
         call sc_open 
     !<
 
     // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
-    fd ?> 0 < if 
+    &fd ?> 0 < if 
         "Unable to open given file\n" eprint_fatal 
     end
 
     // Read file
-    fd ?>
-    buf sizeof buf
+    &fd ?>
+    &buf 
+    sizeof buf
     call sc_read 
     
     0 < if 
@@ -39,6 +40,8 @@ func void main[]
     end
 
     // Print whole buffer
-    STD_OUT buf sizeof buf 
+    STD_OUT 
+    &buf 
+    sizeof buf 
     call print_fd drop
 end

@@ -42,29 +42,29 @@
 func void input_exhaust_buffer[]
     var buffer char[1]
 
-    buffer[0] 'a' !<
+    &buffer[0] 'a' !<
 
     while 
-        buffer[0] ?> typecast int 
+        &buffer[0] ?> typecast int 
         '\n' typecast int 
         != 
     do
             STD_IN
-            buffer
+            &buffer
             sizeof buffer
-        input_fd drop
+        call input_fd drop
     end
 end
 
 // Input a string from standard console input stream
 // Safe to buffer overflows, as exhaust all remaining IO buffer
 // unsafe to big buffers (TODO)
-var input_length_temp int
 func void input[*char[], int]
-    input_length_temp swap !<
+    var len int; &len swap !<
+
     STD_IN swap
-    input_length_temp ?>
-    input_fd drop
+    &len ?>
+    call input_fd drop
 
     // Safety mechanism:
     // exhaust leftover buffer after system IO read
@@ -72,74 +72,68 @@ func void input[*char[], int]
 end
 
 // Print an string into standard console output stream
-var print_length_temp int
 func void print[*char[], int]
-    print_length_temp swap !<
+    var len int; &len swap !<
+
     STD_OUT swap
-    print_length_temp ?>
-    print_fd drop
+    &len ?>
+    call print_fd drop
 end
 
 // Print an string into standard console with trailing newline
 func void println[*char[], int]
-    print
-    "\n" print
+    call print
+    "\n" call print
 end
 
 // Print an string into standard console error stream
 func void eprint[*char[], int]
-    print_length_temp swap !<
+    var len int; &len swap !<
+
     STD_ERR swap
-    print_length_temp ?> 
+    &len ?> 
     print_fd drop
 end
 
 // Print an string into standard error console stream and abort execution
 func void eprint_fatal[*char[], int]
-    "FATAL: " eprint
-    eprint abort
+    "FATAL: " call eprint
+    call eprint 
+    call abort
 end
 
 // Print given number into given file descriptor / handle
 // does not emit '\n' at the end
 // negative numbers is not supported
-var print_integer_buffer_temp int[128]
-var print_integer_number_temp int
-var print_integer_idx_temp int
-var print_integer_fd_temp int
+var print_integer_fd_buffer int[64] // int32 TODO
 func void print_integer_fd[int, int]
-    // TODO: negative numbers is not supported
-    print_integer_number_temp swap !<
-    print_integer_fd_temp swap !<
+    var number int; &number swap !<
+    var fd int; &fd swap !<
+    var idx int = 0;
 
-
-    print_integer_number_temp ?> 0 < if
+    &number ?> 0 < if
+        // TODO: negative numbers is not supported
         "print_integer_fd got negative number!\n" eprint_fatal
     end
 
-    print_integer_number_temp ?> 0 == if
+    &number ?> 0 == if
         // Straight zero
-        print_integer_buffer_temp 0 + '0'  !<
-        print_integer_buffer_temp 1 + '\n' !<
+        &print_integer_fd_buffer 0 + '0'  !<
+        &print_integer_fd_buffer 1 + '\n' !<
 
-        print_integer_fd_temp ?> 
-        print_integer_buffer_temp 
-        2 print_fd drop
+        &fd ?> 
+        &print_integer_fd_buffer 
+        2 call print_fd drop
     end
 
-    print_integer_idx_temp 0 !<
-    
-   
-    while 
-        print_integer_number_temp ?> 
-        0 >
-    do
+
+    while &number ?> 0 > do
         
         // Get last digit of an number
-        print_integer_number_temp ?> 10 %
+        &number ?> 10 %
 
         // position to write at
-        print_integer_buffer_temp print_integer_idx_temp ?> + 
+        &print_integer_fd_buffer &idx ?> + 
         
         // Write digit as char
         swap 
@@ -147,31 +141,32 @@ func void print_integer_fd[int, int]
         !<
         
         // Shift number from right to left (drop last digit)
-        print_integer_number_temp copy ?> 10 / !< 
+        &number copy ?> 10 / !< 
 
         // Increment IDX
-        print_integer_idx_temp copy ?> inc !<
+        &idx copy ?> inc !<
     end
 
     // Number: 1234
     // Buffer [...]
     // After block above buffer will become: [4321]
     // we iterate from right to left so emitting an '1234' string
-    while print_integer_idx_temp ?> 1 + 0 > do
+    while &idx ?> 1 + 0 > do
         // Print current symbol one-by-one from right to left
-        print_integer_fd_temp ?>
-            print_integer_buffer_temp print_integer_idx_temp ?> + 
-        1 print_fd drop
+        &fd ?>
+            &print_integer_fd_buffer &idx ?> + 
+        1 call print_fd drop
 
         // Decrement IDX
-        print_integer_idx_temp copy ?> dec !<
+        &idx copy ?> dec !<
     end
+
 end
 
 // Print given number into standard console output
 // Emits '\n' at the end
 // negative numbers is not supported
 func void print_integer[int]
-    STD_IN swap print_integer_fd
-    "\n" print
+    STD_IN swap call print_integer_fd
+    "\n" call print
 end

@@ -10,8 +10,8 @@
 var buf char[128]
 
 func void print_int_with_sep[int]
-    buf int2str
-    buf sizeof buf print
+    &buf int2str
+    &buf sizeof buf print
     ", " print
 end
 
@@ -20,21 +20,21 @@ func void main[]
     var b int = 1
     var x int
 
-    x a ?> b ?> + !<
+    &x &a ?> &b ?> + !<
 
     "Fibonacci Series: " print
-    a ?> print_int_with_sep
-    b ?> print_int_with_sep
+    &a ?> print_int_with_sep
+    &b ?> print_int_with_sep
 
-    while x ?> N <= do
-        x ?> buf int2str 
-        buf sizeof buf print
+    while &x ?> N <= do
+        &x ?> &buf int2str 
+        &buf sizeof buf print
 
-        a b ?> !<
-        b x ?> !<
-        x a ?> b ?> + !<
+        &a &b ?> !<
+        &b &x ?> !<
+        &x &a ?> &b ?> + !<
 
-        x ?> N <= if
+        &x ?> N <= if
             ", " print
         end
     end 

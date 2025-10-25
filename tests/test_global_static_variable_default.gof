@@ -6,5 +6,5 @@
 var static int = 69
 
 func void main[]
-    static ?> exit
+    &static ?> exit
 end

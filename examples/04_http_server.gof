@@ -15,7 +15,7 @@ var server HTTPServer
 var request HTTPIncomingRequest
 
 func void pack_sockaddr[]
-    server.net_addr
+    &server.net_addr
         AF_INET 48 <<  // sin_family highest bit -> little endian
         0x1F90   32 << // sin_port 
         | 0x7F000001 | // sin_addr
@@ -28,35 +28,35 @@ func void handle_request[]
     "Got connection!" println
 
     // Read request
-    request call http_server_read_request
+    &request call http_server_read_request
     "Bytes read: " print print_integer
 
     // Send response
-    request 
+    &request 
     "<h1>Hello from Gofra HTTP server!</h1><i>Built with Gofra and native HTTP library</i>"
     call http_server_send_html_response
     "Bytes written: " print print_integer
 
     // Finish request
-    request call http_server_close_request
+    &request call http_server_close_request
     "Closed connection!\n" print
 end
 
 func void main[]
-    server.port 8080 !< // todo: not used
-    server.backlog 5 !<
+    &server.port 8080 !< // todo: not used
+    &server.backlog 5 !<
 
     call pack_sockaddr
-    server call http_server_start
+    &server call http_server_start
 
     "Listening...\n" print
 
     while true do
-        request.socket
-            server.socket ?> 
+        &request.socket
+            &server.socket ?> 
         call net_accept_sink !<
  
-        request.socket ?> -1 == if
+        &request.socket ?> -1 == if
             "Unable to accept to client socket on HTTP server socket\n" eprint_fatal
         end
 

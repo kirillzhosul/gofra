@@ -6,13 +6,13 @@
 
 #ifdef OS_DARWIN
     // System call wrappers
-    inline func int  net_socket[int, int, int]        call sc_socket end
-    inline func int  net_bind[int, *sockaddr_in, int] call sc_bind   end
-    inline func int  net_listen[int, int]             call sc_listen end
-    inline func int  net_accept[int, int, int]        call sc_accept end
-    inline func int  net_read[int, *char[], int]      call sc_read   end
-    inline func int  net_write[int, *char[], int]     call sc_write  end
-    inline func int  net_close[int]                   call sc_close  end
+    inline func int net_socket[int, int, int]        call sc_socket end
+    inline func int net_bind[int, *sockaddr_in, int] call sc_bind   end
+    inline func int net_listen[int, int]             call sc_listen end
+    inline func int net_accept[int, int, int]        call sc_accept end
+    inline func int net_read[int, *char[], int]      call sc_read   end
+    inline func int net_write[int, *char[], int]     call sc_write  end
+    inline func int net_close[int]                   call sc_close  end
 
     // Accept without an client address - only server socket is required
     func int net_accept_sink[int] 0 0 call net_accept end
@@ -30,13 +30,13 @@
 // TODO: Add proper OR to preprocessor, must separate that from windows NET-code
 #ifdef OS_LINUX
     // System call wrappers
-    inline func int  net_socket[int, int, int]        call sc_socket end
-    inline func int  net_bind[int, *sockaddr_in, int] call sc_bind   end
-    inline func int  net_listen[int, int]             call sc_listen end
-    inline func int  net_accept[int, int, int]        call sc_accept end
-    inline func int  net_read[int, *char[], int]      call sc_read   end
-    inline func int  net_write[int, *char[], int]     call sc_write  end
-    inline func int  net_close[int]                   call sc_close  end
+    inline func int net_socket[int, int, int]        call sc_socket end
+    inline func int net_bind[int, *sockaddr_in, int] call sc_bind   end
+    inline func int net_listen[int, int]             call sc_listen end
+    inline func int net_accept[int, int, int]        call sc_accept end
+    inline func int net_read[int, *char[], int]      call sc_read   end
+    inline func int net_write[int, *char[], int]     call sc_write  end
+    inline func int net_close[int]                   call sc_close  end
 
     // Accept without an client address - only server socket is required
     func int net_accept_sink[int] 0 0 call net_accept end
@@ -49,4 +49,3 @@
         call net_socket
     end
 #endif
-

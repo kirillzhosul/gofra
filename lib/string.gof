@@ -6,23 +6,22 @@
 // Get length of an C-Style string (ends with `\0`)
 // Will cause segmentation fault / infinite loop if string is not an C-style.
 var cstr_len_ptr_temp int
-var cstr_len_idx_temp int
 func int cstr_len[*char[]]
-    cstr_len_ptr_temp swap !<
-    cstr_len_idx_temp 0    !<
+    var ptr *char[]; &ptr swap !<
+    var idx int = 0;
 
     while
-        cstr_len_ptr_temp ?>
-        cstr_len_idx_temp ?>
+        &ptr ?>
+        &idx ?>
         + typecast *int ?>
         '\0' !=
     do
-        cstr_len_idx_temp
-            cstr_len_idx_temp ?> inc
+        &idx
+            &idx ?> inc
         !<
     end
 
-    cstr_len_idx_temp ?> typecast int
+    &idx ?>
 end
 
 
@@ -30,26 +29,23 @@ end
 func int str_len[*char[], int] drop cstr_len end
 
 func void int2str[int, *char[]]
-    var str *char[]
-    var idx int
-    var num int
+    var str *char[]; &str swap !<
+    var num int; &num swap !<
+    var idx int = 0;
 
-    str swap !<
-    num swap !<
-
-    num ?> 0 == if
-        str ?> typecast *char 0 + '0' !<
-        str ?> typecast *char 1 + '\0' !<
+    &num ?> 0 == if
+        &str ?> typecast *char 0 + '0' !<
+        &str ?> typecast *char 1 + '\0' !<
     end
 
-    num ?> 0 != if 
-        idx 0 !<
-        while num ?> 0 > do
-            str ?> idx ?> + typecast *char
-            num ?> 10 % '0' + !<
+    &num ?> 0 != if 
+        &idx 0 !<
+        while &num ?> 0 > do
+            &str ?> &idx ?> + typecast *char
+            &num ?> 10 % '0' + !<
 
-            num copy ?> 10 / !< 
-            idx copy ?> inc !<
+            &num copy ?> 10 / !< 
+            &idx copy ?> inc !<
         end
     end
 end
