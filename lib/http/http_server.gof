@@ -82,7 +82,8 @@ func void http_server_start[*HTTPServer]
 end
 
 // Send given string payload as HTML to client
-func int http_server_send_html_response[*HTTPIncomingRequest, *char[]]
+func int http_server_send_html_response[*HTTPIncomingRequest, *char[], int]
+    var payload_len int; payload_len swap !<
     var payload *char[]; payload swap !<
     var request *HTTPIncomingRequest; request swap !<
     var bytes_written int = 0
@@ -94,6 +95,7 @@ func int http_server_send_html_response[*HTTPIncomingRequest, *char[]]
 
     request.socket ?>
     payload ?>
+    payload_len ?>
     call _http_server_net_write_bytes
     bytes_written swap bytes_written ?> + !<
 

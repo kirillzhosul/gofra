@@ -8,7 +8,7 @@
 #include "os/network.gof"
 #include "http"
 
-#define HTTP_IO_BUFFER_CAP 4096
+
 
 var buffer char[HTTP_IO_BUFFER_CAP]
 var server HTTPServer
@@ -33,7 +33,7 @@ func void handle_request[]
 
     // Send response
     request 
-    "<h1>Hello from Gofra HTTP server!</h1><i>Built with Gofra and native HTTP library</i>" to_cstr_ptr
+    "<h1>Hello from Gofra HTTP server!</h1><i>Built with Gofra and native HTTP library</i>"
     call http_server_send_html_response
     "Bytes written: " print print_integer
 
