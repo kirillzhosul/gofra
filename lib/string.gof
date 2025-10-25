@@ -33,14 +33,14 @@ func void int2str[int, *char[]]
     var idx int = 0;
 
     num 0 == if
-        &str typecast *char 0 + '0' !<
-        &str typecast *char 1 + '\0' !<
+        str typecast *char 0 + '0' !<
+        str typecast *char 1 + '\0' !<
     end
 
     num 0 != if 
         &idx 0 !<
         while num 0 > do
-            &str idx + typecast *char
+            str idx + typecast *char
             num 10 % '0' + !<
 
             &num num 10 / !< 
