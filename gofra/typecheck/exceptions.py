@@ -24,13 +24,15 @@ class TypecheckInvalidOperatorArgumentTypeError(GofraError):
         self.type_stack = type_stack
 
     def __repr__(self) -> str:
-        contract = ", ".join([" | ".join(map(repr, union)) for union in self.contract])
+        contract = ", ".join(
+            [" | ".join(t.__name__ for t in union) for union in self.contract],
+        )
 
         type_stack = ", ".join(map(repr, self.type_stack))
 
         return f"""Type safety check failed!
 
-Expected [{" | ".join(map(repr, self.expected_type))}] but got {self.actual_type}
+Expected [{" | ".join(t.__name__ for t in self.expected_type)}] but got {self.actual_type}
  for '{self.operator.token.text}' at {self.operator.location}
 
 '{self.operator.token.text}' contract is: [{contract}]
