@@ -1,4 +1,3 @@
-from gofra.feature_flags import FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from gofra.lexer.tokens import Token, TokenType
@@ -77,7 +76,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     varname = token.text
 
-    is_reference = not FEATURE_DEREFERENCE_VARIABLES_BY_DEFAULT
+    is_reference = False
     array_index_at = None
     struct_field_accessor = None
 
@@ -129,7 +128,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     if struct_field_accessor:
         if not is_reference:
-            msg = "Struct field accessors are implemented only for references."
+            msg = f"Struct field accessors are implemented only for references. At {token.location}"
             raise NotImplementedError(msg)
 
         if not isinstance(variable.type, StructureType) and not isinstance(
