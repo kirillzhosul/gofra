@@ -127,10 +127,6 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
     )
 
     if struct_field_accessor:
-        if not is_reference:
-            msg = f"Struct field accessors are implemented only for references. At {token.location}"
-            raise NotImplementedError(msg)
-
         if not isinstance(variable.type, StructureType) and not isinstance(
             variable.type,
             PointerType,
