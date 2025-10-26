@@ -1,0 +1,6 @@
+struct forward_struct_t
+    field forward_struct_t
+end
+
+func void main[]
+end

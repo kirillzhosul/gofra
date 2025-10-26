@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING
+
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
 from gofra.parser.types import parser_type_from_tokenizer
-from gofra.types._base import Type
 from gofra.types.composite.structure import StructureType
+
+if TYPE_CHECKING:
+    from gofra.types._base import Type
 
 
 def unpack_structure_definition_from_token(context: ParserContext) -> None:
@@ -17,6 +21,16 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
     if context.name_is_already_taken(name):
         msg = f"Structure name {name} is already taken by other definition"
         raise ValueError(msg)
+
+    # Forward declare this struct so users may use that type in structure definition
+    # this must to be back-patched after parsing types
+    structure_reference = StructureType(
+        name=name,
+        fields={},
+        cpu_alignment_in_bytes=8,  # assume we always on 64 bit machine (TODO)
+        fields_ordering=[],
+    )
+    context.structs[name] = structure_reference
 
     fields: dict[str, Type] = {}
     fields_ordering: list[str] = []
@@ -34,10 +48,6 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
         fields_ordering.append(field_name)
         fields[field_name] = field_type
 
-    struct = StructureType(
-        name=name,
-        fields=fields,
-        cpu_alignment_in_bytes=8,  # assume we always on 64 bit machine (TODO)
-        fields_ordering=fields_ordering,
-    )
-    context.structs[name] = struct
+    # Back-patch reference
+    structure_reference.fields = fields
+    structure_reference.fields_ordering = fields_ordering
