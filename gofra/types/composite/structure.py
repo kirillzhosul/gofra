@@ -15,6 +15,8 @@ class StructureType(CompositeType):
     name: str
     size_in_bytes: int
 
+    cpu_alignment_in_bytes: int
+
     def __init__(
         self,
         name: str,
@@ -25,12 +27,15 @@ class StructureType(CompositeType):
         self.name = name
         self.fields = fields
         self.fields_ordering = fields_ordering
+        self.cpu_alignment_in_bytes = cpu_alignment_in_bytes
+        self.recalculate_size_in_bytes()
 
-        self.size_in_bytes = sum(f.size_in_bytes for f in fields.values())
+    def recalculate_size_in_bytes(self) -> None:
+        self.size_in_bytes = sum(f.size_in_bytes for f in self.fields.values())
 
         # Align whole structure by alignment
-        if cpu_alignment_in_bytes != 0:
-            alignment = cpu_alignment_in_bytes + 1
+        if self.cpu_alignment_in_bytes != 0:
+            alignment = self.cpu_alignment_in_bytes + 1
             self.size_in_bytes = (self.size_in_bytes + alignment) & ~alignment
 
     def __repr__(self) -> str:

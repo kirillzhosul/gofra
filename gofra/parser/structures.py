@@ -24,13 +24,13 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
 
     # Forward declare this struct so users may use that type in structure definition
     # this must to be back-patched after parsing types
-    structure_reference = StructureType(
+    ref = StructureType(
         name=name,
         fields={},
         cpu_alignment_in_bytes=8,  # assume we always on 64 bit machine (TODO)
         fields_ordering=[],
     )
-    context.structs[name] = structure_reference
+    context.structs[name] = ref
 
     fields: dict[str, Type] = {}
     fields_ordering: list[str] = []
@@ -49,5 +49,6 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
         fields[field_name] = field_type
 
     # Back-patch reference
-    structure_reference.fields = fields
-    structure_reference.fields_ordering = fields_ordering
+    ref.fields = fields
+    ref.fields_ordering = fields_ordering
+    ref.recalculate_size_in_bytes()
