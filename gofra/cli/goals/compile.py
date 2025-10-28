@@ -136,7 +136,8 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     if args.delete_build_cache:
         object_filepath.unlink()
 
-    apply_file_executable_permissions(args.output_filepath)
+    if args.output_format == "executable":
+        apply_file_executable_permissions(args.output_filepath)
 
     cli_message(
         level="INFO",
