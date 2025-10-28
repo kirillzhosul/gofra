@@ -231,12 +231,7 @@ def aarch64_macos_executable_functions(
 
     Provides an prolog and epilogue.
     """
-    # Define only function that contains anything to execute
-    functions = filter(
-        lambda f: f.has_executable_operators or f.is_global,
-        program.functions.values(),
-    )
-    for function in functions:
+    for function in program.functions.values():
         function_begin_with_prologue(
             context,
             name=function.name,
