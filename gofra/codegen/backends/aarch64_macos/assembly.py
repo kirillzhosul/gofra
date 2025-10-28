@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from gofra.codegen.abi import AARCH64ABI
 from gofra.codegen.backends.aarch64_macos.frame import (
     build_local_variables_frame_offsets,
     preserve_calee_frame,
     restore_calee_frame,
 )
 from gofra.hir.operator import OperatorType
+from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
@@ -204,7 +206,7 @@ def initialize_static_data_section(
             type_size = variable.size_in_bytes
             if type_size != 0:
                 # TODO(@kirillzhosul): review realignment of static variables
-                if type_size >= 32:  # noqa: PLR2004
+                if type_size >= 32:
                     context.fd.write(".p2align 4\n")
                 else:
                     context.fd.write(".p2align 3\n")
@@ -217,18 +219,18 @@ def initialize_static_data_section(
             type_size = variable.size_in_bytes
             if type_size != 0:
                 # TODO(@kirillzhosul): review realignment of static variables
-                if type_size >= 32:  # noqa: PLR2004
+                if type_size >= 32:
                     context.fd.write(".p2align 4\n")
                 else:
                     context.fd.write(".p2align 3\n")
                 assert variable.initial_value is not None
                 if type_size <= 1:
                     context.fd.write(f"{name}: .byte {variable.initial_value}\n")
-                elif type_size <= 2:  # noqa: PLR2004
+                elif type_size <= 2:
                     context.fd.write(f"{name}: .half {variable.initial_value}\n")
-                elif type_size <= 4:  # noqa: PLR2004
+                elif type_size <= 4:
                     context.fd.write(f"{name}: .word {variable.initial_value}\n")
-                elif type_size <= 8:  # noqa: PLR2004
+                elif type_size <= 8:
                     context.fd.write(f"{name}: .quad {variable.initial_value}\n")
                 else:
                     msg = "Codegen does not supports initial values that out of 8 bytes range"
@@ -240,7 +242,7 @@ def ipc_syscall_macos(
     *,
     arguments_count: int,
     store_retval_onto_stack: bool,
-    injected_args: list[int | None] | None,
+    injected_args: Sequence[int | None] | None,
 ) -> None:
     """Call system (syscall) via supervisor call and apply IPC ABI convention to arguments."""
     assert not injected_args or len(injected_args) == arguments_count + 1
@@ -272,11 +274,10 @@ def ipc_syscall_macos(
     # Supervisor call (syscall)
     context.write("svc #0")
 
+    # System calls always returns `long` type (e.g integer 64 bits (default one for Gofra))
     if store_retval_onto_stack:
         # Mostly related to optimizations above if we dont want to store result
-        # TODO: must validate return type as 64 bit.
-        # TODO: add features based on return registers
-        push_register_onto_stack(context, abi.retval_primitive_64bit_register)
+        acquire_return_value_from_abi_call(context, context.abi, I64Type())
 
 
 def perform_operation_onto_stack(
@@ -420,15 +421,10 @@ def function_end_with_epilogue(
     :execution_trap_instead_return: Internal, if true, will replace simple return with execution guard trap to raise from execution
     """
     if not isinstance(return_type, VoidType):
-        abi = context.abi
-        context.write("// C-FFI retval")
-        if return_type.size_in_bytes > 16:  # noqa: PLR2004
-            msg = "Tried to return value which size in bytes requires indirect return register, NIP!"
+        if return_type.size_in_bytes == 0:
+            msg = "Cannot return value with size in bytes zero!"
             raise ValueError(msg)
-        pop_cells_from_stack_into_registers(
-            context,
-            abi.retval_primitive_64bit_register,
-        )
+        acquire_return_value_from_abi_call(context, context.abi, return_type)
 
     if has_preserved_frame:
         restore_calee_frame(context)
@@ -501,12 +497,71 @@ def function_call(
         context.write("// C-FFI arguments")
         pop_cells_from_stack_into_registers(context, *registers)
 
-    context.write(
-        f"bl {name} // C-FFI {'' if store_return_value else 'no retval'}",
-    )
+    context.write(f"bl {name}")
 
     if store_return_value:
-        context.write(
-            f"// {name} return value (defined as type {type_contract_out})",
+        retval_t = type_contract_out
+        if retval_t.size_in_bytes <= 4:
+            # Primitive return value as 32 bit
+            # directly store into return register (lower 32 bits)
+            push_register_onto_stack(context, abi.retval_primitive_32bit_register)
+        elif retval_t.size_in_bytes <= 8:
+            # Primitive return value as 64 bit
+            # directly store into return register (full 64 bits)
+            push_register_onto_stack(context, abi.retval_primitive_64bit_register)
+        elif retval_t.size_in_bytes <= 16:
+            # Composite return value up to 128 bits
+            # store two segments as registers where lower bytes are in first register (always 64 bit)
+            # and remaining bytes in second register
+            push_register_onto_stack(context, abi.retval_primitive_64bit_register)
+            remaining_bytes = retval_t.size_in_bytes - 8
+            if remaining_bytes <= 4:
+                push_register_onto_stack(context, abi.retval_composite_32bit_register)
+            else:
+                push_register_onto_stack(context, abi.retval_composite_64bit_register)
+        else:
+            msg = "Indirect allocation required, not implemented!"
+            raise ValueError(msg)
+
+
+def acquire_return_value_from_abi_call(
+    context: AARCH64CodegenContext,
+    abi: AARCH64ABI,
+    retval: Type,
+) -> None:
+    if retval.size_in_bytes <= 4:
+        # Primitive return value as 32 bit
+        # directly store into return register (lower 32 bits)
+        pop_cells_from_stack_into_registers(
+            context,
+            abi.retval_primitive_32bit_register,
         )
-        push_register_onto_stack(context, "X0")
+    elif retval.size_in_bytes <= 8:
+        # Primitive return value as 64 bit
+        # directly store into return register (full 64 bits)
+        pop_cells_from_stack_into_registers(
+            context,
+            abi.retval_primitive_64bit_register,
+        )
+    elif retval.size_in_bytes <= 16:
+        # Composite return value up to 128 bits
+        # store two segments as registers where lower bytes are in first register (always 64 bit)
+        # and remaining bytes in second register
+        pop_cells_from_stack_into_registers(
+            context,
+            abi.retval_primitive_64bit_register,
+        )
+        remaining_bytes = retval.size_in_bytes - 8
+        if remaining_bytes <= 4:
+            pop_cells_from_stack_into_registers(
+                context,
+                abi.retval_composite_32bit_register,
+            )
+        else:
+            pop_cells_from_stack_into_registers(
+                context,
+                abi.retval_composite_64bit_register,
+            )
+    else:
+        msg = "Indirect allocation required, not implemented!"
+        raise ValueError(msg)
