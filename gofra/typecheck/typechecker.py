@@ -57,7 +57,10 @@ def validate_type_safety(
     if entry_point.is_external or entry_point.is_inline:
         raise ParserEntryPointFunctionModifiersError
 
-    if entry_point.has_return_value():
+    if entry_point.has_return_value() and not isinstance(
+        entry_point.return_type,
+        I64Type,
+    ):
         raise EntryPointReturnTypeMismatchTypecheckError(
             return_type=entry_point.return_type,
         )
@@ -101,7 +104,7 @@ def validate_function_type_safety(
             raise ReturnValueMissingTypecheckError(owner=function)
 
         if len(emulated_type_stack) > 1:
-            msg = "Ambiguous stack size at function end"
+            msg = f"Ambiguous stack size at function end in {function.name} at {function.defined_at}"
             raise ValueError(msg)
 
         if not is_types_same(

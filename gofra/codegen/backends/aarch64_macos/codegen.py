@@ -33,6 +33,7 @@ from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import Operator, OperatorType
 from gofra.hir.variable import VariableStorageClass
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
+from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
@@ -272,26 +273,34 @@ def aarch64_macos_program_entry_point(
     )
 
     # Prepare and execute main function
-    assert isinstance(entry_point.return_type, VoidType)
-    assert not entry_point.has_return_value()
+    assert isinstance(entry_point.return_type, VoidType | I64Type)
     function_call(
         context,
         name=entry_point.name,
         type_contract_in=[],
-        type_contract_out=VoidType(),
+        type_contract_out=entry_point.return_type,
     )
 
     # Call syscall to exit without accessing protected system memory.
     # `ret` into return-address will fail with segfault
-    ipc_syscall_macos(
-        context,
-        arguments_count=1,
-        store_retval_onto_stack=False,
-        injected_args=[
-            AARCH64_MACOS_EPILOGUE_EXIT_CODE,
-            AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
-        ],
-    )
+    if isinstance(entry_point.return_type, VoidType):
+        ipc_syscall_macos(
+            context,
+            arguments_count=1,
+            store_retval_onto_stack=False,
+            injected_args=[
+                AARCH64_MACOS_EPILOGUE_EXIT_CODE,
+                AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
+            ],
+        )
+    else:
+        push_integer_onto_stack(context, AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER)
+        ipc_syscall_macos(
+            context,
+            arguments_count=1,
+            store_retval_onto_stack=False,
+            injected_args=None,
+        )
 
     function_end_with_epilogue(
         context=context,

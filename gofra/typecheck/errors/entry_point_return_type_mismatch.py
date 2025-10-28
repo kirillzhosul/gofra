@@ -11,6 +11,6 @@ class EntryPointReturnTypeMismatchTypecheckError(GofraError):
     def __repr__(self) -> str:
         return f"""Entry point function '{GOFRA_ENTRY_POINT}' violates return type contract!
 
-Entry point function cannot have type contract out (e.g only `void` type is allowed)!
+Entry point function cannot have type contract out (e.g only `void` and `int` type is allowed)!
 But currently it has return type: {self.return_type}
 """
