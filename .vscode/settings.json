@@ -15,7 +15,8 @@
         "types",
         "assembler",
         "linker",
-        "hir"
+        "hir",
+        "toolchain"
     ],
     "cSpell.words": [
         "addq",
@@ -67,6 +68,7 @@
         "MAXSYSCALL",
         "mkdocs",
         "MKNOD",
+        "MMAP",
         "movk",
         "movq",
         "movz",

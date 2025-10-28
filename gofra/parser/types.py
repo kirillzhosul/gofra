@@ -79,7 +79,7 @@ def parser_type_from_tokenizer(
 
             rbracket = context.next_token()
             if rbracket.type != TokenType.RBRACKET:
-                msg = f"Expected RBRACKET after array type elements qualifier but got {rbracket.type.name}"
+                msg = f"Expected RBRACKET after array type elements qualifier but got {rbracket.type.name} at {rbracket.location}"
                 raise ValueError(msg)
         elif elements_or_rbracket.type != TokenType.RBRACKET:
             msg = f"Expected RBRACKET after array type empty qualifier but got {elements_or_rbracket.type.name}"

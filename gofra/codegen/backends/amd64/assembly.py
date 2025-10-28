@@ -134,11 +134,11 @@ def initialize_static_data_section(
             assert variable.initial_value is not None
             if type_size == 1:
                 context.write(f"{name}: .byte {variable.initial_value}")
-            elif type_size == 2:  # noqa: PLR2004
+            elif type_size == 2:
                 context.write(f"{name}: .value {variable.initial_value}")
-            elif type_size <= 4:  # noqa: PLR2004
+            elif type_size <= 4:
                 context.write(f"{name}: .long {variable.initial_value}")
-            elif type_size <= 8:  # noqa: PLR2004
+            elif type_size <= 8:
                 context.write(f"{name}: .quad {variable.initial_value}")
             else:
                 msg = (
@@ -217,7 +217,7 @@ def function_end_with_epilogue(
     """Functions epilogue at the end. Restores required fields (like stack-pointer)."""
     abi = context.abi
     if not isinstance(return_type, VoidType):
-        if return_type.size_in_bytes > 16:  # noqa: PLR2004
+        if return_type.size_in_bytes > 16:
             msg = "Tried to return value which size in bytes requires indirect return register, NIP!"
             raise ValueError(msg)
         pop_cells_from_stack_into_registers(

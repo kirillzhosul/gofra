@@ -162,7 +162,9 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
     if array_index_at is not None:
         if not isinstance(variable.type, ArrayType):
-            msg = "cannot get index-of (e.g []) for non-array types."
+            msg = (
+                f"cannot get index-of (e.g []) for non-array types. at {token.location}"
+            )
             raise ValueError(msg)
 
         if array_index_at < 0:

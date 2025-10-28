@@ -20,7 +20,7 @@ def apply_file_executable_permissions(filepath: Path) -> None:
         return
 
     if not filepath.is_file():
-        msg = "Cannot apply file executable permissions for an non-file, this is probably an bug in the toolchain"
+        msg = f"Cannot apply file executable permissions for an non-file ({filepath}), this is probably an bug in the toolchain"
         raise OSError(msg)
 
     if filepath.is_symlink():

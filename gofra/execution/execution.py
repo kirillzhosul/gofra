@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def execute_binary_executable(
+def execute_binary_executable(  # noqa: PLR0913
     filepath: Path,
     *,
     args: Iterable[str],
