@@ -139,6 +139,9 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     if args.output_format == "executable":
         apply_file_executable_permissions(args.output_filepath)
 
+    if args.output_format == "object":
+        object_filepath.replace(args.output_filepath)
+
     cli_message(
         level="INFO",
         text=f"Compiled input file down to {args.output_format} `{args.output_filepath.name}`!",
