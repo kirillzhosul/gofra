@@ -1,9 +1,8 @@
 # Installation
 
-## Prerequirements
+## Pre requirements
 
-Gofra is an Python-based toolchain so you must only required to have Python installation.
-But as toolchain compiled code, it depends on target-specific linker and assembler.
+Gofra is a Python-based toolchain, so you only require a Python installation. However, as a toolchain-compiled code, it depends on the target-specific linker and assembler.
 
 - [Python >3.12.x](https://www.python.org) available as `python` or `python3` command
 - GNU/Mach-O Linker (ld) - For linking compiled objects
@@ -32,7 +31,7 @@ git clone https://github.com/kirillzhosul/gofra.git
 cd gofra
 ```
 
-(Step 2): Verify Installation
+(Step 2): Verify installation
 ```bash
 cd gofra
 python -m gofra --help
@@ -51,5 +50,5 @@ mkdocs serve
 ruff .
 ```
 
-(It will also propagate local `gofra` command over system-wide gofra if you inside environment (e.g `poetry shell`))
+(It will also propagate the local `gofra` command over the system-wide gofra if you are inside the environment (e.g. `poetry shell`))
 

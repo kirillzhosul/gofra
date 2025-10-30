@@ -1,8 +1,8 @@
 # Gofra
 
-**A Stack-based compiled programming language**
+**A Stack-based compiled programming language.**
 
-**Project is made for FUN and educational purposes! Don`t expect anything cool from it and just try/contribute**
+**The project is made for FUN and educational purposes! Don`t expect anything cool from it and just try/contribute.**
 
 ## Overview
 Gofra is a **concatenative** (stack-based) programming language that compiles to native code. 
@@ -32,7 +32,7 @@ Gofra currently supports native compilation (no cross-compilation yet). You must
 - Partial: **x86_64** (Linux)
 - Pending: **x86_64** (Windows)
 
-## Prerequirements
+## Pre requirements
 
 Before installing Gofra, ensure you have the following tools available system-wide:
 
@@ -42,7 +42,7 @@ Before installing Gofra, ensure you have the following tools available system-wi
 
 ## Installation
 
-**For full installation steps, please visit [Installation](./installation.md) page**
+**For full installation steps, please visit [Installation](./installation.md) page.**
 
 [Gofra](https://github.com/kirillzhosul/gofra) is distributed as single Python-based toolchain. To install:
 

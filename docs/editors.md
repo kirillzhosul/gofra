@@ -20,19 +20,19 @@ Syntax Highlighting: Support for `.gof` file syntax.
 The extension is currently available by installing it directly from the source. We are working on publishing it to the Visual Studio Code Marketplace for easier installation.
 
 #### Manual Installation from Source
-1.Clone the Repository:
-```bash
-git clone https://github.com/kirillzhosul/gofra
-cd gofra/editors/vscode
-```
+1. Clone the Repository:
+    ```bash
+    git clone https://github.com/kirillzhosul/gofra
+    cd gofra/editors/vscode
+    ```
 
 2. Package the Extension:
 You need to have Node.js and the vsce (Visual Studio Code Extensions) tool installed.
-```bash
-npm install -g @vscode/vsce
-vsce package
-```
-This command will create a .vsix file in the directory.
+    ```bash
+    npm install -g @vscode/vsce
+    vsce package
+    ```
+    This command will create a .vsix file in the directory.
 
 3. Install in VS Code:
 - Open VS Code.
