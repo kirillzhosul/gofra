@@ -56,7 +56,7 @@ var global int
 func void main[]
     // Local variable
     // located and initialized at stack
-    var local
+    var local int
 end
 ```
 

@@ -46,17 +46,16 @@ end
 
 #### Example
 ```gofra
-var counter int
-counter 0 !<  // Initialize counter to 0
+var counter int = 0; // Initialize counter to 0
 
-while 
+while
     counter 10 < // condition
 do
     "Hello! Iteration: " print
     counter print_integer  // Print current counter value
     "\n" print
-    
-    counter copy ?> 1 + !<  // Increment counter
+
+    &counter copy ?> 1 + !<  // Increment counter
 end
 ```
 

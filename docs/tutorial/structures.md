@@ -21,8 +21,9 @@ end
 
 ## Accessing an structure field
 ```gofra
+var stepan Person // initialize variable of type Person
 
-Person.age // will push an pointer to an `age` field so you can write / read from it
+stepan.age // will push an pointer to an `age` field so you can write / read from it
 ```
 
 ## Alignment on CPUs

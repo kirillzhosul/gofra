@@ -11,7 +11,7 @@ Swaps two arguments from stack, for example for reaching second argument
 Example
 ```gofra
 3 2      - // 1
-2 3 swap - // -1
+3 2 swap - // -1
 ```
 
 # DROP
@@ -21,7 +21,7 @@ Drops element from stack
 
 Example:
 ```gofra
-2 2 2 drop + // 4, and empty stack
+2 2 100 drop + // 4, and empty stack
 ```
 
 # COPY

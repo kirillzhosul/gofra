@@ -29,12 +29,12 @@ Consumes two values from the stack: `[address, value]`
 ```gofra
 // Store to a variable
 var name int
-name 1 !<  // Store 1 into name
+&name 1 !<  // Store 1 into name
 
 // Store to calculated address
 var array int[10]
-array 0 + 42 !<  // Store 42 at array[0]
-array 8 + 99 !<  // Store 99 at array[8] (if int is 4 bytes)
+&array 0 + 42 !<  // Store 42 at array[0]
+&array 8 + 99 !<  // Store 99 at array[8] (if int is 4 bytes)
 ```
 
 ## Load from memory
@@ -53,20 +53,28 @@ Consumes one value from the stack: `[address]`
 ```gofra
 <address> ?>
 ```
+To push variable onto stack:
+```gofra
+<variable>
+```
 
 ### Examples
 ```gofra
 // Load from a variable
 var name int
-name 1 !<    // Store 1 into name
-name ?>      // Load value from name (pushes 1 onto stack)
+&name 1 !<    // Store 1 into name
+
+&name ?>      // Load value from name (pushes 1 onto stack)
+// or
+name
+
 print_integer   // Prints 1
 
 // Load from array element
 var numbers int[3]
-numbers 0 + 10 !<    // numbers[0] = 10
-numbers 8 + 20 !<    // numbers[1] = 20 (assuming 8-byte integers)
-numbers 0 + ?> print // Load and print numbers[0]
+&numbers 0 + 10 !<    // numbers[0] = 10
+&numbers 8 + 20 !<    // numbers[1] = 20 (assuming 8-byte integers)
+&numbers 0 + ?> print // Load and print numbers[0]
 ```
 
 # Memory Size Considerations
