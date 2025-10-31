@@ -33,3 +33,25 @@ Example:
 ```gofra
 2 copy // 2 2 on stack
 ```
+
+# Tips and Tricks
+
+ - `swap` is useful when initializing local variables by function arguments values. For example:
+    ```gofra
+    func int str2int[
+        *char[],
+        int
+    ] do
+        var len int; &len swap !<
+        var ptr *char[]; &ptr swap !<
+        ...
+    end
+    ```
+    In this example, the `len` variable is initialized by the `int` value from the arguments and
+     the `ptr` variable is initilized by the `*char[]` value from the arguments.
+-  `copy` is useful when increasing or decreasing some value. For example:
+    ```
+    var number int = 0;
+
+    &number copy ?> 10 + !< // number = number + 10
+    ```
