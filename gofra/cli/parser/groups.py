@@ -112,7 +112,7 @@ def add_output_group(parser: ArgumentParser) -> None:
 
     group.add_argument(
         "--execute",
-        "-e",
+        "-x",
         required=False,
         action="store_true",
         help="If provided, will execute output executable file after compilation. Expects output format to be executable",
