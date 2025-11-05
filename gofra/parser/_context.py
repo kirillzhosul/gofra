@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from gofra.hir.function import Function
 from gofra.hir.operator import Operator, OperatorType
+from gofra.lexer.tokens import TokenType
 from gofra.types.composite.structure import StructureType
 
 if TYPE_CHECKING:
@@ -37,6 +38,12 @@ class PeekableTokenizer:
             self._peeked = next(self._tokenizer)
         return self._peeked
 
+    def expect_token(self, type: TokenType) -> None:  # noqa: A002
+        token = self.peek_token()
+        if token.type != type:
+            msg = f"Expected {type.name} but got {token.type.name} at {token.location}!\n[lexer-parser-general-expectation]"
+            raise ValueError(msg)
+
 
 @dataclass(frozen=False)
 class ParserContext(PeekableTokenizer):
@@ -47,7 +54,9 @@ class ParserContext(PeekableTokenizer):
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=list[Operator])
 
-    context_stack: deque[tuple[int, Operator]] = field(default_factory=lambda: deque())
+    context_stack: deque[tuple[int, Operator, tuple[str, int] | None]] = field(
+        default_factory=lambda: deque(),
+    )
     variables: MutableMapping[str, Variable] = field(
         default_factory=dict[str, "Variable"],
     )
@@ -118,7 +127,7 @@ class ParserContext(PeekableTokenizer):
             raise ValueError(msg)
         self.operators.extend(inline_block.operators)
 
-    def pop_context_stack(self) -> tuple[int, Operator]:
+    def pop_context_stack(self) -> tuple[int, Operator, tuple[str, int] | None]:
         return self.context_stack.pop()
 
     def push_new_operator(
@@ -139,4 +148,4 @@ class ParserContext(PeekableTokenizer):
         )
         self.operators.append(operator)
         if is_contextual:
-            self.context_stack.append((self.current_operator - 1, operator))
+            self.context_stack.append((self.current_operator - 1, operator, None))

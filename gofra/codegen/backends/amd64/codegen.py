@@ -124,7 +124,11 @@ def amd64_operator_instructions(
                 operator.jumps_to_operator_idx,
             )
             evaluate_conditional_block_on_stack_with_jump(context, label)
-        case OperatorType.CONDITIONAL_END | OperatorType.CONDITIONAL_WHILE:
+        case (
+            OperatorType.CONDITIONAL_END
+            | OperatorType.CONDITIONAL_WHILE
+            | OperatorType.CONDITIONAL_FOR
+        ):
             # This also should be refactored into `assembly` layer
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
             if isinstance(operator.jumps_to_operator_idx, int):

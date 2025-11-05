@@ -451,7 +451,11 @@ def translate_hir_function_to_lir_function(
                     LIRPushStaticStringAddress(segment=segment.name),
                 )
                 lir_function.add_op(LIRPushInteger32Bits(len(decoded_string)))
-            case OperatorType.CONDITIONAL_END | OperatorType.CONDITIONAL_WHILE:
+            case (
+                OperatorType.CONDITIONAL_END
+                | OperatorType.CONDITIONAL_WHILE
+                | OperatorType.CONDITIONAL_FOR
+            ):
                 label = CODEGEN_GOFRA_CONTEXT_LABEL % (lir_function.name, idx)
                 if isinstance(operator.jumps_to_operator_idx, int):
                     label_to = CODEGEN_GOFRA_CONTEXT_LABEL % (

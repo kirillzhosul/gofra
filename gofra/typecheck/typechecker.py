@@ -140,7 +140,11 @@ def emulate_type_stack_for_operators(
         if DEBUG_TRACE_TYPESTACK:
             print(operator.location, context.emulated_stack_types)
         match operator.type:
-            case OperatorType.CONDITIONAL_WHILE | OperatorType.CONDITIONAL_END:
+            case (
+                OperatorType.CONDITIONAL_WHILE
+                | OperatorType.CONDITIONAL_FOR
+                | OperatorType.CONDITIONAL_END
+            ):
                 ...  # Nothing here as there nothing to typecheck
             case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
                 context.raise_for_operator_arguments(operator, (BoolType,))

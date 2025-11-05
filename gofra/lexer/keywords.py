@@ -7,7 +7,9 @@ class Keyword(Enum):
     IF = auto()
 
     WHILE = auto()
+    FOR = auto()
     DO = auto()
+    IN = auto()
 
     END = auto()
 
@@ -55,6 +57,8 @@ WORD_TO_PREPROCESSOR_KEYWORD = {
 WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "if": Keyword.IF,
     "while": Keyword.WHILE,
+    "in": Keyword.IN,
+    "for": Keyword.FOR,
     "do": Keyword.DO,
     "end": Keyword.END,
     "extern": Keyword.EXTERN,
