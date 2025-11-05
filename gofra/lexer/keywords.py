@@ -44,11 +44,13 @@ class PreprocessorKeyword(Enum):
     INCLUDE = auto()
 
     IF_DEFINED = auto()
+    IF_NOT_DEFINED = auto()
     END_IF = auto()
 
 
 WORD_TO_PREPROCESSOR_KEYWORD = {
     "#ifdef": PreprocessorKeyword.IF_DEFINED,
+    "#ifndef": PreprocessorKeyword.IF_NOT_DEFINED,
     "#endif": PreprocessorKeyword.END_IF,
     "#include": PreprocessorKeyword.INCLUDE,
     "#define": PreprocessorKeyword.DEFINE,

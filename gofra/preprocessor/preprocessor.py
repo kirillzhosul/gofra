@@ -39,12 +39,19 @@ def preprocess_file(
     )
 
     for token in state.tokenizer:
+        print(token)
         match token:
             case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.INCLUDE):
                 resolve_include_from_token_into_state(token, state)
             case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.DEFINE):
                 consume_macro_definition_from_token(token, state)
-            case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.IF_DEFINED):
+            case (
+                Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.IF_DEFINED)
+                | Token(
+                    type=TokenType.KEYWORD,
+                    value=PreprocessorKeyword.IF_NOT_DEFINED,
+                )
+            ):
                 resolve_conditional_block_from_token(token, state)
             case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.UNDEFINE):
                 consume_macro_undefine_from_token(token, state)
