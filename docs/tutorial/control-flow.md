@@ -67,3 +67,36 @@ while → (condition check) → do → end → while (loop back)
                     ↓ (condition false)
                (exit loop)
 ```
+
+
+## `for` Statement
+
+The `for` loop is under the hood is same/using `while` construction but adds syntactical sugar for auto-constraints and counters (iterator)
+
+At entering the loop, iterator variable will be set to low threshold of range
+Range is exclusive (not inclusive)
+#### Example
+```gofra
+for i in 0..10 do
+    // i will be [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+end
+```
+
+#### Comparison to `while` HIR syntactical sugar
+
+Something like this:
+```gofra
+for i in 0..10 do
+end
+```
+
+Is being translated by compiler frontend into something like
+
+```gofra
+var i int = 0;
+
+while i 10 < do
+    // body of for
+    &i i 1 + !<
+end
+```
