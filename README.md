@@ -1,8 +1,8 @@
-# Gofra
+# Gofra [beta]
 
-**A Stack-based compiled programming language**
+**A Stack-based compiled programming language.**
 
-**Project is made for FUN and educational purposes! Don`t expect anything cool from it and just try/contribute**
+**The project is made not for competing with other languages, rather it is another incomplete language almost same like others.**
 
 ---
 #### [Documentation and information is available here](https://kirillzhosul.github.io/gofra)
@@ -23,6 +23,18 @@ func void main
 end
 ```
 
+## Features
+- *Low-level* - Write unsafe, low-level code with direct memory access
+- *Native Compilation* - Generates optimized native assembly code
+- *Type Safety* - Validates stack usage and type correctness at compile time
+- *C FFI* - Seamless integration with **C** libraries
+
+## Showcase
+- Pong Game (`examples/03_pong.gof`)
+- Simple HTTP server (`examples/04_http_server.gof`)
+
+## Milestones
+
 ## Platform support
 Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target:
 
@@ -30,23 +42,29 @@ Gofra currently supports native compilation (no cross-compilation yet). You must
 - Partial: **x86_64** (Linux)
 - Pending: **x86_64** (Windows)
 
-## Features
-- *Low-level* - Write unsafe, low-level code with direct memory access
-- *Native Compilation* - Generates optimized native assembly code
-- *Type Safety* - Validates stack usage and type correctness at compile time
-- *C FFI* - Seamless integration with **C** libraries
+## Pre requirements
+
+Before installing Gofra, ensure you have the following tools available system-wide:
+
+- [Python >3.12.x](https://www.python.org)
+- GNU/Mach-O Linker (ld) - For linking compiled objects
+- Assembler (as) - Typically included with Clang LLVM compiler
 
 ## Installation
 
-**For full installation steps, please visit [Documentation](https://kirillzhosul.github.io/gofra) page**
+**For full installation steps, please visit [Installation](./installation.md) page.**
 
 [Gofra](https://github.com/kirillzhosul/gofra) is distributed as single Python-based toolchain. To install:
 
+(Step 1): Install toolchain
 ```bash
 pip install gofra
-gofra --help
 ```
-
+(Step 2): Verify Installation
+```bash
+gofra --help
+gofra --version
+```
 
 ## More information and next steps
 

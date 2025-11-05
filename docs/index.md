@@ -1,8 +1,8 @@
-# Gofra
+# Gofra [beta]
 
 **A Stack-based compiled programming language.**
 
-**The project is made for FUN and educational purposes! Don`t expect anything cool from it and just try/contribute.**
+**The project is made not for competing with other languages, rather it is another incomplete language almost same like others.**
 
 ## Overview
 Gofra is a **concatenative** (stack-based) programming language that compiles to native code. 
@@ -24,6 +24,12 @@ end
 - *Native Compilation* - Generates optimized native assembly code
 - *Type Safety* - Validates stack usage and type correctness at compile time
 - *C FFI* - Seamless integration with **C** libraries
+
+## Showcase
+- Pong Game (`examples/03_pong.gof`)
+- Simple HTTP server (`examples/04_http_server.gof`)
+
+## Milestones
 
 ## Platform support
 Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target:
@@ -53,5 +59,6 @@ pip install gofra
 (Step 2): Verify Installation
 ```bash
 gofra --help
+gofra --version
 ```
 
