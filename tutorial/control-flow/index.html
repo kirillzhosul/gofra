@@ -85,6 +85,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#for-statement" class="nav-link">for Statement</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -138,7 +142,7 @@ do
     counter print_integer  // Print current counter value
     &quot;\n&quot; print
 
-    counter copy ?&gt; inc !&lt;  // Increment counter
+    counter copy ?&gt; 1 + !&lt;  // Increment counter
 end
 </code></pre>
 <h4 id="control-flow-pattern">Control flow pattern</h4>
@@ -146,6 +150,28 @@ end
                     │
                     ↓ (condition false)
                (exit loop)
+</code></pre>
+<h2 id="for-statement"><code>for</code> Statement</h2>
+<p>The <code>for</code> loop is under the hood is same/using <code>while</code> construction but adds syntactical sugar for auto-constraints and counters (iterator)</p>
+<p>At entering the loop, iterator variable will be set to low threshold of range
+Range is exclusive (not inclusive)</p>
+<h4 id="example_2">Example</h4>
+<pre><code class="language-gofra">for i in 0..10 do
+    // i will be [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+end
+</code></pre>
+<h4 id="comparison-to-while-hir-syntactical-sugar">Comparison to <code>while</code> HIR syntactical sugar</h4>
+<p>Something like this:</p>
+<pre><code class="language-gofra">for i in 0..10 do
+end
+</code></pre>
+<p>Is being translated by compiler frontend into something like</p>
+<pre><code class="language-gofra">var i int = 0;
+
+while i 10 &lt; do
+    // body of for
+    &amp;i i 1 + !&lt;
+end
 </code></pre></div>
             </div>
         </div>

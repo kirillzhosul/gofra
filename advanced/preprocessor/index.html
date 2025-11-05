@@ -126,7 +126,7 @@ And if file is not found there also, it will search against all include search d
 <p>You can use <code>-D</code> flag to define an macro from CLI which is useful for something like debug flags
 <code>-Ddebug=1</code> (define an macro <code>debug</code> with value 1)</p>
 <h3 id="definition-checking-at-preprocessor-stage">Definition checking at preprocessor stage</h3>
-<p>You can use <code>#ifdef</code> and <code>#endif</code> for checking definition of an macro</p>
+<p>You can use <code>#ifdef</code>, <code>#ifndef</code> and <code>#endif</code> for checking definition of an macro</p>
 <pre><code class="language-gofra">#idedef DEBUG
     // only be compiled if DEBUG macro is present
 #endif

@@ -85,7 +85,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#gofra" class="nav-link">Gofra</a>
+            <li class="nav-item" data-bs-level="1"><a href="#gofra-beta" class="nav-link">Gofra [beta]</a>
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#overview" class="nav-link">Overview</a>
               <ul class="nav flex-column">
@@ -99,11 +99,19 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#showcase" class="nav-link">Showcase</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#milestones" class="nav-link">Milestones</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#platform-support" class="nav-link">Platform support</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#prerequirements" class="nav-link">Prerequirements</a>
+            <li class="nav-item" data-bs-level="2"><a href="#pre-requirements" class="nav-link">Pre requirements</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -118,9 +126,9 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="gofra">Gofra</h1>
-<p><strong>A Stack-based compiled programming language</strong></p>
-<p><strong>Project is made for FUN and educational purposes! Don`t expect anything cool from it and just try/contribute</strong></p>
+<h1 id="gofra-beta">Gofra [beta]</h1>
+<p><strong>A Stack-based compiled programming language.</strong></p>
+<p><strong>The project is made not for competing with other languages, rather it is another incomplete language almost same like others.</strong></p>
 <h2 id="overview">Overview</h2>
 <p>Gofra is a <strong>concatenative</strong> (stack-based) programming language that compiles to native code. 
 Programs are written using <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation">Reverse Polish notation</a>, where operations follow their operands (e.g <code>2 + 2</code> is <code>2 2 +</code>).</p>
@@ -139,13 +147,20 @@ end
 <li><em>Type Safety</em> - Validates stack usage and type correctness at compile time</li>
 <li><em>C FFI</em> - Seamless integration with <strong>C</strong> libraries</li>
 </ul>
+<h2 id="showcase">Showcase</h2>
+<ul>
+<li>Pong Game (<code>examples/03_pong.gof</code>)</li>
+<li>Simple HTTP server (<code>examples/04_http_server.gof</code>)</li>
+</ul>
+<h2 id="milestones">Milestones</h2>
 <h2 id="platform-support">Platform support</h2>
 <p>Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target:</p>
 <ul>
-<li><strong>x86_64</strong> (Linux)</li>
-<li><strong>AArch64</strong> macOS (Darwin)</li>
+<li>Full: <strong>AArch64</strong> macOS (Darwin)</li>
+<li>Partial: <strong>x86_64</strong> (Linux)</li>
+<li>Pending: <strong>x86_64</strong> (Windows)</li>
 </ul>
-<h2 id="prerequirements">Prerequirements</h2>
+<h2 id="pre-requirements">Pre requirements</h2>
 <p>Before installing Gofra, ensure you have the following tools available system-wide:</p>
 <ul>
 <li><a href="https://www.python.org">Python &gt;3.12.x</a></li>
@@ -153,13 +168,14 @@ end
 <li>Assembler (as) - Typically included with Clang LLVM compiler</li>
 </ul>
 <h2 id="installation">Installation</h2>
-<p><strong>For full installation steps, please visit <a href="installation/">Installation</a> page</strong></p>
+<p><strong>For full installation steps, please visit <a href="installation/">Installation</a> page.</strong></p>
 <p><a href="https://github.com/kirillzhosul/gofra">Gofra</a> is distributed as single Python-based toolchain. To install:</p>
 <p>(Step 1): Install toolchain</p>
 <pre><code class="language-bash">pip install gofra
 </code></pre>
 <p>(Step 2): Verify Installation</p>
 <pre><code class="language-bash">gofra --help
+gofra --version
 </code></pre></div>
             </div>
         </div>
@@ -242,5 +258,5 @@ end
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2025-10-14 01:19:14.758856+00:00
+Build Date UTC : 2025-11-05 22:08:29.871167+00:00
 -->

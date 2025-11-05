@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Array data type - Gofra</title>
+        <title>Toolchain (Compiler) architecture - Gofra</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -44,7 +44,7 @@
                                 <a href="../../tutorial/" class="nav-link">Tutorial</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../../advanced/" class="nav-link">Advanced</a>
+                                <a href="../" class="nav-link">Advanced</a>
                             </li>
                         </ul>
 
@@ -55,7 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/datatypes/array.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/toolchain-architecture.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -75,25 +75,21 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#array-data-type" class="nav-link">Array data type</a>
+            <li class="nav-item" data-bs-level="1"><a href="#toolchain-compiler-architecture" class="nav-link">Toolchain (Compiler) architecture</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#layout" class="nav-link">Layout</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#syntax" class="nav-link">Syntax</a>
+            <li class="nav-item" data-bs-level="2"><a href="#core-modules" class="nav-link">Core modules</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#initialization" class="nav-link">Initialization</a>
+            <li class="nav-item" data-bs-level="2"><a href="#toolchain-cli-goal-flow" class="nav-link">Toolchain CLI goal flow</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#incomplete-array-type-definition" class="nav-link">Incomplete array type definition</a>
+            <li class="nav-item" data-bs-level="2"><a href="#structure-of-default-code-generators" class="nav-link">Structure of default Code-generators</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#accessing-array-element" class="nav-link">Accessing array element</a>
+            <li class="nav-item" data-bs-level="2"><a href="#structure-of-typechecker" class="nav-link">Structure of typechecker</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -104,61 +100,16 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="array-data-type">Array data type</h1>
-<p>In Gofra <em>array</em> is a composite data type that represents a pointer to a contiguous segment of memory storing a fixed number of elements of the same specified type. 
-Unlike dynamic collections, arrays in Gofra have a predetermined size that cannot be changed after declaration.</p>
-<h2 id="layout">Layout</h2>
-<p>In memory, as array being contiguous blob of memory, it corresponding value points at first element in memory
-shifting that pointer</p>
-<pre><code>//  [element0element1element2]
-//   ^       ^
-// array ptr |
-//      ptr+sizeof
-</code></pre>
-<p>So accessing memory at array pointer will lead to reading its first element
-While second element is at pointer + size of array element</p>
-<p>For <code>int8</code> which size is 8 bytes, <code>var array int[3]</code> according to image above has memory layout like</p>
-<p>array      -&gt; pointer to an first element
-array + 8  -&gt; pointer to an second element
-array + 16 -&gt; pointer to an third element</p>
-<p>For convenient usage of layout, see <em>Accessing array element</em> section</p>
-<h2 id="syntax">Syntax</h2>
-<p>Array type is defined as element type followed by square brackets</p>
-<pre><code class="language-gofra">int[32] // Array of 32 integer elements 
-int[] // Incomplete array definition, for type parameters
-</code></pre>
-<h2 id="initialization">Initialization</h2>
-<p>Arrays currently does not have constructors, and by default all arrays are zero-initialized
-You has to manually initialize array with memory write instructions</p>
-<h2 id="incomplete-array-type-definition">Incomplete array type definition</h2>
-<p>As you see before, there is possibility to define an incomplete type for array (e.g <code>int[]</code>) this has no effect while used as variable or field type
-as leading to generation of an empty blob segment (zero elements by default, meaning size of array is zero, no way to generate that blob or it is inaccessible)
-This incomplete array types is used as function parameters, as mark that array has any arbitrary size while passed to desired function:</p>
-<pre><code class="language-gofra">func void incomplete_array[int[]]
-    ...
-end
-</code></pre>
-<p>This function can be called with array of any size like <code>int[32]</code> or <code>int[1]</code> but any other type is prohibited
-Mostly, useful for accepting array of character as strings, as size is useless mostly for these function (e.g to calculate string size)</p>
-<h2 id="accessing-array-element">Accessing array element</h2>
-<p>As documented in <em>Layout</em> section, you must already know how does array layouts in memory, but using pointer arithmetics is weird as you can access direct array indices at runtime via</p>
-<pre><code class="language-gofra">var array int[32]
-
-array[0] // pointer to an first element, same as `array`
-array[3] // pointer to third element, same as `array + sizeof(int) * 3` or `array + 8 * 3` which is shift pointer by 24
-</code></pre>
-<p>You also can use variable identifier to get array index by value of that variable</p>
-<h3 id="pointer-arithmetics-equivalent">Pointer arithmetics equivalent</h3>
-<pre><code class="language-gofra">var array int[32]
-
-array 8 0 * + // pointer to first element
-array 8 3 * + // pointer to third element
-</code></pre>
-<h3 id="oob-out-of-bounds">OOB (Out-Of-Bounds)</h3>
-<p>Gofra performs compile-time bounds checking where possible:</p>
-<pre><code class="language-gofra">var array int[5]
-array[5] // Compilation error: OOB for array access
-</code></pre></div>
+<h1 id="toolchain-compiler-architecture">Toolchain (Compiler) architecture</h1>
+<p>This page explains internals of compiler (toolchain) and is useful for development, continue reading if you need this</p>
+<h2 id="core-modules">Core modules</h2>
+<p>Toolchain consists of widely used components: Lexer, Parser, Codegen but also contains Preprocessor, Optimizer, Typechecker and also relatable to notice is Linker, Assembler and CLI</p>
+<h2 id="toolchain-cli-goal-flow">Toolchain CLI goal flow</h2>
+<p><code>CLI -&gt; Lexer -&gt; Preprocessor -&gt; Parser -&gt; Typechecker -&gt; Optimizer -&gt; Codegen -&gt; Assembler -&gt; Linker</code></p>
+<h2 id="structure-of-default-code-generators">Structure of default Code-generators</h2>
+<p>By default all architectures emits assembly-code (e.g almost nearly machine code) that is requires to be assembler into binary machine code via Assembler</p>
+<h2 id="structure-of-typechecker">Structure of typechecker</h2>
+<p>As parser produce an HIR and does barely perform type checking, there is an Typechecker module which is responsible for checking that types are compatible within operations (e.g plus or function call)</p></div>
             </div>
         </div>
 

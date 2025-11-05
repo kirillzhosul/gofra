@@ -109,20 +109,24 @@ These extensions provide syntax highlighting, code snippets, and useful commands
 <h2 id="visual-studio-code">Visual Studio Code</h2>
 <p>The extension is currently available by installing it directly from the source. We are working on publishing it to the Visual Studio Code Marketplace for easier installation.</p>
 <h4 id="manual-installation-from-source">Manual Installation from Source</h4>
-<p>1.Clone the Repository:</p>
-<pre><code class="language-bash">git clone https://github.com/kirillzhosul/gofra
-cd gofra/editors/vscode
-</code></pre>
 <ol>
-<li>Package the Extension:
-You need to have Node.js and the vsce (Visual Studio Code Extensions) tool installed.</li>
-</ol>
-<pre><code class="language-bash">npm install -g @vscode/vsce
-vsce package
-</code></pre>
-<p>This command will create a .vsix file in the directory.</p>
-<ol>
-<li>Install in VS Code:</li>
+<li>
+<p>Clone the Repository:
+    <code>bash
+    git clone https://github.com/kirillzhosul/gofra
+    cd gofra/editors/vscode</code></p>
+</li>
+<li>
+<p>Package the Extension:
+You need to have Node.js and the vsce (Visual Studio Code Extensions) tool installed.
+    <code>bash
+    npm install -g @vscode/vsce
+    vsce package</code>
+    This command will create a .vsix file in the directory.</p>
+</li>
+<li>
+<p>Install in VS Code:</p>
+</li>
 <li>Open VS Code.</li>
 <li>Go to the Extensions view (Ctrl+Shift+X / Cmd+Shift+X).</li>
 <li>Click the "..." menu in the top-right of the Extensions panel and select Install from VSIX....</li>

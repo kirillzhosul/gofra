@@ -87,7 +87,7 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#installation" class="nav-link">Installation</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#prerequirements" class="nav-link">Prerequirements</a>
+            <li class="nav-item" data-bs-level="2"><a href="#pre-requirements" class="nav-link">Pre requirements</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -107,9 +107,8 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="installation">Installation</h1>
-<h2 id="prerequirements">Prerequirements</h2>
-<p>Gofra is an Python-based toolchain so you must only required to have Python installation.
-But as toolchain compiled code, it depends on target-specific linker and assembler.</p>
+<h2 id="pre-requirements">Pre requirements</h2>
+<p>Gofra is a Python-based toolchain, so you only require a Python installation. However, as a toolchain-compiled code, it depends on the target-specific linker and assembler.</p>
 <ul>
 <li><a href="https://www.python.org">Python &gt;3.12.x</a> available as <code>python</code> or <code>python3</code> command</li>
 <li>GNU/Mach-O Linker (ld) - For linking compiled objects</li>
@@ -128,7 +127,7 @@ But as toolchain compiled code, it depends on target-specific linker and assembl
 <pre><code class="language-bash">git clone https://github.com/kirillzhosul/gofra.git
 cd gofra
 </code></pre>
-<p>(Step 2): Verify Installation</p>
+<p>(Step 2): Verify installation</p>
 <pre><code class="language-bash">cd gofra
 python -m gofra --help
 </code></pre>
@@ -142,7 +141,7 @@ mkdocs serve
 # Lint source code
 ruff .
 </code></pre>
-<p>(It will also propagate local <code>gofra</code> command over system-wide gofra if you inside environment (e.g <code>poetry shell</code>))</p></div>
+<p>(It will also propagate the local <code>gofra</code> command over the system-wide gofra if you are inside the environment (e.g. <code>poetry shell</code>))</p></div>
             </div>
         </div>
 
