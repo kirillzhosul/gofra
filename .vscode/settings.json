@@ -23,6 +23,7 @@
         "addq",
         "Addrs",
         "adrp",
+        "argb",
         "armv",
         "asciz",
         "bgra",

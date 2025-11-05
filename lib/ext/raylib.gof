@@ -20,5 +20,16 @@ extern func void _DrawText[*char[],int,int,int,int]    #define DrawText _DrawTex
 extern func *int _TextFormat[*char[],*char[]]          #define TextFormat _TextFormat
 extern func void _DrawFPS[int,int]                     #define DrawFPS _DrawFPS
 
+
+func int rgba_to_raylib_argb[int,int,int,int]
+    var color int = 0;
+
+    &color swap 24 << color | !<
+    &color swap 16 << color | !<
+    &color swap 8  << color | !<
+    &color swap       color | !<
+    color return
+end
+
 #define WHITE 0xFFFFFFFF
 #define BLACK 0xFF000000
