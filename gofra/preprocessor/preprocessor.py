@@ -39,7 +39,6 @@ def preprocess_file(
     )
 
     for token in state.tokenizer:
-        print(token)
         match token:
             case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.INCLUDE):
                 resolve_include_from_token_into_state(token, state)
