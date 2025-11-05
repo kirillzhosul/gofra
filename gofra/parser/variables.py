@@ -77,7 +77,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
     varname = token.text
 
     is_reference = False
-    array_index_at = None
+    array_index_at: int | str | None = None
     struct_field_accessor = None
 
     if varname.startswith("&"):
@@ -88,7 +88,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         _ = context.next_token()  # Consume LBRACKET
 
         elements_token = context.next_token()
-        if elements_token.type != TokenType.INTEGER:
+        if elements_token.type not in (TokenType.INTEGER, TokenType.IDENTIFIER):
             msg = (
                 f"Expected array index inside of [], but got {elements_token.type.name}"
             )
@@ -99,9 +99,14 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             msg = f"Expected RBRACKET after array index element qualifier but got {rbracket.type.name}"
             raise ValueError(msg)
 
-        assert isinstance(elements_token.value, int)
-        array_index_at = elements_token.value
-
+        if elements_token.type == TokenType.INTEGER:
+            # Simple integer array access
+            assert isinstance(elements_token.value, int)
+            array_index_at = elements_token.value
+        else:
+            # Variable index access
+            assert isinstance(elements_token.value, str)
+            array_index_at = elements_token.value
     accessor_token = context.peek_token()
     if (
         accessor_token.type == TokenType.DOT
@@ -167,25 +172,42 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             )
             raise ValueError(msg)
 
-        if array_index_at < 0:
-            msg = "Negative indexing inside arrays is prohibited"
-            raise ValueError(msg)
+        if isinstance(array_index_at, int):
+            # Access by integer
+            if array_index_at < 0:
+                msg = "Negative indexing inside arrays is prohibited"
+                raise ValueError(msg)
 
-        if variable.type.is_index_oob(array_index_at):
-            msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements"
-            raise ValueError(msg)
+            if variable.type.is_index_oob(array_index_at):
+                msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements"
+                raise ValueError(msg)
 
-        shift_in_bytes = variable.type.get_index_offset(array_index_at)
-        if shift_in_bytes:
+            shift_in_bytes = variable.type.get_index_offset(array_index_at)
+            if shift_in_bytes:
+                context.push_new_operator(
+                    type=OperatorType.PUSH_INTEGER,
+                    token=token,
+                    operand=shift_in_bytes,
+                )
+                context.push_new_operator(
+                    type=OperatorType.ARITHMETIC_PLUS,
+                    token=token,
+                )
+        else:
+            # Access by variable
             context.push_new_operator(
-                type=OperatorType.PUSH_INTEGER,
-                token=token,
-                operand=shift_in_bytes,
+                OperatorType.PUSH_INTEGER,
+                token,
+                operand=variable.type.element_type.size_in_bytes,
             )
             context.push_new_operator(
-                type=OperatorType.ARITHMETIC_PLUS,
-                token=token,
+                OperatorType.PUSH_VARIABLE_ADDRESS,
+                token,
+                operand=array_index_at,
             )
+            context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
+            context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token)
+            context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token)
 
     if not is_reference:
         context.push_new_operator(
