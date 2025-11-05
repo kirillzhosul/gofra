@@ -1,0 +1,53 @@
+// ==============================================
+// Input manipulations based on operating system (wrapper)
+// ==============================================
+
+#include "os/general.gof"
+#include "string.gof"
+#include "std_handles.gof"
+
+// TODO: Add proper OR to preprocessor
+// TODO: Inline functions has bad debug options and produce improper error messages
+// TODO: Test and implement missing features for Windows
+// TODO: Allow forward referencing functions
+
+// Input a string from given file descriptor and returns number of bytes read
+#ifdef OS_LINUX   inline func int input_fd[int, *char[], int] call sc_read end #endif
+#ifdef OS_DARWIN  inline func int input_fd[int, *char[], int] call sc_read end #endif
+
+// Consume all character bytes from input buffer (e.g `input_fd`)
+// Use as safety method as reading and letting some character leak through 
+func void input_exhaust_buffer[]
+    var buffer char[1]
+
+    // TODO: add proper initializer as language feature
+    &buffer[0] ' ' !<
+
+    // TODO: Allow to compare non-integer types (e.g char)
+    while 
+        buffer[0] typecast int 
+        '\n' typecast int 
+        !=
+    do
+            STD_IN
+            &buffer
+            sizeof buffer
+        call input_fd drop
+        // TODO: Probably we may break from this loop if read zero bytes, but there is no break construction rn
+    end
+end
+
+// Input a string from standard console input stream
+// Safe to buffer overflows, as exhaust all remaining IO buffer
+// TODO: Unsafe to big buffers, requires introducing testkit test cases for that
+func void input[*char[], int]
+    var len int; &len swap !< // TODO: add proper argument names
+    
+    STD_IN swap
+    len
+    call input_fd drop
+
+    // Safety mechanism:
+    // exhaust leftover buffer after system IO read
+    call input_exhaust_buffer
+end

@@ -1,8 +1,11 @@
 // ==============================================
 // Network (TCP/UDP) helpers and wrappers
-// Caveats: Currently works only on Darwin!
 // ==============================================
-#include "os/general.gof"
+
+// TODO: Add Windows support
+// TODO: Add proper OR to preprocessor
+// TODO: Inline functions has bad debug options and produce improper error messages
+#include "general.gof"
 
 #ifdef OS_DARWIN
     // System call wrappers
@@ -26,8 +29,6 @@
     end
 #endif
 
-
-// TODO: Add proper OR to preprocessor, must separate that from windows NET-code
 #ifdef OS_LINUX
     // System call wrappers
     inline func int net_socket[int, int, int]        call sc_socket end

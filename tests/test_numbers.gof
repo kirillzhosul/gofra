@@ -1,6 +1,6 @@
-#include "std.gof"
+#include "assert.gof"
 
-func void main[]
+func int main[]
     0        drop
     128      drop
     1024     drop
@@ -13,5 +13,5 @@ func void main[]
     // This is probably is 64bits arch related
     18446744073709551615 drop
 
-    0 exit
+    0 return
 end

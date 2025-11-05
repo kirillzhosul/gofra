@@ -1,6 +1,6 @@
-#include "std.gof"
+#include "os/io/output.gof"
 
-func void main[]
+func int main[]
     var hello char[6]
 
     &hello[0] 'H' !<
@@ -11,6 +11,6 @@ func void main[]
     &hello[5] '\n' !<
 
     &hello 6 print
-    
-    0 exit
+
+    0 return
 end

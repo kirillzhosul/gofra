@@ -1,12 +1,10 @@
 
-#include "std.gof"
-
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 
 var exit_code int[1]
 
-func void main[]
+func int main[]
     &exit_code[0] TESTKIT_EXPECTED_EXIT_CODE !<
 
-    exit_code[0] call exit
+    exit_code[0] return
 end

@@ -1,14 +1,10 @@
-
-#include "std.gof"
-
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 
-
-func void main[]
+func int main[]
     var exit_code int[60]
 
     // That *massive* shift must be increased later.
     &exit_code[59] TESTKIT_EXPECTED_EXIT_CODE !<
 
-    exit_code[59] call exit
+    exit_code[59] return
 end

@@ -3,6 +3,9 @@
 // Time interaction wrapper
 // ==============================================
 
+// TODO: Add different implementation for Windows and non POSIX systems
+
+#include "general.gof"
 
 struct timeval
     tv_sec int
@@ -15,5 +18,5 @@ func int time_seconds_since_epoch[]
 
     &tv NULL sc_gettimeofday
 
-    tv.tv_sec
+    tv.tv_sec return
 end

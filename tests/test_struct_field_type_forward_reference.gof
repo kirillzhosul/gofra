@@ -2,5 +2,6 @@ struct forward_struct_t
     field forward_struct_t
 end
 
-func void main[]
+func int main[]
+    0
 end

@@ -1,0 +1,6 @@
+// ==============================================
+// I/O (Input / Output) manipulations based on operating system (wrapper)
+// ==============================================
+
+#include "output.gof"
+#include "input.gof"

@@ -4,7 +4,7 @@
 // TODO: add static assertions (https://github.com/kirillzhosul/gofra/issues/19)
 // ==============================================
 
-#include "os/io.gof"
+#include "os/io/output.gof"
 
 // Check for equality at runtime with additional message
 // (assert two values same)
