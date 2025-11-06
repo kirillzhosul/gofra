@@ -15,7 +15,7 @@ def unpack_variable_definition_from_token(
 ) -> None:
     varname_token = context.next_token()
     if varname_token.type != TokenType.IDENTIFIER:
-        msg = "Expected variable name after variable keyword"
+        msg = f"Expected variable name after variable keyword but got {varname_token.type.name} at {varname_token.location}"
         raise ValueError(msg)
     assert isinstance(varname_token.value, str)
 

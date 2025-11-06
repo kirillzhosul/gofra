@@ -395,7 +395,7 @@ def emulate_type_stack_for_operators(
                 ):
                     cli_message(
                         "WARNING",
-                        f"Redundant  static type cast from `{previous_type}` to `{to_type_cast}` at {operator.token.location} (e.g type is strictly same so it is considered as redundant)",
+                        f"Redundant static type cast from `{previous_type}` to `{to_type_cast}` at {operator.token.location} (e.g type is strictly same so it is considered as redundant)",
                     )
                 context.push_types(to_type_cast)
             case OperatorType.STRUCT_FIELD_OFFSET:
