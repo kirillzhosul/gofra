@@ -1,12 +1,16 @@
 # Gofra [beta]
 
+
 **A Stack-based compiled programming language.**
 
 **The project is made not for competing with other languages, rather it is another incomplete language almost same like others.**
 
+[![Compiler Testkit](https://github.com/kirillzhosul/gofra/actions/workflows/testkit.yml/badge.svg)](https://github.com/kirillzhosul/gofra/actions/workflows/testkit.yml)
 ---
 #### [Documentation and information is available here](https://kirillzhosul.github.io/gofra)
 ---
+
+
 
 ## Overview
 Gofra is a **concatenative** (stack-based) programming language that compiles to native code. 
