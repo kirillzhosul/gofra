@@ -80,8 +80,6 @@ def amd64_instruction_set(
             idx,
             owner_function,
         )
-        if operator.type == OperatorType.FUNCTION_RETURN:
-            break
 
 
 def amd64_operator_instructions(

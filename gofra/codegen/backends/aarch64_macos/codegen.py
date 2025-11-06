@@ -80,8 +80,6 @@ def aarch64_macos_instruction_set(
             idx,
             owner_function,
         )
-        if operator.type == OperatorType.FUNCTION_RETURN:
-            break
 
 
 def aarch64_macos_operator_instructions(

@@ -52,6 +52,7 @@ def unpack_variable_definition_from_token(
             msg = f"Expected an integer for assignment operation, but got {value_token.type} as {value_token.location}"
             raise ValueError(msg)
         if type(typename) not in (I64Type,):
+            # TODO(@kirillzhosul): Allow more complex datatypes as initializers
             msg = "Assignment is allowed only for integer types for now."
             raise ValueError(msg)
 

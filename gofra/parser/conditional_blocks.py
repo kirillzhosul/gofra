@@ -134,6 +134,8 @@ def consume_conditional_block_keyword_from_token(
                 ]
                 if loop_block_start.type == OperatorType.CONDITIONAL_FOR:
                     assert loop_compiler_metadata
+
+                    # TODO(@kirillzhosul): Has fatal behavior when b > a (e.g 10..5)
                     # Here we have compiler metadata for `for` loop syntactical sugar
                     iterator, step = loop_compiler_metadata
 

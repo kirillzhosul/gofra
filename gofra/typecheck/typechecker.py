@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING, Literal, assert_never
 
 from gofra.cli.output import cli_message
 from gofra.consts import GOFRA_ENTRY_POINT
@@ -88,7 +88,7 @@ def validate_function_type_safety(
     module: Module,
 ) -> None:
     """Emulate and validate function type safety inside."""
-    emulated_type_stack = emulate_type_stack_for_operators(
+    emulated_type_stack, _ = emulate_type_stack_for_operators(
         operators=function.operators,
         module=module,
         initial_type_stack=list(function.parameters),
@@ -129,7 +129,7 @@ def emulate_type_stack_for_operators(
     initial_type_stack: Sequence[Type],
     current_function: Function,
     blocks_idx_shift: int = 0,
-) -> Sequence[Type]:
+) -> tuple[Sequence[Type], Literal["end-of-block", "early-return"]]:
     """Emulate and return resulting type stack from given operators.
 
     Functions are provided so calling it will dereference new emulation type stack.
@@ -159,7 +159,7 @@ def emulate_type_stack_for_operators(
 
                 assert operators[jumps_to_idx].type == OperatorType.CONDITIONAL_END
 
-                type_stack = emulate_type_stack_for_operators(
+                type_stack, reason = emulate_type_stack_for_operators(
                     operators=operators[idx:jumps_to_idx],
                     module=module,
                     initial_type_stack=context.emulated_stack_types[::],
@@ -167,7 +167,10 @@ def emulate_type_stack_for_operators(
                     current_function=current_function,
                 )
 
-                if not is_typestack_same(type_stack, context.emulated_stack_types):
+                if reason != "early-return" and not is_typestack_same(
+                    type_stack,
+                    context.emulated_stack_types,
+                ):
                     raise TypecheckBlockStackMismatchError(
                         operator_begin=operator,
                         operator_end=operators[jumps_to_idx],
@@ -198,7 +201,7 @@ def emulate_type_stack_for_operators(
             case OperatorType.PUSH_INTEGER:
                 context.push_types(I64Type())
             case OperatorType.FUNCTION_RETURN:
-                return context.emulated_stack_types
+                return context.emulated_stack_types, "early-return"
             case OperatorType.FUNCTION_CALL:
                 assert isinstance(operator.operand, str)
 
@@ -422,7 +425,7 @@ def emulate_type_stack_for_operators(
             case _:
                 assert_never(operator.type)
 
-    return context.emulated_stack_types
+    return context.emulated_stack_types, "end-of-block"
 
 
 def is_typestack_same(a: Sequence[Type], b: Sequence[Type]) -> bool:

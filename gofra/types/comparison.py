@@ -21,6 +21,7 @@ def is_types_same(
         case "strict-same-type":
             return _compare_types_strict_same_type(a, b)
         case "implicit-byte-size":
+            # TODO(@kirillzhosul): Probably required proper check even for that simple strategy, as I64 is same as *void, but should be generous
             return a.size_in_bytes == b.size_in_bytes
 
 
