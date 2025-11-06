@@ -5,7 +5,7 @@
 // MacOS: `-lraylib`
 // ==============================================
 
-#include "ext/raylib.gof"
+#include "bindings/raylib.gof"
 #include "std.gof"
 
 #define PADDLE_DEFAULT_SPEED 3
