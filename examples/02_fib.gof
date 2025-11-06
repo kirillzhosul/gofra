@@ -6,27 +6,21 @@
 
 #include "std.gof"
 
-#define N 1024
-var buf *char[]
-
-func void print_int_with_sep[int]
-    int_to_cstr 20 print
-    ", " print
-end
+#define N 4181
 
 func void main[]
-    var a int = 0
-    var b int = 1
-    var x int
+    var a int = 0;
+    var b int = 1;
+    var x int;
 
     &x a b + !<
 
     "Fibonacci Series: " print
-    a call print_int_with_sep
-    b call print_int_with_sep
+    a print_int ", " print
+    b print_int ", " print
 
     while x N <= do
-        x int_to_cstr 20 print
+        x print_int
 
         &a b !<
         &b x !<
