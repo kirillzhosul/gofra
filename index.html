@@ -137,7 +137,7 @@ Programs are written using <a href="https://en.wikipedia.org/wiki/Reverse_Polish
 <pre><code class="language-gofra">include &quot;std.gof&quot;
 
 func void main
-    &quot;Hello, World!\n&quot; print
+    &quot;Hello, World!&quot; println
 end
 </code></pre>
 <h2 id="features">Features</h2>
@@ -154,12 +154,12 @@ end
 </ul>
 <h2 id="milestones">Milestones</h2>
 <h2 id="platform-support">Platform support</h2>
-<p>Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target:</p>
+<p>Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target.</p>
 <ul>
 <li>Full: <strong>AArch64</strong> macOS (Darwin)</li>
-<li>Partial: <strong>x86_64</strong> (Linux)</li>
-<li>Pending: <strong>x86_64</strong> (Windows)</li>
+<li>Partial, buggy: <strong>x86_64</strong> (Linux)</li>
 </ul>
+<p>(Windows <strong>x86_64</strong> is must be supported soon, requires contributors)</p>
 <h2 id="pre-requirements">Pre requirements</h2>
 <p>Before installing Gofra, ensure you have the following tools available system-wide:</p>
 <ul>
@@ -175,7 +175,6 @@ end
 </code></pre>
 <p>(Step 2): Verify Installation</p>
 <pre><code class="language-bash">gofra --help
-gofra --version
 </code></pre></div>
             </div>
         </div>
@@ -258,5 +257,5 @@ gofra --version
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2025-11-05 22:10:56.396720+00:00
+Build Date UTC : 2025-11-06 05:12:03.775693+00:00
 -->
