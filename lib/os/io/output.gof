@@ -66,9 +66,8 @@ func void print_int64_fd[int, int]
     num 0 == if
         // Straight zero
         &print_int64_buf[0] '0'  !<
-        &print_int64_buf[1] '\n' !<
 
-        fd &print_int64_buf 2 
+        fd &print_int64_buf 1
         call print_fd drop
 
         return
@@ -110,11 +109,9 @@ func void print_int64_fd[int, int]
 end
 
 // Print given number into standard console output
-// Emits '\n' at the end
 // TODO: negative numbers is not supported
 func void print_int64[int]
     STD_OUT swap call print_int64_fd
-    "\n" call print
 end
 
 #define print_int print_int64 // Alias as default int is 64 bits
