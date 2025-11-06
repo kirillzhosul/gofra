@@ -15,7 +15,7 @@ Here's a simple **"Hello, World!"** example:
 include "std.gof"
 
 func void main
-    "Hello, World!\n" print
+    "Hello, World!" println
 end
 ```
 
@@ -32,11 +32,12 @@ end
 ## Milestones
 
 ## Platform support
-Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target:
+Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target.
 
 - Full: **AArch64** macOS (Darwin)
-- Partial: **x86_64** (Linux)
-- Pending: **x86_64** (Windows)
+- Partial, buggy: **x86_64** (Linux)
+
+(Windows **x86_64** is must be supported soon, requires contributors)
 
 ## Pre requirements
 
@@ -59,6 +60,4 @@ pip install gofra
 (Step 2): Verify Installation
 ```bash
 gofra --help
-gofra --version
 ```
-
