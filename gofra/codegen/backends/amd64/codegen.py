@@ -276,8 +276,6 @@ def amd64_program_entry_point(
     )
 
     # Prepare and execute main function
-    assert isinstance(entry_point.return_type, VoidType)
-    assert not entry_point.has_return_value()
     function_call(
         context,
         name=entry_point.name,
@@ -285,10 +283,9 @@ def amd64_program_entry_point(
         type_contract_out=VoidType(),
     )
 
-    if context.target.operating_system == "Windows":
-        ...
+    if isinstance(entry_point.return_type, VoidType):
+        assert context.target.operating_system != "Windows"
         # TODO!(@kirillzhosul): review exit code on Windows  # noqa: TD002, TD004
-    else:
         # Call syscall to exit without accessing protected system memory.
         # `ret` into return-address will fail with segfault
         ipc_syscall_linux(
@@ -299,6 +296,14 @@ def amd64_program_entry_point(
                 AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER,
                 AMD64_LINUX_EPILOGUE_EXIT_CODE,
             ],
+        )
+    else:
+        push_integer_onto_stack(context, AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER)
+        ipc_syscall_linux(
+            context,
+            arguments_count=1,
+            store_retval_onto_stack=False,
+            injected_args=None,
         )
 
     function_end_with_epilogue(
