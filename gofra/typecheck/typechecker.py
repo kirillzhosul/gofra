@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.cli.output import cli_message
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import OperatorType
 from gofra.parser.exceptions import (
@@ -43,6 +44,9 @@ if TYPE_CHECKING:
 # TODO(@kirillzhosul): Probably be something like an debug flag
 # Traces each operation on stack to search bugs in typechecker
 DEBUG_TRACE_TYPESTACK = False
+
+# Emit an warning if doing type cast from one type to exact same type
+WARN_ON_SAME_TYPECAST_STRICT = True
 
 
 def validate_type_safety(
@@ -380,7 +384,16 @@ def emulate_type_stack_for_operators(
                     operator,
                     required_args=1,
                 )
-                context.pop_type_from_stack()
+                previous_type = context.pop_type_from_stack()
+                if is_types_same(
+                    previous_type,
+                    to_type_cast,
+                    strategy="strict-same-type",
+                ):
+                    cli_message(
+                        "WARNING",
+                        f"Redundant  static type cast from `{previous_type}` to `{to_type_cast}` at {operator.token.location} (e.g type is strictly same so it is considered as redundant)",
+                    )
                 context.push_types(to_type_cast)
             case OperatorType.STRUCT_FIELD_OFFSET:
                 context.raise_for_enough_arguments(operator, required_args=1)
