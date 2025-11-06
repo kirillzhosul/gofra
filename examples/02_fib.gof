@@ -7,11 +7,10 @@
 #include "std.gof"
 
 #define N 1024
-var buf char[128]
+var buf *char[]
 
 func void print_int_with_sep[int]
-    &buf int2str
-    &buf sizeof buf print
+    int_to_cstr 20 print
     ", " print
 end
 
@@ -27,8 +26,7 @@ func void main[]
     b call print_int_with_sep
 
     while x N <= do
-        x &buf call int2str 
-        &buf sizeof buf print
+        x int_to_cstr 20 print
 
         &a b !<
         &b x !<

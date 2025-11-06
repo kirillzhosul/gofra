@@ -3,7 +3,6 @@
 // ==============================================
 
 #include "os/general.gof"
-#include "string.gof"
 #include "std_handles.gof"
 
 // TODO: Add proper OR to preprocessor
@@ -26,7 +25,7 @@ func void input_exhaust_buffer[]
     // TODO: Allow to compare non-integer types (e.g char)
     while 
         buffer[0] typecast int 
-        '\n' typecast int 
+        '\n'
         !=
     do
             STD_IN

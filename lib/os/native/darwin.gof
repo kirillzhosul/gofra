@@ -1,124 +1,111 @@
 // ==============================================
-// Darwin native system interaction layer and constant (AARCH64)
+// Darwin native system interaction layer and constant
 // Must works on MacOS, iOS, watchOS and other Darwin kernel operating system
 // Interacts with kernel via system/supervisor calls
-// Caveats: Currently works only for AARCH64 Darwin!
-// TODO: Add x86-64 Darwin layer
 // ==============================================
 
-#ifdef OS_DARWIN
-    // Guard for uninteonal includes, mostly unused
+// TODO: Add x86-64 Darwin layer
+// TODO: Add a compiler intrinsic or attribute for `no_return` if possible for exit.
+// TODO: Add variadic function for `sc_syscall`
 
-    // File access mode flags
-    #define O_RDONLY   0x0000  // Open for reading only
-    #define O_WRONLY   0x0001  // Open for writing only
-    #define O_RDWR     0x0002  // Open for reading and writing
+// File access mode flags
+#define O_RDONLY   0x0000  // Open for reading only
+#define O_WRONLY   0x0001  // Open for writing only
+#define O_RDWR     0x0002  // Open for reading and writing O_RDONLY | O_WRONLY
 
-    // Standard file descriptors
-    #define STD_IN_FD  0
-    #define STD_OUT_FD 1
-    #define STD_ERR_FD 2
+// Standard file descriptors
+#define STD_IN_FD  0
+#define STD_OUT_FD 1
+#define STD_ERR_FD 2
 
-    // --- Network constants ---
-    // Address family
-    #define AF_UNIX    1
-    #define AF_INET    2
-    #define AF_INET6   10
-    // Socket type
-    #define SOCK_STREAM 1
-    #define SOCK_DGRAM  2 
-    #define SOCK_RAW    3
-    // Other
-    #define SOMAXCONN   128
+#define OS_LINESEP "\n" // Line separator
 
-    // Line separator
-    #define OS_LINESEP "\n"
+// Network socket address in structure
+struct sockaddr_in
+    sin_family char[2]
+    sin_port   char[2]
+    sin_addr   char[4]
+    sin_zero   int   // zero padding
+end
 
-    // --- Syscall Numbers (Partial Table) ---
-    #ifdef ARCH_ARM64
-        #define DARWIN_SYSCALL_SYSCALL     0
-        #define DARWIN_SYSCALL_EXIT        1
-        #define DARWIN_SYSCALL_FORK        2
-        #define DARWIN_SYSCALL_READ        3
-        #define DARWIN_SYSCALL_WRITE       4
-        #define DARWIN_SYSCALL_OPEN        5
-        #define DARWIN_SYSCALL_CLOSE       6
-        #define DARWIN_SYSCALL_WAIT4       7
-        #define DARWIN_SYSCALL_LINK        9
-        #define DARWIN_SYSCALL_UNLINK      10
-        #define DARWIN_SYSCALL_CHDIR       12
-        #define DARWIN_SYSCALL_FCHDIR      13
-        #define DARWIN_SYSCALL_MKNOD       14
-        #define DARWIN_SYSCALL_CHMOD       15
-        #define DARWIN_SYSCALL_CHOWN       16
-        #define DARWIN_SYSCALL_ACCEPT      30
-        #define DARWIN_SYSCALL_KILL        37
-        #define DARWIN_SYSCALL_SOCKET      97
-        #define DARWIN_SYSCALL_CONNECT     98
-        #define DARWIN_SYSCALL_BIND        104
-        #define DARWIN_SYSCALL_SETSOCKOPT  105
-        #define DARWIN_SYSCALL_LISTEN      106
-        #define DARWIN_SYSCALL_GETTIMEOFDAY 116
-    #endif // ARCH_ARM64
+// --- Syscall Numbers (Partial Table) ---
+#ifdef ARCH_ARM64
+    #define DARWIN_SYSCALL_SYSCALL      0
+    #define DARWIN_SYSCALL_EXIT         1
+    #define DARWIN_SYSCALL_FORK         2
+    #define DARWIN_SYSCALL_READ         3
+    #define DARWIN_SYSCALL_WRITE        4
+    #define DARWIN_SYSCALL_OPEN         5
+    #define DARWIN_SYSCALL_CLOSE        6
+    #define DARWIN_SYSCALL_WAIT4        7
+    #define DARWIN_SYSCALL_LINK         9
+    #define DARWIN_SYSCALL_UNLINK       10
+    #define DARWIN_SYSCALL_CHDIR        12
+    #define DARWIN_SYSCALL_FCHDIR       13
+    #define DARWIN_SYSCALL_MKNOD        14
+    #define DARWIN_SYSCALL_CHMOD        15
+    #define DARWIN_SYSCALL_CHOWN        16
+    #define DARWIN_SYSCALL_ACCEPT       30
+    #define DARWIN_SYSCALL_KILL         37
+    #define DARWIN_SYSCALL_SOCKET       97
+    #define DARWIN_SYSCALL_CONNECT      98
+    #define DARWIN_SYSCALL_BIND         104
+    #define DARWIN_SYSCALL_SETSOCKOPT   105
+    #define DARWIN_SYSCALL_LISTEN       106
+    #define DARWIN_SYSCALL_GETTIMEOFDAY 116
+    #define DARWIN_SYSCALL_MMAP         197
+#endif // ARCH_ARM64
 
-    // network socket address in structure (posix/unix only)
-    struct sockaddr_in
-        sin_family char[2]
-        sin_port   char[2]
-        sin_addr   char[4]
-        sin_zero   int   // zero padding
-    end
+// ---  Syscall Wrappers ---
+// These are the preferred way to make syscalls.
+#ifdef ARCH_ARM64
+    // Terminates the current process. Does not return.
+    inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
 
-    // ---  Syscall Wrappers ---
-    // These are the preferred way to make syscalls.
-    #ifdef ARCH_ARM64
-        // TODO: that is actually variadic function to make any syscall which is currently useless
-        inline func void sc_syscall[] DARWIN_SYSCALL_SYSCALL syscall0 drop end
+    // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
+    inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
 
-        // Terminates the current process. Does not return.
-        // TODO: Add a compiler intrinsic or attribute for `no_return` if possible.
-        inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
+    // Creates an socket FD
+    // [domain,type,protocol]
+    inline func int sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
 
-        // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
-        inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
+    // Reads from a file descriptor.
+    // Signature: [fd,buf,count]
+    // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
+    // Returns number of bytes read, 0 on EOF, or -1 on error.
+    inline func int sc_read[int,*char[],int] DARWIN_SYSCALL_READ syscall3 end
 
-        // Creates an socket FD
-        // [domain,type,protocol]
-        inline func int sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
+    // Writes to a file descriptor.
+    // Signature: [fd,buf,count]
+    // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
+    // Returns number of bytes written, or -1 on error.
+    inline func int sc_write[int,*char[],int] DARWIN_SYSCALL_WRITE syscall3 end
 
-        // Reads from a file descriptor.
-        // Signature: [fd,buf,count]
-        // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
-        // Returns number of bytes read, 0 on EOF, or -1 on error.
-        inline func int sc_read[int,*char[],int] DARWIN_SYSCALL_READ syscall3 end
+    // Opens a file.
+    // Signature: [path, flags, mode]
+    // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
+    // Returns file descriptor, or -1 on error.
+    inline func int sc_open[*int,int,int] DARWIN_SYSCALL_OPEN syscall3 end
 
-        // Writes to a file descriptor.
-        // Signature: [fd,buf,count]
-        // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
-        // Returns number of bytes written, or -1 on error.
-        inline func int sc_write[int,*char[],int] DARWIN_SYSCALL_WRITE syscall3 end
+    // Closes a file descriptor.
+    inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
 
-        // Opens a file.
-        // Signature: [path, flags, mode]
-        // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
-        // Returns file descriptor, or -1 on error.
-        inline func int sc_open[*int,int,int] DARWIN_SYSCALL_OPEN syscall3 end
+    // Bind given socket to given address
+    inline func int sc_bind[int, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
 
-        // Closes a file descriptor.
-        inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
+    // Listen to an socket with specified backlog
+    inline func int sc_listen[int, int] DARWIN_SYSCALL_LISTEN syscall2 end
 
-        // Bind given socket to given address
-        inline func int sc_bind[int, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
+    // Accept pending connections on given socket and return client socket
+    inline func int sc_accept[int, *sockaddr_in, int] DARWIN_SYSCALL_ACCEPT syscall3 end
 
-        // Listen to an socket with specified backlog
-        inline func int sc_listen[int, int] DARWIN_SYSCALL_LISTEN syscall2 end
+    // Get current time of day
+    // Signature: [timeval, timezone]
+    // Notice that timezone usage is discouraged so pass NULL always
+    inline func void sc_gettimeofday[*char[16], *char[16]] DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
 
-        // Accept pending connections on given socket and return client socket
-        inline func int sc_accept[int, *sockaddr_in, int] DARWIN_SYSCALL_ACCEPT syscall3 end
-
-        // Get current time of day
-        // Signature: [timeval, timezone]
-        // Notice that timezone usage is discouraged so pass NULL always
-        inline func void sc_gettimeofday[*char[16], *char[16]] DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
-    #endif // ARCH_ARM64
-#endif // OS_DARWIN
+    // Map memory (allocate it)
+    // Signature: [address, size, prot, flags, fd, offset]
+    // TODO!: Return at the end as parser/lexer eats some identifiers...
+    func *void sc_mmap[int, int, int, int, int, int] DARWIN_SYSCALL_MMAP syscall6 typecast *void return end
+#endif // ARCH_ARM64

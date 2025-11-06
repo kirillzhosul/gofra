@@ -7,7 +7,7 @@
 // Compiler will optimize that with optimize level greater or 1 (`-O1`)
 #define noop 1 drop
 
-// Temporary backwards compatibility.
+// Temporary backwards compatibility, quite volatile code and may be removed.
 #define inc 1 + 
 #define dec 1 -
 
@@ -18,4 +18,3 @@
 #include "os/io"
 
 #include "string.gof"
-#include "assert.gof"

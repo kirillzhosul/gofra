@@ -1,4 +1,4 @@
-#include "std.gof"
+#include "assert.gof"
 
 func void main[]
     'i'  105 "Characters must resolve to their char code" assert

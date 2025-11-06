@@ -31,12 +31,12 @@ end
 
 var ball Ball
 
-var difficulty int = 2
+var difficulty int = 5
 
 #define WINDOW_NAME   "Gofra Pong"
 #define WINDOW_WIDTH  1200
 #define WINDOW_HEIGHT 800
-#define WINDOW_FPS    60
+#define WINDOW_FPS    120
 
 #define FONT_SIZE 80
 #define BACKGROUND_COLOR BLACK
@@ -75,8 +75,8 @@ func void init_game[]
     &ball.x WINDOW_WIDTH  2 / BALL_SIZE - !<
     &ball.y WINDOW_HEIGHT 2 / BALL_SIZE - !<
 
-    &player.score 0 !<
-    &enemy.score  0 !<
+    &player.score 15 !<
+    &enemy.score  32 !<
 
     &ball.speed_x BALL_SPEED !<
     &ball.speed_y BALL_SPEED !<
@@ -106,14 +106,14 @@ func void draw_game[]
      BACKGROUND_COLOR
     call ClearBackground
 
-     &enemy_score_str
+     enemy.score call int_to_cstr
      WINDOW_WIDTH 4 / 20 -
      20
      FONT_SIZE 
      WHITE
     call DrawText
 
-     &player_score_str
+     player.score call int_to_cstr
      WINDOW_WIDTH 4 / 20 - 3 *
      20
      FONT_SIZE 
@@ -230,10 +230,6 @@ func void handle_ball_wall_bounce[]
     end
 end
 
-func void update_user_interface[]
-    enemy.score &enemy_score_str call int2str
-    player.score &player_score_str call int2str
-end
 
 func void game_loop[]
     call draw_game
@@ -242,7 +238,6 @@ func void game_loop[]
     call update_ball_movement
     call handle_ball_wall_bounce
     call handle_ball_paddle_bounce
-    call update_user_interface
 end
 
 func void main[]

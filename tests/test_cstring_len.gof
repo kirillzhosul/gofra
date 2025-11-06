@@ -1,8 +1,0 @@
-
-#include "std.gof"
-
-#define TESTKIT_EXPECTED_EXIT_CODE 13
-
-func void main[]
-    "Hello, World!" str_len exit
-end

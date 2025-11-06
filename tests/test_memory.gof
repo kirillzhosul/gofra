@@ -1,4 +1,5 @@
 #include "std.gof"
+#include "assert.gof"
 
 #define NUMBER 32
 var static_blob int

@@ -27,13 +27,13 @@ func void handle_request[]
 
     // Read request
     &request call http_server_read_request
-    "Bytes read: " print print_integer
+    "Bytes read: " print print_int
 
     // Send response
     &request 
     "<h1>Hello from Gofra HTTP server!</h1><i>Built with Gofra and native HTTP library</i>"
     call http_server_send_html_response
-    "Bytes written: " print print_integer
+    "Bytes written: " print print_int
 
     // Finish request
     &request call http_server_close_request

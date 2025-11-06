@@ -1,11 +1,11 @@
 // ==============================================
 // Random number generator (PRNG)
+// Under the hood uses Xorshift algorithm: 
+// https://en.wikipedia.org/wiki/Xorshift
 // ==============================================
-
 
 // Static global state of randomizer
 var std_prng_random_state int
-
 
 // Set an given number as seed (PRNG random state)
 func void set_random_seed[int]
@@ -20,38 +20,28 @@ func void prng_randomize_state_xorshift[]
     // &rs rs rs 5  << ^ !<
     &std_prng_random_state
         std_prng_random_state
-            std_prng_random_state
-            13
-            <<
+        std_prng_random_state 13 <<
         ^
     !<
 
     &std_prng_random_state
         std_prng_random_state
-            std_prng_random_state
-            17
-            <<
+        std_prng_random_state 17 <<
         ^
     !<
 
     &std_prng_random_state
         std_prng_random_state
-            std_prng_random_state
-            5
-            <<
+        std_prng_random_state 5 <<
         ^
     !<
 end
-
 
 // Get random number from PRNG
 func int random[]
     call prng_randomize_state_xorshift
 
-    std_prng_random_state
-
-    noop
-    // some bug ?
+    std_prng_random_state return // TODO: Fix parser/lexer eats identifiers
 end
 
 // Get random number from PRNG withing range from 0 to argument

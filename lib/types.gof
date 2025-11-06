@@ -7,4 +7,7 @@
 // Probably, sometime this will be part of an language
 #define true    1 1 ==
 #define false   1 0 ==
-#define NULL    0
+
+// Somewhere using terminology of NULL is more readable
+#define NULL     0
+#define NULL_PTR 0 typecast *void
