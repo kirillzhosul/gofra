@@ -105,7 +105,7 @@ func void print_int64_fd[int, int]
     end
     
     // TODO: Possibly would be good to introduce more capable `for` loop e.g:
-    // `for i in idx..0`, but this is requires using `idx` as value which is currently disallowed in for loop range qualifier
+    // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
 end
 
 // Print given number into standard console output

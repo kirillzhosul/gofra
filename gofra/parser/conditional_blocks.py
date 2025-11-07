@@ -96,7 +96,7 @@ def consume_conditional_block_keyword_from_token(
 
             # Consume range qualifier
             if context.peek_token().type != TokenType.INTEGER:
-                msg = "For loop currently can handle only integer ranges"
+                msg = "For loop currently can handle only integer ranges on left side of range"
                 raise ValueError(msg)
 
             # Probably - an range qualifier (`x..n`)
@@ -106,14 +106,34 @@ def consume_conditional_block_keyword_from_token(
             context.next_token()
             context.expect_token(TokenType.DOT)
             context.next_token()
-            context.expect_token(TokenType.INTEGER)
-            range_to_qualifier = cast("int", (context.next_token().value))
+            if context.peek_token().type == TokenType.INTEGER:
+                range_to_qualifier = cast("int", (context.next_token().value))
+            elif context.peek_token().type == TokenType.IDENTIFIER:
+                range_to_qualifier = context.next_token().text
+                range_to_var = context.search_variable_in_context_parents(
+                    range_to_qualifier,
+                )
+                if not range_to_var:
+                    msg = (
+                        f"Unknown variable `{range_to_qualifier}` in `for-loop` block."
+                    )
+                    raise ValueError(msg)
+                if not isinstance(range_to_var.type, I64Type):
+                    msg = f"Expected `{range_to_qualifier}` to be an I64 type in `for-loop` block, as it used as range qualifier bounds."
+                    raise ValueError(msg)
+            else:
+                context.expect_token(TokenType.INTEGER)
+                raise AssertionError("Unreachable")  # noqa: EM101
 
             # TODO(@kirillzhosul): Mostly requires reworking HIR into single HIR load-and-store instruction
             # Code below adds some syntactical sugar which is inlined here
 
-            # ` a TO b` or `b TO a` if range is from greater to least
-            step = 1 if range_to_qualifier >= range_from_qualifier else -1
+            if isinstance(range_to_qualifier, str):
+                # From known int to variable
+                step = 1
+            else:
+                # ` a TO b` or `b TO a` if range is from greater to least
+                step = 1 if range_to_qualifier >= range_from_qualifier else -1
 
             return unwrap_for_operators_syntactical_sugar(
                 context,
@@ -200,7 +220,7 @@ def unwrap_for_operators_syntactical_sugar(  # noqa: PLR0913
     context: ParserContext,
     token: Token,
     a: int,
-    b: int,
+    b: int | str,
     step: int,
     iterator: str,
 ) -> None:
@@ -238,13 +258,23 @@ def unwrap_for_operators_syntactical_sugar(  # noqa: PLR0913
     context.push_new_operator(
         OperatorType.MEMORY_VARIABLE_READ,
         token=token,
-        operand=iterator,
     )
-    context.push_new_operator(
-        OperatorType.PUSH_INTEGER,
-        token=token,
-        operand=b,
-    )
+    if isinstance(b, str):
+        context.push_new_operator(
+            OperatorType.PUSH_VARIABLE_ADDRESS,
+            token=token,
+            operand=b,
+        )
+        context.push_new_operator(
+            OperatorType.MEMORY_VARIABLE_READ,
+            token=token,
+        )
+    else:
+        context.push_new_operator(
+            OperatorType.PUSH_INTEGER,
+            token=token,
+            operand=b,
+        )
 
     compare_op = OperatorType.COMPARE_LESS if step > 0 else OperatorType.COMPARE_GREATER
     context.push_new_operator(compare_op, token=token)
