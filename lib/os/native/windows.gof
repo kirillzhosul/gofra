@@ -54,7 +54,6 @@ func int win_write[int, *char[], int]
     var error int = 0;
     var bytes_written int;
 
-    // TODO: Fix return and early-return from this function
     // TODO: Introduce else block
 
     handle call win_is_console_handle true == if
@@ -64,9 +63,7 @@ func int win_write[int, *char[], int]
         ptr len
         &bytes_written
         call win_write_console
-        0 != if
-            &bytes_written -1 !< 
-        end
+        0 != if -1 return end
     end
     handle call win_is_console_handle false == if
         // Is an file
@@ -74,9 +71,7 @@ func int win_write[int, *char[], int]
         handle len ptr
         &bytes_written
         call win_write_file
-        0 != if
-            &bytes_written -1 !< 
-        end
+        0 != if -1 return end
     end
 
     bytes_written return

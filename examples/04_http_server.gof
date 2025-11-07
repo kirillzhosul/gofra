@@ -11,6 +11,7 @@
 #include "os/network.gof"
 #include "http"
 
+// TODO: Some static structs are invariant by default
 var buffer char[HTTP_IO_BUFFER_CAP]
 var server HTTPServer
 var request HTTPIncomingRequest
