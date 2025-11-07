@@ -5,7 +5,6 @@
 #define NUMBER 32
 var static int
 
-
 func void test_variables_rw_stack[]
     var stack int;
 

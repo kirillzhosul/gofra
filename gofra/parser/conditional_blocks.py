@@ -112,11 +112,15 @@ def consume_conditional_block_keyword_from_token(
             # TODO(@kirillzhosul): Mostly requires reworking HIR into single HIR load-and-store instruction
             # Code below adds some syntactical sugar which is inlined here
 
+            # ` a TO b` or `b TO a` if range is from greater to least
+            step = 1 if range_to_qualifier >= range_from_qualifier else -1
+
             return unwrap_for_operators_syntactical_sugar(
                 context,
                 token,
                 a=range_from_qualifier,
                 b=range_to_qualifier,
+                step=step,
                 iterator=iterator_varname,
             )
         case Keyword.END:
@@ -139,6 +143,15 @@ def consume_conditional_block_keyword_from_token(
                     # Here we have compiler metadata for `for` loop syntactical sugar
                     iterator, step = loop_compiler_metadata
 
+                    assert step != 0, (
+                        "Step must be non-zero as being implicit infinite loop"
+                    )
+                    step_abs = abs(step)
+                    step_op = (
+                        OperatorType.ARITHMETIC_PLUS
+                        if step > 0
+                        else OperatorType.ARITHMETIC_MINUS
+                    )
                     # Gofra: `&iterator iterator 1 + !<`
                     context.push_new_operator(
                         OperatorType.PUSH_VARIABLE_ADDRESS,
@@ -154,9 +167,9 @@ def consume_conditional_block_keyword_from_token(
                     context.push_new_operator(
                         OperatorType.PUSH_INTEGER,
                         token=token,
-                        operand=step,
+                        operand=step_abs,
                     )
-                    context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token)
+                    context.push_new_operator(step_op, token)
                     context.push_new_operator(OperatorType.MEMORY_VARIABLE_WRITE, token)
             context.push_new_operator(
                 type=OperatorType.CONDITIONAL_END,
@@ -183,13 +196,15 @@ def consume_conditional_block_keyword_from_token(
             raise AssertionError
 
 
-def unwrap_for_operators_syntactical_sugar(
+def unwrap_for_operators_syntactical_sugar(  # noqa: PLR0913
     context: ParserContext,
     token: Token,
     a: int,
     b: int,
+    step: int,
     iterator: str,
 ) -> None:
+    assert step != 0, "Step must be non-zero as being implicit infinite loop"
     # Reset iterator before entering an for loop (e.g while)
     context.push_new_operator(
         OperatorType.PUSH_VARIABLE_ADDRESS,
@@ -213,7 +228,7 @@ def unwrap_for_operators_syntactical_sugar(
         is_contextual=True,
     )
     loop_context = context.pop_context_stack()
-    context.context_stack.append((*loop_context[:2], (iterator, 1)))
+    context.context_stack.append((*loop_context[:2], (iterator, step)))
 
     context.push_new_operator(
         OperatorType.PUSH_VARIABLE_ADDRESS,
@@ -230,9 +245,8 @@ def unwrap_for_operators_syntactical_sugar(
         token=token,
         operand=b,
     )
-    context.push_new_operator(
-        OperatorType.COMPARE_LESS,
-        token=token,
-    )
+
+    compare_op = OperatorType.COMPARE_LESS if step > 0 else OperatorType.COMPARE_GREATER
+    context.push_new_operator(compare_op, token=token)
 
     # Requires syntactical sugar to be added to the close context block
