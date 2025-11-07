@@ -1,8 +1,10 @@
+/// Test that simple sum within `for in` loop works
 
 #define TESTKIT_EXPECTED_EXIT_CODE 45
 
 func int main[]
     var sum int = 0;
+
     for i in 0..10 do
         &sum sum i + !<
     end

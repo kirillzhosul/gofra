@@ -1,0 +1,11 @@
+/// Test min value function from math library
+#include "os/io"
+#include "math.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 13
+
+func int main[]
+    3 7 min
+    5 10 max
+    + return // min(3, 7) + max(5, 10) => 3 + 10 => 13
+end

@@ -1,0 +1,9 @@
+/// Test power function from math library
+#include "os/io"
+#include "math.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 81
+
+func int main[]
+    3 4 pow return // 3ˆ4 => 81
+end

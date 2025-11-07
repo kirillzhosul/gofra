@@ -1,0 +1,13 @@
+/// Test clamp value function from math library
+#include "os/io"
+#include "math.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 22
+
+func int main[]
+    15 5 10 clamp
+    3 5 10 clamp +
+    7 5 10 clamp +
+
+    return // clamp(15, 5, 10) + clamp(3, 5, 10) + clamp(7, 5, 10) => 10 + 5 + 7 => 22
+end

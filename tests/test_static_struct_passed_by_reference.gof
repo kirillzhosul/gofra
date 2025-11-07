@@ -1,3 +1,4 @@
+/// Tests that passing structure as pointer to another function works and allows to work with that
 #include "std.gof"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 69
@@ -9,9 +10,7 @@ end
 var x struct_
 
 func void f[*struct_]
-    var n *struct_
-
-    &n swap !<
+    var n *struct_; &n swap !<
 
     &n.field TESTKIT_EXPECTED_EXIT_CODE !<
 end
@@ -19,5 +18,5 @@ end
 func void main[]
     &x call f
 
-    x.field exit
+    x.field exit // TODO: Remove exit after fix
 end

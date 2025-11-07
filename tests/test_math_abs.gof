@@ -1,0 +1,11 @@
+/// Test absolute value function from math library
+#include "os/io"
+#include "math.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 10
+
+func int main[]
+    -5 abs 
+    5 abs 
+    + return // |-5| + |5| => 10
+end

@@ -1,5 +1,6 @@
-#define TESTKIT_EXPECTED_EXIT_CODE 69
+/// Test that storing and loading from local stack array returns same result
 
+#define TESTKIT_EXPECTED_EXIT_CODE 69
 
 func int main[]
     var exit_code int[1]

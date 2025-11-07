@@ -1,7 +1,16 @@
+/// Tests that forward referencing struct in itself is allowed
+
+#define TESTKIT_EXPECTED_EXIT_CODE 0
+
 struct forward_struct_t
     field forward_struct_t
+
+    zero_padding int // TODO: This is required for forward references and MUST be considered as bug, as `forward_struct_t` has zero size during parsing this struct (also does not generate memory blob unless other fields specified)
 end
 
+var s forward_struct_t;
+
 func int main[]
-    0
+    &s.field TESTKIT_EXPECTED_EXIT_CODE !<
+    s.field typecast int return
 end

@@ -1,3 +1,4 @@
+/// Test that storing and loading from global static array returns same result
 
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 

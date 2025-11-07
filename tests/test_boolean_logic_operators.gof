@@ -1,0 +1,34 @@
+/// Test that booleans are working and logic operators too
+
+#include "types.gof"
+#include "assert.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 0 
+
+func int main[]
+    true  typecast int 
+    true  typecast int  
+    "True must equals true" assert 
+
+    false typecast int 
+    false typecast int  
+    "False must equals false" assert
+
+    true false && typecast int 
+    false typecast int 
+    "(true and false) must equal false" assert
+
+    true false || typecast int 
+    true typecast int 
+    "(true or false) must equal true" assert
+
+    false false || typecast int 
+    false typecast int 
+    "(false or false) must equal false" assert
+
+    false false && typecast int 
+    false typecast int 
+    "(false and false) must equal false" assert
+
+    TESTKIT_EXPECTED_EXIT_CODE return // TODO: Fix weird bug that requires this test to be an int-return
+end

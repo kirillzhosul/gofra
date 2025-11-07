@@ -1,3 +1,5 @@
+/// Test all numerical literals on stack
+
 #include "assert.gof"
 
 func int main[]

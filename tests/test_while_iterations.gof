@@ -1,0 +1,17 @@
+/// Test simple N iterations with while loop
+#include "os/general.gof"
+#include "assert.gof"
+
+#define ITERATIONS 10
+
+func void main[]
+    var x int = 0;
+
+    while x ITERATIONS < do
+        &x x 1 + !< 
+    end 
+    
+    x ITERATIONS "While loop must perform exactly N iterations" assert
+
+    0 exit // TODO: Remove after fix
+end

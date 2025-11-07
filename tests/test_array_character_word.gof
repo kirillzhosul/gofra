@@ -1,16 +1,45 @@
+/// Test that storing an word in array as characters and printing it shows that word
+
 #include "os/io/output.gof"
+#include "os/general.gof"
+#define TESTKIT_EXPECTED_EXIT_CODE 0
+#define TESTKIT_EXPECTED_STDOUT "Global\nLocal\n"
 
-func int main[]
-    var hello char[6]
+var global_ char[7]; // TODO: `global` is treated as keyword
 
-    &hello[0] 'H' !<
-    &hello[1] 'e' !<
-    &hello[2] 'l' !<
-    &hello[3] 'l' !<
-    &hello[4] 'o' !<
-    &hello[5] '\n' !<
+func void test_array_global_character_word[]
+    &global_[0] 'G'  !<
+    &global_[1] 'l'  !<
+    &global_[2] 'o'  !<
+    &global_[3] 'b'  !<
+    &global_[4] 'a'  !<
+    &global_[5] 'l'  !<
+    &global_[6] '\n' !<
 
-    &hello 6 print
+    &global_ 7 print
 
-    0 return
+    return
+end
+
+func void test_array_local_character_word[]
+    var local char[6]
+
+    &local[0] 'L'  !<
+    &local[1] 'o'  !<
+    &local[2] 'c'  !<
+    &local[3] 'a'  !<
+    &local[4] 'l'  !<
+    &local[5] '\n' !<
+
+    &local 6 print
+
+    return
+end
+
+func void main[]
+    // TODO: Allow testkit to specify these cases as separate tests
+    call test_array_global_character_word
+    call test_array_local_character_word
+
+    0 exit // TODO: This must be resolved as this raises an segmentation fault if not within exit
 end
