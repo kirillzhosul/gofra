@@ -20,6 +20,23 @@ func int pow[int, int]
     result return
 end
 
+// Calculate integer square root for an value (e.g floor Babylonian method)
+func int sqrt[int]
+    var n int; &n swap !<;
+    var y int = 1;
+    var x int;
+
+    // TODO: X64/AARCH64 has direct machine ops to perform FSQRT, probably at some time we introduce injected SQRT when done with FPU/FP and need fast SQRT (e.g 3D renderers)
+    &x n !< // x = n
+
+    while x y > do 
+        &x x y + 2 / !<
+        &y n x /     !<
+    end
+
+    x return
+end
+
 // Return absolute value of an negative/positive integer
 func int abs[int]
     copy 0 < if 

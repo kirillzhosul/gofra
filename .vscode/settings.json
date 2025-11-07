@@ -53,6 +53,7 @@
         "FCHDIR",
         "fdce",
         "finline",
+        "FSQRT",
         "GETTIMEOFDAY",
         "gofralang",
         "htons",
