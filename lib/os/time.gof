@@ -6,6 +6,7 @@
 // TODO: Add different implementation for Windows and non POSIX systems
 
 #include "general.gof"
+#include "types.gof"
 
 struct timeval
     tv_sec int
