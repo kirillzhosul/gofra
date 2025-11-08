@@ -138,14 +138,14 @@ var global int
 func void main[]
     // Local variable
     // located and initialized at stack
-    var local
+    var local int
 end
 </code></pre>
 <p>Using local/global storage type of variables has no differences for end-user programmer, as it differs at code generation level and only will affect memory layout</p>
 <h2 id="local-variables-alignment-on-cpus">Local variables: alignment on CPUs</h2>
 <p>Each local variable must be alignment on most architectures (CPUs) so for example definition of three local variables like that:</p>
 <pre><code class="language-gofra">var a int
-var b int 
+var b int
 var c byte
 </code></pre>
 <p>will result in 24 bytes total space allocated at callee, as:

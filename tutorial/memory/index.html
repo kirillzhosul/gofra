@@ -132,12 +132,12 @@
 <h3 id="examples">Examples</h3>
 <pre><code class="language-gofra">// Store to a variable
 var name int
-name 1 !&lt;  // Store 1 into name
+&amp;name 1 !&lt;  // Store 1 into name
 
 // Store to calculated address
 var array int[10]
-array 0 + 42 !&lt;  // Store 42 at array[0]
-array 8 + 99 !&lt;  // Store 99 at array[8] (if int is 4 bytes)
+&amp;array 0 + 42 !&lt;  // Store 42 at array[0]
+&amp;array 8 + 99 !&lt;  // Store 99 at array[8] (if int is 4 bytes)
 </code></pre>
 <h2 id="load-from-memory">Load from memory</h2>
 <p>Stores a value at a specified memory address.</p>
@@ -151,18 +151,25 @@ array 8 + 99 !&lt;  // Store 99 at array[8] (if int is 4 bytes)
 <h3 id="syntax_1">Syntax</h3>
 <pre><code class="language-gofra">&lt;address&gt; ?&gt;
 </code></pre>
+<p>To push variable onto stack:</p>
+<pre><code class="language-gofra">&lt;variable&gt;
+</code></pre>
 <h3 id="examples_1">Examples</h3>
 <pre><code class="language-gofra">// Load from a variable
 var name int
-name 1 !&lt;    // Store 1 into name
-name ?&gt;      // Load value from name (pushes 1 onto stack)
+&amp;name 1 !&lt;    // Store 1 into name
+
+&amp;name ?&gt;      // Load value from name (pushes 1 onto stack)
+// or
+name
+
 print_integer   // Prints 1
 
 // Load from array element
 var numbers int[3]
-numbers 0 + 10 !&lt;    // numbers[0] = 10
-numbers 8 + 20 !&lt;    // numbers[1] = 20 (assuming 8-byte integers)
-numbers 0 + ?&gt; print // Load and print numbers[0]
+&amp;numbers 0 + 10 !&lt;    // numbers[0] = 10
+&amp;numbers 8 + 20 !&lt;    // numbers[1] = 20 (assuming 8-byte integers)
+&amp;numbers 0 + ?&gt; print // Load and print numbers[0]
 </code></pre>
 <h1 id="memory-size-considerations">Memory Size Considerations</h1>
 <ul>

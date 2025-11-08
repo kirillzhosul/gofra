@@ -108,19 +108,19 @@ end
 <h4 id="example">Example</h4>
 <pre><code class="language-gofra">// This block will NOT execute
 0 1 == if 
-    &quot;This will not print&quot; print
+    &quot;This will not be printed&quot; print
 end
 
 // This block WILL execute
 1 1 == if
-    &quot;This will print&quot; print
+    &quot;This will be printed&quot; print
 end
 
 // Using variables
 var is_valid bool
-true is_valid !&lt;
+&amp;is_valid true !&lt;
 
-is_valid ?&gt; if
+is_valid if
     &quot;Valid state&quot; print
 end
 </code></pre>
@@ -132,17 +132,16 @@ end
 end
 </code></pre>
 <h4 id="example_1">Example</h4>
-<pre><code class="language-gofra">var counter int
-counter 0 !&lt;  // Initialize counter to 0
+<pre><code class="language-gofra">var counter int = 0; // Initialize counter to 0
 
-while 
+while
     counter 10 &lt; // condition
 do
     &quot;Hello! Iteration: &quot; print
     counter print_integer  // Print current counter value
     &quot;\n&quot; print
 
-    counter copy ?&gt; 1 + !&lt;  // Increment counter
+    &amp;counter copy ?&gt; 1 + !&lt;  // Increment counter
 end
 </code></pre>
 <h4 id="control-flow-pattern">Control flow pattern</h4>
@@ -153,11 +152,22 @@ end
 </code></pre>
 <h2 id="for-statement"><code>for</code> Statement</h2>
 <p>The <code>for</code> loop is under the hood is same/using <code>while</code> construction but adds syntactical sugar for auto-constraints and counters (iterator)</p>
+<p>Planned features: Soon, there will be feature for using array as an <code>in</code> qualifier and <code>0..array</code> respectfully</p>
 <p>At entering the loop, iterator variable will be set to low threshold of range
 Range is exclusive (not inclusive)</p>
 <h4 id="example_2">Example</h4>
 <pre><code class="language-gofra">for i in 0..10 do
     // i will be [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+end
+
+for i in 10..0 do
+    // i will be [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+end
+
+var x int = 5;
+for i in 0..x do // variables is allowed only on RHS for now, TODO
+    // Step always will be 1, reversed iterations is not possible!
+    // i will be [0, 1, 2, 3, 4]
 end
 </code></pre>
 <h4 id="comparison-to-while-hir-syntactical-sugar">Comparison to <code>while</code> HIR syntactical sugar</h4>
@@ -168,9 +178,9 @@ end
 <p>Is being translated by compiler frontend into something like</p>
 <pre><code class="language-gofra">var i int = 0;
 
-while i 10 &lt; do
+while i 10 &lt; do // For variable range 10 is replaced ith loading variable, for reversed range, will be `&gt;`
     // body of for
-    &amp;i i 1 + !&lt;
+    &amp;i i 1 + !&lt; // Decrement if reversed
 end
 </code></pre></div>
             </div>
