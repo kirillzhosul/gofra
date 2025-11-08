@@ -35,27 +35,20 @@ end
 
 // --- Syscall Numbers (Partial Table) ---
 #ifdef ARCH_ARM64
-    #define DARWIN_SYSCALL_SYSCALL      0
     #define DARWIN_SYSCALL_EXIT         1
     #define DARWIN_SYSCALL_FORK         2
     #define DARWIN_SYSCALL_READ         3
     #define DARWIN_SYSCALL_WRITE        4
     #define DARWIN_SYSCALL_OPEN         5
     #define DARWIN_SYSCALL_CLOSE        6
-    #define DARWIN_SYSCALL_WAIT4        7
-    #define DARWIN_SYSCALL_LINK         9
-    #define DARWIN_SYSCALL_UNLINK       10
-    #define DARWIN_SYSCALL_CHDIR        12
-    #define DARWIN_SYSCALL_FCHDIR       13
-    #define DARWIN_SYSCALL_MKNOD        14
-    #define DARWIN_SYSCALL_CHMOD        15
-    #define DARWIN_SYSCALL_CHOWN        16
+    #define DARWIN_SYSCALL_GETPID       20
     #define DARWIN_SYSCALL_ACCEPT       30
-    #define DARWIN_SYSCALL_KILL         37
+    #define DARWIN_SYSCALL_GETPPID      39
+    #define DARWIN_SYSCALL_EXECVE       59
+    #define DARWIN_SYSCALL_SELECT       93
     #define DARWIN_SYSCALL_SOCKET       97
     #define DARWIN_SYSCALL_CONNECT      98
     #define DARWIN_SYSCALL_BIND         104
-    #define DARWIN_SYSCALL_SETSOCKOPT   105
     #define DARWIN_SYSCALL_LISTEN       106
     #define DARWIN_SYSCALL_GETTIMEOFDAY 116
     #define DARWIN_SYSCALL_MMAP         197
@@ -66,13 +59,6 @@ end
 #ifdef ARCH_ARM64
     // Terminates the current process. Does not return.
     inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
-
-    // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
-    inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
-
-    // Creates an socket FD
-    // [domain,type,protocol]
-    inline func int sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
 
     // Reads from a file descriptor.
     // Signature: [fd,buf,count]
@@ -95,14 +81,32 @@ end
     // Closes a file descriptor.
     inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
 
+    // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
+    inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
+
+    // Get PID of current process
+    inline func int sc_getpid[] DARWIN_SYSCALL_GETPID syscall0 end
+
+    // Get PID of parent process
+    inline func int sc_getppid[] DARWIN_SYSCALL_GETPPID syscall0 end
+
+    // Abort current process execution (process suicide) and reincarnation as specified executable
+    // Signature: [pathname, argv, envp]
+    // Does not returns anything unless no errors occurred, otherwise always returns -1
+    inline func int sc_execve[*char[], **char, **char] DARWIN_SYSCALL_EXECVE syscall3 end
+
+    // Accept pending connections on given socket and return client socket
+    inline func int sc_accept[int, *sockaddr_in, int] DARWIN_SYSCALL_ACCEPT syscall3 end
+
+    // Creates an socket FD
+    // [domain,type,protocol]
+    inline func int sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
+
     // Bind given socket to given address
     inline func int sc_bind[int, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
 
     // Listen to an socket with specified backlog
     inline func int sc_listen[int, int] DARWIN_SYSCALL_LISTEN syscall2 end
-
-    // Accept pending connections on given socket and return client socket
-    inline func int sc_accept[int, *sockaddr_in, int] DARWIN_SYSCALL_ACCEPT syscall3 end
 
     // Get current time of day
     // Signature: [timeval, timezone]
