@@ -16,19 +16,19 @@ end
 ```gofra
 // This block will NOT execute
 0 1 == if 
-    "This will not print" print
+    "This will not be printed" print
 end
 
 // This block WILL execute
 1 1 == if
-    "This will print" print
+    "This will be printed" print
 end
 
 // Using variables
 var is_valid bool
-true is_valid !<
+&is_valid true !<
 
-is_valid ?> if
+is_valid if
     "Valid state" print
 end
 ```
@@ -46,17 +46,16 @@ end
 
 #### Example
 ```gofra
-var counter int
-counter 0 !<  // Initialize counter to 0
+var counter int = 0; // Initialize counter to 0
 
-while 
+while
     counter 10 < // condition
 do
     "Hello! Iteration: " print
     counter print_integer  // Print current counter value
     "\n" print
-    
-    counter copy ?> 1 + !<  // Increment counter
+
+    &counter copy ?> 1 + !<  // Increment counter
 end
 ```
 
