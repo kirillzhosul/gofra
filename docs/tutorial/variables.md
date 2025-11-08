@@ -66,7 +66,7 @@ Using local/global storage type of variables has no differences for end-user pro
 Each local variable must be alignment on most architectures (CPUs) so for example definition of three local variables like that:
 ```gofra
 var a int
-var b int 
+var b int
 var c byte
 ``` 
 will result in 24 bytes total space allocated at callee, as:

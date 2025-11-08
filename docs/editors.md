@@ -13,7 +13,8 @@ Please refer to their respective documentation using the repository URL: [github
 
 #### Features
 
-Syntax Highlighting: Support for `.gof` file syntax.
+- Syntax Highlighting: Support for `.gof` file syntax.
+- Automatic indentation
 
 ## Visual Studio Code
 
@@ -42,7 +43,7 @@ You need to have Node.js and the vsce (Visual Studio Code Extensions) tool insta
 - Reload VS Code when prompted.
 
 #### Features
-Syntax Highlighting: Support for `.gof` file syntax.
+- Syntax Highlighting: Support for `.gof` file syntax.
 
 ## Other Editors & Contributing
 
