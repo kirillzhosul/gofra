@@ -44,10 +44,13 @@ def parser_type_from_tokenizer(
     # TODO(@kirillzhosul): Type parsing is weird (especially new allow_inferring_variable_types) must be separated in complex-type parsing system ?
     t = context.next_token()
 
-    is_pointer = False
     if t.type == TokenType.STAR:
-        is_pointer = True
-        t = context.next_token()
+        return PointerType(
+            points_to=parser_type_from_tokenizer(
+                context,
+                allow_inferring_variable_types=False,
+            ),
+        )
 
     if t.type != TokenType.IDENTIFIER:
         msg = f"While expecting type expected identifier but got {t.type.name}"
@@ -88,8 +91,5 @@ def parser_type_from_tokenizer(
             element_type=aggregated_type,
             elements_count=elements,
         )
-
-    if is_pointer:
-        return PointerType(points_to=aggregated_type)
 
     return aggregated_type
