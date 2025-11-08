@@ -28,6 +28,11 @@ struct sockaddr_in
     sin_zero   int   // zero padding
 end
 
+struct timeval
+    tv_sec int
+    tv_usec int
+end
+
 // --- Syscall Numbers (Partial Table) ---
 #ifdef ARCH_ARM64
     #define DARWIN_SYSCALL_SYSCALL      0
@@ -102,7 +107,11 @@ end
     // Get current time of day
     // Signature: [timeval, timezone]
     // Notice that timezone usage is discouraged so pass NULL always
-    inline func void sc_gettimeofday[*char[16], *char[16]] DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
+    inline func void sc_gettimeofday[*timeval, *char[16]] DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
+
+    // Await given descriptors to be ready
+    // Signature: [nfds, readfds, writefds, exceptfds, timeout]
+    inline func int sc_select[int, *void, *void, *void, *timeval] DARWIN_SYSCALL_SELECT syscall5 end
 
     // Map memory (allocate it)
     // Signature: [address, size, prot, flags, fd, offset]

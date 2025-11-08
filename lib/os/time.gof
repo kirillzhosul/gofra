@@ -8,10 +8,6 @@
 #include "general.gof"
 #include "types.gof"
 
-struct timeval
-    tv_sec int
-    tv_usec int
-end
 
 // Get current time of day as seconds from epoch
 func int time_seconds_since_epoch[]
@@ -20,4 +16,15 @@ func int time_seconds_since_epoch[]
     &tv NULL sc_gettimeofday
 
     tv.tv_sec return
+end
+
+
+// Sleep for given amount of seconds
+func void sleep[int]
+    var tv timeval
+
+    &tv.tv_sec swap !<
+    &tv.tv_usec 0 !<
+
+    0 NULL NULL NULL &tv call sc_select drop
 end
