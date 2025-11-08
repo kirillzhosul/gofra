@@ -1,0 +1,10 @@
+/// Test min value function from math library
+#include "os/io"
+#include "math.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 120
+
+func int main[]
+    5 factorial
+    return // 5! => 120
+end

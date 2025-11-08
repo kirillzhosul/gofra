@@ -1,0 +1,18 @@
+/// Test that structs simply works by writing and reading value from its field
+#include "std.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 69
+
+struct struct_
+    _padding_left int
+    field int // Padded from both sides to see if reading may fail
+    _padding_right int
+end
+
+var x struct_
+
+func void main[]
+    &x.field TESTKIT_EXPECTED_EXIT_CODE !<
+
+    x.field exit // TODO: Remove exit after fix
+end

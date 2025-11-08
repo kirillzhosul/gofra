@@ -1,0 +1,9 @@
+/// Test square root function from math library
+#include "os/io"
+#include "math.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 23
+
+func int main[]
+    529 sqrt return // √529 = 23
+end

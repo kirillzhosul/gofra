@@ -1,0 +1,11 @@
+/// Test simple sizeof of char array (e.g mostly string), does not test for complex sizeof examples (e.g struct field sizeof, TODO)
+#include "std.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 32
+
+var buffer char[TESTKIT_EXPECTED_EXIT_CODE]
+
+func void main[]
+    sizeof buffer
+    exit // TODO: Remove after fix
+end

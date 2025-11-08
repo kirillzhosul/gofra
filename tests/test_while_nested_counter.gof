@@ -1,0 +1,24 @@
+/// Test nested while loops counter
+
+#define A 3
+#define B 4
+
+#define TESTKIT_EXPECTED_EXIT_CODE 12
+
+func int main[]
+    var counter int = 0;
+    var a int = 0;
+    var b int = 0;
+
+    while a A < do
+        while b B < do
+            &b b 1 + !<
+
+            &counter counter 1 + !<
+        end
+        &b 0 !<
+        &a a 1 + !<
+    end
+    
+    counter return
+end

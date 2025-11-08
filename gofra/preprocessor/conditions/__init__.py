@@ -26,6 +26,9 @@ def resolve_conditional_block_from_token(
         case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.IF_DEFINED):
             if not macro:
                 _consume_until_endif(token, state)
+        case Token(type=TokenType.KEYWORD, value=PreprocessorKeyword.IF_NOT_DEFINED):
+            if macro:
+                _consume_until_endif(token, state)
         case _:
             msg = "Expected resolve conditional block to receive an known preprocessor keyword token"
             raise AssertionError(msg)

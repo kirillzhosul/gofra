@@ -1,0 +1,29 @@
+/// Test that RW for variables is working (both static and stack)
+#include "std.gof"
+#include "assert.gof"
+
+#define NUMBER 32
+var static int
+
+func void test_variables_rw_stack[]
+    var stack int;
+
+    &stack NUMBER !<
+
+    stack NUMBER
+    "Write and read on stack must return same value" assert
+end
+
+func void test_variables_rw_heap_static[]
+    &static NUMBER !<
+
+    static NUMBER
+    "Write and read on heap must return same value" assert
+end
+
+func void main[]
+    call test_variables_rw_stack
+    call test_variables_rw_heap_static
+
+    0 exit
+end

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import signal
 import sys
 from typing import TYPE_CHECKING, NoReturn
 
@@ -181,8 +182,19 @@ def cli_execute_after_compilation(args: CLIArguments) -> None:
             verbose=args.verbose,
         )
     else:
-        cli_message(
-            "ERROR",
-            f"Program finished with fail exit code {exit_code}!",
-            verbose=args.verbose,
+        is_sigsegv = exit_code in (
+            signal.SIGSEGV,
+            -signal.SIGSEGV,
+            128 + signal.SIGSEGV,
         )
+        if is_sigsegv:
+            cli_message(
+                "ERROR",
+                f"Program finished with segmentation fault exit code (SIGSEGV, {exit_code})!",
+            )
+        else:
+            cli_message(
+                "ERROR",
+                f"Program finished with fail exit code {exit_code}!",
+                verbose=args.verbose,
+            )

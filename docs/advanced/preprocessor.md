@@ -51,7 +51,7 @@ You can use `-D` flag to define an macro from CLI which is useful for something 
 `-Ddebug=1` (define an macro `debug` with value 1)
 
 ### Definition checking at preprocessor stage
-You can use `#ifdef` and `#endif` for checking definition of an macro
+You can use `#ifdef`, `#ifndef` and `#endif` for checking definition of an macro
 ```gofra
 #idedef DEBUG
     // only be compiled if DEBUG macro is present

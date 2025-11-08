@@ -3,15 +3,15 @@
     "patterns": [
         {
             "name": "keyword.control.gofra",
-            "match": "\\b(if|while|end|extern|inline|func|do|var|typecast|return|struct|sizeof)\\b"
+            "match": "\\b(if|for|in|while|end|extern|inline|func|do|var|typecast|return|struct|sizeof)\\b"
         },
         {
             "name": "keyword.preprocessor.gofra",
-            "match": "(#macro|#define|#include|#endif|#ifdef)"
+            "match": "(#macro|#define|#include|#endif|#ifdef|#ifndef)"
         },
         {
             "name": "keyword.operator.gofra",
-            "match": "(==|!=|<=|>=|<|>)"
+            "match": "(==|!=|<=|>=|<|>|&&)"
         },
         {
             "name": "string.quoted.double.gofra",
@@ -26,7 +26,7 @@
         },
         {
             "name": "keyword.other.gofra",
-            "match": "\\b(drop|call|copy|syscall0|syscall1|syscall2|syscall3|syscall4|syscall5|syscall6|inc|dec)\\b"
+            "match": "\\b(drop|call|copy|breakpoint|syscall0|syscall1|syscall2|syscall3|syscall4|syscall5|syscall6)\\b"
         },
         {
             "name": "comment.line.gofra",
@@ -46,7 +46,7 @@
         },
         {
             "name": "storage.type.gofra",
-            "match": "\\b(int|ptr|void|bool|char)\\b"
+            "match": "\\b(int|void|bool|char)\\b"
         }
     ]
 }

@@ -1,6 +1,5 @@
 // ==============================================
 // Operating system interactions wrapper
-// Works with Darwin (AARCH64), Linux (x86-64), Windows (x86-64)
 // ==============================================
 
 // OS-dependant native abstraction layer
@@ -9,4 +8,5 @@
 #ifdef OS_LINUX   #include "os/native/linux.gof"   #endif
 
 #include "general.gof"
-#include "io.gof"
+
+// TODO: Probably would be cool and more user friendly if including something like `file` will include `file.gof` if there is no variants for module include

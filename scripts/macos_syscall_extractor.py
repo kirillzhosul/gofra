@@ -1,3 +1,7 @@
+"""Extract system call numbers from OS headers."""
+
+# TODO(@stepanzubkov, @kirillzhosul): Refactor for Linux also
+
 import subprocess
 
 SYSCALL_MACRO_PREFIX = "SYS_"

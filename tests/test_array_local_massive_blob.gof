@@ -1,0 +1,16 @@
+/// Test allocating an massive blob of memory at stack
+/// Currently this is capped due to local variables always stored locally 
+/// This may be reworked after we introduce auto local variables as static
+
+#define TESTKIT_EXPECTED_EXIT_CODE 69
+
+// TODO: Add negative tests for that
+
+func int main[]
+    var exit_code int[61]
+
+    // That *massive* shift must be increased later.
+    &exit_code[60] TESTKIT_EXPECTED_EXIT_CODE !<
+
+    exit_code[60] return
+end

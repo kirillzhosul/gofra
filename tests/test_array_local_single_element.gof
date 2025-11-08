@@ -1,13 +1,11 @@
-
-#include "std.gof"
+/// Test that storing and loading from local stack array returns same result
 
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 
-
-func void main[]
+func int main[]
     var exit_code int[1]
 
     &exit_code[0] TESTKIT_EXPECTED_EXIT_CODE !<
 
-    exit_code[0] call exit
+    exit_code[0] return
 end

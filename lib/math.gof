@@ -1,0 +1,89 @@
+// ==============================================
+// Math helpers
+// E.g power, min/max, clamp, factorials
+// ==============================================
+
+// TODO: Gofra does not have FP so this is only integer-math library
+
+// Calculate base in power of exponent
+func int pow[int, int]
+    var exponent int; &exponent swap !<;
+    var base int; &base swap !<;
+    var result int = 1;
+
+    // TODO: This is not performant way to calculate power, but this is enough for now
+    while exponent 0 > do
+        &result result base * !<
+        &exponent exponent 1 - !<
+    end
+
+    result return
+end
+
+// Calculate integer square root for an value (e.g floor Babylonian method)
+func int sqrt[int]
+    var n int; &n swap !<;
+    var y int = 1;
+    var x int;
+
+    // TODO: X64/AARCH64 has direct machine ops to perform FSQRT, probably at some time we introduce injected SQRT when done with FPU/FP and need fast SQRT (e.g 3D renderers)
+    &x n !< // x = n
+
+    while x y > do 
+        &x x y + 2 / !<
+        &y n x /     !<
+    end
+
+    x return
+end
+
+// Return absolute value of an negative/positive integer
+func int abs[int]
+    copy 0 < if 
+        -1 *  // (-n) * -1 => n
+    end
+    return // Positive by default
+end
+
+// Return minimum value from two values
+func int min[int, int]
+    var b int; &b swap !<;
+    var a int; &a swap !<;
+
+    a b <= if a return end
+    b return
+end
+
+// Return maximals value from two values
+func int max[int, int]
+    var b int; &b swap !<;
+    var a int; &a swap !<;
+
+    a b >= if a return end
+    b return
+end
+
+// Clamp given value between two constraints
+func int clamp[int, int, int]
+    var b int; &b swap !<;
+    var a int; &a swap !<;
+    var n int; &n swap !<;
+
+    n a < if a return end
+    n b > if b return end
+    n return
+end
+
+// Factorial (n!) of value
+func int factorial[int]
+    var n int; &n swap !<;
+    var r int = 1;
+    var i int = 2;
+
+    while i n <= do
+        &r r i * !<
+        &i i 1 + !<
+    end
+
+    r return
+end

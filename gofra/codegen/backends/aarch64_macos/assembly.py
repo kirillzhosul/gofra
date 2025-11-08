@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from gofra.codegen.abi import AARCH64ABI
 from gofra.codegen.backends.aarch64_macos.frame import (
     build_local_variables_frame_offsets,
     preserve_calee_frame,
     restore_calee_frame,
 )
 from gofra.hir.operator import OperatorType
-from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
@@ -25,6 +23,7 @@ from .registers import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from gofra.codegen.abi import AARCH64ABI
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.hir.variable import Variable
     from gofra.types._base import Type
@@ -276,8 +275,10 @@ def ipc_syscall_macos(
 
     # System calls always returns `long` type (e.g integer 64 bits (default one for Gofra))
     if store_retval_onto_stack:
-        # Mostly related to optimizations above if we dont want to store result
-        acquire_return_value_from_abi_call(context, context.abi, I64Type())
+        push_register_onto_stack(
+            context,
+            abi.retval_primitive_64bit_register,
+        )
 
 
 def perform_operation_onto_stack(

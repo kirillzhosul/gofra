@@ -67,6 +67,7 @@ def _emit_hir_into_stdout(module: Module) -> None:
                 OperatorType.CONDITIONAL_DO,
                 OperatorType.CONDITIONAL_IF,
                 OperatorType.CONDITIONAL_WHILE,
+                OperatorType.CONDITIONAL_FOR,
             ):
                 context_block_shift += 1
 
@@ -76,7 +77,11 @@ def _emit_ir_operator(operator: Operator, context_block_shift: int) -> None:
     match operator.type:
         case OperatorType.PUSH_INTEGER:
             return print(f"{shift}PUSH {operator.operand}")
-        case OperatorType.CONDITIONAL_WHILE | OperatorType.CONDITIONAL_IF:
+        case (
+            OperatorType.CONDITIONAL_WHILE
+            | OperatorType.CONDITIONAL_IF
+            | OperatorType.CONDITIONAL_FOR
+        ):
             return print(f"{shift}{operator.type.name}" + "{")
         case OperatorType.CONDITIONAL_DO:
             return print(f"{shift}" + "}" + f"{operator.type.name}" + "{")

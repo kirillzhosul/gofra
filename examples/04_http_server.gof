@@ -4,10 +4,14 @@
 // Open an HTTP server on localhost that responds with simple HTML page
 // ==============================================
 
+// TODO!!!!!: This example at some point has broken!
+// TODO: Remove and feature `pack_sockaddr`
+
 #include "std.gof"
 #include "os/network.gof"
 #include "http"
 
+// TODO: Some static structs are invariant by default
 var buffer char[HTTP_IO_BUFFER_CAP]
 var server HTTPServer
 var request HTTPIncomingRequest
@@ -27,27 +31,27 @@ func void handle_request[]
 
     // Read request
     &request call http_server_read_request
-    "Bytes read: " print print_integer
+    "Bytes read: " print print_int "\n" print
 
     // Send response
     &request 
     "<h1>Hello from Gofra HTTP server!</h1><i>Built with Gofra and native HTTP library</i>"
     call http_server_send_html_response
-    "Bytes written: " print print_integer
+    "Bytes written: " print print_int "\n" print
 
     // Finish request
     &request call http_server_close_request
-    "Closed connection!\n" print
+    "Closed connection!" println
 end
 
 func void main[]
-    &server.port 8080 !< // todo: not used
+    &server.port 8080 !< // TODO: not used
     &server.backlog 5 !<
 
     call pack_sockaddr
     &server call http_server_start
 
-    "Listening...\n" print
+    "Listening..." println
 
     while true do
         &request.socket

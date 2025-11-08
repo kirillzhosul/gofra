@@ -1,10 +1,10 @@
-// Test that static global variables are zero-initialized
+/// Test that static global variables are zero-initialized
 #include "std.gof"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 0
 
-var static int
+var static int;
 
-func void main[]
-    static call exit
+func int main[]
+    static return
 end

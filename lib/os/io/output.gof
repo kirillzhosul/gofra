@@ -1,0 +1,117 @@
+// ==============================================
+// Output manipulations based on operating system (wrapper)
+// ==============================================
+
+#include "os/general.gof"
+#include "std_handles.gof"
+
+// TODO: Add proper OR to preprocessor
+// TODO: Inline functions has bad debug options and produce improper error messages
+// TODO: Test and implement missing features for Windows
+// TODO: Allow forward referencing functions
+
+// Print an string into given file descriptor / handle and return bytes written
+#ifdef OS_DARWIN  inline func int print_fd[int, *char[], int] call sc_write  end #endif
+#ifdef OS_LINUX   inline func int print_fd[int, *char[], int] call sc_write  end #endif
+#ifdef OS_WINDOWS inline func int print_fd[int, *char[], int] call win_write end #endif
+
+// Print an string into standard console output stream
+func void print[*char[], int]
+    var len int; &len swap !< // TODO: add proper arguments
+
+    STD_OUT swap
+    len
+    call print_fd drop
+end
+
+// Print an string into standard console with trailing newline
+func void println[*char[], int]
+    call print
+    "\n" call print
+end
+
+// Print an string into standard console error stream
+func void eprint[*char[], int]
+    var len int; &len swap !<
+
+    STD_ERR swap
+    len
+    print_fd drop
+end
+
+// Print an string into standard error console stream and abort execution
+// TODO: Probably must refactored into panic system or something like that as this is not I/O responsibility
+func void eprint_fatal[*char[], int]
+    "FATAL: " call eprint
+    call eprint
+    call abort
+end
+
+// Print given number into given file descriptor / handle
+// does not emit '\n' at the end
+// TODO: negative numbers is not supported
+var print_int64_buf char[20] // Max 64 bit cap
+func void print_int64_fd[int, int]
+    var num int; &num swap !< // TODO: add proper arguments
+    var fd int; &fd swap !< // TODO: add proper arguments
+    var idx int = 0;
+
+    // TODO: This is probably must be merged with `int2str` but must be reviewed, also introduces cross-reference
+
+    num 0 < if
+        // TODO: negative numbers is not supported
+        "print_int64_fd got negative number!\n" eprint_fatal
+    end
+
+    num 0 == if
+        // Straight zero
+        &print_int64_buf[0] '0'  !<
+
+        fd &print_int64_buf 1
+        call print_fd drop
+
+        return
+    end
+
+    // Iterates number by single digits via:
+    // 1234
+    // 1234 % 10 => 4
+    // 1234 / 10 = > 123
+
+    while num 0 > do
+        &print_int64_buf[idx]
+            num 10 % // Get last digit of an number 
+            '0' + // real `cast` to char (e.g digit + 48 => char code) 
+        !<
+
+        // Shift number from right to left (drop last digit)
+        &num num 10 / !< 
+
+        &idx idx 1 + !< // Increment IDX
+    end
+
+    // Number: 1234
+    // After block above buffer will become: [4321]
+    // we iterate from right to left so emitting an '1234' string
+
+    while idx 0 >= do
+        // Print current symbol one-by-one from right to left
+        fd
+        &print_int64_buf[idx]
+        1 call print_fd drop
+
+        // Decrement IDX
+        &idx idx 1 - !<
+    end
+    
+    // TODO: Possibly would be good to introduce more capable `for` loop e.g:
+    // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
+end
+
+// Print given number into standard console output
+// TODO: negative numbers is not supported
+func void print_int64[int]
+    STD_OUT swap call print_int64_fd
+end
+
+#define print_int print_int64 // Alias as default int is 64 bits

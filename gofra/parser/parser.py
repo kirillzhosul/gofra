@@ -73,7 +73,7 @@ def _parse_from_context_into_operators(context: ParserContext) -> None:
         pass
 
     if context.context_stack:
-        _, unclosed_operator = context.pop_context_stack()
+        _, unclosed_operator, *_ = context.pop_context_stack()
         match unclosed_operator.type:
             case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_WHILE:
                 raise ParserUnfinishedWhileDoBlockError(token=unclosed_operator.token)
@@ -172,7 +172,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
         raise ValueError(msg, token.location)
 
     match token.value:
-        case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END:
+        case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END | Keyword.FOR:
             return consume_conditional_block_keyword_from_token(context, token)
         case Keyword.INLINE | Keyword.EXTERN | Keyword.FUNCTION | Keyword.GLOBAL:
             return _unpack_function_definition_from_token(context, token)
@@ -204,6 +204,9 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:
             )
         case Keyword.SIZEOF:
             return _unpack_sizeof_from_token(context, token)
+        case Keyword.IN:
+            msg = f"In must be in form `for-in` loop, but got unconstrained `in` keyword at {token.location}"
+            raise ValueError(msg)
         case _:
             assert_never(token.value)
 

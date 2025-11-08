@@ -60,6 +60,8 @@ var array int[32]
 array[0] // pointer to an first element, same as `array`
 array[3] // pointer to third element, same as `array + sizeof(int) * 3` or `array + 8 * 3` which is shift pointer by 24
 ```
+
+You also can use variable identifier to get array index by value of that variable
 ### Pointer arithmetics equivalent
 ```gofra
 var array int[32]

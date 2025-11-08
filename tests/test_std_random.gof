@@ -1,0 +1,15 @@
+/// Test random number generation from standard library
+#include "os/general.gof"
+#include "random.gof"
+#include "os/time.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 0
+
+func void main[] 
+    time_seconds_since_epoch set_random_seed
+
+    random drop
+    200 random_range drop
+
+    0 exit // TODO: Fix that 
+end

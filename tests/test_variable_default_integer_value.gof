@@ -1,0 +1,21 @@
+/// Test that assignment of default to stack/static variable works
+#include "std.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 30
+
+var static int = 20;
+
+func int test_local_stack_variable_initializer[]
+    var stack int = 10;
+    stack return
+end
+
+func int test_global_static_variable_initializer[]
+    static return
+end
+
+func int main[]
+    call test_global_static_variable_initializer
+    call test_local_stack_variable_initializer
+    + return
+end

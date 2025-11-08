@@ -1,0 +1,12 @@
+/// Test that characters correspond to their value as integer respectfully
+
+#include "assert.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 0
+
+func void main[]
+    'i'  105 "Characters must resolve to their char code (i)"   assert
+    '0'  48  "Characters must resolve to their char code (0)"   assert
+    '\n' 10  "Characters must resolve to their char code (\\n)" assert
+    '\0' 0   "Characters must resolve to their char code (\\0)" assert
+end

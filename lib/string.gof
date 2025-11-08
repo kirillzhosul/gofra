@@ -2,49 +2,57 @@
 // String helpers
 // ==============================================
 
-
-// Get length of an C-Style string (ends with `\0`)
-// Will cause segmentation fault / infinite loop if string is not an C-style.
-var cstr_len_ptr_temp int
-func int cstr_len[*char[]]
-    var ptr *char[]; &ptr swap !<
-    var idx int = 0;
-
-    while
-        ptr
-        idx
-        + typecast *int ?>
-        '\0' !=
-    do
-        &idx idx 1 + !<
-    end
-
-    &idx ?>
-    // bug here ?
-end
+// TODO: Move back string length helpers, as they currently broken due to probably memory reading pollution (e.g read only single char byte instead of CPU WORD
+// TODO: idk how to express that but we possibly may introduce swapping variable address with an other address, or this may be fixed with named arguments
+// TODO: This requires legacy variant with callee-allocated buffer for int64_to_cstr
+#include "os/io/output.gof"
 
 
-// Almost as an alias to `cstr_len`, as in Gofra all string are C-strings by default (except size pushed after)
-func int str_len[*char[], int] drop cstr_len end
-
-func void int2str[int, *char[]]
-    var str *char[]; &str swap !<
+// Convert int64 to string
+// TODO: negative numbers is not supported
+var int64_to_cstr_swap_buf char[20] // Max 64 bit cap
+var int64_to_cstr_buf      char[20] // Max 64 bit cap
+func *char[] int64_to_cstr[int]
     var num int; &num swap !<
     var idx int = 0;
 
+    num 0 < if
+        // TODO: negative numbers is not supported
+        "int64_to_cstr got negative number!\n" eprint_fatal
+    end
+
     num 0 == if
-        str typecast *char 0 + '0' !<
-        str typecast *char 1 + '\0' !<
+        // Direct zero
+        &int64_to_cstr_buf[0] '0'  !<
+        &int64_to_cstr_buf[1] '\0' !<
+        &int64_to_cstr_buf return
     end
 
-    num 0 != if 
-        &idx 0 !<
-        while num 0 > do
-            str idx + typecast *char
-            num 10 % '0' + !<
+    while num 0 > do
+        &int64_to_cstr_swap_buf[idx]
+            num 10 % // Get last digit of an number 
+            '0' + // real `cast` to char (e.g digit + 48 => char code) 
+        !<
 
-            &num num 10 / !< 
-            &idx idx 1 + !<
-        end
+        // Shift number from right to left (drop last digit)
+        &num num 10 / !< 
+
+        &idx idx 1 + !< // Increment IDX
     end
+
+    // Swap buffers as in reverse order
+    var a int;
+    for b in 0..idx do
+        // Push LTR, load RTL
+        &a idx b - 1 - !< // Minus one so we trim last increment from previous loop: a = idx - b - 1;
+        &int64_to_cstr_buf[b] int64_to_cstr_swap_buf[a] typecast int !<
+    end
+
+    // Null terminate before return
+    &int64_to_cstr_buf[idx] '\0' !<
+
+    &int64_to_cstr_buf return
 end
+
+
+inline func *char[] int_to_cstr[int] call int64_to_cstr end // Alias as default int is 64 bits

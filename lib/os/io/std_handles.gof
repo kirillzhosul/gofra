@@ -1,0 +1,19 @@
+// ==============================================
+// Default handles / file descriptors
+// ==============================================
+
+#ifdef OS_WINDOWS
+    #define STD_IN  STD_INPUT_HANDLE
+    #define STD_OUT STD_OUTPUT_HANDLE
+    #define STD_ERR STD_ERROR_HANDLE
+#endif // OS_WINDOWS
+#ifdef OS_DARWIN
+    #define STD_IN  STD_IN_FD
+    #define STD_OUT STD_OUT_FD
+    #define STD_ERR STD_ERR_FD
+#endif // OS_DARWIN
+#ifdef OS_LINUX
+    #define STD_IN  STD_IN_FD
+    #define STD_OUT STD_OUT_FD
+    #define STD_ERR STD_ERR_FD
+#endif // OS_LINUX

@@ -99,14 +99,14 @@ Available function names: {", ".join(self.functions_available) or "..."}""" + (
         )
 
 
-class ParserNoWhileBeforeDoError(GofraError):
+class ParserNoWhileOrForBeforeDoError(GofraError):
     def __init__(self, *args: object, do_token: Token) -> None:
         super().__init__(*args)
         self.do_token = do_token
 
     def __repr__(self) -> str:
-        return f"""No 'while' before 'do' at {self.do_token.location}!
-Expected there will be 'while' block before 'do'.
+        return f"""No 'while'/'for' before 'do' at {self.do_token.location}!
+Expected there will be 'while'/'for' block before 'do'.
 
 Did you forgot to add starting block?"""
 

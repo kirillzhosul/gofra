@@ -1,33 +1,28 @@
 // ==============================================
 // Runtime assertions
 // Check is value are equals without proper error handling
-// TODO: add static assertions (https://github.com/kirillzhosul/gofra/issues/19)
 // ==============================================
 
-#include "os/io.gof"
+#include "os/io/output.gof"
+
+// TODO: add static assertions (https://github.com/kirillzhosul/gofra/issues/19)
 
 // Check for equality at runtime with additional message
-// (assert two values same)
-func void runtime_assert[
-    int,
-    int,
-    *char[],
-    int
-]
-    var len int; &len swap !<
-    var ptr *char[]; &ptr swap !<
+// (assert two values are same)
+// TODO: add proper types to that function, as it may compare not only integers
+// probably this requires some overloading or something like that
+func void runtime_assert[int, int, *char[], int]
+    var len int; &len swap !<; // TODO: add named arguments
+    var ptr *char[]; &ptr swap !<; // TODO: add named arguments
 
-    // TODO: add proper types to that function, as it may compare not only integers
     != if
         "runtime_assert: Assertion failed, " eprint
-    
-        ptr len
-        call eprint
-
-        "\n" call eprint_fatal
+        ptr len call eprint
+        "\n"    call eprint
+        call abort
     end
 end
 
 // *Export* simple `assert` as an alias to real `runtime_assert`
-// e.g static one will be `static_assert`, and this may be reworked
+// e.g static one will be `static_assert`, and this may be reworked, volatile code
 #define assert runtime_assert

@@ -1,9 +1,0 @@
-#include "std.gof"
-
-func void main[]
-    // TODO: broken
-    //true true    typecast int typecast int  "True must equals true"   assert 
-    //false false  typecast int typecast int  "False must equals false" assert
-
-    0 exit
-end

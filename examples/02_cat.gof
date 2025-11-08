@@ -6,7 +6,10 @@
 
 #include "std.gof"
 
+// TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
 // TODO: add argc argv
+// TODO: Windows support
+
 #define PATH "test.txt" to_cstr_ptr
 
 // Some segment in memory so we can store content of the file
@@ -16,21 +19,17 @@ var buf char[1024]
 func void main[]
     var fd int
     
-    // Open file (TODO: Windows analogue)
     &fd 
-        PATH 0 0 
-        call sc_open 
+        PATH 0 0 call sc_open 
     !<
 
-    // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
     fd 0 < if 
         "Unable to open given file\n" eprint_fatal 
     end
 
     // Read file
     fd
-    &buf 
-    sizeof buf
+    &buf sizeof buf
     call sc_read; 0 < if 
         "Unable to read given file\n" eprint_fatal 
     end

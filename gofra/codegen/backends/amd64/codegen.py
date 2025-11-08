@@ -80,8 +80,6 @@ def amd64_instruction_set(
             idx,
             owner_function,
         )
-        if operator.type == OperatorType.FUNCTION_RETURN:
-            break
 
 
 def amd64_operator_instructions(
@@ -124,7 +122,11 @@ def amd64_operator_instructions(
                 operator.jumps_to_operator_idx,
             )
             evaluate_conditional_block_on_stack_with_jump(context, label)
-        case OperatorType.CONDITIONAL_END | OperatorType.CONDITIONAL_WHILE:
+        case (
+            OperatorType.CONDITIONAL_END
+            | OperatorType.CONDITIONAL_WHILE
+            | OperatorType.CONDITIONAL_FOR
+        ):
             # This also should be refactored into `assembly` layer
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
             if isinstance(operator.jumps_to_operator_idx, int):
@@ -274,8 +276,6 @@ def amd64_program_entry_point(
     )
 
     # Prepare and execute main function
-    assert isinstance(entry_point.return_type, VoidType)
-    assert not entry_point.has_return_value()
     function_call(
         context,
         name=entry_point.name,
@@ -283,10 +283,9 @@ def amd64_program_entry_point(
         type_contract_out=VoidType(),
     )
 
-    if context.target.operating_system == "Windows":
-        ...
+    if isinstance(entry_point.return_type, VoidType):
+        assert context.target.operating_system != "Windows"
         # TODO!(@kirillzhosul): review exit code on Windows  # noqa: TD002, TD004
-    else:
         # Call syscall to exit without accessing protected system memory.
         # `ret` into return-address will fail with segfault
         ipc_syscall_linux(
@@ -297,6 +296,14 @@ def amd64_program_entry_point(
                 AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER,
                 AMD64_LINUX_EPILOGUE_EXIT_CODE,
             ],
+        )
+    else:
+        push_integer_onto_stack(context, AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER)
+        ipc_syscall_linux(
+            context,
+            arguments_count=1,
+            store_retval_onto_stack=False,
+            injected_args=None,
         )
 
     function_end_with_epilogue(

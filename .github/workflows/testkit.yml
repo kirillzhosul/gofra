@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.12']
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest] # TODO: Add `windows-latest` when we start to support Windows
       fail-fast: false
   
     runs-on: ${{ matrix.os }}
@@ -30,19 +30,18 @@ jobs:
         python -m gofra --version
         
 
-    # TODO: add `--fail-with-abnormal-exit-code` when finish these tests
-
+    # TODO: Add pong test if there is any easy way to install raylib
     - name: Run tests
       # Threads is set to 1 as it affects testing speed, but currently makes display of errors harder as they not linear
       # probably should be fixed at some point
       run: |
-        python -m gofra.testkit --keep-artifacts --silent --fail-with-abnormal-exit-code --threads 1 -d ./tests
-        
+        python -m gofra.testkit --silent --fail-with-abnormal-exit-code --threads 1 -d ./tests
+  
     - name: Run examples test
       run: |
         python -m gofra.testkit \
           --build-only \
-          --keep-artifacts --silent \
+          --silent \
           -d ./examples \
           -p "*_*.gof" \
           -e 03_pong.gof 

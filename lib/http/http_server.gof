@@ -4,6 +4,8 @@
 
 #include "os/network.gof"
 
+// TODO: Add async/thread support
+
 // IO RX/TX buffer capacity expected
 #define HTTP_IO_BUFFER_CAP 4096
 
@@ -105,7 +107,7 @@ func int http_server_send_html_response[*HTTPIncomingRequest, *char[], int]
     &bytes_written swap bytes_written + !<
 
     // TODO: use io_tx_buffer
-    &bytes_written ?>
+    bytes_written return
 end
 
 // Read an HTTP request with headers
@@ -122,7 +124,7 @@ func int http_server_read_request[*HTTPIncomingRequest]
         "Unable to read response from client socket on HTTP server socket\n" eprint_fatal
     end
 
-    &bytes_read ?>
+    bytes_read return
 end
 
 // Close client request finishing request-response interaction
