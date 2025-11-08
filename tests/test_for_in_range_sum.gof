@@ -5,11 +5,11 @@
 func int main[]
     var sum int = 0;
 
-    for i1 in 0..15 do
+    for i in 0..15 do
         &sum sum 1 + !<
     end
 
-    for i2 in 15..5 do // reverse for above but less on 5
+    for i in 15..5 do // reverse for above but less on 5
         &sum sum 1 - !<
     end
 

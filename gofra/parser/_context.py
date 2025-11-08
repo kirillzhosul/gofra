@@ -54,7 +54,7 @@ class ParserContext(PeekableTokenizer):
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=list[Operator])
 
-    context_stack: deque[tuple[int, Operator, tuple[str, int] | None]] = field(
+    context_stack: deque[tuple[int, Operator, tuple[Variable, int] | None]] = field(
         default_factory=lambda: deque(),
     )
     variables: MutableMapping[str, Variable] = field(
@@ -127,7 +127,7 @@ class ParserContext(PeekableTokenizer):
             raise ValueError(msg)
         self.operators.extend(inline_block.operators)
 
-    def pop_context_stack(self) -> tuple[int, Operator, tuple[str, int] | None]:
+    def pop_context_stack(self) -> tuple[int, Operator, tuple[Variable, int] | None]:
         return self.context_stack.pop()
 
     def push_new_operator(
