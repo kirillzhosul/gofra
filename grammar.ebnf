@@ -57,16 +57,22 @@ CallStmt = "call", Identifier;
 TypecastStmt = "typecast", TypeExpr;
 SizeofStmt = "sizeof", {TypeExpr | Identifier};
 
-IntegerLiteral = "0" | PositiveNumber | NegativeNumber;
 StringLiteral = '"', {Character}, '"';
 CharLiteral = "'", Character, "'";
 Identifier = Letter, {Letter | Digit};
+
+IntegerLiteral = "0" | PositiveNumber | NegativeNumber | HexPositiveNumber | HexNegativeNumber;
 
 DigitExcludingZero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 Digit = "0" | DigitExcludingZero;
 
 PositiveNumber = DigitExcludingZero, {Digit};
 NegativeNumber = ["-"], PositiveNumber;
+
+HexPrefix = "0x" | "0X";
+HexDigit = Digit | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F";
+HexPositiveNumber = HexPrefix, HexDigit, {HexDigit};
+HexNegativeNumber = "-", HexPrefix, HexDigit, {HexDigit};
 
 Character = ? any character except quote being used?;
 Tabulation = ? any tabulation character?;
