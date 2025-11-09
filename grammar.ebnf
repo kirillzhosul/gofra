@@ -1,0 +1,83 @@
+(* 
+    Generic syntax for Gofra
+
+    This file is modified after some modifications and some changes may be not described here
+    Syntax and semantics of the language is not final as language being in beta
+
+    Use this as as alternative documentation
+*)
+Program = { FunctionDef | Statement  | VariableDefinition};
+
+Negate = "-";
+Number =  digit+ | Negate, {digit};
+
+Comment = "//", {Character}, Newline;
+
+StructureDefinition = "struct", Identifier, {Identifier, TypeExpr, Newline}, "end";
+
+Operator = 
+    "%" |
+    "+" | "-" | 
+    "*" | "/" | 
+    "?>" | "!<" | 
+    "&&" | "||" | "&" | "|" | "^" | "<<" | ">>" |
+    "<" | ">" | ">=" | "<=" | "==" | "!=" |
+    "drop" | "swap" | "return" ;
+
+VariableReference = ["&"], Identifier, ["[", [PositiveNumber | Identifier], "]"] | [".", Identifier];
+
+FunctionDef = 
+    ['inline'], ['global'], ['extern'], 
+    "func", TypeExpr, Identifier, "[", [Params], "]", [Newline], 
+        {Statement | VariableDefinition}, 
+    "end";
+
+Params = Param, {",", Param};
+Param = TypeExpr;
+
+Statement = 
+    [{Tabulation}], 
+    IfStmt | WhileStmt | ForStmt | 
+    CallStmt |
+    TypecastStmt | SizeofStmt |
+    IntegerLiteral | StringLiteral | CharLiteral | 
+    Operator | Comment | Identifier | 
+    VariableReference | 
+    PreprocessorDefinition | PreprocessorInclude , 
+    [";"], [{Newline}];
+
+IntRangeQualifier = IntegerLiteral, "..", IntegerLiteral;
+VarRangeQualifier = IntegerLiteral, "..", Identifier;
+RangeQualifier = IntRangeQualifier | VarRangeQualifier;
+
+IfStmt = "if", {Statement}, "end";
+WhileStmt = "while", {Statement}, "do", {Statement}, "end";
+ForStmt = "for", Identifier, "in", RangeQualifier, "do", {Statement}, "end";
+CallStmt = "call", Identifier;
+TypecastStmt = "typecast", TypeExpr;
+SizeofStmt = "sizeof", {TypeExpr | Identifier};
+
+IntegerLiteral = "0" | PositiveNumber | NegativeNumber;
+StringLiteral = '"', {Character}, '"';
+CharLiteral = "'", Character, "'";
+Identifier = Letter, {Letter | Digit};
+
+DigitExcludingZero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+Digit = "0" | DigitExcludingZero;
+
+PositiveNumber = DigitExcludingZero, {Digit};
+NegativeNumber = ["-"], PositiveNumber;
+
+Character = ? any character except quote being used?;
+Tabulation = ? any tabulation character?;
+Newline = ? line break character ?;
+Letter = ? [a-Z]?;
+
+TypeExpr = [{"*"}], PrimitiveType, ["[", [PositiveNumber], "]"];
+
+PrimitiveType = "int" | "char" | "bool" | "void";
+VariableDefinition = "var", Identifier, TypeExpr, ["=", IntegerLiteral];
+
+PreprocessorInclude = "#include", StringLiteral, [Newline];
+PreprocessorDefinition = "#define", Identifier, {Statement}, [Newline];
+PreprocessorUndefine = "#undef", Identifier;
