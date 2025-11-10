@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal, assert_never
 from gofra.cli.output import cli_message
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import OperatorType
+from gofra.hir.variable import VariableStorageClass
 from gofra.parser.exceptions import (
     ParserEntryPointFunctionModifiersError,
     ParserNoEntryFunctionError,
@@ -19,7 +20,7 @@ from gofra.typecheck.errors.return_value_missing import ReturnValueMissingTypech
 from gofra.types import Type
 from gofra.types.comparison import is_types_same
 from gofra.types.composite.array import ArrayType
-from gofra.types.composite.pointer import PointerType
+from gofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
     from gofra.hir.module import Module
     from gofra.hir.operator import Operator
 
+# TODO!!!(@kirillzhosul): Typechecker may skip typechecking if early-return is occurred  # noqa: TD002, TD004
 
 # TODO(@kirillzhosul): Probably be something like an debug flag
 # Traces each operation on stack to search bugs in typechecker
@@ -111,8 +113,9 @@ def validate_function_type_safety(
             msg = f"Ambiguous stack size at function end in {function.name} at {function.defined_at}"
             raise ValueError(msg)
 
+        retval_t = emulated_type_stack[0]
         if not is_types_same(
-            a=emulated_type_stack[0],
+            a=retval_t,
             b=function.return_type,
             strategy="strict-same-type",
         ):
@@ -120,6 +123,15 @@ def validate_function_type_safety(
             raise TypecheckFunctionTypeContractOutViolatedError(
                 function=function,
                 type_stack=list(emulated_type_stack),
+            )
+
+        if (
+            isinstance(retval_t, PointerType)
+            and retval_t.memory_location == PointerMemoryLocation.STACK
+        ):
+            cli_message(
+                "WARNING",
+                f"""Returning an pointer from function that has stack memory location inside function '{function.name}' defined at {function.defined_at}!""",
             )
 
 
@@ -186,7 +198,10 @@ def emulate_type_stack_for_operators(
                     element_type=CharType(),
                     elements_count=len(operator.operand),
                 )
-                string_ptr = PointerType(points_to=string)
+                string_ptr = PointerType(
+                    points_to=string,
+                    memory_location=PointerMemoryLocation.STATIC,
+                )
                 context.push_types(string_ptr, I64Type())
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(operator.operand, str)
@@ -197,7 +212,18 @@ def emulate_type_stack_for_operators(
                         msg = f"Typechecker expect variable is known at module level or function level but it is not found in both (variable name - {operator.operand}"
                         raise ValueError(msg)
                 t = variable.type
-                context.push_types(PointerType(points_to=t))
+
+                memory_location = {
+                    VariableStorageClass.STACK: PointerMemoryLocation.STACK,
+                    VariableStorageClass.STATIC: PointerMemoryLocation.STATIC,
+                }[variable.storage_class]
+
+                context.push_types(
+                    PointerType(
+                        points_to=t,
+                        memory_location=memory_location,
+                    ),
+                )
             case OperatorType.PUSH_INTEGER:
                 context.push_types(I64Type())
             case OperatorType.FUNCTION_RETURN:
