@@ -113,9 +113,100 @@ func void print_int64_fd[int, int]
     // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
 end
 
+// Print given number into given file descriptor / handle as hexadecimal 0x
+// does not emit '\n' at the end
+var print_int64_hex_buf char[16] // Max 64 bit cap
+func void print_int64_hex_fd[int, int, bool, bool]
+    var as_uppercase bool; &as_uppercase swap typecast int !<
+    var show_hex_prefix bool; &show_hex_prefix swap typecast int !<
+
+    var num int; &num swap !< // TODO: add proper arguments
+    var fd int; &fd swap !< // TODO: add proper arguments
+    var idx int = 0;
+    var is_negative bool;
+
+    &is_negative false typecast int !<
+    num 0 < if
+        &num num -1 * !< 
+        &is_negative true typecast int !<
+    end
+
+    num 0 == if
+        // Straight zero
+        show_hex_prefix true == if
+            fd "0x0"
+            call print_fd drop
+            return
+        end
+
+        &print_int64_buf[0] '0'  !<
+        fd &print_int64_buf 1
+        call print_fd drop
+        return
+    end
+
+    // For description look in `print_int64_fd`
+    while num 0 > do
+        var digit int;
+        &digit num 16 % !<
+
+        digit 10 < if
+            &print_int64_hex_buf[idx] digit '0' + !<
+        end
+        digit 10 >= if
+            as_uppercase true == if
+                &print_int64_hex_buf[idx] digit 10 - 'A' + !<
+            end
+            as_uppercase false == if
+                &print_int64_hex_buf[idx] digit 10 - 'a' + !<
+            end
+        end
+
+        // Shift number from right to left (drop last digit)
+        &num num 16 / !< 
+
+        &idx idx 1 + !< // Increment IDX
+    end
+
+    is_negative if
+        &print_int64_hex_buf[idx] '-' !<
+        &idx idx 1 + !< // Increment IDX
+    end
+
+    show_hex_prefix if
+        &print_int64_hex_buf[idx] 'x' !<
+        &idx idx 1 + !<
+        &print_int64_hex_buf[idx] '0' !<
+        &idx idx 1 + !<
+    end
+
+    // Number: 1234
+    // After block above buffer will become: [4321]
+    // we iterate from right to left so emitting an '1234' string
+
+    while idx 0 >= do
+        // Print current symbol one-by-one from right to left
+        fd
+        &print_int64_hex_buf[idx]
+        1 call print_fd drop
+
+        // Decrement IDX
+        &idx idx 1 - !<
+    end
+    
+    // TODO: Possibly would be good to introduce more capable `for` loop e.g:
+    // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
+end
+
+
 // Print given number into standard console output
 func void print_int64[int]
     STD_OUT swap call print_int64_fd
 end
+
+func void print_int64_hex[int]
+    STD_OUT swap true true call print_int64_hex_fd
+end
+
 
 #define print_int print_int64 // Alias as default int is 64 bits
