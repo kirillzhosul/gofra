@@ -49,18 +49,19 @@ end
 
 // Print given number into given file descriptor / handle
 // does not emit '\n' at the end
-// TODO: negative numbers is not supported
 var print_int64_buf char[20] // Max 64 bit cap
 func void print_int64_fd[int, int]
     var num int; &num swap !< // TODO: add proper arguments
     var fd int; &fd swap !< // TODO: add proper arguments
     var idx int = 0;
+    var is_negative bool;
 
     // TODO: This is probably must be merged with `int2str` but must be reviewed, also introduces cross-reference
 
+    &is_negative false typecast int !<
     num 0 < if
-        // TODO: negative numbers is not supported
-        "print_int64_fd got negative number!\n" eprint_fatal
+        &num num -1 * !< 
+        &is_negative true typecast int !<
     end
 
     num 0 == if
@@ -90,6 +91,10 @@ func void print_int64_fd[int, int]
         &idx idx 1 + !< // Increment IDX
     end
 
+    is_negative if
+        &print_int64_buf[idx] '-' !<
+        &idx idx 1 + !< // Increment IDX
+    end
     // Number: 1234
     // After block above buffer will become: [4321]
     // we iterate from right to left so emitting an '1234' string
@@ -109,7 +114,6 @@ func void print_int64_fd[int, int]
 end
 
 // Print given number into standard console output
-// TODO: negative numbers is not supported
 func void print_int64[int]
     STD_OUT swap call print_int64_fd
 end
