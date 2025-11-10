@@ -28,3 +28,14 @@ func void sleep[int]
 
     0 NULL NULL NULL &tv call sc_select drop
 end
+
+// Sleep for given amount of microseconds
+func void sleep_ms[int]
+    var ms int; &ms swap !<
+    var tv timeval
+
+    &tv.tv_sec ms 1000 /         !<
+    &tv.tv_usec ms 1000 % 1000 * !<
+
+    0 NULL NULL NULL &tv call sc_select drop
+end

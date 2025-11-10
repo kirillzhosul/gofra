@@ -31,5 +31,5 @@ def cli_gofra_error_handler(
         return sys.exit(pe.returncode)
 
     # This is unreachable but error wrapper must fail
-    cli_message("ERROR", "Bug in an CLI: error handler must has no-return")
+    cli_message("ERROR", "Bug in a CLI: error handler must has no-return")
     sys.exit(1)
