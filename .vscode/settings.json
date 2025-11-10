@@ -17,7 +17,8 @@
         "linker",
         "hir",
         "toolchain",
-        "grammar"
+        "grammar",
+        "repl"
     ],
     "cSpell.words": [
         "ABGR",

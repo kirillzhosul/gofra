@@ -72,7 +72,7 @@ def _emit_hir_into_stdout(module: Module) -> None:
                 context_block_shift += 1
 
 
-def _emit_ir_operator(operator: Operator, context_block_shift: int) -> None:
+def _emit_ir_operator(operator: Operator, context_block_shift: int) -> None:  # noqa: PLR0911
     shift = " " * (context_block_shift + 3)
     match operator.type:
         case OperatorType.PUSH_INTEGER:
@@ -90,7 +90,9 @@ def _emit_ir_operator(operator: Operator, context_block_shift: int) -> None:
         case OperatorType.FUNCTION_CALL:
             return print(f"{shift}{operator.operand}()")
         case _:
-            return print(f"{shift}{operator.type.name}<{operator.operand}>")
+            if operator.operand:
+                return print(f"{shift}{operator.type.name}<{operator.operand}>")
+            return print(f"{shift}{operator.type.name}")
 
 
 def _emit_ir_function_signature(function: Function) -> None:
