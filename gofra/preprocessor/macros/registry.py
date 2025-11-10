@@ -33,6 +33,9 @@ class MacrosRegistry(dict[str, Macro]):
         self.update(injected_registry)
         return self
 
+    def copy(self) -> "MacrosRegistry":
+        return MacrosRegistry(super().copy())
+
 
 def registry_from_raw_definitions(
     location: TokenLocation,

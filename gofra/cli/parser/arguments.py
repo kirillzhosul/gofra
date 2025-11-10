@@ -23,6 +23,7 @@ class CLIArguments:
     definitions: dict[str, str]
 
     version: bool
+    repl: bool
 
     hir: bool
     lir: bool

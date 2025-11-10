@@ -8,7 +8,7 @@ type Triplet = Literal[
 ]
 
 
-@dataclass
+@dataclass(eq=True)
 class Target:
     """Specifications for target build host."""
 

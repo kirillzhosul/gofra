@@ -29,7 +29,7 @@ def cli_entry_point(prog: str | None = None) -> None:
         perform_desired_toolchain_goal(args)
 
     # This is unreachable but error wrapper must fail
-    cli_message("ERROR", "Bug in an CLI: toolchain must perform at least one goal!")
+    cli_message("ERROR", "Bug in a CLI: toolchain must perform at least one goal!")
     sys.exit(1)
 
 

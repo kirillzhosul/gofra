@@ -7,6 +7,7 @@ from typing import NoReturn
 from gofra.cli.goals.compile import cli_perform_compile_goal
 from gofra.cli.goals.hir import cli_perform_hir_goal
 from gofra.cli.goals.preprocessor import cli_perform_preprocess_goal
+from gofra.cli.goals.repl import cli_perform_repl_goal
 from gofra.cli.goals.version import cli_perform_version_goal
 from gofra.cli.output import cli_message
 from gofra.cli.parser.arguments import CLIArguments
@@ -20,6 +21,9 @@ def perform_desired_toolchain_goal(args: CLIArguments) -> NoReturn:
     try:
         if args.version:
             return cli_perform_version_goal(args)
+
+        if args.repl:
+            return cli_perform_repl_goal(args)
 
         if args.preprocess_only:
             return cli_perform_preprocess_goal(args)
