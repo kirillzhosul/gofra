@@ -353,10 +353,8 @@ def emulate_type_stack_for_operators(
                 )
                 context.push_types(BoolType())
             case OperatorType.STACK_DROP:
-                context.raise_for_operator_arguments(
-                    operator,
-                    (I64Type, PointerType),
-                )
+                context.raise_for_enough_arguments(operator, 1)
+                context.consume_n_arguments(1)
             case OperatorType.SYSCALL:
                 args_count = operator.operand
                 assert isinstance(args_count, int)
