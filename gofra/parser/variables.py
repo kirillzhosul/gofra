@@ -29,7 +29,8 @@ def unpack_variable_definition_from_token(
         )
 
     if context.name_is_already_taken(varname):
-        msg = f"Variable name {varname} is already taken by other definition"
+        previous_def = context.search_variable_in_context_parents(varname)
+        msg = f"Variable name {varname} at {varname_token.location} is already taken by other definition within context parents at {previous_def.defined_at if previous_def else 'unknown location'}"
         raise ValueError(msg)
 
     storage_class = (

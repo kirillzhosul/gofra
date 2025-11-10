@@ -223,7 +223,7 @@ def consume_function_body_tokens(context: ParserContext) -> Generator[Token]:
 
     while token := context.next_token():
         if token.type == TokenType.EOF:
-            msg = "Expected function to be closed but got end of file"
+            msg = f"Expected function to be closed but got end of file at {token.location}"
             raise ValueError(msg)
         if token.type != TokenType.KEYWORD:
             yield token
