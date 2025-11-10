@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, assert_never
 
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
@@ -23,6 +23,8 @@ def is_types_same(
         case "implicit-byte-size":
             # TODO(@kirillzhosul): Probably required proper check even for that simple strategy, as I64 is same as *void, but should be generous
             return a.size_in_bytes == b.size_in_bytes
+        case _:
+            assert_never(strategy)
 
 
 def _compare_types_strict_same_type(a: Type, b: Type) -> bool:
@@ -49,7 +51,10 @@ def _compare_types_strict_same_type(a: Type, b: Type) -> bool:
         return a.name == b.name and a.fields_ordering == b.fields_ordering
 
     if isinstance(a, PointerType) and isinstance(b, PointerType):
-        return is_types_same(a.points_to, b.points_to)
+        return is_types_same(
+            _try_unwrap_array_element_type(a.points_to),
+            _try_unwrap_array_element_type(b.points_to),
+        )
 
     if isinstance(a, ArrayType) and isinstance(b, ArrayType):
         return (
@@ -61,3 +66,9 @@ def _compare_types_strict_same_type(a: Type, b: Type) -> bool:
         )
 
     return False
+
+
+def _try_unwrap_array_element_type(x: Type) -> Type:
+    if isinstance(x, ArrayType):
+        return x.element_type
+    return x
