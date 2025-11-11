@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug: gofra (current args)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "-m",
+            "args": [
+                "gofra",
+                "${command:pickArgs}"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
