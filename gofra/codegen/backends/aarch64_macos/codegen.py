@@ -18,6 +18,7 @@ from gofra.codegen.backends.aarch64_macos.assembly import (
     load_memory_from_stack_arguments,
     perform_operation_onto_stack,
     pop_cells_from_stack_into_registers,
+    push_float_onto_stack,
     push_integer_onto_stack,
     push_local_variable_address_from_frame_offset,
     push_register_onto_stack,
@@ -51,7 +52,12 @@ def generate_aarch64_macos_backend(
 ) -> None:
     """AARCH64 MacOS code generation backend."""
     _ = target
-    context = AARCH64CodegenContext(fd=fd, strings={}, abi=DarwinAARCH64ABI())
+    context = AARCH64CodegenContext(
+        fd=fd,
+        strings={},
+        abi=DarwinAARCH64ABI(),
+        float_constants={},
+    )
 
     # Executable section with instructions only (pure_instructions)
     context.write(".section __TEXT,__text,regular,pure_instructions")
@@ -113,6 +119,9 @@ def aarch64_macos_operator_instructions(
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
+        case OperatorType.PUSH_FLOAT:
+            assert isinstance(operator.operand, float)
+            push_float_onto_stack(context, operator.operand)
         case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
             assert isinstance(operator.jumps_to_operator_idx, int)
             label = CODEGEN_GOFRA_CONTEXT_LABEL % (

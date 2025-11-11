@@ -82,7 +82,12 @@ def generate_aarch64_lir_macos_backend(
 ) -> None:
     """AARCH64 MacOS code generation backend."""
     _ = target
-    context = AARCH64CodegenContext(fd=fd, strings={}, abi=DarwinAARCH64ABI())
+    context = AARCH64CodegenContext(
+        fd=fd,
+        strings={},
+        abi=DarwinAARCH64ABI(),
+        float_constants={},
+    )
     lir = translate_hir_to_lir(
         program,
         system_entry_point_name=LINKER_EXPECTED_ENTRY_POINT,

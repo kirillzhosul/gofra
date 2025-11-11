@@ -24,6 +24,7 @@ from gofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
+from gofra.types.primitive.floats import F64Type
 from gofra.types.primitive.integers import I64Type
 
 from ._context import TypecheckContext
@@ -226,6 +227,8 @@ def emulate_type_stack_for_operators(
                 )
             case OperatorType.PUSH_INTEGER:
                 context.push_types(I64Type())
+            case OperatorType.PUSH_FLOAT:
+                context.push_types(F64Type())
             case OperatorType.FUNCTION_RETURN:
                 return context.emulated_stack_types, "early-return"
             case OperatorType.FUNCTION_CALL:

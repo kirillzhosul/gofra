@@ -69,6 +69,7 @@ class TokenType(IntEnum):
 
     # Numerical
     INTEGER = auto()
+    FLOAT = auto()
 
     # Text
     CHARACTER = auto()
@@ -111,7 +112,7 @@ class Token:
 
     # `pre-parsed` value (e.g numbers are numbers, string are unescaped)
     # This is actually may not be here (inside parser), but due to now this will be as-is
-    value: int | str | Keyword | PreprocessorKeyword
+    value: int | float | str | Keyword | PreprocessorKeyword
 
     # Location within file
     location: TokenLocation

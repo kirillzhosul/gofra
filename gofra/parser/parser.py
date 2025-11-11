@@ -4,6 +4,7 @@ from difflib import get_close_matches
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.consts import GOFRA_ENTRY_POINT
+from gofra.feature_flags import FEATURE_ALLOW_FPU
 from gofra.hir.function import Function
 from gofra.hir.module import Module
 from gofra.lexer import (
@@ -87,6 +88,11 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
     match token.type:
         case TokenType.INTEGER | TokenType.CHARACTER:
             return _push_integer_operator(context, token)
+        case TokenType.FLOAT:
+            if not FEATURE_ALLOW_FPU:
+                msg = "FPU is disabled as feature for being in unstable test stage, try enable `FEATURE_ALLOW_FPU` to access FP."
+                raise ValueError(msg)
+            return _push_float_operator(context, token)
         case TokenType.STRING:
             return _push_string_operator(context, token)
         case TokenType.IDENTIFIER:
@@ -118,6 +124,8 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
         ):
             msg = f"Got {token.type.name} ({token.location}) in form of an single parser-expression (non-composite). This token (as other symbol-defined ones) must occur only in composite expressions (e.g function signature, type constructions)."
             raise ValueError(msg)
+        case _:
+            assert_never(token.type)
 
 
 def _consume_word_token(token: Token, context: ParserContext) -> None:
@@ -347,6 +355,15 @@ def _push_integer_operator(context: ParserContext, token: Token) -> None:
     assert isinstance(token.value, int)
     context.push_new_operator(
         type=OperatorType.PUSH_INTEGER,
+        token=token,
+        operand=token.value,
+    )
+
+
+def _push_float_operator(context: ParserContext, token: Token) -> None:
+    assert isinstance(token.value, float)
+    context.push_new_operator(
+        type=OperatorType.PUSH_FLOAT,
         token=token,
         operand=token.value,
     )

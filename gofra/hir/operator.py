@@ -16,6 +16,7 @@ class OperatorType(Enum):
     # any type which is scalar/arithmetical is treated as an integer (e.g bool)
     # TODO(@kirillzhosul): Proper inference of integer size
     PUSH_INTEGER = auto()
+    PUSH_FLOAT = auto()
 
     # Push address of string (static) and its size onto stack
     # TODO(@kirillzhosul): Review C-Strings - https://github.com/kirillzhosul/gofra/issues/27
@@ -98,7 +99,7 @@ class OperatorType(Enum):
 class Operator:
     type: OperatorType
     token: Token
-    operand: int | str | Type | None
+    operand: int | float | str | Type | None
 
     jumps_to_operator_idx: int | None = None
 

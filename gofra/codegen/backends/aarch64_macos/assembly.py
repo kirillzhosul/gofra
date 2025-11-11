@@ -83,6 +83,15 @@ def store_integer_into_register(
     context.write(f"mov {register}, #{value}")
 
 
+def push_float_onto_stack(context: AARCH64CodegenContext, value: float):
+    assert value > 0
+    context.float_constants[value] = f"__gofra_float{len(context.float_constants)}"
+    f_const = context.float_constants[value]
+    context.write(f"adrp X0, {f_const}@PAGE")
+    context.write(f"ldr D0, [X0, {f_const}@PAGEOFF]")
+    push_register_onto_stack(context, register="D0")
+
+
 def push_integer_onto_stack(
     context: AARCH64CodegenContext,
     value: int,
@@ -212,9 +221,12 @@ def initialize_static_data_section(
                 assert variable.initial_value is None
                 context.fd.write(f"{name}: .space {type_size}\n")
 
-    if data_variables:
+    if data_variables or context.float_constants:
         context.fd.write(".section __DATA,__data\n")
+        for float_v, float_n in context.float_constants.items():
+            context.fd.write(f"{float_n}: .double {float_v}")
         for name, variable in data_variables.items():
+            assert name not in context.float_constants.values()
             type_size = variable.size_in_bytes
             if type_size != 0:
                 # TODO(@kirillzhosul): review realignment of static variables

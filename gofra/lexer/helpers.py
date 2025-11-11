@@ -29,6 +29,16 @@ def is_valid_integer(text: str) -> bool:
     return text.isdigit()
 
 
+def is_valid_float(text: str) -> bool:
+    """Is given raw text can be parsed as integer?."""
+    if text.count(".") != 1:
+        return False
+
+    # Yes, `isdecimal` is easier
+    whole, fractional = text.split(".", maxsplit=1)
+    return whole.isdigit() and fractional.isdigit()
+
+
 def find_word_start(text: str, start: int) -> int:
     """Find start column index of an word."""
     return _find_column(text, start, lambda s: not s.isspace())

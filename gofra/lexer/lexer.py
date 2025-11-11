@@ -18,6 +18,7 @@ from gofra.lexer.helpers import (
     find_string_end,
     find_word_end,
     find_word_start,
+    is_valid_float,
     is_valid_hexadecimal,
     is_valid_integer,
     unescape_string,
@@ -146,6 +147,7 @@ def _try_tokenize_numerable_into_token(
     base = 0
     sign = (1, -1)[word.startswith("-")]
     word = word.removeprefix("-")
+    is_fp = False
 
     if is_valid_integer(word):
         base = 10
@@ -156,9 +158,20 @@ def _try_tokenize_numerable_into_token(
                 hexadecimal_raw=word,
                 number_location=location,
             )
-
+    elif is_valid_float(word):
+        base = 10
+        is_fp = True
     if not base:
         return None
+
+    if is_fp:
+        assert base == 10, "FP numbers allowed to be only in base 10"
+        return Token(
+            type=TokenType.FLOAT,
+            text=word,
+            value=float(word) * sign,
+            location=location,
+        )
 
     return Token(
         type=TokenType.INTEGER,

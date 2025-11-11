@@ -464,6 +464,9 @@ def translate_hir_function_to_lir_function(
                     )
                     lir_function.add_op(LIRUnconditionalJumpToLabel(label_to))
                 lir_function.add_op(LIRLabel(label))
+            case OperatorType.PUSH_FLOAT:
+                msg = "FPU is not implemented for LIR"
+                raise ValueError(msg)
             case _:
                 assert_never(operator.type)
 

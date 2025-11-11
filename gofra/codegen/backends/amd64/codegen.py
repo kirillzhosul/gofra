@@ -228,6 +228,9 @@ def amd64_operator_instructions(
                 )  # struct pointer (*struct)
                 context.write(f"addq ${field_offset} %rax")
                 push_register_onto_stack(context, "rax")
+        case OperatorType.PUSH_FLOAT:
+            msg = "FPU is not implemented on amd64"
+            raise ValueError(msg)
         case _:
             assert_never(operator.type)
 

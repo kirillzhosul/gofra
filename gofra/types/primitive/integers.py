@@ -8,3 +8,6 @@ class I64Type(PrimitiveType):
 
     def __repr__(self) -> str:
         return "I64"
+
+
+type AnyIntegerType = I64Type

@@ -22,6 +22,7 @@ class AARCH64CodegenContext:
 
     fd: IO[str]
     strings: MutableMapping[str, str] = field()
+    float_constants: MutableMapping[float, str] = field()
     abi: AARCH64ABI
 
     vreg_allocator: LIRVirtualRegisterAllocator = field(

@@ -134,7 +134,7 @@ class ParserContext(PeekableTokenizer):
         self,
         type: OperatorType,  # noqa: A002
         token: Token,
-        operand: int | str | Type | None = None,
+        operand: float | str | Type | None = None,
         *,
         is_contextual: bool = False,
     ) -> None:
