@@ -63,14 +63,14 @@ class EmulatedTypeBlock(NamedTuple):
 def validate_type_safety(
     module: Module,
     *,
-    strict_expect_validate_entry_point: bool = True,
+    strict_expect_entry_point: bool = True,
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
     functions = list(module.functions.values())
-    if strict_expect_validate_entry_point:
-        if GOFRA_ENTRY_POINT not in module.functions:
-            raise ParserNoEntryFunctionError
+    if strict_expect_entry_point and GOFRA_ENTRY_POINT not in module.functions:
+        raise ParserNoEntryFunctionError
 
+    if GOFRA_ENTRY_POINT in module.functions:
         entry_point = module.functions[GOFRA_ENTRY_POINT]
 
         _validate_entry_point_signature(entry_point)

@@ -77,7 +77,11 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             verbose=args.verbose,
         )
         with wrap_with_perf_time_taken("Typecheck and lint", verbose=args.verbose):
-            validate_type_safety(module)
+            is_executable = args.output_format == "executable"
+            validate_type_safety(
+                module,
+                strict_expect_entry_point=is_executable,
+            )
 
     with wrap_with_perf_time_taken("Optimizer", verbose=args.verbose):
         cli_process_optimization_pipeline(module, args)
