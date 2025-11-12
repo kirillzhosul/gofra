@@ -30,7 +30,6 @@ from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.floats import F64Type
 from gofra.types.primitive.integers import I64Type
-from gofra.types.primitive.void import VoidType
 
 from ._context import TypecheckContext
 from .exceptions import (
@@ -57,7 +56,7 @@ DEBUG_TRACE_TYPESTACK = False
 class EmulatedTypeBlock(NamedTuple):
     types: Sequence[Type]
     reason: Literal["end-of-block", "early-return"]
-    references_variables: Mapping[str, Variable]
+    references_variables: Mapping[str, Variable[Type]]
 
 
 def validate_type_safety(
@@ -109,8 +108,8 @@ def validate_function_type_safety(
         )
 
     if function.has_return_value():
+        _validate_retval_stack(function, emulated_type_stack)
         retval_t = emulated_type_stack[0]
-        _validate_retval_stack(function, retval_t, emulated_type_stack)
         lint_stack_memory_retval(function, retval_t)
 
 
@@ -129,7 +128,7 @@ def emulate_type_stack_for_operators(
         emulated_stack_types=list(initial_type_stack),
     )
 
-    references_variables: Mapping[str, Variable] = {}  # merge into context?
+    references_variables: Mapping[str, Variable[Type]] = {}  # merge into context?
     idx_max, idx = len(operators), 0
     while idx < idx_max:
         operator, idx = operators[idx], idx + 1
@@ -331,6 +330,7 @@ def emulate_type_stack_for_operators(
                 | OperatorType.COMPARE_GREATER_EQUALS
                 | OperatorType.COMPARE_GREATER
             ):
+                # TODO(@kirillzhosul): Generic comparison
                 context.raise_for_operator_arguments(
                     operator,
                     (I64Type,),
@@ -448,15 +448,12 @@ def _validate_entry_point_signature(entry_point: Function) -> None:
 
 def _validate_retval_stack(
     function: Function,
-    retval_t: Type,
     emulated_type_stack: Sequence[Type],
 ) -> None:
-    assert not isinstance(retval_t, VoidType), (
-        f"{_validate_retval_stack.__name__} must accept non-void return type"
-    )
     if len(emulated_type_stack) == 0:
         raise ReturnValueMissingTypecheckError(owner=function)
 
+    retval_t = emulated_type_stack[0]
     if len(emulated_type_stack) > 1:
         msg = f"Ambiguous stack size at function end in {function.name} at {function.defined_at}"
         raise ValueError(msg)

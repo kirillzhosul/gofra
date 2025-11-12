@@ -6,7 +6,7 @@ from gofra.types._base import Type
 
 
 @dataclass(frozen=True, slots=True)
-class Variable:
+class Variable[T: Type]:
     """HIR variable containing an name and type."""
 
     # Actual name of the variable as defined in source code.
@@ -22,7 +22,7 @@ class Variable:
     scope_class: "VariableScopeClass"
 
     # Type of an variable specified in source code
-    type: Type
+    type: T
 
     # Value which this variables is filled by default
     # None means it has not initialized and must be zero-initialized

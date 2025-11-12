@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from gofra.hir.variable import Variable
     from gofra.lexer.tokens import TokenType
+    from gofra.parser.conditional_blocks import RangeQualifier
     from gofra.types._base import Type
 
 
@@ -56,11 +57,11 @@ class ParserContext(PeekableTokenizer):
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=list[Operator])
 
-    context_stack: deque[tuple[int, Operator, tuple[Variable, int] | None]] = field(
+    context_stack: deque[tuple[int, Operator, RangeQualifier | None]] = field(
         default_factory=lambda: deque(),
     )
-    variables: MutableMapping[str, Variable] = field(
-        default_factory=dict[str, "Variable"],
+    variables: MutableMapping[str, Variable[Type]] = field(
+        default_factory=dict[str, "Variable[Type]"],
     )
 
     structs: MutableMapping[str, StructureType] = field(
@@ -102,7 +103,7 @@ class ParserContext(PeekableTokenizer):
     def search_variable_in_context_parents(
         self,
         variable: str,
-    ) -> Variable | None:
+    ) -> Variable[Type] | None:
         context_ref = self
 
         while True:
@@ -129,7 +130,7 @@ class ParserContext(PeekableTokenizer):
             raise ValueError(msg)
         self.operators.extend(inline_block.operators)
 
-    def pop_context_stack(self) -> tuple[int, Operator, tuple[Variable, int] | None]:
+    def pop_context_stack(self) -> tuple[int, Operator, RangeQualifier | None]:
         return self.context_stack.pop()
 
     def push_new_operator(

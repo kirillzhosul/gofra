@@ -38,7 +38,7 @@ class Function:
 
     # Local variables defined inside that function
     # only that function can reference them and location of that variable is different as codegen may solve that
-    variables: Mapping[str, Variable]
+    variables: Mapping[str, Variable[Type]]
 
     # Actual executable block that this function contains
     # If this is extern function will always be empty
@@ -157,7 +157,7 @@ class Function:
         name: str,
         defined_at: TokenLocation,
         parameters: Sequence[Type],
-        variables: Mapping[str, Variable],
+        variables: Mapping[str, Variable[Type]],
         operators: Sequence[Operator],
         return_type: Type,
         is_global: bool,
@@ -184,7 +184,7 @@ class Function:
         name: str,
         defined_at: TokenLocation,
         parameters: Sequence[Type],
-        variables: Mapping[str, Variable] | None,
+        variables: Mapping[str, Variable[Type]] | None,
         operators: Sequence[Operator] | None,
         return_type: Type,
         is_global: bool,

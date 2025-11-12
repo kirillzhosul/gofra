@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from gofra.types._base import Type
+
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
@@ -28,7 +30,7 @@ class Module:
 
     # Global functions that this module defines (excluding static variables inside function)
     # notice that static variables inside function is held inside functions
-    variables: MutableMapping[str, Variable]
+    variables: MutableMapping[str, Variable[Type]]
 
     # Structures that this module defines (can be unused)
     structures: MutableMapping[str, StructureType]

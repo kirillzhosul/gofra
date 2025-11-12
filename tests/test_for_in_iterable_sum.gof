@@ -1,0 +1,16 @@
+/// Test that using `for-in` expression works
+#include "std.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 100
+
+var xs = [10, 20, 20, 50];
+
+func int main[]
+    var sum = 0;
+
+    for x in xs do
+        &sum x ?> sum + !<
+    end
+
+    sum return
+end

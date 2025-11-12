@@ -4,6 +4,7 @@ from typing import NamedTuple
 from gofra.codegen.backends.alignment import align_to_highest_size
 from gofra.codegen.backends.amd64._context import AMD64CodegenContext
 from gofra.hir.variable import Variable
+from gofra.types._base import Type
 
 # Size of frame head (RBP register)
 FRAME_HEAD_SIZE = 8
@@ -17,7 +18,7 @@ class LocalVariablesFrameOffsets(NamedTuple):
 
 
 def build_local_variables_frame_offsets(
-    variables: Mapping[str, Variable],
+    variables: Mapping[str, Variable[Type]],
 ) -> LocalVariablesFrameOffsets:
     """Construct mapping from local variable name to stack frame offset where that variable should live.
 

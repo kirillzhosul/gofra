@@ -96,7 +96,7 @@ def push_static_address_onto_stack(
 def initialize_static_data_section(
     context: AMD64CodegenContext,
     static_strings: Mapping[str, str],
-    static_variables: Mapping[str, Variable],
+    static_variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Initialize data section fields with given values.
 
@@ -197,7 +197,7 @@ def ipc_syscall_linux(
 
 def push_local_variable_address_from_frame_offset(
     context: AMD64CodegenContext,
-    local_variables: Mapping[str, Variable],
+    local_variables: Mapping[str, Variable[Type]],
     local_variable: str,
 ) -> None:
     current_offset = build_local_variables_frame_offsets(
@@ -245,7 +245,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
     as_global_linker_symbol: bool,
     preserve_frame: bool,
     arguments_count: int,
-    local_variables: Mapping[str, Variable],
+    local_variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Begin an function symbol with prologue with preparing required (like stack-pointer).
 

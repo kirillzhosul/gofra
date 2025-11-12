@@ -1,4 +1,5 @@
-from typing import cast
+from dataclasses import dataclass
+from typing import Literal, cast
 
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
@@ -12,8 +13,28 @@ from gofra.parser.exceptions import (
     ParserNoWhileConditionOperatorsError,
     ParserNoWhileOrForBeforeDoError,
 )
+from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
+from gofra.types.composite.pointer import PointerType
 from gofra.types.primitive.integers import I64Type
+
+
+@dataclass(frozen=True, slots=True)
+class RangeQualifierForeach:
+    iterator: Variable[Type]
+    iterable: Variable[ArrayType]
+    step: Literal[1] = 1
+
+
+@dataclass(frozen=True, slots=True)
+class RangeQualifierRange:
+    iterator: Variable[Type]
+    a: int
+    b: int | Variable[Type]
+    step: int = 1
+
+
+type RangeQualifier = RangeQualifierForeach | RangeQualifierRange
 
 
 def consume_conditional_block_keyword_from_token(
@@ -73,26 +94,15 @@ def consume_conditional_block_keyword_from_token(
                 is_contextual=True,
             )
         case Keyword.FOR:
-            iterator, range_qualifier = parse_for_range_qualifier(context, token)
-            range_from_qualifier, range_to_qualifier = range_qualifier
-
+            qualifier = parse_for_range_qualifier(context, token)
+            context.expect_token(TokenType.KEYWORD)
             # TODO(@kirillzhosul): Mostly requires reworking HIR into single HIR load-and-store instruction
             # Code below adds some syntactical sugar which is inlined here
-
-            if isinstance(range_to_qualifier, Variable):
-                # From known int to variable value / array variable size
-                step = 1
-            else:
-                # ` a TO b` or `b TO a` if range is from greater to least
-                step = 1 if range_to_qualifier >= range_from_qualifier else -1
 
             return unwrap_for_operators_syntactical_sugar(
                 context,
                 token,
-                a=range_from_qualifier,
-                b=range_to_qualifier,
-                step=step,
-                iterator=iterator,
+                qualifier=qualifier,
             )
         case Keyword.END:
             if not context.has_context_stack():
@@ -111,31 +121,65 @@ def consume_conditional_block_keyword_from_token(
                     assert loop_compiler_metadata
 
                     # Here we have compiler metadata for `for` loop syntactical sugar
-                    iterator, step = loop_compiler_metadata
+                    qualifier = loop_compiler_metadata
 
-                    assert step != 0, (
+                    assert qualifier.step != 0, (
                         "Step must be non-zero as being implicit infinite loop"
                     )
-                    step_abs = abs(step)
-                    step_op = (
-                        OperatorType.ARITHMETIC_PLUS
-                        if step > 0
-                        else OperatorType.ARITHMETIC_MINUS
-                    )
-                    # Gofra: `&iterator iterator 1 + !<`
-                    context.push_new_operator(
-                        OperatorType.PUSH_VARIABLE_ADDRESS,
-                        token=token,
-                        operand=iterator.name,
-                    )
-                    operators_read_sint64_variable(context, token, variable=iterator)
-                    context.push_new_operator(
-                        OperatorType.PUSH_INTEGER,
-                        token=token,
-                        operand=step_abs,
-                    )
-                    context.push_new_operator(step_op, token)
-                    context.push_new_operator(OperatorType.MEMORY_VARIABLE_WRITE, token)
+                    if isinstance(qualifier, RangeQualifierRange):
+                        step_abs = abs(qualifier.step)
+                        step_op = (
+                            OperatorType.ARITHMETIC_PLUS
+                            if qualifier.step > 0
+                            else OperatorType.ARITHMETIC_MINUS
+                        )
+                        # Gofra: `&iterator iterator 1 + !<`
+                        context.push_new_operator(
+                            OperatorType.PUSH_VARIABLE_ADDRESS,
+                            token=token,
+                            operand=qualifier.iterator.name,
+                        )
+                        operators_read_sint64_variable(
+                            context,
+                            token,
+                            variable=qualifier.iterator,
+                        )
+                        context.push_new_operator(
+                            OperatorType.PUSH_INTEGER,
+                            token=token,
+                            operand=step_abs,
+                        )
+                        context.push_new_operator(step_op, token)
+                        context.push_new_operator(
+                            OperatorType.MEMORY_VARIABLE_WRITE,
+                            token,
+                        )
+                    else:
+                        assert qualifier.step == 1
+                        context.push_new_operator(
+                            OperatorType.PUSH_VARIABLE_ADDRESS,
+                            token=token,
+                            operand=qualifier.iterator.name,
+                        )
+                        context.push_new_operator(
+                            OperatorType.PUSH_VARIABLE_ADDRESS,
+                            token=token,
+                            operand=qualifier.iterator.name,
+                        )
+                        context.push_new_operator(
+                            OperatorType.MEMORY_VARIABLE_READ,
+                            token=token,
+                        )
+                        context.push_new_operator(
+                            OperatorType.PUSH_INTEGER,
+                            token=token,
+                            operand=qualifier.iterable.type.element_type.size_in_bytes,
+                        )
+                        context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token)
+                        context.push_new_operator(
+                            OperatorType.MEMORY_VARIABLE_WRITE,
+                            token,
+                        )
             context.push_new_operator(
                 type=OperatorType.CONDITIONAL_END,
                 token=token,
@@ -164,7 +208,7 @@ def consume_conditional_block_keyword_from_token(
 def parse_for_range_qualifier(
     context: ParserContext,
     token: Token,
-) -> tuple[Variable, tuple[int, int | Variable]]:
+) -> RangeQualifier:
     iterator_identifier = context.next_token()
     if iterator_identifier.type != TokenType.IDENTIFIER:
         msg = f"For loop expected identifier as iterator after `for` but got {iterator_identifier.type} at {iterator_identifier.location}"
@@ -177,6 +221,7 @@ def parse_for_range_qualifier(
         )
         assert conflicting_variable
         if not isinstance(conflicting_variable.type, I64Type):
+            # TODO(@kirillzhosul): Saying about i64 but may be back-patched
             msg = f"For loop iterator {iterator_varname} used at {token.location} has conflict with variable of same name that has type {conflicting_variable.type}, if you use variable as iterator which is defined, its type must be an I64, otherwise use another name."
             raise ValueError(msg)
     else:
@@ -195,19 +240,71 @@ def parse_for_range_qualifier(
         raise ValueError(msg)
 
     # Consume range qualifier
-    if context.peek_token().type != TokenType.INTEGER:
-        msg = "For loop currently can handle only integer ranges on left side of range"
+
+    # TODO(@kirillzhosul): Requires more generic refactor
+
+    if context.peek_token().type == TokenType.IDENTIFIER:
+        iterable_identifier_tok = context.next_token()
+        if _peek_for_dot_dot_syntax(context):
+            context.push_token_back_upfront_peeked(iterable_identifier_tok)
+            range_from_qualifier_name = context.next_token().text
+
+            range_from_qualifier = context.search_variable_in_context_parents(
+                range_from_qualifier_name,
+            )
+            if not range_from_qualifier:
+                msg = f"Unknown variable `{range_from_qualifier}` in `for-loop` block."
+                raise ValueError(msg)
+            if not isinstance(range_from_qualifier.type, (I64Type, ArrayType)):
+                msg = f"Expected `{range_from_qualifier_name}` to be an I64/Array type but got {range_from_qualifier.type} in `for-loop` block at {in_token.location}, as it used as range qualifier bounds."
+                raise ValueError(msg)
+        else:
+            iterable_identifier_name = iterable_identifier_tok.text
+
+            iterable_identifier = context.search_variable_in_context_parents(
+                iterable_identifier_name,
+            )
+
+            if not iterable_identifier:
+                msg = f"Unknown variable `{iterable_identifier}` in `for-loop` block used as iterable at {iterable_identifier_tok.location}."
+                raise ValueError(msg)
+            if iterable_identifier.storage_class == VariableStorageClass.STACK:
+                msg = "Prohibited to use stack located iterable, currently leads to segmentation faults"
+                raise ValueError(msg)
+            if not isinstance(iterable_identifier.type, ArrayType):
+                msg = f"Expected `{iterable_identifier_name}` to be an Array type but got {iterable_identifier.type} in `for-loop` block at {in_token.location}, as it used as range qualifier iterable."
+                raise ValueError(msg)
+            iterable_identifier = cast("Variable[ArrayType]", iterable_identifier)
+            assert iterable_identifier.type.element_type.size_in_bytes == 8, (
+                "Expected iterable that has elements of byte size 8 only"
+            )
+
+            # Back-patch iterator defined before as now we know that we iterate array
+            context.variables[iterator_varname] = Variable(
+                name=iterator_varname,
+                defined_at=iterator_identifier.location,
+                storage_class=VariableStorageClass.STACK,
+                scope_class=VariableScopeClass.FUNCTION,
+                type=PointerType(points_to=iterable_identifier.type.element_type),
+            )
+
+            return RangeQualifierForeach(
+                iterator=iterator,
+                iterable=iterable_identifier,
+            )
+
+    elif context.peek_token().type != TokenType.INTEGER:
+        msg = f"For loop at {in_token.location} expects integer or identifier as range qualifier but got {context.peek_token().type}"
         raise ValueError(msg)
 
+    step = 1
     # Probably - an range qualifier (`x..n`)
     # at least currently only this is allowed
     range_from_qualifier = cast("int", (context.next_token().value))
-    context.expect_token(TokenType.DOT)
-    context.next_token()
-    context.expect_token(TokenType.DOT)
-    context.next_token()
+    _consume_dot_dot_syntax(context)
     if context.peek_token().type == TokenType.INTEGER:
         range_to_qualifier = cast("int", (context.next_token().value))
+        step = 1 if range_to_qualifier >= range_from_qualifier else -1
     elif context.peek_token().type == TokenType.IDENTIFIER:
         range_to_qualifier_name = context.next_token().text
 
@@ -220,60 +317,174 @@ def parse_for_range_qualifier(
         if not isinstance(range_to_qualifier.type, (I64Type, ArrayType)):
             msg = f"Expected `{range_to_qualifier_name}` to be an I64/Array type but got {range_to_qualifier.type} in `for-loop` block at {in_token.location}, as it used as range qualifier bounds."
             raise ValueError(msg)
+
     else:
-        context.expect_token(TokenType.INTEGER)
-        raise AssertionError("Unreachable")  # noqa: EM101
+        msg = "Either integer or identifier expected, but got here somehow, unreachable"
+        raise ValueError(msg)
 
-    print(range_to_qualifier)
-    return iterator, (range_from_qualifier, range_to_qualifier)
+    return RangeQualifierRange(
+        iterator=iterator,
+        a=range_from_qualifier,
+        b=range_to_qualifier,
+        step=step,
+    )
 
 
-def unwrap_for_operators_syntactical_sugar(  # noqa: PLR0913
+def _consume_dot_dot_syntax(context: ParserContext) -> None:
+    context.expect_token(TokenType.DOT)
+    context.next_token()
+    context.expect_token(TokenType.DOT)
+    context.next_token()
+
+
+def _peek_for_dot_dot_syntax(context: ParserContext) -> bool:
+    """Check if next tokens are containing `..` (dot-dot) syntax."""
+    dot_t1 = context.next_token()
+    if dot_t1.type != TokenType.DOT:
+        context.push_token_back_upfront_peeked(dot_t1)
+        return False
+
+    dot_t2 = context.next_token()
+    if dot_t2.type != TokenType.DOT:
+        context.push_token_back_upfront_peeked(dot_t1)
+        context.push_token_back_upfront_peeked(dot_t2)
+        return False
+
+    context.push_token_back_upfront_peeked(dot_t1)
+    context.push_token_back_upfront_peeked(dot_t2)
+    return True
+
+
+def unwrap_for_operators_syntactical_sugar(
     context: ParserContext,
     token: Token,
-    a: int,
-    b: int | Variable,
-    step: int,
-    iterator: Variable,
+    qualifier: RangeQualifier,
 ) -> None:
-    assert step != 0, "Step must be non-zero as being implicit infinite loop"
+    assert qualifier.step != 0, "Step must be non-zero as being implicit infinite loop"
+    if isinstance(qualifier, RangeQualifierRange):
+        a = qualifier.a
+        b = qualifier.b
+        step = qualifier.step
 
-    # Initializer block: Set initial value for iterator
-    operators_set_sint64_variable(context, token, value=a, variable=iterator)
+        # Initializer block: Set initial value for iterator
+        operators_set_sint64_variable(
+            context,
+            token,
+            value=a,
+            variable=qualifier.iterator,
+        )
 
-    context.push_new_operator(OperatorType.CONDITIONAL_FOR, token, is_contextual=True)
-    loop_context = context.pop_context_stack()
-    context.context_stack.append((*loop_context[:2], (iterator, step)))
+        context.push_new_operator(
+            OperatorType.CONDITIONAL_FOR,
+            token,
+            is_contextual=True,
+        )
+        loop_context = context.pop_context_stack()
+        context.context_stack.append((*loop_context[:2], qualifier))
 
-    operators_read_sint64_variable(context, token, variable=iterator)
+        operators_read_sint64_variable(context, token, variable=qualifier.iterator)
 
-    if isinstance(b, Variable):
-        if isinstance(b.type, I64Type):
-            operators_read_sint64_variable(context, token, variable=b)
+        if isinstance(b, Variable):
+            if isinstance(b.type, I64Type):
+                operators_read_sint64_variable(context, token, variable=b)
+            else:
+                assert isinstance(b.type, ArrayType)
+                context.push_new_operator(
+                    OperatorType.PUSH_INTEGER,
+                    token=token,
+                    operand=b.type.elements_count,
+                )
         else:
-            assert isinstance(b.type, ArrayType)
             context.push_new_operator(
                 OperatorType.PUSH_INTEGER,
                 token=token,
-                operand=b.type.elements_count,
+                operand=b,
             )
-    else:
-        context.push_new_operator(
-            OperatorType.PUSH_INTEGER,
-            token=token,
-            operand=b,
+
+        compare_op = (
+            OperatorType.COMPARE_LESS if step > 0 else OperatorType.COMPARE_GREATER
         )
+        context.push_new_operator(compare_op, token=token)
+        return
+    assert isinstance(qualifier, RangeQualifierForeach)
 
-    compare_op = OperatorType.COMPARE_LESS if step > 0 else OperatorType.COMPARE_GREATER
-    context.push_new_operator(compare_op, token=token)
+    # Initializer block: Set initial value for iterator
+    # For for-each it is idx = *iterable
+    context.push_new_operator(
+        OperatorType.PUSH_VARIABLE_ADDRESS,
+        token=token,
+        operand=qualifier.iterator.name,
+    )
 
+    context.push_new_operator(
+        OperatorType.PUSH_VARIABLE_ADDRESS,
+        token=token,
+        operand=qualifier.iterable.name,
+    )
+    context.push_new_operator(
+        OperatorType.MEMORY_VARIABLE_WRITE,
+        token=token,
+    )
+
+    context.push_new_operator(
+        OperatorType.CONDITIONAL_FOR,
+        token,
+        is_contextual=True,
+    )
+    loop_context = context.pop_context_stack()
+    context.context_stack.append((*loop_context[:2], qualifier))
+
+    context.push_new_operator(
+        OperatorType.PUSH_VARIABLE_ADDRESS,
+        token=token,
+        operand=qualifier.iterator.name,
+    )
+    context.push_new_operator(
+        OperatorType.MEMORY_VARIABLE_READ,
+        token=token,
+    )
+    context.push_new_operator(
+        OperatorType.STATIC_TYPE_CAST,
+        token=token,
+        operand=I64Type(),
+    )
+
+    assert isinstance(qualifier.iterable.type, ArrayType)
+    # *X (X is array type), iterator as pointer within iterable
+    context.push_new_operator(
+        OperatorType.PUSH_VARIABLE_ADDRESS,
+        token=token,
+        operand=qualifier.iterable.name,
+    )
+
+    # *X and *X but first must be already advanced as being an iterator
+    iterable_t = qualifier.iterable.type
+    end_of_array_offset = iterable_t.element_type.size_in_bytes * (
+        iterable_t.elements_count
+    )
+    context.push_new_operator(
+        OperatorType.PUSH_INTEGER,
+        token=token,
+        operand=end_of_array_offset,
+    )
+    context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token=token)
+    assert qualifier.step == 1
+    context.push_new_operator(
+        OperatorType.STATIC_TYPE_CAST,
+        token=token,
+        operand=I64Type(),
+    )
+
+    # Compares *X and *X (second must be greater until we reached end of array memory blob)
+    context.push_new_operator(OperatorType.COMPARE_LESS, token=token)
+    return
     # Requires syntactical sugar to be added to the close context block
 
 
 def operators_read_sint64_variable(
     context: ParserContext,
     token: Token,
-    variable: Variable,
+    variable: Variable[Type],
 ) -> None:
     """Write operators to read specified variable onto stack."""
     # TODO(@kirillzhosul): This probably must form new HIR operation after we rework memory I/O and other stuff
@@ -292,7 +503,7 @@ def operators_set_sint64_variable(
     context: ParserContext,
     token: Token,
     value: int,
-    variable: Variable,
+    variable: Variable[Type],
 ) -> None:
     """Write operators to set specified variable given value."""
     # TODO(@kirillzhosul): This probably must form new HIR operation after we rework memory I/O and other stuff

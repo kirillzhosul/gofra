@@ -167,7 +167,7 @@ def push_static_address_onto_stack(
 
 def push_local_variable_address_from_frame_offset(
     context: AARCH64CodegenContext,
-    local_variables: Mapping[str, Variable],
+    local_variables: Mapping[str, Variable[Type]],
     local_variable: str,
 ) -> None:
     # Calculate negative offset from X29
@@ -200,7 +200,7 @@ def evaluate_conditional_block_on_stack_with_jump(
 def initialize_static_data_section(
     context: AARCH64CodegenContext,
     static_strings: Mapping[str, str],
-    static_variables: Mapping[str, Variable],
+    static_variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Initialize data section fields with given values.
 
@@ -252,7 +252,7 @@ def initialize_static_data_section(
 
 def _write_static_segment_const_variable_initializer(
     context: AARCH64CodegenContext,
-    variable: Variable,
+    variable: Variable[Type],
     symbol_name: str,
 ) -> None:
     type_size = variable.size_in_bytes
@@ -441,7 +441,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
     name: str,
     global_name: str | None = None,
     preserve_frame: bool = True,
-    local_variables: Mapping[str, Variable],
+    local_variables: Mapping[str, Variable[Type]],
     arguments_count: int,
 ) -> None:
     """Begin an function symbol.

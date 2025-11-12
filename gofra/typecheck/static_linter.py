@@ -34,7 +34,7 @@ def lint_typecast_same_type(t_from: Type, t_to: Type, at: TokenLocation) -> None
 
 def lint_unused_function_local_variables(
     function: Function,
-    references_variables: Mapping[str, Variable],
+    references_variables: Mapping[str, Variable[Type]],
 ) -> None:
     func_vars = set(function.variables.keys())
     ref_vars = set(references_variables.keys())
