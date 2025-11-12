@@ -4,6 +4,7 @@
 
 #include "os/general.gof"
 #include "std_handles.gof"
+#include "types.gof"
 
 // TODO: Add proper OR to preprocessor
 // TODO: Inline functions has bad debug options and produce improper error messages

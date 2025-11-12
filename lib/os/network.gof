@@ -32,7 +32,7 @@
     inline func int net_write[int, *char[], int]     call sc_write  end
     inline func int net_close[int]                   call sc_close  end
 
-    // Accept without an client address - only server socket is required
+    // Accept without a client address - only server socket is required
     func int net_accept_sink[int] 0 0 call net_accept end
 
     // Create an IPv4 TCP socket
@@ -54,7 +54,7 @@
     inline func int net_write[int, *char[], int]     call sc_write  end
     inline func int net_close[int]                   call sc_close  end
 
-    // Accept without an client address - only server socket is required
+    // Accept without a client address - only server socket is required
     func int net_accept_sink[int] 0 0 call net_accept end
 
     // Create an IPv4 TCP socket
