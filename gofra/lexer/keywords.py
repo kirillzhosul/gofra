@@ -26,6 +26,8 @@ class Keyword(Enum):
     VARIABLE_DEFINE = auto()
 
     TYPE_CAST = auto()
+    TYPE_DEFINE = auto()
+
     SIZEOF = auto()
     SYSCALL = auto()
 
@@ -73,6 +75,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "sizeof": Keyword.SIZEOF,
     "var": Keyword.VARIABLE_DEFINE,
     "typecast": Keyword.TYPE_CAST,
+    "type": Keyword.TYPE_DEFINE,
     "breakpoint": Keyword.DEBUGGER_BREAKPOINT,
     "copy": Keyword.COPY,
     "syscall0": Keyword.SYSCALL,

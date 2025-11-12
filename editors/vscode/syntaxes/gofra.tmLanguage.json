@@ -3,7 +3,7 @@
     "patterns": [
         {
             "name": "keyword.control.gofra",
-            "match": "\\b(if|for|in|while|end|extern|global|inline|func|do|var|typecast|return|struct|sizeof)\\b"
+            "match": "\\b(if|for|in|while|end|extern|global|inline|func|do|var|typecast|return|struct|sizeof|type)\\b"
         },
         {
             "name": "keyword.preprocessor.gofra",
@@ -46,7 +46,7 @@
         },
         {
             "name": "storage.type.gofra",
-            "match": "\\b(int|void|bool|char)\\b"
+            "match": "\\b(int|void|bool|char|i64)\\b"
         }
     ]
 }

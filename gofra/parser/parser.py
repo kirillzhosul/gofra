@@ -20,6 +20,7 @@ from gofra.parser.functions.parser import (
 )
 from gofra.parser.structures import unpack_structure_definition_from_token
 from gofra.parser.typecast import unpack_typecast_from_token
+from gofra.parser.typedef import unpack_type_definition_from_token
 from gofra.parser.types import parser_type_from_tokenizer
 from gofra.parser.variables import (
     try_push_variable_reference,
@@ -165,6 +166,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         Keyword.FUNCTION,
         Keyword.GLOBAL,
         Keyword.STRUCT,
+        Keyword.TYPE_DEFINE,
     )
 
     BOTH_LEVEL_KEYWORD = (  # noqa: N806
@@ -215,6 +217,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         case Keyword.IN:
             msg = f"In must be in form `for-in` loop, but got unconstrained `in` keyword at {token.location}"
             raise ValueError(msg)
+        case Keyword.TYPE_DEFINE:
+            return unpack_type_definition_from_token(context)
         case _:
             assert_never(token.value)
 

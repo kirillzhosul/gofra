@@ -9,6 +9,7 @@ from gofra.hir.operator import Operator, OperatorType
 from gofra.lexer import Token
 from gofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from gofra.types.composite.structure import StructureType
+from gofra.types.registry import DEFAULT_PRIMITIVE_TYPE_REGISTRY, TypeRegistry
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -44,7 +45,7 @@ class PeekableTokenizer:
             raise ExpectedTokenByParserError(expected=type, got=token)
 
     def push_token_back_upfront_peeked(self, token: Token) -> None:
-        """Push token infront of peeked ones, so next/peek will take it last in order of peeked."""
+        """Push token in front of peeked ones, so next/peek will take it last in order of peeked."""
         self._peeked.appendleft(token)
 
 
@@ -60,6 +61,7 @@ class ParserContext(PeekableTokenizer):
     context_stack: deque[tuple[int, Operator, RangeQualifier | None]] = field(
         default_factory=lambda: deque(),
     )
+
     variables: MutableMapping[str, Variable[Type]] = field(
         default_factory=dict[str, "Variable[Type]"],
     )
@@ -69,6 +71,9 @@ class ParserContext(PeekableTokenizer):
     )
     functions: MutableMapping[str, Function] = field(
         default_factory=dict[str, Function],
+    )
+    types: TypeRegistry = field(
+        default_factory=lambda: DEFAULT_PRIMITIVE_TYPE_REGISTRY.copy(),
     )
 
     # No function calls in that context

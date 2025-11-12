@@ -48,8 +48,9 @@ Statement =
 
 IntRangeQualifier = IntegerLiteral, "..", IntegerLiteral;
 VarRangeQualifier = IntegerLiteral, "..", Identifier;
-RangeQualifier = IntRangeQualifier | VarRangeQualifier;
+RangeQualifier = IntRangeQualifier | VarRangeQualifier | Identifier;
 
+TypedefStmt = "type", Identifier, TypeExpr, [';'];
 IfStmt = "if", {Statement}, "end";
 WhileStmt = "while", {Statement}, "do", {Statement}, "end";
 ForStmt = "for", Identifier, "in", RangeQualifier, "do", {Statement}, "end";
@@ -80,10 +81,12 @@ Tabulation = ? any tabulation character?;
 Newline = ? line break character ?;
 Letter = ? [a-Z]?;
 
-TypeExpr = [{"*"}], PrimitiveType, ["[", [PositiveNumber], "]"];
+TypeExpr = [{"*"}], PrimitiveType | Identifier, ["[", [PositiveNumber], "]"];
 
 PrimitiveType = "int" | "char" | "bool" | "void";
-VariableDefinition = "var", Identifier, TypeExpr, ["=", IntegerLiteral];
+
+VariableInitializer = IntegerLiteral | CharLiteral | ("[", {IntegerLiteral | CharLiteral, {",", IntegerLiteral, CharLiteral}}, ")");
+VariableDefinition = "var", Identifier, [TypeExpr, "=", VariableInitializer] | ["=", VariableInitializer];
 
 PreprocessorInclude = "#include", StringLiteral, [Newline];
 PreprocessorDefinition = "#define", Identifier, {Statement}, [Newline];

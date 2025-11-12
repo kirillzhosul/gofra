@@ -155,7 +155,6 @@ def consume_function_parameters(context: ParserContext) -> list[Type]:
         if token.type == TokenType.RBRACKET:
             break
         parameters.append(parser_type_from_tokenizer(context))
-        print(parameters)
         t = context.peek_token()
         if t.type == TokenType.RBRACKET:
             break
