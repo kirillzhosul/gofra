@@ -12,37 +12,34 @@
 // TODO: Allow forward referencing functions
 
 // Print an string into given file descriptor / handle and return bytes written
-#ifdef OS_DARWIN  inline func int print_fd[int, *char[], int] call sc_write  end #endif
-#ifdef OS_LINUX   inline func int print_fd[int, *char[], int] call sc_write  end #endif
-#ifdef OS_WINDOWS inline func int print_fd[int, *char[], int] call win_write end #endif
+#ifdef OS_DARWIN  func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
+#ifdef OS_LINUX   func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
+#ifdef OS_WINDOWS func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call win_write end #endif
 
 // Print an string into standard console output stream
-func void print[*char[], int]
-    var len int; &len swap !< // TODO: add proper arguments
+func void print[*string]
+    var str *string; &str swap !< // TODO: add proper arguments
 
-    STD_OUT swap
-    len
+    STD_OUT
+    str
     call print_fd drop
 end
 
 // Print an string into standard console with trailing newline
-func void println[*char[], int]
+func void println[*string]
     call print
     "\n" call print
 end
 
 // Print an string into standard console error stream
-func void eprint[*char[], int]
-    var len int; &len swap !<
-
+func void eprint[*string]
     STD_ERR swap
-    len
     print_fd drop
 end
 
 // Print an string into standard error console stream and abort execution
 // TODO: Probably must refactored into panic system or something like that as this is not I/O responsibility
-func void eprint_fatal[*char[], int]
+func void eprint_fatal[*string]
     "FATAL: " call eprint
     call eprint
     call abort
@@ -55,11 +52,11 @@ func void print_int64_fd[int, int]
     var num int; &num swap !< // TODO: add proper arguments
     var fd int; &fd swap !< // TODO: add proper arguments
     var idx int = 0;
-    var is_negative bool;
+    var is_negative bool = 0;
+    var str_view string;
+
 
     // TODO: This is probably must be merged with `int2str` but must be reviewed, also introduces cross-reference
-
-    &is_negative false typecast int !<
     num 0 < if
         &num num -1 * !< 
         &is_negative true typecast int !<
@@ -69,7 +66,9 @@ func void print_int64_fd[int, int]
         // Straight zero
         &print_int64_buf[0] '0'  !<
 
-        fd &print_int64_buf 1
+        &str_view.data &print_int64_buf !<
+        &str_view.len 1 !<
+        fd &str_view
         call print_fd drop
 
         return
@@ -102,9 +101,9 @@ func void print_int64_fd[int, int]
 
     while idx 0 >= do
         // Print current symbol one-by-one from right to left
-        fd
-        &print_int64_buf[idx]
-        1 call print_fd drop
+        &str_view.data &print_int64_buf[idx] !<
+        &str_view.len 1 !<
+        fd &str_view call print_fd drop
 
         // Decrement IDX
         &idx idx 1 - !<
@@ -125,6 +124,7 @@ func void print_int64_hex_fd[int, int, bool, bool]
     var fd int; &fd swap !< // TODO: add proper arguments
     var idx int = 0;
     var is_negative bool;
+    var str_view string;
 
     &is_negative false typecast int !<
     num 0 < if
@@ -141,7 +141,11 @@ func void print_int64_hex_fd[int, int, bool, bool]
         end
 
         &print_int64_buf[0] '0'  !<
-        fd &print_int64_buf 1
+
+        &str_view.data &print_int64_buf !<
+        &str_view.len 1 !<
+
+        fd &str_view
         call print_fd drop
         return
     end
@@ -187,9 +191,11 @@ func void print_int64_hex_fd[int, int, bool, bool]
 
     while idx 0 >= do
         // Print current symbol one-by-one from right to left
-        fd
-        &print_int64_hex_buf[idx]
-        1 call print_fd drop
+        &str_view.data &print_int64_buf[idx] !<
+        &str_view.len 1 !<
+
+        fd &str_view
+        call print_fd drop
 
         // Decrement IDX
         &idx idx 1 - !<

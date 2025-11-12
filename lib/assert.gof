@@ -3,6 +3,7 @@
 // Check is value are equals without proper error handling
 // ==============================================
 
+#include "types.gof"
 #include "os/io/output.gof"
 
 // TODO: add static assertions (https://github.com/kirillzhosul/gofra/issues/19)
@@ -11,13 +12,12 @@
 // (assert two values are same)
 // TODO: add proper types to that function, as it may compare not only integers
 // probably this requires some overloading or something like that
-func void runtime_assert[int, int, *char[], int]
-    var len int; &len swap !<; // TODO: add named arguments
-    var ptr *char[]; &ptr swap !<; // TODO: add named arguments
-
+func void runtime_assert[int, int, *string]
+    var sv *string; &sv swap !<; // TODO: add named arguments
+ 
     != if
         "runtime_assert: Assertion failed, " eprint
-        ptr len call eprint
+        sv      call eprint
         "\n"    call eprint
         call abort
     end

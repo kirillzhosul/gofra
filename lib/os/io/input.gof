@@ -11,8 +11,8 @@
 // TODO: Allow forward referencing functions
 
 // Input a string from given file descriptor and returns number of bytes read
-#ifdef OS_LINUX   inline func int input_fd[int, *char[], int] call sc_read end #endif
-#ifdef OS_DARWIN  inline func int input_fd[int, *char[], int] call sc_read end #endif
+#ifdef OS_LINUX   inline func int input_fd[int, CStr, int] call sc_read end #endif
+#ifdef OS_DARWIN  inline func int input_fd[int, CStr, int] call sc_read end #endif
 
 // Consume all character bytes from input buffer (e.g `input_fd`)
 // Use as safety method as reading and letting some character leak through 
@@ -36,7 +36,7 @@ end
 // Input a string from standard console input stream
 // Safe to buffer overflows, as exhaust all remaining IO buffer
 // TODO: Unsafe to big buffers, requires introducing testkit test cases for that
-func void input[*char[], int]
+func void input[CStr, int]
     var len int; &len swap !< // TODO: add proper argument names
     
     STD_IN swap

@@ -7,9 +7,13 @@
 var buf char[16]
 
 func void main[]
+    var sv string;
+    
     "Enter something: " print
     &buf sizeof buf input
+    &sv.data &buf !<
+    &sv.len sizeof buf !<
 
     "You entered: " print
-    &buf sizeof buf println
+    &sv println
 end

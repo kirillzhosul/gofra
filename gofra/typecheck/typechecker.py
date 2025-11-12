@@ -25,9 +25,9 @@ from gofra.types import Type
 from gofra.types.comparison import is_types_same, is_typestack_same
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerMemoryLocation, PointerType
+from gofra.types.composite.string import StringType
 from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
-from gofra.types.primitive.character import CharType
 from gofra.types.primitive.floats import F64Type
 from gofra.types.primitive.integers import I64Type
 
@@ -181,15 +181,12 @@ def emulate_type_stack_for_operators(
                 idx = jumps_to_idx
             case OperatorType.PUSH_STRING:
                 assert isinstance(operator.operand, str)
-                string = ArrayType(
-                    element_type=CharType(),
-                    elements_count=len(operator.operand),
+                context.push_types(
+                    PointerType(
+                        points_to=StringType(),
+                        memory_location=PointerMemoryLocation.STATIC,
+                    ),
                 )
-                string_ptr = PointerType(
-                    points_to=string,
-                    memory_location=PointerMemoryLocation.STATIC,
-                )
-                context.push_types(string_ptr, I64Type())
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(operator.operand, str)
                 varname = operator.operand

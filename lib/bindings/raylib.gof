@@ -6,24 +6,28 @@
 // TODO(@kirillzhosul): We cannot pass color struct within C ABI, use `rgba_to_raylib_argb`
 // TODO(@kirillzhosul): Cannot pass floats into C ABI
 
-extern func void _InitWindow[int,int,*char[]]          #define InitWindow _InitWindow
-extern func bool _WindowShouldClose[]                  #define WindowShouldClose _WindowShouldClose
-extern func void _CloseWindow[]                        #define CloseWindow _CloseWindow
-extern func void _SetTargetFPS[int]                    #define SetTargetFPS _SetTargetFPS
-extern func void _BeginDrawing[]                       #define BeginDrawing _BeginDrawing
-extern func void _EndDrawing[]                         #define EndDrawing _EndDrawing
-extern func void _ClearBackground[int]                 #define ClearBackground _ClearBackground 
-extern func void _DrawCircle[int,int,int,*int]         #define DrawCircle _DrawCircle
-extern func void _DrawRectangle[int,int,int,int,int]   #define DrawRectangle _DrawRectangle
-extern func void _DrawLine[int,int,int,int,int]        #define DrawLine _DrawLine
-extern func bool _IsKeyPressed[int]                    #define IsKeyPressed _IsKeyPressed
-extern func bool _IsKeyDown[int]                       #define IsKeyDown _IsKeyDown
-extern func void _DrawText[*char[],int,int,int,int]    #define DrawText _DrawText
-extern func *int _TextFormat[*char[],*char[]]          #define TextFormat _TextFormat
-extern func void _DrawFPS[int,int]                     #define DrawFPS _DrawFPS
+#include "types.gof"
+
+type RaylibColor int
+
+extern func void _InitWindow[int,int,CStr]                     #define InitWindow _InitWindow
+extern func bool _WindowShouldClose[]                          #define WindowShouldClose _WindowShouldClose
+extern func void _CloseWindow[]                                #define CloseWindow _CloseWindow
+extern func void _SetTargetFPS[int]                            #define SetTargetFPS _SetTargetFPS
+extern func void _BeginDrawing[]                               #define BeginDrawing _BeginDrawing
+extern func void _EndDrawing[]                                 #define EndDrawing _EndDrawing
+extern func void _ClearBackground[RaylibColor]                 #define ClearBackground _ClearBackground 
+extern func void _DrawCircle[int,int,int,*int]                 #define DrawCircle _DrawCircle
+extern func void _DrawRectangle[int,int,int,int,RaylibColor]   #define DrawRectangle _DrawRectangle
+extern func void _DrawLine[int,int,int,int,RaylibColor]        #define DrawLine _DrawLine
+extern func bool _IsKeyPressed[int]                            #define IsKeyPressed _IsKeyPressed
+extern func bool _IsKeyDown[int]                               #define IsKeyDown _IsKeyDown
+extern func void _DrawText[CStr,int,int,int,int]               #define DrawText _DrawText
+extern func *int _TextFormat[CStr,CStr]                        #define TextFormat _TextFormat
+extern func void _DrawFPS[int,int]                             #define DrawFPS _DrawFPS
 
 // As we cannot pass color struct to Raylib, we pack this as an integer by ourselves
-func int rgba_to_raylib_argb[int,int,int,int]
+func RaylibColor rgba_to_raylib_argb[int,int,int,int]
     var color int = 0;
 
     &color swap 24 << color | !<
@@ -34,5 +38,5 @@ func int rgba_to_raylib_argb[int,int,int,int]
     color return
 end
 
-#define WHITE 0xFFFFFFFF
-#define BLACK 0xFF000000
+const var WHITE = 0xFFFFFFFF
+const var BLACK = 0xFF000000

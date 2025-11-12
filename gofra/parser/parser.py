@@ -38,6 +38,7 @@ from gofra.parser.variables import (
     try_push_variable_reference,
     unpack_variable_definition_from_token,
 )
+from gofra.types.composite.string import StringType
 
 from ._context import ParserContext
 from .exceptions import (
@@ -66,12 +67,19 @@ def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Modu
     if context.operators:
         raise TopLevelExpectedNoOperatorsError(context.operators[0])
 
+    _inject_context_module_runtime_definitions(context)
     return Module(
         path=path,
         functions=context.functions,
         variables=context.variables,
         structures=context.structs,
     )
+
+
+def _inject_context_module_runtime_definitions(context: ParserContext) -> None:
+    """Inject definitions that must be known at parse stage."""
+    string_t = StringType()
+    context.structs[string_t.name] = string_t
 
 
 def _parse_from_context_into_operators(context: ParserContext) -> None:

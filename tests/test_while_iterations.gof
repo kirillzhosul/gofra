@@ -5,7 +5,7 @@
 #define ITERATIONS 10
 
 func void main[]
-    var x int = 0;
+    var x = 0;
 
     while x ITERATIONS < do
         &x x 1 + !< 

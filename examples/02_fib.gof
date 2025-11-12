@@ -6,13 +6,13 @@
 
 #include "std.gof"
 
-#define N 4181
+const N = 4181;
 
 func void main[]
+
     var a = 0;
     var b = 1;
     var x int;
-
     &x a b + !<
 
     "Fibonacci Series: " print

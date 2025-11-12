@@ -3,6 +3,7 @@
 // ==============================================
 
 #include "os/network.gof"
+#include "types.gof"
 
 // TODO: Add async/thread support
 
@@ -67,8 +68,10 @@ func void _http_server_listen_socket[*HTTPServer]
 end
 
 // Internal wrapper around system network write bytes
-func int _http_server_net_write_bytes[int, *char[], int]
-    call net_write
+func int _http_server_net_write_bytes[int, *string]
+    var sv *string; &sv swap !<;
+
+    sv.data sv.len call net_write
     copy -1 == if
         "Unable to send response to client socket on HTTP server socket\n" eprint_fatal
         // todo: close socket
@@ -85,10 +88,9 @@ func void http_server_start[*HTTPServer]
 end
 
 // Send given string payload as HTML to client
-func int http_server_send_html_response[*HTTPIncomingRequest, *char[], int]
-    var payload_len int; &payload_len swap !<
-    var payload *char[]; &payload swap !<
+func int http_server_send_html_response[*HTTPIncomingRequest, *string]
     var request *HTTPIncomingRequest; &request swap !<
+    var sv *string; &sv swap !<;
     var bytes_written int = 0
 
     request.socket
@@ -96,9 +98,7 @@ func int http_server_send_html_response[*HTTPIncomingRequest, *char[], int]
     call _http_server_net_write_bytes
     &bytes_written swap bytes_written + !<
 
-    request.socket
-    payload
-    payload_len
+    request.socket sv
     call _http_server_net_write_bytes
     &bytes_written swap bytes_written + !<
 

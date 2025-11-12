@@ -1,0 +1,39 @@
+
+#include "os/io/output.gof"
+
+// Fork current process and return PID executed at two processes: Parent and Child
+// Aborts execution if fork failed (use underlying `sc_fork` as syscall to fork
+// TODO: Add Windows and OS guards
+func int fork[]
+    var pid int;
+
+    &pid call sc_fork !< // Fork current process and get an PID
+
+    pid -1 == if 
+        // TODO: Not proper handling of error cases
+        "Fork failed!" eprint_fatal 
+    end
+
+    pid return
+end
+
+
+// TODO
+func void spawn[CStr, **char, **char]
+    var pid int;
+    &pid call fork !< // Fork current process and get an PID
+
+    pid 0 == if
+        // Child executes
+        call sc_execve 
+
+        "'spawn' inside an child process did continued execution! Considering aborting child!" eprint_fatal 
+        drop return // todo
+    end
+
+    // Parent must still execute
+    drop drop drop // todo
+end
+
+
+// TODO: Bare bone exec

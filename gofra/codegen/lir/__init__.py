@@ -429,6 +429,7 @@ def translate_hir_function_to_lir_function(
                     LIRPushRegistersOntoStack((vreg_a,)),
                 )
             case OperatorType.PUSH_STRING:
+                raise NotImplementedError
                 assert isinstance(operator.operand, str)
                 string_raw = str(operator.token.text[1:-1])
                 decoded_string = string_raw.encode().decode("unicode_escape")

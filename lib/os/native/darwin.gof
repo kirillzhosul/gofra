@@ -8,6 +8,8 @@
 // TODO: Add a compiler intrinsic or attribute for `no_return` if possible for exit.
 // TODO: Add variadic function for `sc_syscall`
 
+#include "types.gof"
+
 // File access mode flags
 #define O_RDONLY   0x0000  // Open for reading only
 #define O_WRONLY   0x0001  // Open for writing only
@@ -21,17 +23,22 @@
 #define OS_LINESEP "\n" // Line separator
 
 // Network socket address in structure
-struct sockaddr_in
+type struct sockaddr_in
     sin_family char[2]
     sin_port   char[2]
     sin_addr   char[4]
     sin_zero   int   // zero padding
 end
 
-struct timeval
+type struct timeval
     tv_sec int
     tv_usec int
 end
+
+type timezone char[16]
+type sc_argvp **char[]
+type sc_envp **char[]
+type fd_t int
 
 // --- Syscall Numbers (Partial Table) ---
 #ifdef ARCH_ARM64
@@ -54,9 +61,12 @@ end
     #define DARWIN_SYSCALL_MMAP         197
 #endif // ARCH_ARM64
 
+
 // ---  Syscall Wrappers ---
 // These are the preferred way to make syscalls.
 #ifdef ARCH_ARM64
+
+
     // Terminates the current process. Does not return.
     inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
 
@@ -64,22 +74,22 @@ end
     // Signature: [fd,buf,count]
     // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
     // Returns number of bytes read, 0 on EOF, or -1 on error.
-    inline func int sc_read[int,*char[],int] DARWIN_SYSCALL_READ syscall3 end
+    inline func int sc_read[fd_t,CStr,int] DARWIN_SYSCALL_READ syscall3 end
 
     // Writes to a file descriptor.
     // Signature: [fd,buf,count]
     // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
     // Returns number of bytes written, or -1 on error.
-    inline func int sc_write[int,*char[],int] DARWIN_SYSCALL_WRITE syscall3 end
+    func int sc_write[fd_t,CStr,int] DARWIN_SYSCALL_WRITE syscall3 end
 
     // Opens a file.
     // Signature: [path, flags, mode]
     // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
     // Returns file descriptor, or -1 on error.
-    inline func int sc_open[*int,int,int] DARWIN_SYSCALL_OPEN syscall3 end
+    inline func int sc_open[CStr, int, int] DARWIN_SYSCALL_OPEN syscall3 end
 
     // Closes a file descriptor.
-    inline func int sc_close[int] DARWIN_SYSCALL_CLOSE syscall1 end
+    inline func int sc_close[fd_t] DARWIN_SYSCALL_CLOSE syscall1 end
 
     // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
     inline func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
@@ -93,25 +103,25 @@ end
     // Abort current process execution (process suicide) and reincarnation as specified executable
     // Signature: [pathname, argv, envp]
     // Does not returns anything unless no errors occurred, otherwise always returns -1
-    inline func int sc_execve[*char[], **char, **char] DARWIN_SYSCALL_EXECVE syscall3 end
+    inline func int sc_execve[CStr, sc_argvp, sc_envp] DARWIN_SYSCALL_EXECVE syscall3 end
 
     // Accept pending connections on given socket and return client socket
     inline func int sc_accept[int, *sockaddr_in, int] DARWIN_SYSCALL_ACCEPT syscall3 end
 
     // Creates an socket FD
     // [domain,type,protocol]
-    inline func int sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
+    inline func fd_t sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
 
     // Bind given socket to given address
-    inline func int sc_bind[int, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
+    inline func int sc_bind[fd_t, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
 
     // Listen to an socket with specified backlog
-    inline func int sc_listen[int, int] DARWIN_SYSCALL_LISTEN syscall2 end
+    inline func int sc_listen[fd_t, int] DARWIN_SYSCALL_LISTEN syscall2 end
 
     // Get current time of day
     // Signature: [timeval, timezone]
     // Notice that timezone usage is discouraged so pass NULL always
-    inline func void sc_gettimeofday[*timeval, *char[16]] DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
+    inline func void sc_gettimeofday[*timeval, *timezone] DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
 
     // Await given descriptors to be ready
     // Signature: [nfds, readfds, writefds, exceptfds, timeout]

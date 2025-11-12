@@ -18,7 +18,8 @@ var buf char[1024]
 
 func void main[]
     var fd int
-    
+    var sv string;
+
     &fd 
         PATH 0 0 call sc_open 
     !<
@@ -35,8 +36,10 @@ func void main[]
     end
 
     // Print whole buffer
+    &sv.data &buf !<
+    &sv.len sizeof buf !<
+
     STD_OUT 
-    &buf 
-    sizeof buf
+    &sv
     call print_fd drop
 end

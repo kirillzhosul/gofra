@@ -18,7 +18,7 @@ class OperatorType(Enum):
     PUSH_INTEGER = auto()
     PUSH_FLOAT = auto()
 
-    # Push address of string (static) and its size onto stack
+    # Push address of static string onto stack (structure type definition)
     # TODO(@kirillzhosul): Review C-Strings - https://github.com/kirillzhosul/gofra/issues/27
     PUSH_STRING = auto()
 

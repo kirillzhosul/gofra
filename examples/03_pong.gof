@@ -8,9 +8,9 @@
 #include "bindings/raylib.gof"
 #include "std.gof"
 
-#define PADDLE_DEFAULT_SPEED 3
-#define PADDLE_WIDTH 25
-#define PADDLE_HEIGHT 120
+const PADDLE_DEFAULT_SPEED = 3
+const PADDLE_WIDTH = 25
+const PADDLE_HEIGHT = 120
 struct Paddle
     speed int
     score int
@@ -21,8 +21,8 @@ var player Paddle
 var enemy  Paddle
 
 #define BALL_COLOR WHITE
-#define BALL_SIZE  20
-#define BALL_SPEED 3
+const BALL_SIZE = 20
+const BALL_SPEED = 3
 struct Ball
     speed_x int
     speed_y int 
@@ -33,13 +33,13 @@ var ball Ball
 
 var difficulty int = 5
 
-#define WINDOW_NAME   "Gofra Pong"
-#define WINDOW_WIDTH  1200
-#define WINDOW_HEIGHT 800
-#define WINDOW_FPS    120
-
-#define FONT_SIZE 80
 #define BACKGROUND_COLOR BLACK
+#define WINDOW_NAME   "Gofra Pong"
+const WINDOW_WIDTH  = 1200
+const WINDOW_HEIGHT = 800
+const WINDOW_FPS    = 120
+
+const FONT_SIZE = 80
 
 inline func void update_ball_movement[]
     &ball.x ball.x ball.speed_x + !<

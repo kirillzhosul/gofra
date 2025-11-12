@@ -209,7 +209,7 @@ def initialize_static_data_section(
     if static_strings:
         context.fd.write(f".section {SYM_SECTION_CSTR}\n")
         for name, data in static_strings.items():
-            context.fd.write(f'{name}: .asciz "{data}"\n')
+            context.fd.write(f'{name}d: .asciz "{data}"\n')
 
     bss_variables = {
         k: v for k, v in static_variables.items() if v.initial_value is None
@@ -236,7 +236,7 @@ def initialize_static_data_section(
                 assert variable.initial_value is None
                 context.fd.write(f"{name}: .space {type_size}\n")
 
-    if data_variables or context.float_constants:
+    if data_variables or context.float_constants or static_strings:
         context.fd.write(f".section {SYM_SECTION_DATA}\n")
         for float_v, float_n in context.float_constants.items():
             context.fd.write(f"{float_n}: .double {float_v}")
@@ -247,6 +247,12 @@ def initialize_static_data_section(
                 variable,
                 symbol_name=name,
             )
+
+        for name, data in static_strings.items():
+            context.fd.write(".p2align 3\n")
+            decoded_string = data.encode().decode("unicode_escape")
+            length = len(decoded_string)
+            context.fd.write(f"{name}: \n.quad {name}d\n.quad {length}\n")
 
 
 def _write_static_segment_const_variable_initializer(

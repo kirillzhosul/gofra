@@ -2,6 +2,9 @@
 // Type definition and helpers
 // ==============================================
 
+type NullPtr *void
+type CStr *char[]
+
 // Boolean bindings for type-safety
 // Under optimizer this resolves into single boolean push onto stack
 // Probably, sometime this will be part of an language
@@ -10,4 +13,4 @@
 
 // Somewhere using terminology of NULL is more readable
 #define NULL     0
-#define NULL_PTR 0 typecast *void
+#define NULL_PTR 0 typecast NullPtr

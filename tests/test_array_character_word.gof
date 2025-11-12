@@ -8,6 +8,8 @@
 var global_ char[7]; // TODO: `global` is treated as keyword
 
 func void test_array_global_character_word[]
+    var sv string;
+
     &global_[0] 'G'  !<
     &global_[1] 'l'  !<
     &global_[2] 'o'  !<
@@ -16,14 +18,18 @@ func void test_array_global_character_word[]
     &global_[5] 'l'  !<
     &global_[6] '\n' !<
 
-    &global_ 7 print
+    &sv.data &global_ !<
+    &sv.len 7 !<
+
+    &sv print
 
     return
 end
 
 func void test_array_local_character_word[]
     var local char[6]
-
+    var sv string;
+    
     &local[0] 'L'  !<
     &local[1] 'o'  !<
     &local[2] 'c'  !<
@@ -31,8 +37,10 @@ func void test_array_local_character_word[]
     &local[4] 'l'  !<
     &local[5] '\n' !<
 
-    &local 6 print
+    &sv.data &local !<
+    &sv.len 6 !<
 
+    &sv print
     return
 end
 
