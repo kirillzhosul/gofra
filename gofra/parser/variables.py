@@ -343,5 +343,20 @@ def _infer_auto_variable_type_from_initializer(
     if context.peek_token().type == TokenType.CHARACTER:
         return CharType()
 
+    if context.peek_token().type == TokenType.LBRACKET:
+        lbracket = context.next_token()
+        if context.peek_token().type == TokenType.RBRACKET:
+            msg = f"Cannot infer variable type from array initializer with no values at {varname_token.location}, consider adding type explicitly."
+            raise ValueError(msg)
+
+        if context.peek_token().type == TokenType.INTEGER:
+            context.push_token_back_upfront_peeked(lbracket)
+            return ArrayType(
+                element_type=I64Type(),
+                elements_count=0,
+            )  # Incomplete array definition
+
+        context.push_token_back_upfront_peeked(lbracket)
+
     msg = f"Unable to infer variable type from initializer for variable at {varname_token.location}, consider adding type explicitly."
     raise ValueError(msg)

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from gofra.hir.function import Function
 from gofra.hir.operator import Operator, OperatorType
+from gofra.lexer import Token
 from gofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from gofra.types.composite.structure import StructureType
 
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
     )
 
     from gofra.hir.variable import Variable
-    from gofra.lexer import Token
     from gofra.lexer.tokens import TokenType
     from gofra.types._base import Type
 
@@ -25,24 +25,26 @@ if TYPE_CHECKING:
 @dataclass
 class PeekableTokenizer:
     _tokenizer: Generator[Token] = field()
-    _peeked: Token | None = field(default=None)
+    _peeked: deque[Token] = field(default_factory=deque[Token])
 
     def next_token(self) -> Token:
-        if self._peeked is not None:
-            token = self._peeked
-            self._peeked = None
-            return token
+        if self._peeked:
+            return self._peeked.popleft()
         return next(self._tokenizer)
 
     def peek_token(self) -> Token:
-        if self._peeked is None:
-            self._peeked = next(self._tokenizer)
-        return self._peeked
+        if not self._peeked:
+            self._peeked.append(next(self._tokenizer))
+        return self._peeked[0]
 
     def expect_token(self, type: TokenType) -> None:  # noqa: A002
         token = self.peek_token()
         if token.type != type:
             raise ExpectedTokenByParserError(expected=type, got=token)
+
+    def push_token_back_upfront_peeked(self, token: Token) -> None:
+        """Push token infront of peeked ones, so next/peek will take it last in order of peeked."""
+        self._peeked.appendleft(token)
 
 
 @dataclass(frozen=False)
