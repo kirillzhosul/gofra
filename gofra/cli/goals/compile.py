@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import signal
 import sys
+from contextlib import contextmanager
+from time import perf_counter_ns
 from typing import TYPE_CHECKING, NoReturn
 
 from gofra.assembler.assembler import (
@@ -25,7 +27,24 @@ from gofra.preprocessor.macros.registry import registry_from_raw_definitions
 from gofra.typecheck import validate_type_safety
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from gofra.cli.parser.arguments import CLIArguments
+
+# Must refactor and move somewhere else?
+NANOS_TO_SECONDS = 1_000_000_000
+
+
+@contextmanager
+def wrap_with_perf_time_taken(message: str, *, verbose: bool) -> Generator[None]:
+    start_time = perf_counter_ns()
+    yield
+    time_taken = (perf_counter_ns() - start_time) / NANOS_TO_SECONDS
+    cli_message(
+        level="INFO",
+        text=f"{message} took {time_taken:.2f}s",
+        verbose=verbose,
+    )
 
 
 def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
@@ -43,12 +62,13 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         definitions=args.definitions,
     ).inject_propagated_defaults(target=args.target)
 
-    module = process_input_file(
-        args.source_filepaths[0],
-        args.include_paths,
-        macros=macros_registry,
-        _debug_emit_lexemes=args.lexer_debug_emit_lexemes,
-    )
+    with wrap_with_perf_time_taken("Core (lex/parse/pp)", verbose=args.verbose):
+        module = process_input_file(
+            args.source_filepaths[0],
+            args.include_paths,
+            macros=macros_registry,
+            _debug_emit_lexemes=args.lexer_debug_emit_lexemes,
+        )
 
     if not args.skip_typecheck:
         cli_message(
@@ -56,9 +76,11 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             text="Validating type safety...",
             verbose=args.verbose,
         )
-        validate_type_safety(module)
+        with wrap_with_perf_time_taken("Typecheck and lint", verbose=args.verbose):
+            validate_type_safety(module)
 
-    cli_process_optimization_pipeline(module, args)
+    with wrap_with_perf_time_taken("Optimizer", verbose=args.verbose):
+        cli_process_optimization_pipeline(module, args)
 
     cli_message(
         level="INFO",
@@ -74,19 +96,21 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         args.target.file_assembly_suffix,
     )
 
-    generate_code_for_assembler(assembly_filepath, module, args.target)
+    with wrap_with_perf_time_taken("Codegen", verbose=args.verbose):
+        generate_code_for_assembler(assembly_filepath, module, args.target)
 
     object_filepath = (cache_dir / output.name).with_suffix(
         args.target.file_object_suffix,
     )
 
-    assemble_object_from_codegen_assembly(
-        assembly=assembly_filepath,
-        output=object_filepath,
-        target=args.target,
-        additional_assembler_flags=args.assembler_flags,
-        debug_information=args.debug_symbols,
-    )
+    with wrap_with_perf_time_taken("Assembler", verbose=args.verbose):
+        assemble_object_from_codegen_assembly(
+            assembly=assembly_filepath,
+            output=object_filepath,
+            target=args.target,
+            additional_assembler_flags=args.assembler_flags,
+            debug_information=args.debug_symbols,
+        )
 
     if args.delete_build_cache:
         assembly_filepath.unlink()
@@ -119,20 +143,21 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 paths = pkgconfig_get_library_search_paths(library)
                 if paths:
                     libraries_search_paths += paths
-        linker_process = link_object_files(
-            objects=[object_filepath],
-            target=args.target,
-            output=args.output_filepath,
-            libraries=args.linker_libraries,
-            output_format=output_format,
-            additional_flags=args.linker_additional_flags,
-            libraries_search_paths=args.linker_libraries_search_paths,
-            profile=args.linker_profile,
-            linker_backend=linker_backend,
-            linker_executable=args.linker_executable,
-            cache_directory=args.build_cache_dir,
-        )
-        linker_process.check_returncode()
+        with wrap_with_perf_time_taken("Linker", verbose=args.verbose):
+            linker_process = link_object_files(
+                objects=[object_filepath],
+                target=args.target,
+                output=args.output_filepath,
+                libraries=args.linker_libraries,
+                output_format=output_format,
+                additional_flags=args.linker_additional_flags,
+                libraries_search_paths=args.linker_libraries_search_paths,
+                profile=args.linker_profile,
+                linker_backend=linker_backend,
+                linker_executable=args.linker_executable,
+                cache_directory=args.build_cache_dir,
+            )
+            linker_process.check_returncode()
 
     if args.delete_build_cache:
         object_filepath.unlink()
@@ -156,7 +181,8 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 text="Cannot execute after compilation due to output format is not set to an executable!",
             )
             sys.exit(1)
-        cli_execute_after_compilation(args)
+        with wrap_with_perf_time_taken("Execution", verbose=args.verbose):
+            cli_execute_after_compilation(args)
 
     return sys.exit(0)
 
