@@ -137,7 +137,9 @@ def _tuck_definition_stmts_for_loader(
 
 
 def _perform_input(
-    args: CLIArguments, source: list[str], ref_macros_registry: MacrosRegistry
+    args: CLIArguments,
+    source: list[str],
+    ref_macros_registry: MacrosRegistry,
 ) -> None:
     # We `tuck` something like `func` to loader and preassemble it
     source_to_execute = _tuck_definition_stmts_for_loader(source, session_loader_source)

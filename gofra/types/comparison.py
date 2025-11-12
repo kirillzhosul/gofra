@@ -28,7 +28,7 @@ def is_types_same(
             assert_never(strategy)
 
 
-def _compare_types_strict_same_type(a: Type, b: Type) -> bool:
+def _compare_types_strict_same_type(a: Type, b: Type) -> bool:  # noqa: PLR0911
     if is_primitive_type(a) and is_primitive_type(b):
         # primitives types without narrowing is just check of equality
         return type(a) is type(b)

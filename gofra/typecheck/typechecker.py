@@ -40,7 +40,7 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import MutableMapping, Sequence
 
     from gofra.hir.function import Function
     from gofra.hir.module import Module
@@ -56,7 +56,7 @@ DEBUG_TRACE_TYPESTACK = False
 class EmulatedTypeBlock(NamedTuple):
     types: Sequence[Type]
     reason: Literal["end-of-block", "early-return"]
-    references_variables: Mapping[str, Variable[Type]]
+    references_variables: MutableMapping[str, Variable[Type]]
 
 
 def validate_type_safety(
@@ -128,7 +128,10 @@ def emulate_type_stack_for_operators(
         emulated_stack_types=list(initial_type_stack),
     )
 
-    references_variables: Mapping[str, Variable[Type]] = {}  # merge into context?
+    references_variables: MutableMapping[
+        str,
+        Variable[Type],
+    ] = {}  # merge into context?
     idx_max, idx = len(operators), 0
     while idx < idx_max:
         operator, idx = operators[idx], idx + 1

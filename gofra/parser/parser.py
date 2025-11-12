@@ -84,7 +84,7 @@ def _parse_from_context_into_operators(context: ParserContext) -> None:
                 raise ParserExhaustiveContextStackError
 
 
-def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:
+def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:  # noqa: PLR0911
     match token.type:
         case TokenType.INTEGER | TokenType.CHARACTER:
             return _push_integer_operator(context, token)
@@ -154,7 +154,7 @@ def _best_match_for_word(context: ParserContext, word: str) -> str | None:
     return matches[0] if matches else None
 
 
-def _consume_keyword_token(context: ParserContext, token: Token) -> None:
+def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noqa: PLR0911
     if isinstance(token.value, PreprocessorKeyword):
         raise ParserDirtyNonPreprocessedTokenError(token=token)
     assert isinstance(token.value, Keyword)

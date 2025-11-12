@@ -19,8 +19,8 @@ from gofra.lexer import Token
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
-from gofra.parser.types import parse_type_from_text, parser_type_from_tokenizer
-from gofra.types import Type, VoidType
+from gofra.parser.types import parser_type_from_tokenizer
+from gofra.types import Type
 
 from .exceptions import (
     ParserExpectedFunctionAfterFunctionModifiersError,
@@ -147,71 +147,21 @@ def consume_function_signature(
 def consume_function_parameters(context: ParserContext) -> list[Type]:
     parameters: list[Type] = []
 
-    paren_token = context.next_token()
-    if paren_token.type != TokenType.LBRACKET:
+    if (paren_token := context.next_token()) and paren_token.type != TokenType.LBRACKET:
         msg = f"Expected LBRACKET `[` after function name for parameters but got {paren_token.type.name}"
         raise ValueError(msg, paren_token.location)
 
-    # TODO(@kirillzhosul): allows trailing comma after last typename
-    typename_tokens: list[list[Token]] = [[]]
-
-    unbalanced_brackets = 0
-    while token := context.next_token():
-        if token.type == TokenType.EOL:
-            continue
-
-        if token.type == TokenType.COMMA:
-            if not typename_tokens:
-                msg = "expected typename for parameter before comma separator"
-                raise ValueError(msg)
-            typename_tokens.append([])
-            continue
-
-        if token.type == TokenType.LBRACKET:
-            unbalanced_brackets += 1
-
+    while token := context.peek_token():
         if token.type == TokenType.RBRACKET:
-            if unbalanced_brackets == 0:
-                break
-            unbalanced_brackets -= 1
-
-        if token.type == TokenType.EOF:
-            msg = "Expected RBRACKET `]` after function parameters but got end of file!"
-            raise ValueError(msg)
-
-        if token.type not in (
-            TokenType.IDENTIFIER,
-            TokenType.INTEGER,
-            TokenType.RBRACKET,
-            TokenType.LBRACKET,
-            TokenType.STAR,
-        ):
-            msg = f"Expected only identifiers or typename allowed tokens in function parameters but got {token.type.name} at {token.location}"
-            raise ValueError(msg)
-
-        # Buffering type name tokens for parsing at comma separator
-        typename_tokens[-1].append(token)
-
-    # TODO(@kirillzhosul): refactor into parse_type_from_tokenizer
-    for t_tokens in typename_tokens:
-        if not t_tokens:
-            if len(typename_tokens) == 1:
-                # empty parameters
-                break
-            msg = "expected typename after token"
-            raise ValueError(msg, token.location)
-        typename_text = "".join(t.text for t in t_tokens)
-        parameter_type = parse_type_from_text(context, typename_text)
-        if not parameter_type:
-            msg = f"unknown parameter type {typename_text}"
-            raise ValueError(msg)
-
-        if isinstance(parameter_type, VoidType):
-            # TODO(@kirillzhosul): Consider an warning
-            pass
-        else:
-            parameters.append(parameter_type)
-
+            break
+        parameters.append(parser_type_from_tokenizer(context))
+        print(parameters)
+        t = context.peek_token()
+        if t.type == TokenType.RBRACKET:
+            break
+        context.expect_token(TokenType.COMMA)
+        _ = context.next_token()
+    _ = context.next_token()
     return parameters
 
 

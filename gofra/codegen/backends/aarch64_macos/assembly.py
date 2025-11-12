@@ -12,7 +12,6 @@ from gofra.codegen.backends.aarch64_macos.frame import (
 )
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import VariableIntArrayInitializerValue
-from gofra.types._base import PrimitiveType
 from gofra.types.composite.array import ArrayType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
     from gofra.codegen.abi import AARCH64ABI
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.hir.variable import Variable
-    from gofra.types._base import Type
+    from gofra.types._base import PrimitiveType, Type
 
 # Static symbol (data) sections
 SYM_SECTION_BSS = "__DATA,__bss"

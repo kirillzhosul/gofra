@@ -29,7 +29,10 @@ def cli_gofra_error_handler(
         )
         # Propagate exit code from called process
         return sys.exit(pe.returncode)
-
+    except KeyboardInterrupt:
+        print()
+        cli_message("INFO", "Interrupted by user (Ctrl+C)!")
+        return sys.exit(0)
     # This is unreachable but error wrapper must fail
     cli_message("ERROR", "Bug in a CLI: error handler must has no-return")
     sys.exit(1)

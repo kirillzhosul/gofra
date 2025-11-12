@@ -3,14 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from gofra.types._base import Type
-
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
     from gofra.hir.function import Function
     from gofra.hir.variable import Variable
+    from gofra.types._base import Type
     from gofra.types.composite.structure import StructureType
 
 

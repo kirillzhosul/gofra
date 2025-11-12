@@ -6,34 +6,6 @@ from gofra.types.composite.pointer import PointerType
 from gofra.types.registry import PRIMITIVE_TYPE_REGISTRY
 
 
-def parse_type_from_text(context: ParserContext, typename: str) -> Type | None:
-    # TODO(@kirillzhosul): Refactor this into proper lexer -> parser peek / consume
-    if primitive_registry_type := PRIMITIVE_TYPE_REGISTRY.get(typename, None):
-        return primitive_registry_type
-
-    if context.get_struct(typename):
-        # Unable to get from primitive registry - probably an structure type definition
-        return context.get_struct(typename)
-
-    if typename.startswith("*"):
-        points_to = parse_type_from_text(context, typename.removeprefix("*"))
-        if not points_to:
-            return None
-        return PointerType(points_to)
-
-    if "[" in typename:
-        array_type = parse_type_from_text(context, typename.split("[")[0])
-        if not array_type:
-            return None
-        array_size = typename.split("[", maxsplit=1)[1].removesuffix("]")
-
-        if array_size == "" or array_size.isdigit():
-            array_elements = int(array_size or "0")
-            return ArrayType(element_type=array_type, elements_count=array_elements)
-
-    return None
-
-
 def parser_type_from_tokenizer(
     context: ParserContext,
     *,

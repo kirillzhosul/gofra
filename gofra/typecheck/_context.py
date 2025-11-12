@@ -85,7 +85,7 @@ class TypecheckContext:
             ):
                 continue
 
-            # TODO: Called from `real_function` at `inlined_location` (bug)
+            # TODO(@kirillzhosul): Called from `real_function` at `inlined_location` (bug)
             raise ParameterTypeMismatchTypecheckError(
                 expected_type=expected_type,
                 actual_type=argument_type,
