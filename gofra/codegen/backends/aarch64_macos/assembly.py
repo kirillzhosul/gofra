@@ -455,7 +455,6 @@ def function_begin_with_prologue(  # noqa: PLR0913
     if global_name:
         context.fd.write(f".global {global_name}\n")
 
-    push_register_onto_stack(context, register="X0")
     context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
     context.fd.write(f"{name}:\n")
 

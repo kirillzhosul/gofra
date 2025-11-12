@@ -301,8 +301,8 @@ def aarch64_macos_program_entry_point(
             arguments_count=1,
             store_retval_onto_stack=False,
             injected_args=[
-                AARCH64_MACOS_EPILOGUE_EXIT_CODE,
                 AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
+                AARCH64_MACOS_EPILOGUE_EXIT_CODE,
             ],
         )
     else:
