@@ -11,6 +11,7 @@ from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.structure import StructureType
+from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 
@@ -242,6 +243,19 @@ def _consume_variable_initializer(
             initial_value = value_token.value
 
             _validate_initial_numeric_value_fits_type(var_t, initial_value, value_token)
+            return initial_value, var_t
+        case BoolType():
+            value_token = context.next_token()
+            if value_token.type != TokenType.INTEGER:
+                msg = f"Expected INTEGER for initializer (type {var_t}), but got {value_token.type.name} at {value_token.location}"
+                raise ValueError(msg)
+
+            assert isinstance(value_token.value, int)
+            initial_value = value_token.value
+
+            if initial_value not in (0, 1):
+                msg = f"Default value for boolean must be in two states: 0 or 1, but got {initial_value} as initial value at {value_token.location}"
+                raise ValueError(msg)
             return initial_value, var_t
         case _:
             raise TypeHasNoCompileTimeInitializerParserError(
