@@ -14,6 +14,6 @@ def unpack_type_definition_from_token(context: ParserContext) -> None:
         raise ValueError(msg)
 
     typename = name_token.text
-    if typename in context.types:
+    if context.get_type(typename):
         raise TypeDefinitionAlreadyExistsError(typename, name_token.location)
     context.types[typename] = parser_type_from_tokenizer(context)

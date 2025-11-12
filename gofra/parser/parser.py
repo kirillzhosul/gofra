@@ -181,6 +181,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
     )
 
     BOTH_LEVEL_KEYWORD = (  # noqa: N806
+        Keyword.CONST,
         Keyword.END,
         Keyword.VARIABLE_DEFINE,
     )
@@ -201,8 +202,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return context.push_new_operator(OperatorType.FUNCTION_RETURN, token=token)
         case Keyword.TYPE_CAST:
             return unpack_typecast_from_token(context, token)
-        case Keyword.VARIABLE_DEFINE:
-            return unpack_variable_definition_from_token(context)
+        case Keyword.VARIABLE_DEFINE | Keyword.CONST:
+            return unpack_variable_definition_from_token(context, token)
         case Keyword.SYSCALL:
             return context.push_new_operator(
                 type=OperatorType.SYSCALL,

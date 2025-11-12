@@ -27,7 +27,7 @@ def parser_type_from_tokenizer(
     context.expect_token(TokenType.IDENTIFIER)
     t = context.next_token()
 
-    aggregated_type: Type | None = context.types.get(t.text)
+    aggregated_type: Type | None = context.get_type(t.text)
     if not aggregated_type:
         # Unable to get from primitive registry - probably an structure type definition
         aggregated_type = context.get_struct(t.text)

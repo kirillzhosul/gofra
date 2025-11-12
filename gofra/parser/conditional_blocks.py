@@ -231,6 +231,7 @@ def parse_for_range_qualifier(
             storage_class=VariableStorageClass.STACK,
             scope_class=VariableScopeClass.FUNCTION,
             type=I64Type(),
+            is_constant=False,
         )
 
     iterator = context.variables[iterator_varname]
@@ -261,21 +262,21 @@ def parse_for_range_qualifier(
         else:
             iterable_identifier_name = iterable_identifier_tok.text
 
-            iterable_identifier = context.search_variable_in_context_parents(
+            iterable = context.search_variable_in_context_parents(
                 iterable_identifier_name,
             )
 
-            if not iterable_identifier:
-                msg = f"Unknown variable `{iterable_identifier}` in `for-loop` block used as iterable at {iterable_identifier_tok.location}."
+            if not iterable:
+                msg = f"Unknown variable `{iterable}` in `for-loop` block used as iterable at {iterable_identifier_tok.location}."
                 raise ValueError(msg)
-            if iterable_identifier.storage_class == VariableStorageClass.STACK:
+            if iterable.storage_class == VariableStorageClass.STACK:
                 msg = "Prohibited to use stack located iterable, currently leads to segmentation faults"
                 raise ValueError(msg)
-            if not isinstance(iterable_identifier.type, ArrayType):
-                msg = f"Expected `{iterable_identifier_name}` to be an Array type but got {iterable_identifier.type} in `for-loop` block at {in_token.location}, as it used as range qualifier iterable."
+            if not isinstance(iterable.type, ArrayType):
+                msg = f"Expected `{iterable_identifier_name}` to be an Array type but got {iterable.type} in `for-loop` block at {in_token.location}, as it used as range qualifier iterable."
                 raise ValueError(msg)
-            iterable_identifier = cast("Variable[ArrayType]", iterable_identifier)
-            assert iterable_identifier.type.element_type.size_in_bytes == 8, (
+            iterable = cast("Variable[ArrayType]", iterable)
+            assert iterable.type.element_type.size_in_bytes == 8, (
                 "Expected iterable that has elements of byte size 8 only"
             )
 
@@ -285,12 +286,16 @@ def parse_for_range_qualifier(
                 defined_at=iterator_identifier.location,
                 storage_class=VariableStorageClass.STACK,
                 scope_class=VariableScopeClass.FUNCTION,
-                type=PointerType(points_to=iterable_identifier.type.element_type),
+                type=PointerType(points_to=iterable.type.element_type),
+                is_constant=False,
             )
 
+            if iterable.is_constant:
+                msg = f"Cannot use {iterable.name} at {token.location} as iterable as it is defined at const. This is temporary error and will be solved later"
+                raise ValueError(msg)
             return RangeQualifierForeach(
                 iterator=iterator,
-                iterable=iterable_identifier,
+                iterable=iterable,
             )
 
     elif context.peek_token().type != TokenType.INTEGER:

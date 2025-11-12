@@ -103,6 +103,13 @@ class ParserContext(PeekableTokenizer):
             return self.parent.get_struct(name)
         return None
 
+    def get_type(self, name: str) -> Type | None:
+        if name in self.types:
+            return self.types[name]
+        if self.parent:
+            return self.parent.get_type(name)
+        return None
+
     def add_function(self, function: Function) -> Function:
         self.functions[function.name] = function
 

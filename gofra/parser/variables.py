@@ -5,6 +5,7 @@ from gofra.hir.variable import (
     VariableScopeClass,
     VariableStorageClass,
 )
+from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import Token, TokenType
 from gofra.parser._context import ParserContext
 from gofra.parser.errors.cannot_infer_var_type_from_empty_array_initializer import (
@@ -36,7 +37,24 @@ from gofra.types.primitive.void import VoidType
 
 def unpack_variable_definition_from_token(
     context: ParserContext,
+    token: Token,
 ) -> None:
+    assert token.type == TokenType.KEYWORD
+
+    # Either VAR or CONST start
+    modifier_is_const = False
+    if token.value == Keyword.CONST:
+        modifier_is_const = True
+
+        peeked = context.peek_token()
+        if (
+            peeked.type != TokenType.KEYWORD or peeked.value != Keyword.VARIABLE_DEFINE
+        ) and peeked.type != TokenType.IDENTIFIER:
+            msg = f"Expected either `var` after const or identifier as an name AT {peeked.location}"
+            raise ValueError(msg)
+        if peeked.type != TokenType.IDENTIFIER:
+            context.advance_token()
+
     varname_token = context.next_token()
     if varname_token.type != TokenType.IDENTIFIER:
         msg = f"Expected variable name after variable keyword but got {varname_token.type.name} at {varname_token.location}"
@@ -86,6 +104,11 @@ def unpack_variable_definition_from_token(
             var_t,
             varname_token=varname_token,
         )
+    elif modifier_is_const:
+        msg = (
+            "Expected constant variable to have assignment, otherwise it has no effect"
+        )
+        raise ValueError(msg)
 
     if isinstance(var_t, VoidType):
         raise VariableCannotHasVoidTypeParserError(
@@ -105,6 +128,7 @@ def unpack_variable_definition_from_token(
         scope_class=scope_class,
         storage_class=storage_class,
         initial_value=initial_value,
+        is_constant=modifier_is_const,
     )
 
 
@@ -162,6 +186,22 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
     if not variable:
         return False
 
+    if (
+        variable.is_constant
+        and variable.type.size_in_bytes <= 8
+        and not is_reference
+        and not struct_field_accessor
+        and array_index_at is None
+    ):
+        # Simple unwrapping for constants
+        assert isinstance(variable.type, (BoolType, I64Type, CharType))
+        assert isinstance(variable.initial_value, int)
+        context.push_new_operator(
+            type=OperatorType.PUSH_INTEGER,
+            token=token,
+            operand=variable.initial_value,
+        )
+        return True
     context.push_new_operator(
         type=OperatorType.PUSH_VARIABLE_ADDRESS,
         token=token,
@@ -245,7 +285,15 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token)
             context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token)
 
+    if is_reference and variable.is_constant:
+        msg = f"Tried to get reference of constant variable {variable.name} at {token.location}"
+        raise ValueError(msg)
     if not is_reference:
+        if variable.type.size_in_bytes > 8 and not (
+            array_index_at or struct_field_accessor
+        ):
+            msg = f"Cannot load variable {variable.name} of type {variable.type} as it has size {variable.type.size_in_bytes} in bytes (stack-cell-overflow) at {token.location}"
+            raise ValueError(msg)
         context.push_new_operator(
             type=OperatorType.MEMORY_VARIABLE_READ,
             token=token,

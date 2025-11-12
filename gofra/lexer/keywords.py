@@ -23,6 +23,7 @@ class Keyword(Enum):
 
     STRUCT = auto()
 
+    CONST = auto()
     VARIABLE_DEFINE = auto()
 
     TYPE_CAST = auto()
@@ -68,6 +69,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "extern": Keyword.EXTERN,
     "call": Keyword.FUNCTION_CALL,
     "return": Keyword.FUNCTION_RETURN,
+    "const": Keyword.CONST,
     "func": Keyword.FUNCTION,
     "struct": Keyword.STRUCT,
     "inline": Keyword.INLINE,

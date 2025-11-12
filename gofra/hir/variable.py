@@ -15,6 +15,10 @@ class Variable[T: Type]:
     # Source location of definition
     defined_at: TokenLocation
 
+    # If true, cannot change value at runtime and may apply CTE optimizations/inlining
+    # Must have `initial_value`
+    is_constant: bool
+
     # LIR (code-generation) hint about where to locate that variable
     storage_class: "VariableStorageClass"
 
