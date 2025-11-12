@@ -6,17 +6,21 @@ from gofra.types._base import Type
 class TypeHasNoCompileTimeInitializerParserError(GofraError):
     def __init__(
         self,
-        *args: object,
-        type: Type,  # noqa: A002
-        for_variable_at: TokenLocation,
+        type_with_no_initializer: Type,
+        varname: str,
+        at: TokenLocation,
     ) -> None:
-        super().__init__(*args)
-        self.type = type
-        self.for_variable_at = for_variable_at
+        self.type_with_no_initializer = type_with_no_initializer
+        self.at = at
+        self.varname = varname
 
     def __repr__(self) -> str:
-        return f"""Type `{self.type}` has no initializer known at compile time (for variable at {self.for_variable_at})!
+        return f"""No known initializer for type '{self.type_with_no_initializer}'!
 
-Consider using manual initializer logic
+Variable '{self.varname}' defined at {self.at} has 
+type '{self.type_with_no_initializer}' has no initializer known at compile time!
+Has no known solution to initialize this variable.
 
-[parser-no-compile-time-known-initializer-for-var]"""
+Consider using manual initializer logic.
+
+{self.generic_error_name}"""

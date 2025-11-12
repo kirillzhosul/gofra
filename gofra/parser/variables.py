@@ -7,8 +7,17 @@ from gofra.hir.variable import (
 )
 from gofra.lexer.tokens import Token, TokenType
 from gofra.parser._context import ParserContext
+from gofra.parser.errors.cannot_infer_var_type_from_empty_array_initializer import (
+    CannotInferVariableTypeFromEmptyArrayInitializerError,
+)
+from gofra.parser.errors.cannot_infer_var_type_from_initializer import (
+    CannotInferVariableTypeFromInitializerError,
+)
 from gofra.parser.errors.type_has_no_compile_time_initializer import (
     TypeHasNoCompileTimeInitializerParserError,
+)
+from gofra.parser.errors.unknown_field_accessor_struct_field import (
+    UnknownFieldAccessorStructFieldError,
 )
 from gofra.parser.errors.variable_with_void_type import (
     VariableCannotHasVoidTypeParserError,
@@ -184,8 +193,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
         field = struct_field_accessor.text
         if field not in struct.fields:
-            msg = f"Field accessor {field} at {token.location} is unknown for structure {struct.name}"
-            raise ValueError(msg)
+            raise UnknownFieldAccessorStructFieldError(field, token.location, struct)
 
         context.push_new_operator(
             type=OperatorType.STRUCT_FIELD_OFFSET,
@@ -318,8 +326,9 @@ def _consume_variable_initializer(
             ), var_t
         case _:
             raise TypeHasNoCompileTimeInitializerParserError(
-                type=var_t,
-                for_variable_at=varname_token.location,
+                type_with_no_initializer=var_t,
+                varname=varname_token.text,
+                at=varname_token.location,
             )
 
 
@@ -346,8 +355,10 @@ def _infer_auto_variable_type_from_initializer(
     if context.peek_token().type == TokenType.LBRACKET:
         lbracket = context.next_token()
         if context.peek_token().type == TokenType.RBRACKET:
-            msg = f"Cannot infer variable type from array initializer with no values at {varname_token.location}, consider adding type explicitly."
-            raise ValueError(msg)
+            raise CannotInferVariableTypeFromEmptyArrayInitializerError(
+                varname_token.text,
+                varname_token.location,
+            )
 
         if context.peek_token().type == TokenType.INTEGER:
             context.push_token_back_upfront_peeked(lbracket)
@@ -358,5 +369,7 @@ def _infer_auto_variable_type_from_initializer(
 
         context.push_token_back_upfront_peeked(lbracket)
 
-    msg = f"Unable to infer variable type from initializer for variable at {varname_token.location}, consider adding type explicitly."
-    raise ValueError(msg)
+    raise CannotInferVariableTypeFromInitializerError(
+        varname_token.text,
+        varname_token.location,
+    )

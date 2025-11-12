@@ -232,8 +232,11 @@ def _process_output_path(
         )
     )
     if inferred_output_path in source_filepaths:
-        msg = "Inferred/specified output file path will rewrite existing input file, please specify another output path."
-        raise ValueError(msg)
+        cli_message(
+            level="ERROR",
+            text="Inferred/specified output file path will rewrite existing input file, please specify another output path.",
+        )
+        return sys.exit(1)
     return inferred_output_path
 
 

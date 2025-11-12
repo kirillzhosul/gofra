@@ -1,5 +1,6 @@
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
+from gofra.parser.errors.unknown_primitive_type import UnknownPrimitiveTypeError
 from gofra.types import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
@@ -37,8 +38,7 @@ def parser_type_from_tokenizer(
             aggregated_type = variable.type
 
     if not aggregated_type:
-        msg = f"Expected primitive registry type but got unknown type {t.text} at {t.location}."
-        raise ValueError(msg)
+        raise UnknownPrimitiveTypeError(t.text, t.location)
 
     if context.peek_token().type == TokenType.LBRACKET:
         _ = context.next_token()  # Consume LBRACKET

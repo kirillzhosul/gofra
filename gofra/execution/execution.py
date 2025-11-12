@@ -38,7 +38,7 @@ def execute_binary_executable(  # noqa: PLR0913
         stderr=stderr,
         # Mostly, we want to execute with shell as less-abstracted real software
         shell=True,
-        # Do not raise, we would do that by itself
+        # Do not raise, we would do that ourselves
         check=False,
         # Perform in current environment
         user=None,

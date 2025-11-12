@@ -14,6 +14,18 @@ from gofra.lexer import (
 )
 from gofra.lexer.keywords import PreprocessorKeyword
 from gofra.parser.conditional_blocks import consume_conditional_block_keyword_from_token
+from gofra.parser.errors.keyword_in_without_loop_block import (
+    KeywordInWithoutLoopBlockError,
+)
+from gofra.parser.errors.local_level_keyword_in_global_scope import (
+    LocalLevelKeywordInGlobalScopeError,
+)
+from gofra.parser.errors.top_level_expected_no_operators import (
+    TopLevelExpectedNoOperatorsError,
+)
+from gofra.parser.errors.top_level_keyword_in_local_scope import (
+    TopLevelKeywordInLocalScopeError,
+)
 from gofra.parser.functions.parser import (
     consume_function_body_tokens,
     consume_function_definition,
@@ -51,9 +63,8 @@ def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Modu
     assert context.is_top_level, (
         "Parser context in result of parsing must an top level, bug in a parser"
     )
-    assert not context.operators, (
-        f"Expected NO operators on top level, first one is at {context.operators[0].location}"
-    )
+    if context.operators:
+        raise TopLevelExpectedNoOperatorsError(context.operators[0])
 
     return Module(
         path=path,
@@ -175,11 +186,9 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
     )
     if context.is_top_level:
         if token.value not in (*TOP_LEVEL_KEYWORD, *BOTH_LEVEL_KEYWORD):
-            msg = f"{token.value.name} expected to be in functions scope not at global scope!"
-            raise ValueError(msg)
+            raise LocalLevelKeywordInGlobalScopeError(token)
     elif token.value in TOP_LEVEL_KEYWORD:
-        msg = f"{token.value.name} expected to be only inside global scope!"
-        raise ValueError(msg, token.location)
+        raise TopLevelKeywordInLocalScopeError(token)
 
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END | Keyword.FOR:
@@ -215,9 +224,17 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         case Keyword.SIZEOF:
             return _unpack_sizeof_from_token(context, token)
         case Keyword.IN:
-            msg = f"In must be in form `for-in` loop, but got unconstrained `in` keyword at {token.location}"
-            raise ValueError(msg)
+            raise KeywordInWithoutLoopBlockError(token)
         case Keyword.TYPE_DEFINE:
+            if (
+                (peeked := context.peek_token())
+                and peeked.type == TokenType.KEYWORD
+                and peeked.value == Keyword.STRUCT
+            ):
+                # `type struct ...` must be treated as structure
+                context.advance_token()
+                return unpack_structure_definition_from_token(context)
+
             return unpack_type_definition_from_token(context)
         case _:
             assert_never(token.value)

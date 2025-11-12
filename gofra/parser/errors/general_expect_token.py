@@ -10,4 +10,5 @@ class ExpectedTokenByParserError(GofraError):
 
     def __repr__(self) -> str:
         return f"""Expected {self.expected.name} but got {self.got.type.name} at {self.got.location}!
-[lexer-parser-general-expectation]"""
+
+{self.generic_error_name}"""

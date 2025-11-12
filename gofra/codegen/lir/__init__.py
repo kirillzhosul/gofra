@@ -156,7 +156,8 @@ def translate_hir_function_to_lir_function(
     assert not hir_function.is_external
     parameters = [LIRParameter(t) for t in hir_function.parameters]
     if any(v.initial_value is not None for v in hir_function.variables.values()):
-        raise NotADirectoryError
+        msg = "Initial values are not yet implemented in LIR"
+        raise NotImplementedError(msg)
     f_local_vars = {v.name: v.type for v in hir_function.variables.values()}
 
     lir_function = LIRInternalFunction(
@@ -466,7 +467,7 @@ def translate_hir_function_to_lir_function(
                 lir_function.add_op(LIRLabel(label))
             case OperatorType.PUSH_FLOAT:
                 msg = "FPU is not implemented for LIR"
-                raise ValueError(msg)
+                raise NotImplementedError(msg)
             case _:
                 assert_never(operator.type)
 

@@ -34,6 +34,9 @@ class PeekableTokenizer:
             return self._peeked.popleft()
         return next(self._tokenizer)
 
+    def advance_token(self) -> None:
+        self.next_token()
+
     def peek_token(self) -> Token:
         if not self._peeked:
             self._peeked.append(next(self._tokenizer))
@@ -83,7 +86,7 @@ class ParserContext(PeekableTokenizer):
     def name_is_already_taken(self, name: str) -> bool:
         is_taken = any(
             name in container
-            for container in (self.structs, self.variables, self.functions)
+            for container in (self.structs, self.variables, self.functions, self.types)
         )
 
         if not is_taken and self.parent:
