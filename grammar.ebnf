@@ -40,7 +40,7 @@ Statement =
     IfStmt | WhileStmt | ForStmt | 
     CallStmt |
     TypecastStmt | SizeofStmt |
-    IntegerLiteral | StringLiteral | CharLiteral | 
+    IntegerLiteral | FloatLiteral | StringLiteral | CharLiteral | 
     Operator | Comment | Identifier | 
     VariableReference | 
     PreprocessorDefinition | PreprocessorInclude , 
@@ -62,6 +62,7 @@ CharLiteral = "'", Character, "'";
 Identifier = Letter, {Letter | Digit};
 
 IntegerLiteral = "0" | PositiveNumber | NegativeNumber | HexPositiveNumber | HexNegativeNumber;
+FloatLiteral = ("0" | PositiveNumber | NegativeNumber), ".", "0" | PositiveNumber;
 
 DigitExcludingZero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 Digit = "0" | DigitExcludingZero;
