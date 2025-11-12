@@ -26,8 +26,7 @@ class Variable:
 
     # Value which this variables is filled by default
     # None means it has not initialized and must be zero-initialized
-    # ints only for now
-    initial_value: int | None = None
+    initial_value: "VariableIntArrayInitializerValue | int | None" = None
 
     @property
     def is_global_scope(self) -> bool:
@@ -66,3 +65,14 @@ class VariableScopeClass(Enum):
 
     # Function scope - owner is an function and mostly has VariableStorageClass.STACK
     FUNCTION = auto()
+
+
+@dataclass(frozen=True, slots=True)
+class VariableIntArrayInitializerValue:
+    """HIR value parsed from initializer for int array.
+
+    Variable must be initialized with this value.
+    """
+
+    default: int
+    values: list[int]

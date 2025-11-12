@@ -1,9 +1,17 @@
 from gofra.hir.operator import OperatorType
-from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
+from gofra.hir.variable import (
+    Variable,
+    VariableIntArrayInitializerValue,
+    VariableScopeClass,
+    VariableStorageClass,
+)
 from gofra.lexer.tokens import Token, TokenType
 from gofra.parser._context import ParserContext
 from gofra.parser.errors.type_has_no_compile_time_initializer import (
     TypeHasNoCompileTimeInitializerParserError,
+)
+from gofra.parser.errors.variable_with_void_type import (
+    VariableCannotHasVoidTypeParserError,
 )
 from gofra.parser.exceptions import ParserVariableNameAlreadyDefinedAsVariableError
 from gofra.parser.types import parser_type_from_tokenizer
@@ -14,6 +22,7 @@ from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
+from gofra.types.primitive.void import VoidType
 
 
 def unpack_variable_definition_from_token(
@@ -61,11 +70,23 @@ def unpack_variable_definition_from_token(
         _ = context.next_token()  # consume =
 
         # Parse value and infer type from that
+        # `var_t` can be changed if it is inferred type
+        # Or initializer modifies type (e.g incomplete array type)
         initial_value, var_t = _consume_variable_initializer(
             context,
             var_t,
             varname_token=varname_token,
         )
+
+    if isinstance(var_t, VoidType):
+        raise VariableCannotHasVoidTypeParserError(
+            varname=varname,
+            defined_at=varname_token,
+        )
+
+    if var_t and var_t.size_in_bytes == 0:
+        msg = f"Variable {varname} defined at {varname_token.location} has type {var_t}, which has zero byte size! Possible alternative to void, which is prohibited"
+        raise TypeError(msg)
 
     assert var_t, "Must emit infer error"
     context.variables[varname] = Variable(
@@ -228,7 +249,7 @@ def _consume_variable_initializer(
     context: ParserContext,
     var_t: Type | None,
     varname_token: Token,
-) -> tuple[int, Type]:
+) -> tuple[int | VariableIntArrayInitializerValue, Type]:
     if var_t is None:
         var_t = _infer_auto_variable_type_from_initializer(context, varname_token)
 
@@ -257,6 +278,44 @@ def _consume_variable_initializer(
                 msg = f"Default value for boolean must be in two states: 0 or 1, but got {initial_value} as initial value at {value_token.location}"
                 raise ValueError(msg)
             return initial_value, var_t
+        case ArrayType(element_type=I64Type()):
+            context.expect_token(TokenType.LBRACKET)
+            context.next_token()
+
+            values: list[int] = []
+            while True:
+                if context.peek_token().type == TokenType.RBRACKET:
+                    _ = context.next_token()
+                    break
+
+                context.expect_token(TokenType.INTEGER)
+                value_token = context.next_token()
+                assert isinstance(value_token.value, int)
+                element_value = value_token.value
+                values.append(element_value)
+                _validate_initial_numeric_value_fits_type(
+                    var_t.element_type,
+                    element_value,
+                    value_token,
+                )
+                if context.peek_token().type == TokenType.RBRACKET:
+                    _ = context.next_token()
+                    break
+                context.expect_token(TokenType.COMMA)
+                _ = context.next_token()
+
+            # TODO(@kirillzhosul): General semantic problem? t[0] means unfinished array definition and allows this to pass
+            if var_t.elements_count == 0:
+                var_t.elements_count = len(values)
+
+            if len(values) > var_t.elements_count:
+                msg = f"Array initializer got {len(values)} elements at {varname_token.location}, but array size is {var_t.elements_count} which overflows array!"
+                raise ValueError(msg)
+            # This allows not all array to be initialized and its ok
+            return VariableIntArrayInitializerValue(
+                default=0,
+                values=values,
+            ), var_t
         case _:
             raise TypeHasNoCompileTimeInitializerParserError(
                 type=var_t,

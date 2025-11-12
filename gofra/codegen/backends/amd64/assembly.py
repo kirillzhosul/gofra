@@ -132,6 +132,10 @@ def initialize_static_data_section(
             if type_size == 0:
                 continue
             assert variable.initial_value is not None
+            assert isinstance(variable.initial_value, int), (
+                "Array initializer is not implemented on AMD64"
+            )
+
             if type_size == 1:
                 context.write(f"{name}: .byte {variable.initial_value}")
             elif type_size == 2:
@@ -265,6 +269,9 @@ def function_begin_with_prologue(  # noqa: PLR0913
         initial_value = variable.initial_value
         if initial_value is None:
             continue
+        assert isinstance(variable.initial_value, int), (
+            "Array initializer is not implemented on AMD64"
+        )
 
         current_offset = offsets.offsets[variable.name]
         context.write(f"movq ${initial_value}, %rax")

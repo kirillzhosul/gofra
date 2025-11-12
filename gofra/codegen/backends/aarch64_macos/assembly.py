@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from gofra.cli.output import cli_message
 from gofra.codegen.backends.aarch64_macos.frame import (
     build_local_variables_frame_offsets,
     preserve_calee_frame,
     restore_calee_frame,
 )
 from gofra.hir.operator import OperatorType
+from gofra.hir.variable import VariableIntArrayInitializerValue
+from gofra.types._base import PrimitiveType
+from gofra.types.composite.array import ArrayType
+from gofra.types.primitive.character import CharType
+from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
@@ -27,6 +33,11 @@ if TYPE_CHECKING:
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.hir.variable import Variable
     from gofra.types._base import Type
+
+# Static symbol (data) sections
+SYM_SECTION_BSS = "__DATA,__bss"
+SYM_SECTION_DATA = "__DATA,__data"
+SYM_SECTION_CSTR = "__TEXT,__cstring,cstring_literals"
 
 
 def drop_stack_slots(
@@ -83,7 +94,7 @@ def store_integer_into_register(
     context.write(f"mov {register}, #{value}")
 
 
-def push_float_onto_stack(context: AARCH64CodegenContext, value: float):
+def push_float_onto_stack(context: AARCH64CodegenContext, value: float) -> None:
     assert value > 0
     context.float_constants[value] = f"__gofra_float{len(context.float_constants)}"
     f_const = context.float_constants[value]
@@ -166,7 +177,7 @@ def push_local_variable_address_from_frame_offset(
 
     context.write(
         "mov X0, X29",
-        f"sub X0, X0, #{current_offset} // X0 = FP, X0 = &{local_variable} (offset -{current_offset})",
+        f"sub X0, X0, #{current_offset}",
     )
     push_register_onto_stack(context, register="X0")
 
@@ -197,7 +208,7 @@ def initialize_static_data_section(
     Data is an string (raw ASCII) or number (zeroed memory blob)
     """
     if static_strings:
-        context.fd.write(".section __TEXT,__cstring,cstring_literals\n")
+        context.fd.write(f".section {SYM_SECTION_CSTR}\n")
         for name, data in static_strings.items():
             context.fd.write(f'{name}: .asciz "{data}"\n')
 
@@ -209,10 +220,15 @@ def initialize_static_data_section(
     }
 
     if bss_variables:
-        context.fd.write(".section __DATA,__bss\n")
+        context.fd.write(f".section {SYM_SECTION_BSS}\n")
         for name, variable in bss_variables.items():
             type_size = variable.size_in_bytes
-            if type_size != 0:
+            if type_size == 0:
+                cli_message(
+                    "WARNING",
+                    f"Variable {variable.name} has zero byte size (type {variable.type}) this variable will be not defined as symbol!",
+                )
+            else:
                 # TODO(@kirillzhosul): review realignment of static variables
                 if type_size >= 32:
                     context.fd.write(".p2align 4\n")
@@ -222,30 +238,79 @@ def initialize_static_data_section(
                 context.fd.write(f"{name}: .space {type_size}\n")
 
     if data_variables or context.float_constants:
-        context.fd.write(".section __DATA,__data\n")
+        context.fd.write(f".section {SYM_SECTION_DATA}\n")
         for float_v, float_n in context.float_constants.items():
             context.fd.write(f"{float_n}: .double {float_v}")
         for name, variable in data_variables.items():
             assert name not in context.float_constants.values()
-            type_size = variable.size_in_bytes
-            if type_size != 0:
-                # TODO(@kirillzhosul): review realignment of static variables
-                if type_size >= 32:
-                    context.fd.write(".p2align 4\n")
-                else:
-                    context.fd.write(".p2align 3\n")
-                assert variable.initial_value is not None
-                if type_size <= 1:
-                    context.fd.write(f"{name}: .byte {variable.initial_value}\n")
-                elif type_size <= 2:
-                    context.fd.write(f"{name}: .half {variable.initial_value}\n")
-                elif type_size <= 4:
-                    context.fd.write(f"{name}: .word {variable.initial_value}\n")
-                elif type_size <= 8:
-                    context.fd.write(f"{name}: .quad {variable.initial_value}\n")
-                else:
-                    msg = "Codegen does not supports initial values that out of 8 bytes range"
-                    raise ValueError(msg)
+            _write_static_segment_const_variable_initializer(
+                context,
+                variable,
+                symbol_name=name,
+            )
+
+
+def _write_static_segment_const_variable_initializer(
+    context: AARCH64CodegenContext,
+    variable: Variable,
+    symbol_name: str,
+) -> None:
+    type_size = variable.size_in_bytes
+
+    assert variable.initial_value is not None
+    match variable.type:
+        case CharType() | I64Type():
+            if type_size == 0:
+                cli_message(
+                    "WARNING",
+                    f"Variable {variable.name} has zero byte size (type {variable.type}) this variable will be not defined as symbol!",
+                )
+                return
+            # TODO(@kirillzhosul): review realignment of static variables
+            if type_size >= 32:
+                context.fd.write(".p2align 4\n")
+            else:
+                context.fd.write(".p2align 3\n")
+
+            ddd = _get_ddd_for_type(variable.type)
+            context.fd.write(f"{symbol_name}: {ddd} {variable.initial_value}\n")
+        case ArrayType(element_type=I64Type()):
+            assert isinstance(variable.initial_value, VariableIntArrayInitializerValue)
+            ddd = _get_ddd_for_type(I64Type())
+
+            values = variable.initial_value.values
+            f_values = ", ".join(map(str, values))
+
+            context.fd.write(f"{symbol_name}: \n\t{ddd} {f_values}\n")
+            assert variable.initial_value.default == 0, "Not implemented"
+            if variable.initial_value.default == 0:
+                # Zero initialized symbol
+                # TODO(@kirillzhosul): Alignment
+                assert variable.type.elements_count, "Got incomplete array type"
+                element_size = variable.type.element_type.size_in_bytes
+                bytes_total = element_size * variable.type.elements_count
+                bytes_taken = len(values) * element_size
+                bytes_free = bytes_total - bytes_taken
+                context.fd.write(f"\t.zero {bytes_free}\n")
+
+        case _:
+            msg = f"Has no known initializer codegen logic for type {variable.type}"
+            raise ValueError(msg)
+
+
+def _get_ddd_for_type(t: PrimitiveType) -> str:
+    """Get Data Definition Directive for type based on byte size."""
+    type_size = t.size_in_bytes
+    if type_size <= 1:
+        return ".byte"
+    if type_size <= 2:
+        return ".half"
+    if type_size <= 4:
+        return ".word"
+    if type_size <= 8:
+        return ".quad"
+    msg = f"Cannot get DDD for symbol of type {t}, max byte size is capped"
+    raise ValueError(msg)
 
 
 def ipc_syscall_macos(
@@ -410,12 +475,35 @@ def function_begin_with_prologue(  # noqa: PLR0913
             continue
 
         current_offset = local_offsets.offsets[variable.name]
-        if initial_value != 0:
-            context.write(f"mov X0, #{initial_value}")
-            context.write(f"str X0, [X29, -{current_offset}]")
-        else:
-            # wzr for 32 bits later
-            context.write(f"str XZR, [X29, -{current_offset}]")
+        _write_initializer_for_stack_variable(
+            context,
+            initial_value,
+            variable.type,
+            current_offset,
+        )
+
+
+def _write_initializer_for_stack_variable(
+    context: AARCH64CodegenContext,
+    initial_value: int | VariableIntArrayInitializerValue,
+    var_type: Type,
+    offset: int,
+) -> None:
+    if initial_value == 0:
+        # wzr for 32 bits later
+        context.write(f"str XZR, [X29, -{offset}]")
+
+    if isinstance(initial_value, VariableIntArrayInitializerValue):
+        assert isinstance(var_type, ArrayType)
+        for i, value in enumerate(initial_value.values):
+            element_relative_offset = var_type.get_index_offset(i)
+            context.write(f"mov X0, #{value}")
+            context.write(f"str X0, [X29, -{offset - element_relative_offset}]")
+        return
+
+    # Default int initializer
+    context.write(f"mov X0, #{initial_value}")
+    context.write(f"str X0, [X29, -{offset}]")
 
 
 def function_end_with_epilogue(
