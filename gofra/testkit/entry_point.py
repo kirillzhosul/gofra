@@ -67,7 +67,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
             text="Unable to infer compilation target due to no fallback for current operating system",
         )
         sys.exit(1)
-    start_time = time.monotonic_ns()
+    start_time = time.perf_counter_ns()
     test_matrix = evaluate_test_matrix_threaded(
         test_paths,
         args=args,
@@ -85,7 +85,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
             if test.artifact_path:
                 test.artifact_path.unlink()
 
-    time_taken = (time.monotonic_ns() - start_time) / NANOS_TO_SECONDS
+    time_taken = (time.perf_counter_ns() - start_time) / NANOS_TO_SECONDS
     cli_message(
         level="INFO",
         text=f"Completed testkit run for target '{target.triplet}' with {len(test_paths)} cases in {time_taken:.2f}s. (avg {(time_taken / len(test_paths)) if test_paths else 0:.2f}s.)",

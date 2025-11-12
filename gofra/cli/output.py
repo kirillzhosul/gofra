@@ -27,3 +27,8 @@ def cli_message(level: MessageLevel, text: str, *, verbose: bool = True) -> None
         f"{color_mapping.get(level, CLIColor.RESET)}[{level}] {text}{CLIColor.RESET}",
         file=fd,
     )
+
+
+def cli_linter_warning(text: str, *, verbose: bool = True) -> None:
+    """Wrap `cli_message` for easy grep-ing for warnings emitted for user."""
+    return cli_message("WARNING", text, verbose=verbose)

@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Literal, assert_never
 
 from gofra.types.composite.array import ArrayType
@@ -72,3 +73,12 @@ def _try_unwrap_array_element_type(x: Type) -> Type:
     if isinstance(x, ArrayType):
         return x.element_type
     return x
+
+
+def is_typestack_same(a: Sequence[Type], b: Sequence[Type]) -> bool:
+    if len(a) != len(b):
+        return False
+    return all(
+        is_types_same(a, b, strategy="strict-same-type")
+        for a, b in zip(a, b, strict=True)
+    )

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, assert_never
+from typing import TYPE_CHECKING, Literal, NamedTuple, assert_never
 
-from gofra.cli.output import cli_message
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import OperatorType
-from gofra.hir.variable import VariableStorageClass
+from gofra.hir.variable import Variable, VariableStorageClass
 from gofra.parser.exceptions import (
     ParserEntryPointFunctionModifiersError,
     ParserNoEntryFunctionError,
@@ -17,8 +16,13 @@ from gofra.typecheck.errors.entry_point_return_type_mismatch import (
     EntryPointReturnTypeMismatchTypecheckError,
 )
 from gofra.typecheck.errors.return_value_missing import ReturnValueMissingTypecheckError
+from gofra.typecheck.static_linter import (
+    lint_stack_memory_retval,
+    lint_typecast_same_type,
+    lint_unused_function_local_variables,
+)
 from gofra.types import Type
-from gofra.types.comparison import is_types_same
+from gofra.types.comparison import is_types_same, is_typestack_same
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from gofra.types.composite.structure import StructureType
@@ -26,6 +30,7 @@ from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.floats import F64Type
 from gofra.types.primitive.integers import I64Type
+from gofra.types.primitive.void import VoidType
 
 from ._context import TypecheckContext
 from .exceptions import (
@@ -36,7 +41,7 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from gofra.hir.function import Function
     from gofra.hir.module import Module
@@ -48,37 +53,32 @@ if TYPE_CHECKING:
 # Traces each operation on stack to search bugs in typechecker
 DEBUG_TRACE_TYPESTACK = False
 
-# Emit an warning if doing type cast from one type to exact same type
-WARN_ON_SAME_TYPECAST_STRICT = True
+
+class EmulatedTypeBlock(NamedTuple):
+    types: Sequence[Type]
+    reason: Literal["end-of-block", "early-return"]
+    references_variables: Mapping[str, Variable]
 
 
 def validate_type_safety(
     module: Module,
+    *,
+    strict_expect_validate_entry_point: bool = True,
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
-    if GOFRA_ENTRY_POINT not in module.functions:
-        raise ParserNoEntryFunctionError
+    functions = list(module.functions.values())
+    if strict_expect_validate_entry_point:
+        if GOFRA_ENTRY_POINT not in module.functions:
+            raise ParserNoEntryFunctionError
 
-    # TODO(@kirillzhosul): these parser errors comes from legacy entry point validation, must be reworked later - https://github.com/kirillzhosul/gofra/issues/28
-    entry_point = module.functions[GOFRA_ENTRY_POINT]
-    if entry_point.is_external or entry_point.is_inline:
-        raise ParserEntryPointFunctionModifiersError
+        entry_point = module.functions[GOFRA_ENTRY_POINT]
 
-    if entry_point.has_return_value() and not isinstance(
-        entry_point.return_type,
-        I64Type,
-    ):
-        raise EntryPointReturnTypeMismatchTypecheckError(
-            return_type=entry_point.return_type,
-        )
+        _validate_entry_point_signature(entry_point)
+        functions += [entry_point]
 
-    if entry_point.parameters:
-        raise EntryPointParametersMismatchTypecheckError(
-            parameters=entry_point.parameters,
-        )
-
-    for function in (*module.functions.values(), entry_point):
+    for function in functions:
         if function.is_external:
+            # Skip symbols that are has no compile-time known executable operators as have nothing to typecheck
             continue
         validate_function_type_safety(
             function=function,
@@ -91,7 +91,7 @@ def validate_function_type_safety(
     module: Module,
 ) -> None:
     """Emulate and validate function type safety inside."""
-    emulated_type_stack, _ = emulate_type_stack_for_operators(
+    emulated_type_stack, _, references_variables = emulate_type_stack_for_operators(
         operators=function.operators,
         module=module,
         initial_type_stack=list(function.parameters),
@@ -100,40 +100,18 @@ def validate_function_type_safety(
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
 
+    lint_unused_function_local_variables(function, references_variables)
     if not function.has_return_value() and emulated_type_stack:
         # function must not return any
         raise TypecheckFunctionTypeContractOutViolatedError(
             function=function,
             type_stack=list(emulated_type_stack),
         )
+
     if function.has_return_value():
-        if len(emulated_type_stack) == 0:
-            raise ReturnValueMissingTypecheckError(owner=function)
-
-        if len(emulated_type_stack) > 1:
-            msg = f"Ambiguous stack size at function end in {function.name} at {function.defined_at}"
-            raise ValueError(msg)
-
         retval_t = emulated_type_stack[0]
-        if not is_types_same(
-            a=retval_t,
-            b=function.return_type,
-            strategy="strict-same-type",
-        ):
-            # type mismatch.
-            raise TypecheckFunctionTypeContractOutViolatedError(
-                function=function,
-                type_stack=list(emulated_type_stack),
-            )
-
-        if (
-            isinstance(retval_t, PointerType)
-            and retval_t.memory_location == PointerMemoryLocation.STACK
-        ):
-            cli_message(
-                "WARNING",
-                f"""Returning an pointer from function that has stack memory location inside function '{function.name}' defined at {function.defined_at}!""",
-            )
+        _validate_retval_stack(function, retval_t, emulated_type_stack)
+        lint_stack_memory_retval(function, retval_t)
 
 
 def emulate_type_stack_for_operators(
@@ -142,7 +120,7 @@ def emulate_type_stack_for_operators(
     initial_type_stack: Sequence[Type],
     current_function: Function,
     blocks_idx_shift: int = 0,
-) -> tuple[Sequence[Type], Literal["end-of-block", "early-return"]]:
+) -> EmulatedTypeBlock:
     """Emulate and return resulting type stack from given operators.
 
     Functions are provided so calling it will dereference new emulation type stack.
@@ -151,6 +129,7 @@ def emulate_type_stack_for_operators(
         emulated_stack_types=list(initial_type_stack),
     )
 
+    references_variables: Mapping[str, Variable] = {}  # merge into context?
     idx_max, idx = len(operators), 0
     while idx < idx_max:
         operator, idx = operators[idx], idx + 1
@@ -172,14 +151,17 @@ def emulate_type_stack_for_operators(
 
                 assert operators[jumps_to_idx].type == OperatorType.CONDITIONAL_END
 
-                type_stack, reason = emulate_type_stack_for_operators(
-                    operators=operators[idx:jumps_to_idx],
-                    module=module,
-                    initial_type_stack=context.emulated_stack_types[::],
-                    blocks_idx_shift=blocks_idx_shift + idx,
-                    current_function=current_function,
+                type_stack, reason, block_references_variables = (
+                    emulate_type_stack_for_operators(
+                        operators=operators[idx:jumps_to_idx],
+                        module=module,
+                        initial_type_stack=context.emulated_stack_types[::],
+                        blocks_idx_shift=blocks_idx_shift + idx,
+                        current_function=current_function,
+                    )
                 )
 
+                references_variables |= block_references_variables
                 if reason != "early-return" and not is_typestack_same(
                     type_stack,
                     context.emulated_stack_types,
@@ -190,6 +172,8 @@ def emulate_type_stack_for_operators(
                         stack_before_block=context.emulated_stack_types,
                         stack_after_block=type_stack,
                     )
+
+                # TODO(@kirillzhosul): validate return stack if got early-return
 
                 # Skip this part as we typecheck below and acquire type stack
                 idx = jumps_to_idx
@@ -206,31 +190,33 @@ def emulate_type_stack_for_operators(
                 context.push_types(string_ptr, I64Type())
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(operator.operand, str)
-                variable = current_function.variables.get(operator.operand)
-                if variable is None:
-                    variable = module.variables.get(operator.operand)
-                    if variable is None:
-                        msg = f"Typechecker expect variable is known at module level or function level but it is not found in both (variable name - {operator.operand}"
-                        raise ValueError(msg)
-                t = variable.type
+                varname = operator.operand
+                variable = {**module.variables, **current_function.variables}[varname]
+
+                # Track usages of each variable
+                references_variables[varname] = variable
 
                 memory_location = {
                     VariableStorageClass.STACK: PointerMemoryLocation.STACK,
                     VariableStorageClass.STATIC: PointerMemoryLocation.STATIC,
                 }[variable.storage_class]
 
-                context.push_types(
-                    PointerType(
-                        points_to=t,
-                        memory_location=memory_location,
-                    ),
+                t = variable.type
+                ptr = PointerType(
+                    points_to=t,
+                    memory_location=memory_location,
                 )
+                context.push_types(ptr)
             case OperatorType.PUSH_INTEGER:
                 context.push_types(I64Type())
             case OperatorType.PUSH_FLOAT:
                 context.push_types(F64Type())
             case OperatorType.FUNCTION_RETURN:
-                return context.emulated_stack_types, "early-return"
+                return EmulatedTypeBlock(
+                    context.emulated_stack_types,
+                    reason="early-return",
+                    references_variables=references_variables,
+                )
             case OperatorType.FUNCTION_CALL:
                 assert isinstance(operator.operand, str)
 
@@ -329,11 +315,7 @@ def emulate_type_stack_for_operators(
                     revealed_type = revealed_type.element_type
                 context.push_types(revealed_type)
             case OperatorType.STACK_COPY:
-                context.raise_for_enough_arguments(
-                    operator,
-                    required_args=1,
-                )
-
+                context.raise_for_enough_arguments(operator, required_args=1)
                 argument_type = context.pop_type_from_stack()
                 context.push_types(argument_type, argument_type)
             case OperatorType.COMPARE_EQUALS | OperatorType.COMPARE_NOT_EQUALS:
@@ -375,10 +357,7 @@ def emulate_type_stack_for_operators(
                 )
                 context.push_types(I64Type())
             case OperatorType.STACK_SWAP:
-                context.raise_for_enough_arguments(
-                    operator,
-                    required_args=2,
-                )
+                context.raise_for_enough_arguments(operator, required_args=2)
                 b, a = (
                     context.pop_type_from_stack(),
                     context.pop_type_from_stack(),
@@ -410,20 +389,13 @@ def emulate_type_stack_for_operators(
             case OperatorType.STATIC_TYPE_CAST:
                 assert isinstance(operator.operand, Type)
                 to_type_cast = operator.operand
-                context.raise_for_enough_arguments(
-                    operator,
-                    required_args=1,
-                )
+                context.raise_for_enough_arguments(operator, required_args=1)
                 previous_type = context.pop_type_from_stack()
-                if is_types_same(
-                    previous_type,
-                    to_type_cast,
-                    strategy="strict-same-type",
-                ):
-                    cli_message(
-                        "WARNING",
-                        f"Redundant static type cast from `{previous_type}` to `{to_type_cast}` at {operator.token.location} (e.g type is strictly same so it is considered as redundant)",
-                    )
+                lint_typecast_same_type(
+                    t_from=previous_type,
+                    t_to=to_type_cast,
+                    at=operator.token.location,
+                )
                 context.push_types(to_type_cast)
             case OperatorType.STRUCT_FIELD_OFFSET:
                 context.raise_for_enough_arguments(operator, required_args=1)
@@ -452,13 +424,50 @@ def emulate_type_stack_for_operators(
             case _:
                 assert_never(operator.type)
 
-    return context.emulated_stack_types, "end-of-block"
-
-
-def is_typestack_same(a: Sequence[Type], b: Sequence[Type]) -> bool:
-    if len(a) != len(b):
-        return False
-    return all(
-        is_types_same(a, b, strategy="strict-same-type")
-        for a, b in zip(a, b, strict=True)
+    return EmulatedTypeBlock(
+        context.emulated_stack_types,
+        reason="end-of-block",
+        references_variables=references_variables,
     )
+
+
+def _validate_entry_point_signature(entry_point: Function) -> None:
+    # TODO(@kirillzhosul): these parser errors comes from legacy entry point validation, must be reworked later - https://github.com/kirillzhosul/gofra/issues/28
+    if entry_point.is_external or entry_point.is_inline:
+        raise ParserEntryPointFunctionModifiersError
+
+    retval_t = entry_point.return_type
+    if entry_point.has_return_value() and not isinstance(retval_t, I64Type):
+        raise EntryPointReturnTypeMismatchTypecheckError(return_type=retval_t)
+
+    if entry_point.parameters:
+        raise EntryPointParametersMismatchTypecheckError(
+            parameters=entry_point.parameters,
+        )
+
+
+def _validate_retval_stack(
+    function: Function,
+    retval_t: Type,
+    emulated_type_stack: Sequence[Type],
+) -> None:
+    assert not isinstance(retval_t, VoidType), (
+        f"{_validate_retval_stack.__name__} must accept non-void return type"
+    )
+    if len(emulated_type_stack) == 0:
+        raise ReturnValueMissingTypecheckError(owner=function)
+
+    if len(emulated_type_stack) > 1:
+        msg = f"Ambiguous stack size at function end in {function.name} at {function.defined_at}"
+        raise ValueError(msg)
+
+    if not is_types_same(
+        a=retval_t,
+        b=function.return_type,
+        strategy="strict-same-type",
+    ):
+        # type mismatch.
+        raise TypecheckFunctionTypeContractOutViolatedError(
+            function=function,
+            type_stack=list(emulated_type_stack),
+        )
