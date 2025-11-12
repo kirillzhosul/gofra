@@ -17,20 +17,17 @@
 // Consume all character bytes from input buffer (e.g `input_fd`)
 // Use as safety method as reading and letting some character leak through 
 func void input_exhaust_buffer[]
-    var buffer char[1]
-
-    // TODO: add proper initializer as language feature
-    &buffer[0] ' ' !<
+    var buffer char = 1;
 
     // TODO: Allow to compare non-integer types (e.g char)
     while 
-        buffer[0] typecast int 
+        buffer typecast int 
         '\n'
         !=
     do
             STD_IN
             &buffer
-            sizeof buffer
+            1
         call input_fd drop
         // TODO: Probably we may break from this loop if read zero bytes, but there is no break construction rn
     end

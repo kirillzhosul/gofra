@@ -204,10 +204,16 @@ end
 func void print_int64[int]
     STD_OUT swap call print_int64_fd
 end
-
+// Print given number as hexadecimal into standard console output
 func void print_int64_hex[int]
     STD_OUT swap true true call print_int64_hex_fd
 end
 
+
+// Print given pointer (TODO: Requires static cast) as hex-addr
+func void print_ptr[*void]
+    typecast int 
+    call print_int64_hex
+end
 
 #define print_int print_int64 // Alias as default int is 64 bits

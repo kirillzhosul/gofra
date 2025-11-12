@@ -77,8 +77,8 @@ end
 // Factorial (n!) of value
 func int factorial[int]
     var n int; &n swap !<;
-    var r int = 1;
-    var i int = 2;
+    var r = 1;
+    var i = 2;
 
     while i n <= do
         &r r i * !<
