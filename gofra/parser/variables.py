@@ -4,6 +4,7 @@ from gofra.hir.variable import (
     VariableIntArrayInitializerValue,
     VariableScopeClass,
     VariableStorageClass,
+    VariableStringInitializerValue,
 )
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import Token, TokenType
@@ -28,6 +29,7 @@ from gofra.parser.types import parser_type_from_tokenizer
 from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
+from gofra.types.composite.string import StringType
 from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
@@ -192,9 +194,9 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         and not is_reference
         and not struct_field_accessor
         and array_index_at is None
+        and isinstance(variable.type, (BoolType, I64Type, CharType))
     ):
         # Simple unwrapping for constants
-        assert isinstance(variable.type, (BoolType, I64Type, CharType))
         assert isinstance(variable.initial_value, int)
         context.push_new_operator(
             type=OperatorType.PUSH_INTEGER,
@@ -305,11 +307,21 @@ def _consume_variable_initializer(
     context: ParserContext,
     var_t: Type | None,
     varname_token: Token,
-) -> tuple[int | VariableIntArrayInitializerValue, Type]:
+) -> tuple[
+    int | VariableIntArrayInitializerValue | VariableStringInitializerValue,
+    Type,
+]:
     if var_t is None:
         var_t = _infer_auto_variable_type_from_initializer(context, varname_token)
 
     match var_t:
+        case PointerType(points_to=StringType()):
+            string_token = context.next_token()
+            if string_token.type != TokenType.STRING:
+                msg = f"Expected STRING for initializer (type {var_t}), but got {string_token.type.name} at {string_token.location}"
+                raise ValueError(msg)
+            string_raw = str(string_token.text[1:-1])
+            return VariableStringInitializerValue(string=string_raw), var_t
         case I64Type() | CharType():
             value_token = context.next_token()
             if value_token.type not in (TokenType.INTEGER, TokenType.CHARACTER):
@@ -399,6 +411,9 @@ def _infer_auto_variable_type_from_initializer(
 
     if context.peek_token().type == TokenType.CHARACTER:
         return CharType()
+
+    if context.peek_token().type == TokenType.STRING:
+        return PointerType(points_to=StringType())
 
     if context.peek_token().type == TokenType.LBRACKET:
         lbracket = context.next_token()

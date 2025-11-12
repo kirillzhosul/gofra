@@ -30,7 +30,7 @@ class Variable[T: Type]:
 
     # Value which this variables is filled by default
     # None means it has not initialized and must be zero-initialized
-    initial_value: "VariableIntArrayInitializerValue | int | None" = None
+    initial_value: "VariableIntArrayInitializerValue | VariableStringInitializerValue | int | None" = None
 
     @property
     def is_global_scope(self) -> bool:
@@ -80,3 +80,13 @@ class VariableIntArrayInitializerValue:
 
     default: int
     values: list[int]
+
+
+@dataclass(frozen=True, slots=True)
+class VariableStringInitializerValue:
+    """HIR value parsed from initializer for string (e.g *string / string).
+
+    Variable must be initialized with this value.
+    """
+
+    string: str

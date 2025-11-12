@@ -11,8 +11,13 @@ from gofra.codegen.backends.aarch64_macos.frame import (
     restore_calee_frame,
 )
 from gofra.hir.operator import OperatorType
-from gofra.hir.variable import VariableIntArrayInitializerValue
+from gofra.hir.variable import (
+    VariableIntArrayInitializerValue,
+    VariableStringInitializerValue,
+)
 from gofra.types.composite.array import ArrayType
+from gofra.types.composite.pointer import PointerType
+from gofra.types.composite.string import StringType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
@@ -206,10 +211,6 @@ def initialize_static_data_section(
     Section is an tuple (label, data)
     Data is an string (raw ASCII) or number (zeroed memory blob)
     """
-    if static_strings:
-        context.fd.write(f".section {SYM_SECTION_CSTR}\n")
-        for name, data in static_strings.items():
-            context.fd.write(f'{name}d: .asciz "{data}"\n')
 
     bss_variables = {
         k: v for k, v in static_variables.items() if v.initial_value is None
@@ -252,7 +253,14 @@ def initialize_static_data_section(
             context.fd.write(".p2align 3\n")
             decoded_string = data.encode().decode("unicode_escape")
             length = len(decoded_string)
-            context.fd.write(f"{name}: \n.quad {name}d\n.quad {length}\n")
+            context.fd.write(f"{name}: \n\t.quad {name}d\n\t.quad {length}\n")
+
+    # Must defined after others - string initializer may forward reference them
+    # but we define them by single-pass within writing initializer
+    if static_strings:
+        context.fd.write(f".section {SYM_SECTION_CSTR}\n")
+        for name, data in static_strings.items():
+            context.fd.write(f'{name}d: .asciz "{data}"\n')
 
 
 def _write_static_segment_const_variable_initializer(
@@ -297,6 +305,12 @@ def _write_static_segment_const_variable_initializer(
                 bytes_taken = len(values) * element_size
                 bytes_free = bytes_total - bytes_taken
                 context.fd.write(f"\t.zero {bytes_free}\n")
+        case PointerType(points_to=StringType()):
+            assert isinstance(variable.initial_value, VariableStringInitializerValue)
+            string_raw = variable.initial_value.string
+            context.fd.write(
+                f"{symbol_name}: \n\t.quad {context.load_string(string_raw)}\n",
+            )
 
         case _:
             msg = f"Has no known initializer codegen logic for type {variable.type}"
@@ -489,7 +503,9 @@ def function_begin_with_prologue(  # noqa: PLR0913
 
 def _write_initializer_for_stack_variable(
     context: AARCH64CodegenContext,
-    initial_value: int | VariableIntArrayInitializerValue,
+    initial_value: int
+    | VariableIntArrayInitializerValue
+    | VariableStringInitializerValue,
     var_type: Type,
     offset: int,
 ) -> None:
@@ -504,10 +520,15 @@ def _write_initializer_for_stack_variable(
             context.write(f"mov X0, #{value}")
             context.write(f"str X0, [X29, -{offset - element_relative_offset}]")
         return
+    if isinstance(initial_value, int):
+        # Default int initializer
+        context.write(f"mov X0, #{initial_value}")
+        context.write(f"str X0, [X29, -{offset}]")
+        return
 
-    # Default int initializer
-    context.write(f"mov X0, #{initial_value}")
-    context.write(f"str X0, [X29, -{offset}]")
+    if isinstance(initial_value, VariableStringInitializerValue):  # pyright: ignore[reportUnnecessaryIsInstance]
+        msg = "Stack initializer for string is not implemented in codegen."
+        raise NotImplementedError(msg)
 
 
 def function_end_with_epilogue(

@@ -18,8 +18,8 @@ class TypeHasNoCompileTimeInitializerParserError(GofraError):
         return f"""No known initializer for type '{self.type_with_no_initializer}'!
 
 Variable '{self.varname}' defined at {self.at} has 
-type '{self.type_with_no_initializer}' has no initializer known at compile time!
-Has no known solution to initialize this variable.
+type '{self.type_with_no_initializer}' that has no initializer known at compile time!
+No known solution to initialize this variable.
 
 Consider using manual initializer logic.
 

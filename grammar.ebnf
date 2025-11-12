@@ -83,10 +83,10 @@ Letter = ? [a-Z]?;
 
 TypeExpr = [{"*"}], PrimitiveType | Identifier, ["[", [PositiveNumber], "]"];
 
-PrimitiveType = "int" | "char" | "bool" | "void";
+PrimitiveType = "int" | "char" | "bool" | "void" | "string";
 
-VariableInitializer = IntegerLiteral | CharLiteral | ("[", {IntegerLiteral | CharLiteral, {",", IntegerLiteral, CharLiteral}}, ")");
-VariableDefinition = {"var" | 'const'} | 'const' | 'var', Identifier, [TypeExpr, "=", VariableInitializer] | ["=", VariableInitializer];
+VariableInitializer = StringLiteral | IntegerLiteral | CharLiteral | ("[", {IntegerLiteral | CharLiteral, {",", IntegerLiteral, CharLiteral}}, "]");
+VariableDefinition = {"const", "var"} | "const" | "var", Identifier, [TypeExpr, "=", VariableInitializer] | ["=", VariableInitializer];
 
 PreprocessorInclude = "#include", StringLiteral, [Newline];
 PreprocessorDefinition = "#define", Identifier, {Statement}, [Newline];
