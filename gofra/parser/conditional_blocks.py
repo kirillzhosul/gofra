@@ -12,6 +12,7 @@ from gofra.parser.exceptions import (
     ParserNoWhileConditionOperatorsError,
     ParserNoWhileOrForBeforeDoError,
 )
+from gofra.types.composite.array import ArrayType
 from gofra.types.primitive.integers import I64Type
 
 
@@ -79,7 +80,7 @@ def consume_conditional_block_keyword_from_token(
             # Code below adds some syntactical sugar which is inlined here
 
             if isinstance(range_to_qualifier, Variable):
-                # From known int to variable
+                # From known int to variable value / array variable size
                 step = 1
             else:
                 # ` a TO b` or `b TO a` if range is from greater to least
@@ -216,13 +217,14 @@ def parse_for_range_qualifier(
         if not range_to_qualifier:
             msg = f"Unknown variable `{range_to_qualifier_name}` in `for-loop` block."
             raise ValueError(msg)
-        if not isinstance(range_to_qualifier.type, I64Type):
-            msg = f"Expected `{range_to_qualifier_name}` to be an I64 type in `for-loop` block, as it used as range qualifier bounds."
+        if not isinstance(range_to_qualifier.type, (I64Type, ArrayType)):
+            msg = f"Expected `{range_to_qualifier_name}` to be an I64/Array type but got {range_to_qualifier.type} in `for-loop` block at {in_token.location}, as it used as range qualifier bounds."
             raise ValueError(msg)
     else:
         context.expect_token(TokenType.INTEGER)
         raise AssertionError("Unreachable")  # noqa: EM101
 
+    print(range_to_qualifier)
     return iterator, (range_from_qualifier, range_to_qualifier)
 
 
@@ -246,7 +248,15 @@ def unwrap_for_operators_syntactical_sugar(  # noqa: PLR0913
     operators_read_sint64_variable(context, token, variable=iterator)
 
     if isinstance(b, Variable):
-        operators_read_sint64_variable(context, token, variable=b)
+        if isinstance(b.type, I64Type):
+            operators_read_sint64_variable(context, token, variable=b)
+        else:
+            assert isinstance(b.type, ArrayType)
+            context.push_new_operator(
+                OperatorType.PUSH_INTEGER,
+                token=token,
+                operand=b.type.elements_count,
+            )
     else:
         context.push_new_operator(
             OperatorType.PUSH_INTEGER,

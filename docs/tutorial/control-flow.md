@@ -72,8 +72,6 @@ while → (condition check) → do → end → while (loop back)
 
 The `for` loop is under the hood is same/using `while` construction but adds syntactical sugar for auto-constraints and counters (iterator)
 
-Planned features: Soon, there will be feature for using array as an `in` qualifier and `0..array` respectfully
-
 At entering the loop, iterator variable will be set to low threshold of range
 Range is exclusive (not inclusive)
 #### Example
@@ -86,10 +84,15 @@ for i in 10..0 do
     // i will be [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 end
 
-var x int = 5;
+var x = 5;
 for i in 0..x do // variables is allowed only on RHS for now, TODO
     // Step always will be 1, reversed iterations is not possible!
     // i will be [0, 1, 2, 3, 4]
+end
+
+var xs = [5, 6, 7];
+for i in 0..xs do // iterate up to size of xs
+    // i will be [0, 1, 2]
 end
 ```
 
