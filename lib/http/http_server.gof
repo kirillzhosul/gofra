@@ -77,7 +77,8 @@ end
 
 // Bootstrap HTTP server
 func void http_server_start[*HTTPServer]
-    var server *HTTPServer; server swap !<
+    var server *HTTPServer; &server swap !<
+
     server call _http_server_open_socket
     server call _http_server_bind_socket
     server call _http_server_listen_socket
