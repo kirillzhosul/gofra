@@ -2,11 +2,16 @@ from gofra.hir.operator import OperatorType
 from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from gofra.lexer.tokens import Token, TokenType
 from gofra.parser._context import ParserContext
+from gofra.parser.errors.type_has_no_compile_time_initializer import (
+    TypeHasNoCompileTimeInitializerParserError,
+)
 from gofra.parser.exceptions import ParserVariableNameAlreadyDefinedAsVariableError
 from gofra.parser.types import parser_type_from_tokenizer
+from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.structure import StructureType
+from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 
 
@@ -19,7 +24,12 @@ def unpack_variable_definition_from_token(
         raise ValueError(msg)
     assert isinstance(varname_token.value, str)
 
-    typename = parser_type_from_tokenizer(context)
+    var_t = None  # Infer by default
+    if context.peek_token().type == TokenType.ASSIGNMENT:
+        pass
+    else:
+        var_t = parser_type_from_tokenizer(context)
+
     varname = varname_token.text
 
     if varname in context.variables:
@@ -48,24 +58,18 @@ def unpack_variable_definition_from_token(
 
     if context.peek_token().type == TokenType.ASSIGNMENT:
         _ = context.next_token()  # consume =
-        value_token = context.next_token()
-        if value_token.type != TokenType.INTEGER:
-            msg = f"Expected an integer for assignment operation, but got {value_token.type} as {value_token.location}"
-            raise ValueError(msg)
-        if type(typename) not in (I64Type,):
-            # TODO(@kirillzhosul): Allow more complex datatypes as initializers
-            msg = "Assignment is allowed only for integer types for now."
-            raise ValueError(msg)
 
-        assert isinstance(value_token.value, int)
-        initial_value = value_token.value
-        if initial_value.bit_count() > typename.size_in_bytes * 8:
-            msg = f"Default value is to big for that type ({typename}) at {value_token.location}"
-            raise ValueError(msg)
+        # Parse value and infer type from that
+        initial_value, var_t = _consume_variable_initializer(
+            context,
+            var_t,
+            varname_token=varname_token,
+        )
 
+    assert var_t, "Must emit infer error"
     context.variables[varname] = Variable(
         name=varname,
-        type=typename,
+        type=var_t,
         defined_at=varname_token.location,
         scope_class=scope_class,
         storage_class=storage_class,
@@ -217,3 +221,54 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             token=token,
         )
     return True
+
+
+def _consume_variable_initializer(
+    context: ParserContext,
+    var_t: Type | None,
+    varname_token: Token,
+) -> tuple[int, Type]:
+    if var_t is None:
+        var_t = _infer_auto_variable_type_from_initializer(context, varname_token)
+
+    match var_t:
+        case I64Type() | CharType():
+            value_token = context.next_token()
+            if value_token.type not in (TokenType.INTEGER, TokenType.CHARACTER):
+                msg = f"Expected INTEGER or CHARACTER for initializer (type {var_t}), but got {value_token.type.name} at {value_token.location}"
+                raise ValueError(msg)
+
+            assert isinstance(value_token.value, int)
+            initial_value = value_token.value
+
+            _validate_initial_numeric_value_fits_type(var_t, initial_value, value_token)
+            return initial_value, var_t
+        case _:
+            raise TypeHasNoCompileTimeInitializerParserError(
+                type=var_t,
+                for_variable_at=varname_token.location,
+            )
+
+
+def _validate_initial_numeric_value_fits_type(
+    t: Type,
+    value: int,
+    from_token: Token,
+) -> None:
+    if value.bit_count() > t.size_in_bytes * 8:
+        msg = f"Default value is to big for that type ({t}) at {from_token.location}"
+        raise ValueError(msg)
+
+
+def _infer_auto_variable_type_from_initializer(
+    context: ParserContext,
+    varname_token: Token,
+) -> Type:
+    if context.peek_token().type == TokenType.INTEGER:
+        return I64Type()
+
+    if context.peek_token().type == TokenType.CHARACTER:
+        return CharType()
+
+    msg = f"Unable to infer variable type from initializer for variable at {varname_token.location}, consider adding type explicitly."
+    raise ValueError(msg)

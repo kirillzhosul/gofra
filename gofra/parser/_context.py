@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from gofra.hir.function import Function
 from gofra.hir.operator import Operator, OperatorType
-from gofra.lexer.tokens import TokenType
+from gofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from gofra.types.composite.structure import StructureType
 
 if TYPE_CHECKING:
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from gofra.hir.variable import Variable
     from gofra.lexer import Token
+    from gofra.lexer.tokens import TokenType
     from gofra.types._base import Type
 
 
@@ -41,8 +42,7 @@ class PeekableTokenizer:
     def expect_token(self, type: TokenType) -> None:  # noqa: A002
         token = self.peek_token()
         if token.type != type:
-            msg = f"Expected {type.name} but got {token.type.name} at {token.location}!\n[lexer-parser-general-expectation]"
-            raise ValueError(msg)
+            raise ExpectedTokenByParserError(expected=type, got=token)
 
 
 @dataclass(frozen=False)

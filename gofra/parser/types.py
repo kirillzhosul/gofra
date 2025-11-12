@@ -42,9 +42,9 @@ def parser_type_from_tokenizer(
     # TODO(@kirillzhosul): deep pointer is not allowed
     # TODO(@kirillzhosul): distinguish array-of-pointers and pointer-to-array
     # TODO(@kirillzhosul): Type parsing is weird (especially new allow_inferring_variable_types) must be separated in complex-type parsing system ?
-    t = context.next_token()
 
-    if t.type == TokenType.STAR:
+    if context.peek_token().type == TokenType.STAR:
+        _ = context.next_token()  # Consume
         return PointerType(
             points_to=parser_type_from_tokenizer(
                 context,
@@ -52,9 +52,8 @@ def parser_type_from_tokenizer(
             ),
         )
 
-    if t.type != TokenType.IDENTIFIER:
-        msg = f"While expecting type expected identifier but got {t.type.name}"
-        raise ValueError(msg)
+    context.expect_token(TokenType.IDENTIFIER)
+    t = context.next_token()
 
     aggregated_type: Type | None = PRIMITIVE_TYPE_REGISTRY.get(t.text)
     if not aggregated_type:
