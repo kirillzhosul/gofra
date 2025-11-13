@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, NamedTuple, assert_never
 
+from gofra.cli.output import cli_message
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import Variable, VariableStorageClass
@@ -55,7 +56,11 @@ DEBUG_TRACE_TYPESTACK = False
 
 class EmulatedTypeBlock(NamedTuple):
     types: Sequence[Type]
-    reason: Literal["end-of-block", "early-return"]
+    reason: Literal[
+        "end-of-block",  # Reached its end when has no more operators
+        "early-return",  # Hit `return` (not for end-of-block)
+        "no-return-func-call",  # Called to a function which is defined as no return - imply that cannot really execute anything after that
+    ]
     references_variables: MutableMapping[str, Variable[Type]]
 
 
@@ -90,15 +95,23 @@ def validate_function_type_safety(
     module: Module,
 ) -> None:
     """Emulate and validate function type safety inside."""
-    emulated_type_stack, _, references_variables = emulate_type_stack_for_operators(
-        operators=function.operators,
-        module=module,
-        initial_type_stack=list(function.parameters),
-        current_function=function,
+
+    emulated_type_stack, reason, references_variables = (
+        emulate_type_stack_for_operators(
+            operators=function.operators,
+            module=module,
+            initial_type_stack=list(function.parameters),
+            current_function=function,
+        )
     )
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
 
+    if reason == "no-return-func-call" and not function.is_no_return:
+        cli_message(
+            "WARNING",
+            f"Function '{function.name}' defined at {function.defined_at} calls to no-return function inside no conditional blocks, consider propagate no-return attribute",
+        )
     lint_unused_function_local_variables(function, references_variables)
     if not function.has_return_value() and emulated_type_stack:
         # function must not return any
@@ -211,11 +224,17 @@ def emulate_type_stack_for_operators(
             case OperatorType.PUSH_FLOAT:
                 context.push_types(F64Type())
             case OperatorType.FUNCTION_RETURN:
-                return EmulatedTypeBlock(
+                type_block = EmulatedTypeBlock(
                     context.emulated_stack_types,
                     reason="early-return",
                     references_variables=references_variables,
                 )
+                if operators[idx:]:
+                    cli_message(
+                        "WARNING",
+                        f"Function '{current_function.name}' has operators after early-return at {operator.location}! This is unreachable code starting at {operators[idx].location}!",
+                    )
+                return type_block
             case OperatorType.FUNCTION_CALL:
                 assert isinstance(operator.operand, str)
 
@@ -231,6 +250,17 @@ def emulate_type_stack_for_operators(
                     # TODO(@kirillzhosul): Pointers are for now not type-checked at function call level
                     # so passing an *int to *char[] function is valid as they both are an pointer
 
+                if function.is_no_return:
+                    if operators[idx:]:
+                        cli_message(
+                            "WARNING",
+                            f"Function '{current_function.name}' has operators after calling no-return function '{function.name}' at {operator.location}! This is unreachable code starting at {operators[idx].location}!",
+                        )
+                    return EmulatedTypeBlock(
+                        context.emulated_stack_types,
+                        reason="no-return-func-call",
+                        references_variables=references_variables,
+                    )
                 if function.has_return_value():
                     context.push_types(function.return_type)
 

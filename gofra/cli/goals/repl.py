@@ -37,10 +37,8 @@ from gofra.typecheck.typechecker import (
     validate_type_safety,
 )
 from gofra.types._base import Type
-from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.string import StringType
-from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 
 HIST_FILE = Path("~").expanduser() / ".gofra_repl_history"

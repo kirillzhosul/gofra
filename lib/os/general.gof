@@ -8,9 +8,9 @@
 #ifdef OS_LINUX   #include "os/native/linux.gof"   #endif
 
 // Exit an program with given exit code
-#ifdef OS_LINUX   func void exit[int] call sc_exit  end #endif
-#ifdef OS_DARWIN  func void exit[int] call sc_exit  end #endif
-#ifdef OS_WINDOWS func void exit[int] call win_exit end #endif
+#ifdef OS_LINUX   no_return func void exit[int] call sc_exit  end #endif // TODO: must infer no return ?
+#ifdef OS_DARWIN  no_return func void exit[int] call sc_exit  end #endif // TODO: must infer no return ?
+#ifdef OS_WINDOWS no_return func void exit[int] call win_exit end #endif // TODO: must infer no return ?
 
 // Exit an program with error (1) exit code
-inline func void abort[] 1 call exit end
+no_return inline func void abort[] 1 call exit end

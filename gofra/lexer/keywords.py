@@ -16,6 +16,7 @@ class Keyword(Enum):
     EXTERN = auto()
     INLINE = auto()
     GLOBAL = auto()
+    NO_RETURN = auto()
 
     FUNCTION = auto()
     FUNCTION_RETURN = auto()
@@ -73,6 +74,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "func": Keyword.FUNCTION,
     "struct": Keyword.STRUCT,
     "inline": Keyword.INLINE,
+    "no_return": Keyword.NO_RETURN,
     "global": Keyword.GLOBAL,
     "sizeof": Keyword.SIZEOF,
     "var": Keyword.VARIABLE_DEFINE,

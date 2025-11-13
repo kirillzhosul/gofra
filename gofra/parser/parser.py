@@ -182,6 +182,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
     TOP_LEVEL_KEYWORD = (  # noqa: N806
         Keyword.INLINE,
         Keyword.EXTERN,
+        Keyword.NO_RETURN,
         Keyword.FUNCTION,
         Keyword.GLOBAL,
         Keyword.STRUCT,
@@ -202,7 +203,13 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
     match token.value:
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END | Keyword.FOR:
             return consume_conditional_block_keyword_from_token(context, token)
-        case Keyword.INLINE | Keyword.EXTERN | Keyword.FUNCTION | Keyword.GLOBAL:
+        case (
+            Keyword.INLINE
+            | Keyword.EXTERN
+            | Keyword.FUNCTION
+            | Keyword.GLOBAL
+            | Keyword.NO_RETURN
+        ):
             return _unpack_function_definition_from_token(context, token)
         case Keyword.FUNCTION_CALL:
             return _unpack_function_call_from_token(context, token)
@@ -293,28 +300,21 @@ def _unpack_function_definition_from_token(
     context: ParserContext,
     token: Token,
 ) -> None:
-    (
-        token,
-        function_name,
-        parameters,
-        return_type,
-        modifier_is_inline,
-        modifier_is_extern,
-        modifier_is_global,
-    ) = consume_function_definition(context, token)
+    f_header_def = consume_function_definition(context, token)
 
-    if modifier_is_extern:
+    if f_header_def.qualifiers.is_extern:
         function = Function.create_external(
-            name=function_name,
+            name=f_header_def.name,
             defined_at=token.location,
-            parameters=parameters,
-            return_type=return_type,
+            parameters=f_header_def.parameters,
+            return_type=f_header_def.return_type,
         )
+        function.is_no_return = f_header_def.qualifiers.is_no_return
         context.add_function(function)
         return
 
-    if context.name_is_already_taken(function_name):
-        msg = f"Function name {function_name} is already taken by other definition"
+    if context.name_is_already_taken(f_header_def.name):
+        msg = f"Function name {f_header_def.name} is already taken by other definition"
         raise ValueError(msg)
 
     new_context = ParserContext(
@@ -324,30 +324,32 @@ def _unpack_function_definition_from_token(
     )
 
     _parse_from_context_into_operators(context=new_context)
-    if modifier_is_inline:
+    if f_header_def.qualifiers.is_inline:
         assert not new_context.variables, "Inline functions cannot have local variables"
         function = Function.create_internal_inline(
-            name=function_name,
+            name=f_header_def.name,
             defined_at=token.location,
             operators=new_context.operators,
-            return_type=return_type,
-            parameters=parameters,
+            return_type=f_header_def.return_type,
+            parameters=f_header_def.parameters,
         )
+        function.is_no_return = f_header_def.qualifiers.is_no_return
         context.add_function(function)
         return
-    if function_name == GOFRA_ENTRY_POINT:
-        modifier_is_global = True
+    if f_header_def.name == GOFRA_ENTRY_POINT:
+        f_header_def.qualifiers.is_global = True
 
     function = Function.create_internal(
-        name=function_name,
+        name=f_header_def.name,
         defined_at=token.location,
         operators=new_context.operators,
         variables=new_context.variables,
-        parameters=parameters,
-        return_type=return_type,
-        is_global=modifier_is_global,
+        parameters=f_header_def.parameters,
+        return_type=f_header_def.return_type,
+        is_global=f_header_def.qualifiers.is_global,
         is_leaf=new_context.is_leaf_context,
     )
+    function.is_no_return = f_header_def.qualifiers.is_no_return
     context.add_function(function)
 
 

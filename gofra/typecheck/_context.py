@@ -30,7 +30,7 @@ class TypecheckContext:
     emulated_stack_types: MutableSequence[Type]
 
     def push_types(self, *types: Type) -> None:
-        """Push given types onto emulated typeS stack."""
+        """Push given types onto emulated types stack."""
         self.emulated_stack_types.extend(types)
 
     def raise_for_enough_arguments(

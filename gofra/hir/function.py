@@ -53,6 +53,11 @@ class Function:
     # just expands body of the function inside call location
     is_inline: bool
 
+    # If true, means function cannot *return*
+    # E.g is explicitly `exit` function as it must never returns
+    # Allows to treat blocks after as unreachable and perform optional DCE onto it
+    is_no_return: bool
+
     # If true, function must have empty body and it is located somewhere else and only available after linkage
     # Extern functions mostly are `C` functions (system/user defined) and call to them does jumps inside linked source binaries (dynamic libraries)
     # Code generator takes care of that calls and specifies extern function requests if needed (aggregates them for that)

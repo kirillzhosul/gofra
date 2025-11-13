@@ -65,10 +65,8 @@ type fd_t int
 // ---  Syscall Wrappers ---
 // These are the preferred way to make syscalls.
 #ifdef ARCH_ARM64
-
-
     // Terminates the current process. Does not return.
-    inline func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
+    no_return func void sc_exit[int] DARWIN_SYSCALL_EXIT syscall1 drop end
 
     // Reads from a file descriptor.
     // Signature: [fd,buf,count]

@@ -39,7 +39,7 @@ end
 
 // Print an string into standard error console stream and abort execution
 // TODO: Probably must refactored into panic system or something like that as this is not I/O responsibility
-func void eprint_fatal[*string]
+no_return func void eprint_fatal[*string]
     "FATAL: " call eprint
     call eprint
     call abort

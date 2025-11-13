@@ -14,6 +14,7 @@ Extern functions cannot have a body so they do not have `end` block (assuming th
 """
 
 from collections.abc import Generator
+from dataclasses import dataclass
 
 from gofra.lexer import Token
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
@@ -37,33 +38,44 @@ from .exceptions import (
 _ = ParserFunctionInvalidTypeError
 
 
+@dataclass
+class FunctionHeaderQualifiers:
+    is_inline: bool
+    is_extern: bool
+    is_global: bool
+    is_no_return: bool
+
+
+@dataclass
+class FunctionHeaderDefinition:
+    at: Token
+    name: str
+    parameters: list[Type]
+    return_type: Type
+
+    qualifiers: FunctionHeaderQualifiers
+
+
 def consume_function_definition(
     context: ParserContext,
     token: Token,
-) -> tuple[Token, str, list[Type], Type, bool, bool, bool]:
-    token, (qualifier_is_inline, qualifier_is_extern, qualifier_is_global) = (
-        consume_function_qualifiers(
-            context,
-            token,
-        )
-    )
+) -> FunctionHeaderDefinition:
+    token, qualifiers = consume_function_qualifiers(context, token)
     function_name, parameters, return_type = consume_function_signature(context, token)
 
-    return (
+    return FunctionHeaderDefinition(
         token,
         function_name,
         parameters,
         return_type,
-        qualifier_is_inline,
-        qualifier_is_extern,
-        qualifier_is_global,
+        qualifiers,
     )
 
 
 def consume_function_qualifiers(
     context: ParserContext,
     token: Token,
-) -> tuple[Token, tuple[bool, bool, bool]]:
+) -> tuple[Token, FunctionHeaderQualifiers]:
     """Consume parser context assuming given token is last popped, and it is a function modifier (or base function).
 
     Accepts `inline`, `extern`, `function` keywords as tokens.
@@ -76,11 +88,15 @@ def consume_function_qualifiers(
         Keyword.EXTERN,
         Keyword.FUNCTION,
         Keyword.GLOBAL,
+        Keyword.NO_RETURN,
     )
 
-    qualifier_is_extern = False
-    qualifier_is_inline = False
-    qualifier_is_global = False
+    qualifiers = FunctionHeaderQualifiers(
+        is_inline=False,
+        is_extern=False,
+        is_global=False,
+        is_no_return=False,
+    )
 
     next_token = token
     while next_token:
@@ -89,29 +105,31 @@ def consume_function_qualifiers(
 
         match next_token.value:
             case Keyword.INLINE:
-                if qualifier_is_inline:
+                if qualifiers.is_inline:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
-                qualifier_is_inline = True
+                qualifiers.is_inline = True
             case Keyword.EXTERN:
-                if qualifier_is_extern:
+                if qualifiers.is_extern:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
-                qualifier_is_extern = True
+                qualifiers.is_extern = True
             case Keyword.FUNCTION:
                 break
             case Keyword.GLOBAL:
-                if qualifier_is_global:
+                if qualifiers.is_global:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
-                qualifier_is_global = True
+                qualifiers.is_global = True
+            case Keyword.NO_RETURN:
+                qualifiers.is_no_return = True
             case _:
                 raise ParserExpectedFunctionKeywordError(token=next_token)
 
-        if qualifier_is_extern and qualifier_is_inline:
+        if qualifiers.is_extern and qualifiers.is_inline:
             raise ParserFunctionIsBothInlineAndExternalError(
                 modifier_token=next_token,
             )
@@ -120,7 +138,7 @@ def consume_function_qualifiers(
     if next_token.type != TokenType.KEYWORD or next_token.value != Keyword.FUNCTION:
         raise ParserExpectedFunctionAfterFunctionModifiersError(modifier_token=token)
 
-    return next_token, (qualifier_is_inline, qualifier_is_extern, qualifier_is_global)
+    return (next_token, qualifiers)
 
 
 def consume_function_signature(
