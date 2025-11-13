@@ -33,7 +33,9 @@ from gofra.parser.functions.parser import (
 from gofra.parser.structures import unpack_structure_definition_from_token
 from gofra.parser.typecast import unpack_typecast_from_token
 from gofra.parser.typedef import unpack_type_definition_from_token
-from gofra.parser.types import parser_type_from_tokenizer
+from gofra.parser.types import (
+    parse_concrete_type_from_tokenizer,
+)
 from gofra.parser.variables import (
     try_push_variable_reference,
     unpack_variable_definition_from_token,
@@ -122,9 +124,7 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:  #
         case TokenType.EOL | TokenType.EOF:
             return None
         case TokenType.STAR:
-            if context.is_top_level:
-                msg = "expected STAR with meaning of multiply intrinsic to be at top level."
-                raise ValueError(msg)
+            assert not context.is_top_level
             context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token=token)
             return None
         case TokenType.SEMICOLON:
@@ -250,7 +250,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
 
 
 def _unpack_sizeof_from_token(context: ParserContext, token: Token) -> None:
-    sizeof_type = parser_type_from_tokenizer(
+    sizeof_type = parse_concrete_type_from_tokenizer(
         context,
         allow_inferring_variable_types=True,
     )

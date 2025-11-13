@@ -25,7 +25,9 @@ from gofra.parser.errors.variable_with_void_type import (
     VariableCannotHasVoidTypeParserError,
 )
 from gofra.parser.exceptions import ParserVariableNameAlreadyDefinedAsVariableError
-from gofra.parser.types import parser_type_from_tokenizer
+from gofra.parser.types import (
+    parse_concrete_type_from_tokenizer,
+)
 from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
@@ -67,7 +69,7 @@ def unpack_variable_definition_from_token(
     if context.peek_token().type == TokenType.ASSIGNMENT:
         pass
     else:
-        var_t = parser_type_from_tokenizer(context)
+        var_t = parse_concrete_type_from_tokenizer(context)
 
     varname = varname_token.text
 

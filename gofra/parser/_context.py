@@ -9,6 +9,7 @@ from gofra.hir.operator import Operator, OperatorType
 from gofra.lexer import Token
 from gofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from gofra.types.composite.structure import StructureType
+from gofra.types.generics import GenericParametrizedType
 from gofra.types.registry import DEFAULT_PRIMITIVE_TYPE_REGISTRY, TypeRegistry
 
 if TYPE_CHECKING:
@@ -103,7 +104,7 @@ class ParserContext(PeekableTokenizer):
             return self.parent.get_struct(name)
         return None
 
-    def get_type(self, name: str) -> Type | None:
+    def get_type(self, name: str) -> Type | GenericParametrizedType | None:
         if name in self.types:
             return self.types[name]
         if self.parent:

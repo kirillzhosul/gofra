@@ -3,7 +3,10 @@ from gofra.parser._context import ParserContext
 from gofra.parser.errors.type_definition_already_exists import (
     TypeDefinitionAlreadyExistsError,
 )
-from gofra.parser.types import parser_type_from_tokenizer
+from gofra.parser.types import (
+    consume_generic_type_parameters,
+    parse_generic_type_alias_from_tokenizer,
+)
 
 
 def unpack_type_definition_from_token(context: ParserContext) -> None:
@@ -16,4 +19,8 @@ def unpack_type_definition_from_token(context: ParserContext) -> None:
     typename = name_token.text
     if context.get_type(typename):
         raise TypeDefinitionAlreadyExistsError(typename, name_token.location)
-    context.types[typename] = parser_type_from_tokenizer(context)
+    generic_type_params = consume_generic_type_parameters(context)
+    context.types[typename] = parse_generic_type_alias_from_tokenizer(
+        context,
+        generic_type_params=generic_type_params,
+    )

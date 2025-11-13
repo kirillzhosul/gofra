@@ -3,7 +3,9 @@ from typing import TYPE_CHECKING
 from gofra.lexer.keywords import Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
-from gofra.parser.types import parser_type_from_tokenizer
+from gofra.parser.types import (
+    parse_concrete_type_from_tokenizer,
+)
 from gofra.types.composite.structure import StructureType
 
 if TYPE_CHECKING:
@@ -44,7 +46,7 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
             msg = f"Expected structure field name at {field_name_token.location} to be an identifier but got {field_name_token.type.name}"
             raise ValueError(msg)
         field_name = field_name_token.text
-        field_type = parser_type_from_tokenizer(context)
+        field_type = parse_concrete_type_from_tokenizer(context)
         fields_ordering.append(field_name)
         fields[field_name] = field_type
 

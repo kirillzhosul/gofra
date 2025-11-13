@@ -1,4 +1,5 @@
 from gofra.types.composite.string import StringType
+from gofra.types.generics import GenericParametrizedType
 from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
@@ -7,7 +8,7 @@ from gofra.types.primitive.void import VoidType
 from ._base import Type
 
 
-class TypeRegistry(dict[str, Type]):
+class TypeRegistry(dict[str, Type | GenericParametrizedType]):
     def copy(self) -> "TypeRegistry":
         return TypeRegistry(super().copy())
 

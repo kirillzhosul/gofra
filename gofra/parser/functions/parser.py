@@ -19,7 +19,9 @@ from gofra.lexer import Token
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
-from gofra.parser.types import parser_type_from_tokenizer
+from gofra.parser.types import (
+    parse_concrete_type_from_tokenizer,
+)
 from gofra.types import Type
 
 from .exceptions import (
@@ -129,7 +131,7 @@ def consume_function_signature(
 
     Returns function name and signature types (`in` and `out).
     """
-    type_contract_out = parser_type_from_tokenizer(context)
+    type_contract_out = parse_concrete_type_from_tokenizer(context)
 
     name_token = context.next_token()
 
@@ -154,7 +156,7 @@ def consume_function_parameters(context: ParserContext) -> list[Type]:
     while token := context.peek_token():
         if token.type == TokenType.RBRACKET:
             break
-        parameters.append(parser_type_from_tokenizer(context))
+        parameters.append(parse_concrete_type_from_tokenizer(context))
         t = context.peek_token()
         if t.type == TokenType.RBRACKET:
             break
