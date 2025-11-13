@@ -39,6 +39,7 @@ from gofra.typecheck.typechecker import (
 from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
+from gofra.types.composite.string import StringType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 
@@ -129,7 +130,7 @@ def _tuck_definition_stmts_for_loader(
 ) -> MutableSequence[str]:
     leftover: list[str] = []
     for line in from_:
-        if line.startswith(("var", "func", "#include")):
+        if line.startswith(("var", "func", "type", "const", "#include")):
             to.append(line)
             continue
         leftover.append(line)
@@ -283,46 +284,30 @@ def _assemble_preview_expr_from_types(
         # Display pointer as hex-address
 
         ptr_format_str = f'"Addr-of `{head_t}`: "'
-        if _type_char_array_ptr_len(head_t):
+        if isinstance(head_t.points_to, StringType):
             str_format_str = '"String-view: `"'
-            expr.append("copy")
-            expr.append(f"{ptr_format_str} print")
-            expr.append("typecast int; print_int64_hex")
-            expr.append('"\\n" print')
-            expr.append(f"{str_format_str} print")
-            expr.append(f"{_type_char_array_ptr_len(head_t)} print")
-            expr.append('"`" print')
-
+            print("...str...")
+            expr.extend(
+                [
+                    "copy",
+                    f"{ptr_format_str} call print",
+                    "typecast int; call print_int64_hex",  # Addr-of
+                    '"\\n" print',
+                    f"{str_format_str} print",
+                    "print",  # Actual string view
+                    '"`" print',
+                ],
+            )
         else:
             expr.append(f"{ptr_format_str} print")
             expr.append("typecast int; print_int64_hex")
 
     elif isinstance(head_t, I64Type):
-        is_possibly_string = (
-            types
-            and isinstance(types[-1], PointerType)
-            and _type_char_array_ptr_len(types[-1])
-        )
-        if is_possibly_string:
-            # String
-            expr.append("print")
-            types.pop()
-        else:
-            # Integer
-            expr.append("print_int")
+        # Integer
+        expr.append("print_int")
 
     while types:
         types.pop()
         expr.append("drop")
 
     return expr
-
-
-def _type_char_array_ptr_len(t: PointerType) -> int:
-    if isinstance(t.points_to, ArrayType) and isinstance(
-        t.points_to.element_type,
-        CharType,
-    ):
-        return t.points_to.elements_count
-
-    return 0
