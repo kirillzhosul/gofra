@@ -140,9 +140,9 @@ func void print_int64_hex_fd[int, int, bool, bool]
             return
         end
 
-        &print_int64_buf[0] '0'  !<
+        &print_int64_hex_buf[0] '0'  !<
 
-        &str_view.data &print_int64_buf !<
+        &str_view.data &print_int64_hex_buf !<
         &str_view.len 1 !<
 
         fd &str_view
@@ -191,7 +191,7 @@ func void print_int64_hex_fd[int, int, bool, bool]
 
     while idx 0 >= do
         // Print current symbol one-by-one from right to left
-        &str_view.data &print_int64_buf[idx] !<
+        &str_view.data &print_int64_hex_buf[idx] !<
         &str_view.len 1 !<
 
         fd &str_view
