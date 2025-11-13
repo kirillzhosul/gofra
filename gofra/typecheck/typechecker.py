@@ -78,12 +78,12 @@ def validate_type_safety(
         entry_point = module.functions[GOFRA_ENTRY_POINT]
 
         _validate_entry_point_signature(entry_point)
-        functions += [entry_point]
 
     for function in functions:
         if function.is_external:
             # Skip symbols that are has no compile-time known executable operators as have nothing to typecheck
             continue
+
         validate_function_type_safety(
             function=function,
             module=module,
