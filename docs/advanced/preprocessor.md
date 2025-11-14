@@ -53,7 +53,7 @@ You can use `-D` flag to define an macro from CLI which is useful for something 
 ### Definition checking at preprocessor stage
 You can use `#ifdef`, `#ifndef` and `#endif` for checking definition of an macro
 ```gofra
-#idedef DEBUG
+#ifdef DEBUG
     // only be compiled if DEBUG macro is present
 #endif
 ```

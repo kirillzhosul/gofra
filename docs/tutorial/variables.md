@@ -11,7 +11,7 @@ Variable definitions looks like that:
 ```gofra
 
 // Primitive type
-var {name} {type}
+var {name} [type]
 
 // Composite type
 var array {type}[{size_in_elements}]
@@ -22,6 +22,41 @@ var complex **int[32] // pointer to an pointer containing array of integers
 
 It must start with `var` then `name` and `type`
 
+## Initializers
+```gofra
+var x int = 10;
+var x char = 'a'; // or 97
+var x *string = "Hello, World";
+var x int[3] = [1, 2, 3] // Has size inference and validation, rest undefined is always treated as zero initialized (even for stack)
+```
+
+## Type inference and auto types
+
+If defining an variable without an type and it has proper initializer, type may be omitted:
+```gofra
+var x = 5; // int
+var x = "test" // *string
+var x = [1, 2, 3] // int[3]
+var error = [] // Error: is it int[] or whatever else possible? Requires type explicitly
+```
+
+# Type casting at initializer
+
+For few simple types auto type casting (e.g reinterpret cast) is allowed:
+```gofra
+var x bool = 1; // Reinterpret(*) bytes as bool and allow proper type
+var x char = 97 // 'a'
+```
+
+## Constants
+
+Variable with initializer known at compile time may become const by using this syntax:
+```gofra
+const x = 5;
+const var = 10;
+```
+
+Constants are prohibited to obtain their memory address (restricted modifications) and allows optimizer to apply inlining/unwind and DCE on usage
 
 ## Primitive and composite types: differences
 

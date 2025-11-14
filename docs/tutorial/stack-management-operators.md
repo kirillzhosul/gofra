@@ -48,7 +48,7 @@ Example:
     end
     ```
     In this example, the `len` variable is initialized by the `int` value from the arguments and
-     the `ptr` variable is initilized by the `*char[]` value from the arguments.
+     the `ptr` variable is initialized by the `*char[]` value from the arguments.
 -  `copy` is useful when increasing or decreasing some value. For example:
     ```
     var number int = 0;

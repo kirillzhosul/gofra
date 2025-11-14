@@ -28,10 +28,12 @@ end
 ```
 
 ## Features
+- *Native* - Compiles to native machine code
+- *C*-like - Close to C, but has a few more high-level abstraction (`for in`, `type generics`)
+- *C FFI* - Seamless integration with **C**-FFI libraries
 - *Low-level* - Write unsafe, low-level code with direct memory access
-- *Native Compilation* - Generates optimized native assembly code
-- *Type Safety* - Validates stack usage and type correctness at compile time
-- *C FFI* - Seamless integration with **C** libraries
+- *Type System* - Validate types at compile time, has compile-time warnings (Partial generics supports, typechecker)
+- *Library* - By default has support for `math`, `random`, `network` and other libraries
 
 ## Showcase
 - Pong Game ([`examples/03_pong`](./examples/03_pong.gof))

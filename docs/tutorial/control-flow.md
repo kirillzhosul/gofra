@@ -70,7 +70,7 @@ while → (condition check) → do → end → while (loop back)
 
 ## `for` Statement
 
-The `for` loop is under the hood is same/using `while` construction but adds syntactical sugar for auto-constraints and counters (iterator)
+The `for` loop is under the hood is same/using `while` construction but adds syntactical sugar for auto-constraints and counters (iterator, iterable)
 
 At entering the loop, iterator variable will be set to low threshold of range
 Range is exclusive (not inclusive)
@@ -91,8 +91,13 @@ for i in 0..x do // variables is allowed only on RHS for now, TODO
 end
 
 var xs = [5, 6, 7];
-for i in 0..xs do // iterate up to size of xs
+for i in 0..xs do // iterate up to size of xs (index iterator)
     // i will be [0, 1, 2]
+end
+for x in xs do // iterate iterables
+    // x will be [*5, *6, *7]
+
+    // Iterates over pointer as does not have iterator in simple form - shifts array pointer
 end
 ```
 

@@ -9,3 +9,4 @@
 ### [Structures](./structures.md)
 ### [Type casts](./typecasts.md)
 ### [Arrays](../datatypes/array.md)
+### [Strings](../datatypes/string.md)
