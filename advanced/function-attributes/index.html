@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Preprocessor - Gofra</title>
+        <title>Function Attributes - Gofra</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -55,7 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/preprocessor.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/function-attributes.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -75,13 +75,21 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#preprocessor" class="nav-link">Preprocessor</a>
+            <li class="nav-item" data-bs-level="1"><a href="#function-attributes" class="nav-link">Function Attributes</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#include-system-and-include" class="nav-link">Include system and #include</a>
+            <li class="nav-item" data-bs-level="2"><a href="#no_return-attribute" class="nav-link">no_return attribute</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#macro-definitions" class="nav-link">Macro definitions</a>
+            <li class="nav-item" data-bs-level="2"><a href="#inline-attribute" class="nav-link">inline attribute</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#extern-attribute" class="nav-link">extern attribute</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#global-attribute" class="nav-link">global attribute</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -92,48 +100,66 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="preprocessor">Preprocessor</h1>
-<p>Preprocessor is an stage in within compilation (simplified) that works with lexer tokens (e.g raw text) and resolves references to preprocessor itself (e.g <code>#include</code> is preprocessor only directive and will throw an error if occurred at next possible stage: parser)</p>
-<p>All preprocessor keywords begins with <code>#</code></p>
-<h2 id="include-system-and-include">Include system and <code>#include</code></h2>
-<p>Most of the time you do not write program in a single file, or require additional code from libraries, in Gofra <code>#include</code> allows to straightforward include whole text of an file (with some additional file path resolving and include-once strategy)</p>
-<pre><code class="language-gofra">
-#include &quot;sum.gof&quot;
+<h1 id="function-attributes">Function Attributes</h1>
+<p>Function attributes in Gofra are defined like so:</p>
+<pre><code class="language-ebnf">FunctionDef = {&quot;global&quot; | &quot;extern&quot; | &quot;no_return&quot; | &quot;inline}, &quot;func&quot;, ...FunctionRestDef
+</code></pre>
+<p>Here is description of each attribute</p>
+<h2 id="no_return-attribute"><code>no_return</code> attribute</h2>
+<p>Marks function as having no possible way out, for example <code>exit</code> system function, these function must has no return value</p>
+<p>Compiler will warn you if you have function that always calls to <code>no_return</code> functions, and emit possible other warnings</p>
+<p><code>no-return</code> allows to emit general compiler warnings/errors and perform possible optimizations, mostly used in compiler library, but useful if you calling <code>exit</code> function and has nothing more</p>
+<p>This checks appears only at compile-time and has no effect on runtime</p>
+<pre><code class="language-gofra">no_return func void x[]
+    // Must has no way out
+end
 
-func void main
-    2 2 sum // sum is defined at sum.gof
+
+func void x1[]
+   call exit // warning, always calling to `no_return` function - propagate attribute
+
+   2 2 + drop // warning, unreachable code, and allows to apply optimizations like DCE
+end
+
+
+func void x1[]
+    false if == 
+        call exit // may have conditional `no_return` calls without any warning
+    end
 end
 </code></pre>
-<p>Include system is like <em>recursive</em> so all definitions of an preprocessor will be available at include side</p>
-<h3 id="module-include">Module include</h3>
-<p>In Gofra, there is convention that when you include an directory (e.g <code>#include "dir"</code>) it will search for file in that directory named same as directory itself, e.g <code>dir</code> directory will search for <code>dir/dir.gof</code> file and that is being included, that simplifies layout of directory tree of libraries</p>
-<h3 id="searching-strategy">Searching strategy</h3>
-<p>At start of search, same file or an directory (e.g directory include file) will be searched in current working file directory parent, e.g if you include something from stdlib and it include something it first looks at its own directory, not your main one
-At next, if file is not found, it will search from directory where you main file is located
-And if file is not found there also, it will search against all include search directory (e.g <code>-isd</code> CLI flag)</p>
-<p>Overview:
-1. Parent of an current file (not main)
-2. Parent of an main file
-3. Include search directories</p>
-<h2 id="macro-definitions">Macro definitions</h2>
-<p>To define an macro you can use <code>#define</code> preprocessor directive (and <code>#undef</code>) correspondingly</p>
-<pre><code class="language-gofra">#define MACRO 2 // macro containing an token 2
+<h2 id="inline-attribute"><code>inline</code> attribute</h2>
+<p>Functions that marked as <code>inline</code> has no real-call in runtime, it expands their tokens right into caller block
+These function cannot have local variables as may pollute original caller blocks</p>
+<p>TODO: For now, inline functions has lack of compiler-time checks (e.g typechecking), and may be not so safe to use, and are hard to debug, non-inlineable functions are always better now</p>
+<p>For more information what is inlining and optimization look into <a href="../optimizations/">Optimizations</a> documentation</p>
+<p>For example:</p>
+<pre><code class="language-gofra">func int reduce_pairs[int,int,int,int]
+    + + +
+end
+
+func void main[]
+    1 2 3 4 reduce_pairs // yields 10
+end
+
+// After inlining this is becomes:
+inline func int reduce_pairs[int,int,int,int]
+    + + +
+end
+
+// And main is reduced to:
+func void main[]
+    1 2 3 4 + + + // yields 10
+end
 </code></pre>
-<p>after that you are allowed to inject that macro inside your code</p>
-<pre><code class="language-gofra">MACRO MACRO + // 4 (2 2 +)
+<h2 id="extern-attribute"><code>extern</code> attribute</h2>
+<p>Functions marked with <code>extern</code> attribute will be treated as externally defined via FFI (Gofra ones, other C-FFI) for example external function <code>puts</code> from <code>libc</code> is declared as:</p>
+<pre><code class="language-gofra">extern func int _puts[*char[]]
 </code></pre>
-<h3 id="propagation-via-cli">Propagation via CLI</h3>
-<p>You can use <code>-D</code> flag to define an macro from CLI which is useful for something like debug flags
-<code>-Ddebug=1</code> (define an macro <code>debug</code> with value 1)</p>
-<h3 id="definition-checking-at-preprocessor-stage">Definition checking at preprocessor stage</h3>
-<p>You can use <code>#ifdef</code>, <code>#ifndef</code> and <code>#endif</code> for checking definition of an macro</p>
-<pre><code class="language-gofra">#ifdef DEBUG
-    // only be compiled if DEBUG macro is present
-#endif
-</code></pre>
-<h3 id="toolchain-propagated-macros-and-target-specific-macros">Toolchain propagated macros and target specific macros</h3>
-<p>By default Gofra provides two macros: <code>OS_{NAME}</code> and <code>ARCH_{NAME}</code>
-For example while compiling to Darwin on ARM64 there will be 2 macros available -&gt; <code>OS_DARWIN</code> and <code>ARCH_ARM64</code></p></div>
+<p>This means function symbol <code>_puts</code> is not available inside current object file (co-program) but will appear later at linkage step within another object file (library)</p>
+<p>For more information what is FFI look into <a href="../ffi/">FFI</a> documentation</p>
+<h2 id="global-attribute"><code>global</code> attribute</h2>
+<p>Function marked with <code>global</code> attribute are opposite to <code>extern</code> ones - they expose this function symbol to object file and allow other object files to link with it</p></div>
             </div>
         </div>
 

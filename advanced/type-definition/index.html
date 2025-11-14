@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Preprocessor - Gofra</title>
+        <title>Type definition - Gofra</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -55,7 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/preprocessor.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/type-definition.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -75,13 +75,9 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#preprocessor" class="nav-link">Preprocessor</a>
+            <li class="nav-item" data-bs-level="1"><a href="#type-definition" class="nav-link">Type definition</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#include-system-and-include" class="nav-link">Include system and #include</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#macro-definitions" class="nav-link">Macro definitions</a>
+            <li class="nav-item" data-bs-level="2"><a href="#type-aliasing" class="nav-link">Type alias(ing)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -92,48 +88,23 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="preprocessor">Preprocessor</h1>
-<p>Preprocessor is an stage in within compilation (simplified) that works with lexer tokens (e.g raw text) and resolves references to preprocessor itself (e.g <code>#include</code> is preprocessor only directive and will throw an error if occurred at next possible stage: parser)</p>
-<p>All preprocessor keywords begins with <code>#</code></p>
-<h2 id="include-system-and-include">Include system and <code>#include</code></h2>
-<p>Most of the time you do not write program in a single file, or require additional code from libraries, in Gofra <code>#include</code> allows to straightforward include whole text of an file (with some additional file path resolving and include-once strategy)</p>
-<pre><code class="language-gofra">
-#include &quot;sum.gof&quot;
+<h1 id="type-definition">Type definition</h1>
+<p>Gofra has <code>type</code> keyword that allows define types (Generic types, type aliases)</p>
+<h2 id="type-aliasing">Type alias(ing)</h2>
+<p>Type definition allows to define type alias to arbitrary data type</p>
+<pre><code class="language-gofra">type Alias = int
 
-func void main
-    2 2 sum // sum is defined at sum.gof
-end
+var x Alias = 5; // same as int
+````
+
+
+## Generics
+
+Type definitions is also used to define an generic type
+```gofra
+type Generic{T} = T
 </code></pre>
-<p>Include system is like <em>recursive</em> so all definitions of an preprocessor will be available at include side</p>
-<h3 id="module-include">Module include</h3>
-<p>In Gofra, there is convention that when you include an directory (e.g <code>#include "dir"</code>) it will search for file in that directory named same as directory itself, e.g <code>dir</code> directory will search for <code>dir/dir.gof</code> file and that is being included, that simplifies layout of directory tree of libraries</p>
-<h3 id="searching-strategy">Searching strategy</h3>
-<p>At start of search, same file or an directory (e.g directory include file) will be searched in current working file directory parent, e.g if you include something from stdlib and it include something it first looks at its own directory, not your main one
-At next, if file is not found, it will search from directory where you main file is located
-And if file is not found there also, it will search against all include search directory (e.g <code>-isd</code> CLI flag)</p>
-<p>Overview:
-1. Parent of an current file (not main)
-2. Parent of an main file
-3. Include search directories</p>
-<h2 id="macro-definitions">Macro definitions</h2>
-<p>To define an macro you can use <code>#define</code> preprocessor directive (and <code>#undef</code>) correspondingly</p>
-<pre><code class="language-gofra">#define MACRO 2 // macro containing an token 2
-</code></pre>
-<p>after that you are allowed to inject that macro inside your code</p>
-<pre><code class="language-gofra">MACRO MACRO + // 4 (2 2 +)
-</code></pre>
-<h3 id="propagation-via-cli">Propagation via CLI</h3>
-<p>You can use <code>-D</code> flag to define an macro from CLI which is useful for something like debug flags
-<code>-Ddebug=1</code> (define an macro <code>debug</code> with value 1)</p>
-<h3 id="definition-checking-at-preprocessor-stage">Definition checking at preprocessor stage</h3>
-<p>You can use <code>#ifdef</code>, <code>#ifndef</code> and <code>#endif</code> for checking definition of an macro</p>
-<pre><code class="language-gofra">#ifdef DEBUG
-    // only be compiled if DEBUG macro is present
-#endif
-</code></pre>
-<h3 id="toolchain-propagated-macros-and-target-specific-macros">Toolchain propagated macros and target specific macros</h3>
-<p>By default Gofra provides two macros: <code>OS_{NAME}</code> and <code>ARCH_{NAME}</code>
-For example while compiling to Darwin on ARM64 there will be 2 macros available -&gt; <code>OS_DARWIN</code> and <code>ARCH_ARM64</code></p></div>
+<p>Read more at <a href="../generic-types/">Generic</a> types page</p></div>
             </div>
         </div>
 

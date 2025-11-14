@@ -81,6 +81,23 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#initializers" class="nav-link">Initializers</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#type-inference-and-auto-types" class="nav-link">Type inference and auto types</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#type-casting-at-initializer" class="nav-link">Type casting at initializer</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#constants" class="nav-link">Constants</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#primitive-and-composite-types-differences" class="nav-link">Primitive and composite types: differences</a>
               <ul class="nav flex-column">
               </ul>
@@ -107,7 +124,7 @@
 <p>Variable definitions looks like that:</p>
 <pre><code class="language-gofra">
 // Primitive type
-var {name} {type}
+var {name} [type]
 
 // Composite type
 var array {type}[{size_in_elements}]
@@ -116,6 +133,30 @@ var ptr *{type}
 var complex **int[32] // pointer to an pointer containing array of integers
 </code></pre>
 <p>It must start with <code>var</code> then <code>name</code> and <code>type</code></p>
+<h2 id="initializers">Initializers</h2>
+<pre><code class="language-gofra">var x int = 10;
+var x char = 'a'; // or 97
+var x *string = &quot;Hello, World&quot;;
+var x int[3] = [1, 2, 3] // Has size inference and validation, rest undefined is always treated as zero initialized (even for stack)
+</code></pre>
+<h2 id="type-inference-and-auto-types">Type inference and auto types</h2>
+<p>If defining an variable without an type and it has proper initializer, type may be omitted:</p>
+<pre><code class="language-gofra">var x = 5; // int
+var x = &quot;test&quot; // *string
+var x = [1, 2, 3] // int[3]
+var error = [] // Error: is it int[] or whatever else possible? Requires type explicitly
+</code></pre>
+<h1 id="type-casting-at-initializer">Type casting at initializer</h1>
+<p>For few simple types auto type casting (e.g reinterpret cast) is allowed:</p>
+<pre><code class="language-gofra">var x bool = 1; // Reinterpret(*) bytes as bool and allow proper type
+var x char = 97 // 'a'
+</code></pre>
+<h2 id="constants">Constants</h2>
+<p>Variable with initializer known at compile time may become const by using this syntax:</p>
+<pre><code class="language-gofra">const x = 5;
+const var = 10;
+</code></pre>
+<p>Constants are prohibited to obtain their memory address (restricted modifications) and allows optimizer to apply inlining/unwind and DCE on usage</p>
 <h2 id="primitive-and-composite-types-differences">Primitive and composite types: differences</h2>
 <p>Primitive type is such type that only contains an size of memory blob and nothing more inside</p>
 <p>Composite type is such type which contains another type inside (may be primitive or complex) that it refers to (e.g array of elements contains primitive type of an single element and pointer is containing type of memory it refers to (pointer to an integer is an complex pointer type referencing integer and string is in general an complex type as it refers to array of caricature (contiguous memory blob) as another complex type))</p>

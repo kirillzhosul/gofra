@@ -151,8 +151,7 @@ end
                (exit loop)
 </code></pre>
 <h2 id="for-statement"><code>for</code> Statement</h2>
-<p>The <code>for</code> loop is under the hood is same/using <code>while</code> construction but adds syntactical sugar for auto-constraints and counters (iterator)</p>
-<p>Planned features: Soon, there will be feature for using array as an <code>in</code> qualifier and <code>0..array</code> respectfully</p>
+<p>The <code>for</code> loop is under the hood is same/using <code>while</code> construction but adds syntactical sugar for auto-constraints and counters (iterator, iterable)</p>
 <p>At entering the loop, iterator variable will be set to low threshold of range
 Range is exclusive (not inclusive)</p>
 <h4 id="example_2">Example</h4>
@@ -164,10 +163,20 @@ for i in 10..0 do
     // i will be [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 end
 
-var x int = 5;
+var x = 5;
 for i in 0..x do // variables is allowed only on RHS for now, TODO
     // Step always will be 1, reversed iterations is not possible!
     // i will be [0, 1, 2, 3, 4]
+end
+
+var xs = [5, 6, 7];
+for i in 0..xs do // iterate up to size of xs (index iterator)
+    // i will be [0, 1, 2]
+end
+for x in xs do // iterate iterables
+    // x will be [*5, *6, *7]
+
+    // Iterates over pointer as does not have iterator in simple form - shifts array pointer
 end
 </code></pre>
 <h4 id="comparison-to-while-hir-syntactical-sugar">Comparison to <code>while</code> HIR syntactical sugar</h4>
