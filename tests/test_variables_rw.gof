@@ -25,5 +25,4 @@ func void main[]
     call test_variables_rw_stack
     call test_variables_rw_heap_static
 
-    0 exit
 end

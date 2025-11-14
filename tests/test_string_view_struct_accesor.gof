@@ -1,0 +1,9 @@
+/// Tests using string-view struct as accessor
+
+#define TESTKIT_EXPECTED_EXIT_CODE 8
+
+var str = "12345678"
+
+func int main[] 
+    str.len return
+end

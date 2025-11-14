@@ -5,7 +5,7 @@
 
 #define TESTKIT_EXPECTED_EXIT_CODE 0
 
-func void main[] 
+no_return func void main[] 
     time_seconds_since_epoch set_random_seed
 
     random drop

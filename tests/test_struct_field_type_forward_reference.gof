@@ -5,7 +5,7 @@
 struct forward_struct_t
     field forward_struct_t
 
-    zero_padding int // TODO: This is required for forward references and MUST be considered as bug, as `forward_struct_t` has zero size during parsing this struct (also does not generate memory blob unless other fields specified)
+    zero_padding char // TODO: This is required for forward references and MUST be considered as bug, as `forward_struct_t` has zero size during parsing this struct (also does not generate memory blob unless other fields specified)
 end
 
 var s forward_struct_t;

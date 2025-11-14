@@ -44,7 +44,7 @@ func void test_array_local_character_word[]
     return
 end
 
-func void main[]
+no_return func void main[]
     // TODO: Allow testkit to specify these cases as separate tests
     call test_array_global_character_word
     call test_array_local_character_word

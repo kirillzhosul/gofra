@@ -15,7 +15,7 @@ func void f[*struct_]
     &n.field TESTKIT_EXPECTED_EXIT_CODE !<
 end
 
-func void main[]
+no_return func void main[]
     &x call f
 
     x.field exit // TODO: Remove exit after fix

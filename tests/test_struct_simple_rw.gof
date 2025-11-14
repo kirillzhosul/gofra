@@ -11,8 +11,8 @@ end
 
 var x struct_
 
-func void main[]
+func int main[]
     &x.field TESTKIT_EXPECTED_EXIT_CODE !<
 
-    x.field exit // TODO: Remove exit after fix
+    x.field return
 end

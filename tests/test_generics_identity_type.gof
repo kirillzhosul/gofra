@@ -1,0 +1,12 @@
+/// Test simple identity generic into concrete types
+type Identity{T} T
+
+func void main[] 
+    var int_identity Identity{T = int} = 5;
+    var deep_pointer_identity Identity{T = **int};
+
+
+    &deep_pointer_identity &int_identity !<
+
+    int_identity drop
+end
