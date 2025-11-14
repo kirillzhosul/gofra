@@ -89,11 +89,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#type-casting-at-initializer" class="nav-link">Type casting at initializer</a>
+              <ul class="nav flex-column">
               </ul>
             </li>
-            
-            <li class="nav-item" data-bs-level="1"><a href="#type-casting-at-initializer" class="nav-link">Type casting at initializer</a>
-              <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#constants" class="nav-link">Constants</a>
               <ul class="nav flex-column">
               </ul>
@@ -146,7 +145,7 @@ var x = &quot;test&quot; // *string
 var x = [1, 2, 3] // int[3]
 var error = [] // Error: is it int[] or whatever else possible? Requires type explicitly
 </code></pre>
-<h1 id="type-casting-at-initializer">Type casting at initializer</h1>
+<h2 id="type-casting-at-initializer">Type casting at initializer</h2>
 <p>For few simple types auto type casting (e.g reinterpret cast) is allowed:</p>
 <pre><code class="language-gofra">var x bool = 1; // Reinterpret(*) bytes as bool and allow proper type
 var x char = 97 // 'a'
