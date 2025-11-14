@@ -40,7 +40,7 @@ var x = [1, 2, 3] // int[3]
 var error = [] // Error: is it int[] or whatever else possible? Requires type explicitly
 ```
 
-# Type casting at initializer
+## Type casting at initializer
 
 For few simple types auto type casting (e.g reinterpret cast) is allowed:
 ```gofra

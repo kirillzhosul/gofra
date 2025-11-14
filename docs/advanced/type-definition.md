@@ -9,7 +9,7 @@ Type definition allows to define type alias to arbitrary data type
 type Alias = int
 
 var x Alias = 5; // same as int
-````
+```
 
 
 ## Generics
