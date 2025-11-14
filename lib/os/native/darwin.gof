@@ -5,7 +5,6 @@
 // ==============================================
 
 // TODO: Add x86-64 Darwin layer
-// TODO: Add a compiler intrinsic or attribute for `no_return` if possible for exit.
 // TODO: Add variadic function for `sc_syscall`
 
 #include "types.gof"

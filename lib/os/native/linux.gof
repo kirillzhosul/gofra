@@ -4,7 +4,6 @@
 // ==============================================
 
 // TODO: Add AARCH64 Linux layer
-// TODO: Add a compiler intrinsic or attribute for `no_return` if possible for exit.
 
 // File access mode flags
 #define O_RDONLY   0x0000  // Open for reading only
@@ -41,7 +40,7 @@ end
 // These are the preferred way to make syscalls.
 #ifdef ARCH_AMD64
     // Terminates the current process. Does not return.
-    inline func void sc_exit[int] LINUX_SYSCALL_EXIT syscall1 drop end
+    no_return inline func void sc_exit[int] LINUX_SYSCALL_EXIT syscall1 drop end
 
     // Reads from a file descriptor.
     // Signature: [fd,buf,count]
