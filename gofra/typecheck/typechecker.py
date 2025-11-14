@@ -79,31 +79,48 @@ def validate_type_safety(
 
         _validate_entry_point_signature(entry_point)
 
+    global_var_references: MutableMapping[str, Variable[Type]] = {}
     for function in functions:
         if function.is_external:
             # Skip symbols that are has no compile-time known executable operators as have nothing to typecheck
             continue
 
-        validate_function_type_safety(
+        func_block = validate_function_type_safety(
             function=function,
             module=module,
+        )
+        global_var_references |= {
+            v.name: v
+            for v in func_block.references_variables.values()
+            if v.is_global_scope
+        }
+
+    unused_global_variables = [
+        module.variables[vn]
+        for vn in set(module.variables) - set(global_var_references)
+    ]
+    for variable in unused_global_variables:
+        if variable.is_constant:
+            # TODO(@kirillzhosul): Compiler (parser) actually inlines them and TC does not knows about their usages
+            continue
+        cli_message(
+            "WARNING",
+            f"Unused non-constant global variable '{variable.name}' defined at {variable.defined_at}",
         )
 
 
 def validate_function_type_safety(
     function: Function,
     module: Module,
-) -> None:
+) -> EmulatedTypeBlock:
     """Emulate and validate function type safety inside."""
-
-    emulated_type_stack, reason, references_variables = (
-        emulate_type_stack_for_operators(
-            operators=function.operators,
-            module=module,
-            initial_type_stack=list(function.parameters),
-            current_function=function,
-        )
+    func_block = emulate_type_stack_for_operators(
+        operators=function.operators,
+        module=module,
+        initial_type_stack=list(function.parameters),
+        current_function=function,
     )
+    emulated_type_stack, reason, references_variables = func_block
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
 
@@ -112,6 +129,11 @@ def validate_function_type_safety(
             "WARNING",
             f"Function '{function.name}' defined at {function.defined_at} calls to no-return function inside no conditional blocks, consider propagate no-return attribute",
         )
+
+    if function.is_no_return and function.has_return_value():
+        msg = f"Cannot return value from function '{function.name}' defined at {function.defined_at}, it has no_return attribute"
+        raise ValueError(msg)
+
     lint_unused_function_local_variables(function, references_variables)
     if not function.has_return_value() and emulated_type_stack:
         # function must not return any
@@ -124,6 +146,8 @@ def validate_function_type_safety(
         _validate_retval_stack(function, emulated_type_stack)
         retval_t = emulated_type_stack[0]
         lint_stack_memory_retval(function, retval_t)
+
+    return func_block
 
 
 def emulate_type_stack_for_operators(
