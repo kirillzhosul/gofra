@@ -118,7 +118,10 @@ def parse_generic_type_alias_from_tokenizer(
     base_t = context.get_type(typename) or context.get_struct(typename)
 
     if typename in generic_type_params:
-        base_t = GenericParameter(name=typename)
+        base_t = GenericParameter(
+            name=typename,
+            kind=GenericParameter.Kind.TYPE_PARAM,
+        )
 
     if not base_t:
         raise UnknownPrimitiveTypeError(typename, token.location)
@@ -132,29 +135,43 @@ def parse_generic_type_alias_from_tokenizer(
         if elements_or_rbracket.type == TokenType.INTEGER:
             assert isinstance(elements_or_rbracket.value, int)
             elements = elements_or_rbracket.value
-
             rbracket = context.next_token()
             if rbracket.type != TokenType.RBRACKET:
                 msg = f"Expected RBRACKET after array type elements qualifier but got {rbracket.type.name} at {rbracket.location}"
                 raise ValueError(msg)
+        elif elements_or_rbracket.type == TokenType.IDENTIFIER:
+            identifier = elements_or_rbracket.text
+            if identifier not in generic_type_params:
+                msg = f"Expected identifier '{identifier}' at {elements_or_rbracket.location} to be an part of generic type params!"
+                raise ValueError(msg)
+            rbracket = context.next_token()
+            if rbracket.type != TokenType.RBRACKET:
+                msg = f"Expected RBRACKET after array type elements qualifier but got {rbracket.type.name} at {rbracket.location}"
+                raise ValueError(msg)
+            return GenericArrayType(
+                element_type=base_t,
+                element_count=GenericParameter(
+                    name=identifier,
+                    kind=GenericParameter.Kind.VALUE_PARAM,
+                ),
+            )
         elif elements_or_rbracket.type != TokenType.RBRACKET:
             msg = f"Expected RBRACKET after array type empty qualifier but got {elements_or_rbracket.type.name}"
-
+            raise ValueError(msg)
         if isinstance(base_t, GenericParametrizedType):
-            base_t = GenericArrayType(element_type=base_t, element_count=elements)
-        else:
-            base_t = ArrayType(
-                element_type=base_t,
-                elements_count=elements,
-            )
+            return GenericArrayType(element_type=base_t, element_count=elements)
+        return ArrayType(
+            element_type=base_t,
+            elements_count=elements,
+        )
 
     return base_t
 
 
 def consume_concrete_generic_type_parameters(
     context: ParserContext,
-) -> Mapping[str, Type]:
-    generic_type_params: Mapping[str, Type] = {}
+) -> Mapping[str, Type | int]:
+    generic_type_params: Mapping[str, Type | int] = {}
     if context.peek_token().type == TokenType.LCURLY:
         context.advance_token()
         # Generic type
@@ -167,21 +184,31 @@ def consume_concrete_generic_type_parameters(
 
 def _consume_concrete_generic_type_parameters_list(
     context: ParserContext,
-) -> Mapping[str, Type]:
-    type_params: Mapping[str, Type] = {}
+) -> Mapping[str, Type | int]:
+    type_params: Mapping[
+        str,
+        Type | int,
+    ] = {}  # TODO(@kirillzhosul): Named type but also can be value argument (param)
     while token := context.peek_token():
         if token.type == TokenType.RCURLY:
             break
         context.expect_token(TokenType.IDENTIFIER)
         typename_token = context.next_token()
+
         context.expect_token(TokenType.ASSIGNMENT)
         context.advance_token()
 
         typename = typename_token.text
-        type_params[typename] = parse_concrete_type_from_tokenizer(
-            context,
-            allow_inferring_variable_types=False,
-        )
+
+        if context.peek_token().type == TokenType.INTEGER:
+            tok = context.next_token()
+            assert isinstance(tok.value, int)
+            type_params[typename] = tok.value
+        else:
+            type_params[typename] = parse_concrete_type_from_tokenizer(
+                context,
+                allow_inferring_variable_types=False,
+            )
 
         t = context.peek_token()
         if t.type == TokenType.RCURLY:

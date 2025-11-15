@@ -2,6 +2,9 @@
 // Type definition and helpers
 // ==============================================
 
+type Array{T, N} T[N]
+type Pointer{T} *T
+
 type NullPtr *void
 type CStr *char[]
 

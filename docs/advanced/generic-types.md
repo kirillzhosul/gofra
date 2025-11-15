@@ -8,7 +8,6 @@ Generics in Gofra are form of lazy template for any concrete type
 
 These must be resolved later
 - Applying generic type requires type parameter name
-- Cannot use literals (e.g `int[T]`)
 - Cannot define generic for function or struct
 - Cannot apply/reference generic in form of defining another generic
 
@@ -29,6 +28,9 @@ type Identity{T} = T
 
 // Pointer to generic type parameter
 type XT{T} = *T 
+
+// Array of type T with size N (where N is value type parameter)
+type Array{T, N} = T[N]
 ```
 
 ## Applying generic types into concrete one
@@ -42,8 +44,10 @@ type Identity{T} = T
 // Applying generic type into concrete (expanding type parameters)
 var HasConcreteType = Identity{T = int}
 // typeof is `int`
-```
 
+// With value type arguments
+var arr Array{T = int, N = 3}
+```
 
 ## Terminology
 

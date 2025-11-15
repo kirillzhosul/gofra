@@ -301,7 +301,7 @@ def _write_static_segment_const_variable_initializer(
                 # TODO(@kirillzhosul): Alignment
                 assert variable.type.elements_count, "Got incomplete array type"
                 element_size = variable.type.element_type.size_in_bytes
-                bytes_total = element_size * variable.type.elements_count
+                bytes_total = variable.type.size_in_bytes
                 bytes_taken = len(values) * element_size
                 bytes_free = bytes_total - bytes_taken
                 context.fd.write(f"\t.zero {bytes_free}\n")
