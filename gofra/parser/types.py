@@ -78,6 +78,7 @@ def parse_concrete_type_from_tokenizer(
                 raise ValueError(msg)
         elif elements_or_rbracket.type != TokenType.RBRACKET:
             msg = f"Expected RBRACKET after array type empty qualifier but got {elements_or_rbracket.type.name}"
+            raise ValueError(msg)
 
         aggregated_type = ArrayType(
             element_type=aggregated_type,
