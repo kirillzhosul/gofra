@@ -142,7 +142,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
     varname = token.text
 
     is_reference = False
-    array_index_at: int | str | None = None
+    array_index_at: int | Variable[Type] | None = None
     struct_field_accessor = None
 
     if varname.startswith("&"):
@@ -171,7 +171,13 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         else:
             # Variable index access
             assert isinstance(elements_token.value, str)
-            array_index_at = elements_token.value
+            array_index_at = context.search_variable_in_context_parents(
+                elements_token.value,
+            )
+            if array_index_at is None:
+                msg = f"Expected known VARIABLE at {token.location} as array-index-of but unknown variable '{elements_token.value}'"
+                raise ValueError(msg)
+
     accessor_token = context.peek_token()
     if (
         accessor_token.type == TokenType.DOT
@@ -206,6 +212,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             operand=variable.initial_value,
         )
         return True
+
     context.push_new_operator(
         type=OperatorType.PUSH_VARIABLE_ADDRESS,
         token=token,
@@ -252,6 +259,14 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             )
             raise ValueError(msg)
 
+        if isinstance(array_index_at, Variable):
+            var = array_index_at
+            if not isinstance(var.type, (I64Type, CharType)):
+                msg = f"Non I64/char type cannot be used as index at {token.location}!"
+                raise TypeError(msg)
+            if var.is_constant and isinstance(var.initial_value, int):
+                array_index_at = var.initial_value
+
         if isinstance(array_index_at, int):
             # Access by integer
             if array_index_at < 0:
@@ -283,7 +298,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             context.push_new_operator(
                 OperatorType.PUSH_VARIABLE_ADDRESS,
                 token,
-                operand=array_index_at,
+                operand=array_index_at.name,
             )
             context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
             context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token)
