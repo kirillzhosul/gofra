@@ -144,6 +144,9 @@ class ParserContext(PeekableTokenizer):
         if inline_block.is_external:
             msg = "Cannot expand extern function."
             raise ValueError(msg)
+        if any(op.type == OperatorType.FUNCTION_CALL for op in inline_block.operators):
+            self.is_leaf_context = False
+
         self.operators.extend(inline_block.operators)
 
     def pop_context_stack(self) -> tuple[int, Operator, RangeQualifier | None]:
