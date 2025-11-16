@@ -89,6 +89,7 @@
         "lipo",
         "lraylib",
         "MAXSYSCALL",
+        "memset",
         "mkdocs",
         "MKNOD",
         "MMAP",

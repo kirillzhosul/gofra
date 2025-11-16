@@ -1,3 +1,4 @@
+from gofra.feature_flags import FEATURE_RUNTIME_ARRAY_OOB_CHECKS
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import (
     Variable,
@@ -268,13 +269,14 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
                 array_index_at = var.initial_value
 
         if isinstance(array_index_at, int):
-            # Access by integer
+            # Access by integer (direct int or expanded from constant)
+            # Compile-time OOB checks
             if array_index_at < 0:
                 msg = "Negative indexing inside arrays is prohibited"
                 raise ValueError(msg)
 
             if variable.type.is_index_oob(array_index_at):
-                msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements"
+                msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements but accessed element {array_index_at} (may be expanded from constant)"
                 raise ValueError(msg)
 
             shift_in_bytes = variable.type.get_index_offset(array_index_at)
@@ -289,7 +291,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
                     token=token,
                 )
         else:
-            # Access by variable
+            # Access by non-constant variable
             context.push_new_operator(
                 OperatorType.PUSH_INTEGER,
                 token,
@@ -301,6 +303,49 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
                 operand=array_index_at.name,
             )
             context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
+            if FEATURE_RUNTIME_ARRAY_OOB_CHECKS:
+                context.push_new_operator(
+                    OperatorType.PUSH_VARIABLE_ADDRESS,
+                    token,
+                    operand=array_index_at.name,
+                )
+                context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
+                context.push_new_operator(
+                    OperatorType.PUSH_INTEGER,
+                    operand=variable.type.elements_count,
+                    token=token,
+                )
+                context.push_new_operator(
+                    OperatorType.COMPARE_GREATER_EQUALS,
+                    token=token,
+                )
+                context.push_new_operator(
+                    OperatorType.CONDITIONAL_IF,
+                    token=token,
+                    is_contextual=True,
+                )
+                msg = "Runtime OOB error: tried to access array with out-of-bounds index, step into debugger for help!\\n"
+                context.push_new_operator(
+                    OperatorType.PUSH_STRING,
+                    operand=msg,
+                    token=Token(
+                        type=TokenType.STRING,
+                        text=f'"{msg}"',
+                        value=msg,
+                        location=token.location,
+                    ),
+                )
+                if "eprint_fatal" not in context.functions:
+                    msg = "Cannot do FEATURE_RUNTIME_ARRAY_OOB_CHECKS unless stdlib (`eprint_fatal`) is available for panic"
+                    raise ValueError(msg)
+                context.push_new_operator(
+                    OperatorType.FUNCTION_CALL,
+                    token=token,
+                    operand="eprint_fatal",
+                )
+                context.push_new_operator(OperatorType.CONDITIONAL_END, token=token)
+                _, if_op, _ = context.pop_context_stack()
+                if_op.jumps_to_operator_idx = context.current_operator - 1
             context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token)
             context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token)
 
