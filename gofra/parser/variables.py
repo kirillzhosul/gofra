@@ -294,7 +294,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         raise ValueError(msg)
     if not is_reference:
         if variable.type.size_in_bytes > 8 and not (
-            array_index_at or struct_field_accessor
+            array_index_at is not None or struct_field_accessor
         ):
             msg = f"Cannot load variable {variable.name} of type {variable.type} as it has size {variable.type.size_in_bytes} in bytes (stack-cell-overflow) at {token.location}"
             raise ValueError(msg)
