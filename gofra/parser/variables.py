@@ -1,3 +1,5 @@
+from typing import cast
+
 from gofra.feature_flags import FEATURE_RUNTIME_ARRAY_OOB_CHECKS
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import (
@@ -15,6 +17,9 @@ from gofra.parser.errors.cannot_infer_var_type_from_empty_array_initializer impo
 )
 from gofra.parser.errors.cannot_infer_var_type_from_initializer import (
     CannotInferVariableTypeFromInitializerError,
+)
+from gofra.parser.errors.constant_variable_requires_intializer import (
+    ConstantVariableRequiresInitializerError,
 )
 from gofra.parser.errors.type_has_no_compile_time_initializer import (
     TypeHasNoCompileTimeInitializerParserError,
@@ -40,25 +45,52 @@ from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
 
 
+def _consume_variable_modifier_is_const(
+    context: ParserContext,
+    begin_token: Token,
+) -> bool:
+    """Consume modifiers for *definition* (e.g constant or variable* from token that describes start of definition (any modifier or specifier).
+
+    Next token must be an identifier holding definition name.
+
+    Allowed forms: `const x`, `const var x`, `var x`
+    """
+    assert begin_token.type == TokenType.KEYWORD, "Expected keyword (e.g const / var)"
+
+    if begin_token.value != Keyword.CONST:
+        return False
+
+    peeked = context.peek_token()
+    if peeked.type == TokenType.KEYWORD and peeked.value == Keyword.VARIABLE_DEFINE:
+        context.advance_token()
+        # Skip `var` token, if next is non an identifier - caller must emit an error by itself
+
+    return True
+
+
+def _validate_variable_redefinition(
+    context: ParserContext,
+    name: str,
+    token: Token,
+) -> None:
+    if name in context.variables:
+        raise ParserVariableNameAlreadyDefinedAsVariableError(
+            token=token,
+            name=name,
+        )
+
+    if context.name_is_already_taken(name):
+        previous_def = context.search_variable_in_context_parents(name)
+        msg = f"Variable name {name} at {token.location} is already taken by other definition within context parents at {previous_def.defined_at if previous_def else 'unknown location'}"
+        raise ValueError(msg)
+
+
 def unpack_variable_definition_from_token(
     context: ParserContext,
     token: Token,
 ) -> None:
     assert token.type == TokenType.KEYWORD
-
-    # Either VAR or CONST start
-    modifier_is_const = False
-    if token.value == Keyword.CONST:
-        modifier_is_const = True
-
-        peeked = context.peek_token()
-        if (
-            peeked.type != TokenType.KEYWORD or peeked.value != Keyword.VARIABLE_DEFINE
-        ) and peeked.type != TokenType.IDENTIFIER:
-            msg = f"Expected either `var` after const or identifier as an name AT {peeked.location}"
-            raise ValueError(msg)
-        if peeked.type != TokenType.IDENTIFIER:
-            context.advance_token()
+    modifier_is_const = _consume_variable_modifier_is_const(context, token)
 
     varname_token = context.next_token()
     if varname_token.type != TokenType.IDENTIFIER:
@@ -66,24 +98,14 @@ def unpack_variable_definition_from_token(
         raise ValueError(msg)
     assert isinstance(varname_token.value, str)
 
+    varname = varname_token.text
+    _validate_variable_redefinition(context, varname, varname_token)
+
     var_t = None  # Infer by default
     if context.peek_token().type == TokenType.ASSIGNMENT:
         pass
     else:
         var_t = parse_concrete_type_from_tokenizer(context)
-
-    varname = varname_token.text
-
-    if varname in context.variables:
-        raise ParserVariableNameAlreadyDefinedAsVariableError(
-            token=varname_token,
-            name=varname,
-        )
-
-    if context.name_is_already_taken(varname):
-        previous_def = context.search_variable_in_context_parents(varname)
-        msg = f"Variable name {varname} at {varname_token.location} is already taken by other definition within context parents at {previous_def.defined_at if previous_def else 'unknown location'}"
-        raise ValueError(msg)
 
     storage_class = (
         VariableStorageClass.STATIC
@@ -110,10 +132,7 @@ def unpack_variable_definition_from_token(
             varname_token=varname_token,
         )
     elif modifier_is_const:
-        msg = (
-            "Expected constant variable to have assignment, otherwise it has no effect"
-        )
-        raise ValueError(msg)
+        raise ConstantVariableRequiresInitializerError(varname, token.location)
 
     if isinstance(var_t, VoidType):
         raise VariableCannotHasVoidTypeParserError(
@@ -304,48 +323,14 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             )
             context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
             if FEATURE_RUNTIME_ARRAY_OOB_CHECKS:
-                context.push_new_operator(
-                    OperatorType.PUSH_VARIABLE_ADDRESS,
+                assert isinstance(array_index_at.type, (I64Type, CharType))
+                array_index_at = cast("Variable[I64Type]", array_index_at)
+                _emit_runtime_oob_check(
+                    context,
                     token,
-                    operand=array_index_at.name,
+                    array_index_at,
+                    variable.type.elements_count,
                 )
-                context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
-                context.push_new_operator(
-                    OperatorType.PUSH_INTEGER,
-                    operand=variable.type.elements_count,
-                    token=token,
-                )
-                context.push_new_operator(
-                    OperatorType.COMPARE_GREATER_EQUALS,
-                    token=token,
-                )
-                context.push_new_operator(
-                    OperatorType.CONDITIONAL_IF,
-                    token=token,
-                    is_contextual=True,
-                )
-                msg = "Runtime OOB error: tried to access array with out-of-bounds index, step into debugger for help!\\n"
-                context.push_new_operator(
-                    OperatorType.PUSH_STRING,
-                    operand=msg,
-                    token=Token(
-                        type=TokenType.STRING,
-                        text=f'"{msg}"',
-                        value=msg,
-                        location=token.location,
-                    ),
-                )
-                if "eprint_fatal" not in context.functions:
-                    msg = "Cannot do FEATURE_RUNTIME_ARRAY_OOB_CHECKS unless stdlib (`eprint_fatal`) is available for panic"
-                    raise ValueError(msg)
-                context.push_new_operator(
-                    OperatorType.FUNCTION_CALL,
-                    token=token,
-                    operand="eprint_fatal",
-                )
-                context.push_new_operator(OperatorType.CONDITIONAL_END, token=token)
-                _, if_op, _ = context.pop_context_stack()
-                if_op.jumps_to_operator_idx = context.current_operator - 1
             context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token)
             context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token)
 
@@ -363,6 +348,54 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             token=token,
         )
     return True
+
+
+def _emit_runtime_oob_check(
+    context: ParserContext,
+    token: Token,
+    index_var: Variable[I64Type],
+    elements_const: int,
+) -> None:
+    """Push operators to perform OOB check at runtime.
+
+    TODO(@kirillzhosul): Must be reworked into runtime lib?:
+    Possibly introduce runtime include library, should requires via something like `require_runtime_function`
+    """
+    panic_msg = "Runtime OOB error: tried to access array with out-of-bounds index, step into debugger for help!\\n"
+    context.push_new_operator(
+        OperatorType.PUSH_VARIABLE_ADDRESS,
+        token,
+        operand=index_var.name,
+    )
+    context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
+    context.push_new_operator(
+        OperatorType.PUSH_INTEGER,
+        operand=elements_const,
+        token=token,
+    )
+    context.push_new_operator(OperatorType.COMPARE_GREATER_EQUALS, token)
+    context.push_new_operator(OperatorType.CONDITIONAL_IF, token, is_contextual=True)
+    context.push_new_operator(
+        OperatorType.PUSH_STRING,
+        operand=panic_msg,
+        token=Token(
+            type=TokenType.STRING,
+            text=f'"{panic_msg}"',
+            value=panic_msg,
+            location=token.location,
+        ),
+    )
+    if "eprint_fatal" not in context.functions:
+        msg = "Cannot do FEATURE_RUNTIME_ARRAY_OOB_CHECKS unless stdlib (`eprint_fatal`) is available for panic"
+        raise ValueError(msg)
+    context.push_new_operator(
+        OperatorType.FUNCTION_CALL,
+        token=token,
+        operand="eprint_fatal",
+    )
+    context.push_new_operator(OperatorType.CONDITIONAL_END, token=token)
+    _, if_op, _ = context.pop_context_stack()
+    if_op.jumps_to_operator_idx = context.current_operator - 1
 
 
 def _consume_variable_initializer(

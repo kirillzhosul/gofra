@@ -9,7 +9,6 @@ from gofra.hir.operator import Operator, OperatorType
 from gofra.lexer import Token
 from gofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from gofra.types.composite.structure import StructureType
-from gofra.types.generics import GenericParametrizedType
 from gofra.types.registry import DEFAULT_PRIMITIVE_TYPE_REGISTRY, TypeRegistry
 
 if TYPE_CHECKING:
@@ -23,6 +22,7 @@ if TYPE_CHECKING:
     from gofra.lexer.tokens import TokenType
     from gofra.parser.conditional_blocks import RangeQualifier
     from gofra.types._base import Type
+    from gofra.types.generics import GenericParametrizedType
 
 
 @dataclass
