@@ -159,6 +159,7 @@ def aarch64_macos_operator_instructions(
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
 
+            assert operator.operand in program.functions, operator.location
             function = program.functions[operator.operand]
 
             function_call(
@@ -244,7 +245,7 @@ def aarch64_macos_executable_functions(
     """
     # Define only function that contains anything to execute
     functions = filter(
-        lambda f: f.has_executable_operators or f.is_global,
+        lambda f: not f.is_external,
         program.functions.values(),
     )
     for function in functions:

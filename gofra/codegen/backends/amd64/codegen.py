@@ -243,7 +243,11 @@ def amd64_executable_functions(
 
     Provides an prolog and epilogue.
     """
-    for function in program.functions.values():
+    functions = filter(
+        lambda f: not f.is_external,
+        program.functions.values(),
+    )
+    for function in functions:
         function_begin_with_prologue(
             context,
             local_variables=function.variables,
