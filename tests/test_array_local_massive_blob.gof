@@ -7,10 +7,10 @@
 // TODO: Add negative tests for that
 
 func int main[]
-    var exit_code int[61]
+    var exit_code int[60]
 
     // That *massive* shift must be increased later.
-    &exit_code[60] TESTKIT_EXPECTED_EXIT_CODE !<
+    &exit_code[59] TESTKIT_EXPECTED_EXIT_CODE !<
 
-    exit_code[60] return
+    exit_code[59] return
 end

@@ -4,4 +4,6 @@ def align_to_highest_size(size: int) -> int:
     Modern architectures requires 16 bytes alignment, so that function will align that properly with some space left.
     """
     assert size >= 0, "Cannot align negative or zero numbers"
-    return (size + 15) & ~15
+    if size % 16 != 0:
+        return (size + 15) & ~15
+    return size

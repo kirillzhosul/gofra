@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from gofra.codegen.backends.amd64.frame import (
-    build_local_variables_frame_offsets,
     preserve_calee_frame,
     restore_calee_frame,
 )
+from gofra.codegen.frame import build_local_variables_frame_offsets
 from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
 

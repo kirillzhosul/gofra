@@ -33,3 +33,4 @@ class Module:
 
     # Structures that this module defines (can be unused)
     structures: MutableMapping[str, StructureType]
+

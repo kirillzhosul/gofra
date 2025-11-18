@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 from gofra.cli.output import cli_message
 from gofra.codegen.backends.aarch64_macos.frame import (
-    build_local_variables_frame_offsets,
     preserve_calee_frame,
     restore_calee_frame,
 )
+from gofra.codegen.frame import build_local_variables_frame_offsets
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import (
     VariableIntArrayInitializerValue,
@@ -139,7 +139,7 @@ def push_integer_onto_stack(
     for shift in range(0, 64, 16):
         chunk = hex((value >> shift) & AARCH64_HALF_WORD_BITS)
         if chunk == "0x0":
-            # Zeroed chunk so we dont push it as register is zeroed
+            # Zeroed chunk so we do not push it as register is zeroed
             continue
 
         if not preserve_bits:
