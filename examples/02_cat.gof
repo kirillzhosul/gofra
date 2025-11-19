@@ -9,37 +9,32 @@
 // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
 // TODO: add argc argv
 // TODO: Windows support
-
-#define PATH "test.txt" to_cstr_ptr
+const PATH = "test.txt"
 
 // Some segment in memory so we can store content of the file
 // Global one as capacity is too big for stack (heap)
 var buf char[1024]
 
+
 func void main[]
-    var fd int
     var sv string;
+    var fd int;
 
-    &fd 
-        PATH 0 0 call sc_open 
-    !<
-
+    &sv.data &buf !<
+    &sv.len sizeof buf !<
+    
+    &fd PATH call open_file_fd_ro !<
     fd 0 < if 
         "Unable to open given file\n" eprint_fatal 
     end
 
     // Read file
-    fd
-    &buf sizeof buf
-    call sc_read; 0 < if 
+
+    fd &sv call read_file_sv
+    typecast int NULL_PTR typecast int == if 
         "Unable to read given file\n" eprint_fatal 
     end
 
     // Print whole buffer
-    &sv.data &buf !<
-    &sv.len sizeof buf !<
-
-    STD_OUT 
-    &sv
-    call print_fd drop
+    &sv call print
 end

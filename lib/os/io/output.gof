@@ -17,40 +17,37 @@
 #ifdef OS_WINDOWS func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call win_write end #endif
 
 // Print an string into standard console output stream
-func void print[*string]
-    var str *string; &str swap !< // TODO: add proper arguments
-
+func void print[*string sv]
     STD_OUT
-    str
+    sv
     call print_fd drop
 end
 
 // Print an string into standard console with trailing newline
-func void println[*string]
-    call print
+func void println[*string sv]
+    sv call print
     "\n" call print
 end
 
 // Print an string into standard console error stream
-func void eprint[*string]
-    STD_ERR swap
+func void eprint[*string sv]
+    STD_ERR
+    sv
     print_fd drop
 end
 
 // Print an string into standard error console stream and abort execution
 // TODO: Probably must refactored into panic system or something like that as this is not I/O responsibility
-no_return func void eprint_fatal[*string]
+no_return func void eprint_fatal[*string sv]
     "FATAL: " call eprint
-    call eprint
+    sv call eprint
     call abort
 end
 
 // Print given number into given file descriptor / handle
 // does not emit '\n' at the end
 var print_int64_buf char[20] // Max 64 bit cap
-func void print_int64_fd[int, int]
-    var num int; &num swap !< // TODO: add proper arguments
-    var fd int; &fd swap !< // TODO: add proper arguments
+func void print_int64_fd[int fd, int num]
     var idx int = 0;
     var is_negative bool = 0;
     var str_view string;
@@ -59,7 +56,7 @@ func void print_int64_fd[int, int]
     // TODO: This is probably must be merged with `int2str` but must be reviewed, also introduces cross-reference
     num 0 < if
         &num num -1 * !< 
-        &is_negative true typecast int !<
+        &is_negative true !<
     end
 
     num 0 == if
@@ -116,12 +113,12 @@ end
 // Print given number into given file descriptor / handle as hexadecimal 0x
 // does not emit '\n' at the end
 var print_int64_hex_buf char[16] // Max 64 bit cap
-func void print_int64_hex_fd[int, int, bool, bool]
-    var as_uppercase bool; &as_uppercase swap typecast int !<
-    var show_hex_prefix bool; &show_hex_prefix swap typecast int !<
-
-    var num int; &num swap !< // TODO: add proper arguments
-    var fd int; &fd swap !< // TODO: add proper arguments
+func void print_int64_hex_fd[
+    int fd, 
+    int num, 
+    bool show_hex_prefix, 
+    bool as_uppercase
+]
     var idx int = 0;
     var is_negative bool;
     var str_view string;

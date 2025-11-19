@@ -50,7 +50,7 @@ class FunctionHeaderQualifiers:
 class FunctionHeaderDefinition:
     at: Token
     name: str
-    parameters: list[Type]
+    parameters: list[tuple[str, Type]]
     return_type: Type
 
     qualifiers: FunctionHeaderQualifiers
@@ -144,7 +144,7 @@ def consume_function_qualifiers(
 def consume_function_signature(
     context: ParserContext,
     token: Token,
-) -> tuple[str, list[Type], Type]:
+) -> tuple[str, list[tuple[str, Type]], Type]:
     """Consume parser context into function signature assuming given token is `function` keyword.
 
     Returns function name and signature types (`in` and `out).
@@ -164,8 +164,8 @@ def consume_function_signature(
     return function_name, parameters, type_contract_out
 
 
-def consume_function_parameters(context: ParserContext) -> list[Type]:
-    parameters: list[Type] = []
+def consume_function_parameters(context: ParserContext) -> list[tuple[str, Type]]:
+    parameters: list[tuple[str, Type]] = []
 
     if (paren_token := context.next_token()) and paren_token.type != TokenType.LBRACKET:
         msg = f"Expected LBRACKET `[` after function name for parameters but got {paren_token.type.name}"
@@ -174,10 +174,15 @@ def consume_function_parameters(context: ParserContext) -> list[Type]:
     while token := context.peek_token():
         if token.type == TokenType.RBRACKET:
             break
-        parameters.append(parse_concrete_type_from_tokenizer(context))
+        parameters.append(("", parse_concrete_type_from_tokenizer(context)))
         t = context.peek_token()
         if t.type == TokenType.RBRACKET:
             break
+        if t.type == TokenType.IDENTIFIER:
+            parameters[-1] = (t.text, parameters[-1][1])
+            context.next_token()
+            if context.peek_token().type == TokenType.RBRACKET:
+                break
         context.expect_token(TokenType.COMMA)
         _ = context.next_token()
     _ = context.next_token()

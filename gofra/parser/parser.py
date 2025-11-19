@@ -7,6 +7,7 @@ from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.feature_flags import FEATURE_ALLOW_FPU
 from gofra.hir.function import Function
 from gofra.hir.module import Module
+from gofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from gofra.lexer import (
     Keyword,
     Token,
@@ -302,11 +303,13 @@ def _unpack_function_definition_from_token(
 ) -> None:
     f_header_def = consume_function_definition(context, token)
 
+    params = [p[1] for p in f_header_def.parameters]
+
     if f_header_def.qualifiers.is_extern:
         function = Function.create_external(
             name=f_header_def.name,
             defined_at=token.location,
-            parameters=f_header_def.parameters,
+            parameters=params,
             return_type=f_header_def.return_type,
         )
         function.is_no_return = f_header_def.qualifiers.is_no_return
@@ -323,7 +326,33 @@ def _unpack_function_definition_from_token(
         parent=context,
     )
 
+    param_names = [p[0] for p in f_header_def.parameters]
+    if any(param_names) and not all(param_names):
+        msg = f"Either all parameters must be named or none! {token.location}"
+        raise ValueError(msg)
+
+    for param_name, param_type in reversed(f_header_def.parameters):
+        if not param_name:
+            continue
+        new_context.variables[param_name] = Variable(
+            name=param_name,
+            defined_at=token.location,
+            is_constant=False,
+            storage_class=VariableStorageClass.STACK,
+            scope_class=VariableScopeClass.FUNCTION,
+            type=param_type,
+            initial_value=None,
+        )
+        new_context.push_new_operator(
+            OperatorType.PUSH_VARIABLE_ADDRESS,
+            token,
+            operand=param_name,
+        )
+        new_context.push_new_operator(OperatorType.STACK_SWAP, token)
+        new_context.push_new_operator(OperatorType.MEMORY_VARIABLE_WRITE, token)
+
     _parse_from_context_into_operators(context=new_context)
+
     if f_header_def.qualifiers.is_inline:
         assert not new_context.variables, "Inline functions cannot have local variables"
         function = Function.create_internal_inline(
@@ -331,7 +360,7 @@ def _unpack_function_definition_from_token(
             defined_at=token.location,
             operators=new_context.operators,
             return_type=f_header_def.return_type,
-            parameters=f_header_def.parameters,
+            parameters=params,
         )
         function.is_no_return = f_header_def.qualifiers.is_no_return
         context.add_function(function)
@@ -344,7 +373,7 @@ def _unpack_function_definition_from_token(
         defined_at=token.location,
         operators=new_context.operators,
         variables=new_context.variables,
-        parameters=f_header_def.parameters,
+        parameters=params,
         return_type=f_header_def.return_type,
         is_global=f_header_def.qualifiers.is_global,
         is_leaf=new_context.is_leaf_context,

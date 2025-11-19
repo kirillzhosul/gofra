@@ -12,10 +12,8 @@
 // (assert two values are same)
 // TODO: add proper types to that function, as it may compare not only integers
 // probably this requires some overloading or something like that
-func void runtime_assert[int, int, *string]
-    var sv *string; &sv swap !<; // TODO: add named arguments
- 
-    != if
+func void runtime_assert[int a, int b, *string sv]
+    a b != if
         "runtime_assert: Assertion failed, " eprint
         sv      call eprint
         "\n"    call eprint

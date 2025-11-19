@@ -8,8 +8,8 @@
 var std_prng_random_state int
 
 // Set an given number as seed (PRNG random state)
-func void set_random_seed[int]
-    &std_prng_random_state swap !<
+func void set_random_seed[int seed]
+    &std_prng_random_state seed !<
 end
 
 // Randomize current PRNG random state
@@ -45,6 +45,7 @@ func int random[]
 end
 
 // Get random number from PRNG withing range from 0 to argument
-func int random_range[int]
-    call random swap %
+func int random_range[int to]
+    call random
+    to %
 end

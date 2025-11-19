@@ -1,11 +1,7 @@
 /// General helpers for memory usage
 
 // Set memory to int array from given pointer up to + SIZE with given int-value
-func void memset[*int[0], int, int]
-    var value int; &value swap !<;
-    var size int; &size swap !<;
-    var addr *int; &addr swap !<
-
+func void memset[*int[0] addr, int size, int value]
     for idx in 0..size do
         addr sizeof int idx * + value !<
     end

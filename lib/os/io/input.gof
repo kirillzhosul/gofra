@@ -14,6 +14,29 @@
 #ifdef OS_LINUX   inline func int input_fd[int, CStr, int] call sc_read end #endif
 #ifdef OS_DARWIN  inline func int input_fd[int, CStr, int] call sc_read end #endif
 
+#ifdef OS_LINUX  func int open_file_fd_raw[*string sv, int f, int p] sv.data f p call sc_open end #endif
+#ifdef OS_DARWIN func int open_file_fd_raw[*string sv, int f, int p] sv.data f p call sc_open end #endif
+
+
+// Open file in read-only mode
+func int open_file_fd_ro[*string sv] sv 0 0 call open_file_fd_raw end
+
+// Read file into SV (string), and return same pointer
+// reads same amount as string view len, returns null ptr (0) on error
+func *string read_file_sv[int fd, *string sv]
+    fd
+    sv.data
+    sv.len
+    call input_fd
+
+    0 < if
+        NULL_PTR
+        return
+    end
+
+    sv return
+end
+
 // Consume all character bytes from input buffer (e.g `input_fd`)
 // Use as safety method as reading and letting some character leak through 
 func void input_exhaust_buffer[]
@@ -36,10 +59,9 @@ end
 // Input a string from standard console input stream
 // Safe to buffer overflows, as exhaust all remaining IO buffer
 // TODO: Unsafe to big buffers, requires introducing testkit test cases for that
-func void input[CStr, int]
-    var len int; &len swap !< // TODO: add proper argument names
-    
-    STD_IN swap
+func void input[CStr ptr, int len]
+    STD_IN
+    ptr
     len
     call input_fd drop
 

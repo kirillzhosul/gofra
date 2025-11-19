@@ -13,29 +13,28 @@
 func int time_seconds_since_epoch[]
     var tv timeval
 
-    &tv NULL sc_gettimeofday
+    &tv NULL typecast *timezone sc_gettimeofday
 
     tv.tv_sec return
 end
 
 
 // Sleep for given amount of seconds
-func void sleep[int]
+func void sleep[int seconds]
     var tv timeval
 
-    &tv.tv_sec swap !<
+    &tv.tv_sec seconds !<
     &tv.tv_usec 0 !<
 
-    0 NULL NULL NULL &tv call sc_select drop
+    0 NULL_PTR NULL_PTR NULL_PTR &tv call sc_select drop
 end
 
 // Sleep for given amount of microseconds
-func void sleep_ms[int]
-    var ms int; &ms swap !<
+func void sleep_ms[int ms]
     var tv timeval
 
     &tv.tv_sec ms 1000 /         !<
     &tv.tv_usec ms 1000 % 1000 * !<
 
-    0 NULL NULL NULL &tv call sc_select drop
+    0 NULL_PTR NULL_PTR NULL_PTR &tv call sc_select drop
 end

@@ -9,9 +9,7 @@ end
 
 var x struct_
 
-func void f[*struct_]
-    var n *struct_; &n swap !<
-
+func void f[*struct_ n]
     &n.field TESTKIT_EXPECTED_EXIT_CODE !<
 end
 

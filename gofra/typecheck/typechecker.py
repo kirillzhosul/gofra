@@ -29,6 +29,7 @@ from gofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from gofra.types.composite.string import StringType
 from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
+from gofra.types.primitive.character import CharType
 from gofra.types.primitive.floats import F64Type
 from gofra.types.primitive.integers import I64Type
 
@@ -142,7 +143,7 @@ def validate_function_type_safety(
             type_stack=list(emulated_type_stack),
         )
 
-    if function.has_return_value():
+    if function.has_return_value():  # and reason != "no-return-func-call":
         _validate_retval_stack(function, emulated_type_stack)
         retval_t = emulated_type_stack[0]
         lint_stack_memory_retval(function, retval_t)
@@ -351,7 +352,7 @@ def emulate_type_stack_for_operators(
                 context.raise_for_operator_arguments(
                     operator,
                     (PointerType,),
-                    (I64Type, PointerType),
+                    (I64Type, PointerType, BoolType, CharType),
                 )
             case OperatorType.MEMORY_VARIABLE_READ:
                 context.raise_for_enough_arguments(

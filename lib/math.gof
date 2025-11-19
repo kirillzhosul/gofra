@@ -6,9 +6,7 @@
 // TODO: Gofra does not have FP so this is only integer-math library
 
 // Calculate base in power of exponent
-func int pow[int, int]
-    var exponent int; &exponent swap !<;
-    var base int; &base swap !<;
+func int pow[int base, int exponent]
     var result int = 1;
 
     // TODO: This is not performant way to calculate power, but this is enough for now
@@ -21,8 +19,7 @@ func int pow[int, int]
 end
 
 // Calculate integer square root for an value (e.g floor Babylonian method)
-func int sqrt[int]
-    var n int; &n swap !<;
+func int sqrt[int n]
     var y int = 1;
     var x int;
 
@@ -38,45 +35,34 @@ func int sqrt[int]
 end
 
 // Return absolute value of an negative/positive integer
-func int abs[int]
-    copy 0 < if 
-        -1 *  // (-n) * -1 => n
+func int abs[int x]
+    x 0 < if 
+        x -1 * return // (-n) * -1 => n
     end
-    return // Positive by default
+    x return // Positive by default
 end
 
 // Return minimum value from two values
-func int min[int, int]
-    var b int; &b swap !<;
-    var a int; &a swap !<;
-
+func int min[int a, int b]
     a b <= if a return end
     b return
 end
 
 // Return maximals value from two values
-func int max[int, int]
-    var b int; &b swap !<;
-    var a int; &a swap !<;
-
+func int max[int a, int b]
     a b >= if a return end
     b return
 end
 
 // Clamp given value between two constraints
-func int clamp[int, int, int]
-    var b int; &b swap !<;
-    var a int; &a swap !<;
-    var n int; &n swap !<;
-
+func int clamp[int n, int a, int b]
     n a < if a return end
     n b > if b return end
     n return
 end
 
 // Factorial (n!) of value
-func int factorial[int]
-    var n int; &n swap !<;
+func int factorial[int n]
     var r = 1;
     var i = 2;
 

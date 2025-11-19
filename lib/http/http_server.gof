@@ -31,9 +31,7 @@ struct HTTPIncomingRequest
 end
 
 // Open system socket for server, internal function
-func void _http_server_open_socket[*HTTPServer]
-    var server *HTTPServer; &server swap !<
-
+func void _http_server_open_socket[*HTTPServer server]
     &server.socket call net_ipv4_tcp_socket !<
     server.socket 0 < if 
         "Unable to open HTTP server socket\n" eprint_fatal
@@ -41,9 +39,7 @@ func void _http_server_open_socket[*HTTPServer]
 end
 
 // Bind system socket for server, internal function
-func void _http_server_bind_socket[*HTTPServer]
-    var server *HTTPServer; &server swap !<
-
+func void _http_server_bind_socket[*HTTPServer server]
     &server.socket ?>
     &server.net_addr // *sock_addr_in
     sizeof sockaddr_in
@@ -55,9 +51,7 @@ func void _http_server_bind_socket[*HTTPServer]
 end
 
 // Listen system socket for server, internal function
-func void _http_server_listen_socket[*HTTPServer]
-    var server *HTTPServer; &server swap !<
-
+func void _http_server_listen_socket[*HTTPServer server]
         server.socket
         server.backlog
     call net_listen 
@@ -68,10 +62,8 @@ func void _http_server_listen_socket[*HTTPServer]
 end
 
 // Internal wrapper around system network write bytes
-func int _http_server_net_write_bytes[int, *string]
-    var sv *string; &sv swap !<;
-
-    sv.data sv.len call net_write
+func int _http_server_net_write_bytes[int fd, *string sv]
+    fd sv.data sv.len call net_write
     copy -1 == if
         "Unable to send response to client socket on HTTP server socket\n" eprint_fatal
         // todo: close socket
@@ -79,18 +71,14 @@ func int _http_server_net_write_bytes[int, *string]
 end
 
 // Bootstrap HTTP server
-func void http_server_start[*HTTPServer]
-    var server *HTTPServer; &server swap !<
-
+func void http_server_start[*HTTPServer server]
     server call _http_server_open_socket
     server call _http_server_bind_socket
     server call _http_server_listen_socket
 end
 
 // Send given string payload as HTML to client
-func int http_server_send_html_response[*HTTPIncomingRequest, *string]
-    var request *HTTPIncomingRequest; &request swap !<
-    var sv *string; &sv swap !<;
+func int http_server_send_html_response[*HTTPIncomingRequest request, *string sv]
     var bytes_written int = 0
 
     request.socket
@@ -112,12 +100,11 @@ func int http_server_send_html_response[*HTTPIncomingRequest, *string]
 end
 
 // Read an HTTP request with headers
-func int http_server_read_request[*HTTPIncomingRequest]
-    var request *HTTPIncomingRequest; request swap !<
+func int http_server_read_request[*HTTPIncomingRequest request]
     var bytes_read int = 0
 
         request.socket
-        &request.io_rx_buffer 
+        request.io_rx_buffer 
         HTTP_IO_BUFFER_CAP
     net_read &bytes_read swap !<
 
@@ -129,9 +116,7 @@ func int http_server_read_request[*HTTPIncomingRequest]
 end
 
 // Close client request finishing request-response interaction
-func void http_server_close_request[*HTTPIncomingRequest]
-    var request *HTTPIncomingRequest; request swap !<
-
+func void http_server_close_request[*HTTPIncomingRequest request]
     request.socket call net_close -1 == if
         "Unable to close client socket on HTTP server socket\n" eprint_fatal
     end

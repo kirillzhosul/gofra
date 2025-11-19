@@ -30,8 +30,8 @@
 // --- External symbols from kernel libraries (WINAPI) ---
 extern func void winapi_exit_process[int]                            #define ExitProcess winapi_exit_process
 extern func int  winapi_get_std_handle[int]                          #define GetStdHandle winapi_get_std_handle
-extern func bool winapi_write_console_a[int,CStr,int,CStr,int] #define WriteConsoleA winapi_write_console_a
-extern func bool winapi_write_file[int,CStr,int,CStr,int]       #define WriteFile winapi_write_file
+extern func bool winapi_write_console_a[int,CStr,int,CStr,int]       #define WriteConsoleA winapi_write_console_a
+extern func bool winapi_write_file[int,CStr,int,CStr,int]             #define WriteFile winapi_write_file
 extern func int  winapi_get_file_type[int]                            #define GetFileType winapi_get_file_type
 
 // -- Windows API simple wrappers --
@@ -40,17 +40,13 @@ inline func int  win_get_std_handle[int]                                     cal
 inline func int  win_get_stdout_handle[]                  STD_OUTPUT_HANDLE  call winapi_get_std_handle  end
 inline func int  win_get_stderr_handle[]                  STD_ERROR_HANDLE   call winapi_get_std_handle  end
 inline func int  win_get_stdin_handle[]                   STD_INPUT_HANDLE   call winapi_get_std_handle  end
-inline func bool win_write_console[int,CStr,int,*int]  WINAPI_LP_RESERVED call winapi_write_console_a end
-inline func bool win_write_file[int,CStr,int,*int]      WINAPI_LP_RESERVED call winapi_write_file       end
+inline func bool win_write_console[int,CStr,int,*int]     WINAPI_LP_RESERVED call winapi_write_console_a end
+inline func bool win_write_file[int,CStr,int,*int]         WINAPI_LP_RESERVED call winapi_write_file       end
 inline func bool win_is_console_handle[int]               call winapi_get_file_type FILE_TYPE_CHAR ==     end
 
 // Wrapper around Windows write for POSIX
 // Signature: [raw handle, buffer, length]
-func int win_write[int, CStr, int]
-    var len int;    &len swap !<;    // TODO: named arguments
-    var ptr int;    &ptr swap !<;    // TODO: named arguments
-    var handle int; &handle swap !<; // TODO: named arguments
-
+func int win_write[int handle, CStr ptr, int len]
     var error int = 0;
     var bytes_written int;
 

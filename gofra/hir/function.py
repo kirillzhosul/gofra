@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from gofra.types import Type
 
 
+type PARAMS_T = Sequence[Type]
+
+
 @dataclass(frozen=False, slots=True, init=False)
 class Function:
     """HIR Language level function container.
@@ -47,7 +50,7 @@ class Function:
 
     # Parameter types of the function that it accepts
     # e.g type contract-in
-    parameters: Sequence[Type]
+    parameters: PARAMS_T
 
     # If true, calling that function instead of actual calling into that function
     # just expands body of the function inside call location
@@ -114,7 +117,7 @@ class Function:
         *,
         name: str,
         defined_at: TokenLocation,
-        parameters: Sequence[Type],
+        parameters: PARAMS_T,
         return_type: Type,
     ) -> Self:
         """Create function that is external, with propagated flags set."""
@@ -137,7 +140,7 @@ class Function:
         *,
         name: str,
         defined_at: TokenLocation,
-        parameters: Sequence[Type],
+        parameters: PARAMS_T,
         operators: Sequence[Operator],
         return_type: Type,
     ) -> Function:
@@ -161,7 +164,7 @@ class Function:
         *,
         name: str,
         defined_at: TokenLocation,
-        parameters: Sequence[Type],
+        parameters: PARAMS_T,
         variables: Mapping[str, Variable[Type]],
         operators: Sequence[Operator],
         return_type: Type,
@@ -188,7 +191,7 @@ class Function:
         *,
         name: str,
         defined_at: TokenLocation,
-        parameters: Sequence[Type],
+        parameters: PARAMS_T,
         variables: Mapping[str, Variable[Type]] | None,
         operators: Sequence[Operator] | None,
         return_type: Type,
