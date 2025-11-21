@@ -27,7 +27,7 @@ def process_input_file(
     Does not provide optimizer or type checker.
     """
     io = open_source_file_line_stream(filepath)
-    lexer = tokenize_from_raw(filepath, iterable=io)
+    lexer = tokenize_from_raw(filepath, lines=io)
     preprocessor = preprocess_file(
         filepath,
         lexer,

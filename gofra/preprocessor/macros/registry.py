@@ -57,7 +57,7 @@ def registry_from_raw_definitions(
     for name, definition in definitions.items():
         # Tokenize each definition with propagated source
         # (as this functions does not imply that definition source is from an file and probably this wont be that scenario)
-        tokenizer = tokenize_from_raw(source=location.source, iterable=[definition])
+        tokenizer = tokenize_from_raw(source=location.source, lines=[definition])
         tokens = deque(tokenizer)
 
         macro = Macro(location=location, name=name, tokens=tokens)

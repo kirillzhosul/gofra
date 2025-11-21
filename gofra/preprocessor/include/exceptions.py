@@ -43,7 +43,7 @@ class PreprocessorIncludeNonStringNameError(PreprocessorError):
     def __repr__(self) -> str:
         return f"""Invalid include path type at {self.include_path_token.location}!
 
-Expected include path as string with quotes.
+Expected include path as string with quotes but got {self.include_path_token.type.name}. 
 
 Did you forgot to add quotes?"""
 

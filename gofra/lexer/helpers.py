@@ -1,42 +1,17 @@
 from __future__ import annotations
 
-from string import hexdigits
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-STRING_QUOTE = '"'
-CHARACTER_QUOTE = "'"
-SINGLE_LINE_COMMENT = "//"
-HEXADECIMAL_MARK = "0x"
 ESCAPE_SYMBOL = "\\"
 
 
-def unescape_string(string: str) -> str:
-    """Remove all terminations within string (escape it)."""
+def unescape_text_literal(string: str) -> str:
+    """Remove all terminations within string/char (escape it)."""
     return string.encode().decode("unicode-escape")
-
-
-def is_valid_hexadecimal(text: str) -> bool:
-    """Is given raw text cans be parsed as hexadecimal?."""
-    return all(c in hexdigits for c in text[len(HEXADECIMAL_MARK) :])
-
-
-def is_valid_integer(text: str) -> bool:
-    """Is given raw text can be parsed as integer?."""
-    return text.isdigit()
-
-
-def is_valid_float(text: str) -> bool:
-    """Is given raw text can be parsed as integer?."""
-    if text.count(".") != 1:
-        return False
-
-    # Yes, `isdecimal` is easier
-    whole, fractional = text.split(".", maxsplit=1)
-    return whole.isdigit() and fractional.isdigit()
 
 
 def find_word_start(text: str, start: int) -> int:
@@ -49,25 +24,20 @@ def find_word_end(text: str, start: int) -> int:
     return _find_column(text, start, lambda s: s.isspace())
 
 
-def find_string_end(string: str, start: int) -> int | None:
-    """Find index where given string ends (close quote) or None if not closed properly."""
-    idx = start
-    idx_end = len(string)
+def find_quoted_literal_end(line: str, idx: int, *, quote: str) -> int:
+    """Find index where given string ends (close quote) or -1 if not closed properly."""
+    idx_end = len(line)
 
-    # TODO(@kirillzhosul): this fails while some playing with preprocessor and passing source code line by line.
-    prev = string[idx]
-
+    prev = line[idx] if idx >= 0 and idx < len(line) else None
     while idx < idx_end:
-        current = string[idx]
-        if current == STRING_QUOTE and prev != ESCAPE_SYMBOL:
-            break
+        current = line[idx]
+        if current == quote and prev != ESCAPE_SYMBOL:
+            return idx + 1
 
         prev = current
         idx += 1
 
-    if idx >= idx_end:
-        return None
-    return idx + 1
+    return -1
 
 
 def _find_column(text: str, start: int, predicate: Callable[[str], bool]) -> int:

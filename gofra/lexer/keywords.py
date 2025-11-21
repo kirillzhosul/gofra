@@ -61,25 +61,29 @@ WORD_TO_PREPROCESSOR_KEYWORD = {
     "#undef": PreprocessorKeyword.UNDEFINE,
 }
 WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
+    # Function definition
+    "func": Keyword.FUNCTION,
+    "inline": Keyword.INLINE,
+    "global": Keyword.GLOBAL,
+    "no_return": Keyword.NO_RETURN,
+    "extern": Keyword.EXTERN,
+    # Other definition
+    "const": Keyword.CONST,
+    "struct": Keyword.STRUCT,
+    "var": Keyword.VARIABLE_DEFINE,
+    "type": Keyword.TYPE_DEFINE,
+    # Constructions
     "if": Keyword.IF,
     "while": Keyword.WHILE,
     "in": Keyword.IN,
     "for": Keyword.FOR,
     "do": Keyword.DO,
     "end": Keyword.END,
-    "extern": Keyword.EXTERN,
+    # Statements / operators
     "call": Keyword.FUNCTION_CALL,
     "return": Keyword.FUNCTION_RETURN,
-    "const": Keyword.CONST,
-    "func": Keyword.FUNCTION,
-    "struct": Keyword.STRUCT,
-    "inline": Keyword.INLINE,
-    "no_return": Keyword.NO_RETURN,
-    "global": Keyword.GLOBAL,
     "sizeof": Keyword.SIZEOF,
-    "var": Keyword.VARIABLE_DEFINE,
     "typecast": Keyword.TYPE_CAST,
-    "type": Keyword.TYPE_DEFINE,
     "breakpoint": Keyword.DEBUGGER_BREAKPOINT,
     "copy": Keyword.COPY,
     "syscall0": Keyword.SYSCALL,
