@@ -8,7 +8,7 @@ Generics in Gofra are form of lazy template for any concrete type
 
 These must be resolved later
 - Applying generic type requires type parameter name
-- Cannot define generic for function or struct
+- Cannot define generic for function
 - Cannot apply/reference generic in form of defining another generic
 
 ## Concrete types
@@ -31,6 +31,13 @@ type XT{T} = *T
 
 // Array of type T with size N (where N is value type parameter)
 type Array{T, N} = T[N]
+
+// Sort of dynamic array / slice view with generics
+// Struct will be different each application into concrete one
+struct Slice{T, K}
+    data *T[K]
+    len int
+end
 ```
 
 ## Applying generic types into concrete one

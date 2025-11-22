@@ -45,6 +45,7 @@ def parse_concrete_type_from_tokenizer(
     if isinstance(aggregated_type, GenericParametrizedType):
         type_params = consume_concrete_generic_type_parameters(context)
         params_required = get_generic_type_parameters_count(aggregated_type)
+
         if params_required != len(type_params):
             msg = f"Incompatible type params amount for generic type {t.text} at {t.location}. Expected {params_required} but got {len(type_params)}"
             raise ValueError(msg)
@@ -220,6 +221,11 @@ def _consume_concrete_generic_type_parameters_list(
 
 
 def consume_generic_type_parameters(context: ParserContext) -> Mapping[str, Token]:
+    """Consume parameters for generic type definition if specified (e.g cursor points at `{`.
+
+    e.g X{T, N}
+    Otherwise returns empty type parameters.
+    """
     generic_type_params: Mapping[str, Token] = {}
     if context.peek_token().type == TokenType.LCURLY:
         context.advance_token()
@@ -234,6 +240,7 @@ def consume_generic_type_parameters(context: ParserContext) -> Mapping[str, Toke
 def _consume_generic_type_parameters_list(
     context: ParserContext,
 ) -> Mapping[str, Token]:
+    """Read `consume_generic_type_parameters`."""
     type_params: Mapping[str, Token] = {}
     while token := context.peek_token():
         if token.type == TokenType.RCURLY:

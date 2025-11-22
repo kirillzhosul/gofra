@@ -1,10 +1,11 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
 
 from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
+from gofra.types.composite.structure import StructureType
 
 
 class GenericParametrizedType:
@@ -25,11 +26,39 @@ class GenericParameter(GenericParametrizedType):
             return f"'Type Param {self.name}'"
         return f"'Type Value Param {self.name}'"
 
+    def __hash__(self) -> int:
+        return hash(self.name)
+
 
 @dataclass
 class GenericArrayType(GenericParametrizedType):
     element_type: GenericParametrizedType | Type
     element_count: GenericParameter | int
+
+
+class GenericStructureType(GenericParametrizedType):
+    """Type that holds fields with their types as structure."""
+
+    # Direct mapping from name of the field to its direct type
+    fields: Mapping[str, Type | GenericParametrizedType]
+
+    # Order of name for offsetting in `fields`, as mapping does not contain any order information
+    fields_ordering: Sequence[str]
+
+    name: str
+
+    def __init__(
+        self,
+        name: str,
+        fields: Mapping[str, Type],
+        fields_ordering: Sequence[str],
+    ) -> None:
+        self.name = name
+        self.fields = fields
+        self.fields_ordering = fields_ordering
+
+    def __repr__(self) -> str:
+        return f"Generic Struct {self.name}"
 
 
 @dataclass
@@ -49,7 +78,6 @@ def apply_generic_type_into_concrete(
     Given `IdentityGeneric<T> = T`, when TP `T=int`
     transform into concrete type `int`
     """
-
     match generic:
         case GenericPointerType():
             concrete_points_to: Type
@@ -92,23 +120,48 @@ def apply_generic_type_into_concrete(
                 element_type=concrete_element_type,
                 elements_count=concrete_elements_count,
             )
+        case GenericStructureType():
+            concrete_fields = {
+                name: apply_generic_type_into_concrete(field_t, type_parameters)
+                if isinstance(field_t, GenericParametrizedType)
+                else field_t
+                for name, field_t in generic.fields.items()
+            }
+            return StructureType(
+                name=f"=mangled_concrete_generic_{generic.name}",
+                cpu_alignment_in_bytes=8,  # TODO(@kirillzhosul): assume we always on 64 bit machine
+                fields=concrete_fields,
+                fields_ordering=generic.fields_ordering,
+            )
         case _:
-            msg = f"Cannot get {get_generic_type_parameters_count.__name__} for {generic}!"
+            msg = f"Cannot {apply_generic_type_into_concrete.__name__} for {generic}!"
             raise ValueError(msg)
 
 
 def get_generic_type_parameters_count(t: GenericParametrizedType | Type) -> int:
+    return len(get_generic_type_parameters(t))
+
+
+def get_generic_type_parameters(
+    t: GenericParametrizedType | Type,
+) -> set[GenericParameter]:
     match t:
         case GenericPointerType():
-            return get_generic_type_parameters_count(t.points_to)
+            return get_generic_type_parameters(t.points_to)
         case GenericArrayType():
-            elements_count_is_generic = not isinstance(t.element_count, int)
-            return (
-                get_generic_type_parameters_count(t.element_type)
-                + elements_count_is_generic
-            )
+            tp: set[GenericParameter] = set()
+            if not isinstance(t.element_count, int):
+                tp.add(t.element_count)
+            if isinstance(t.element_type, GenericParametrizedType):
+                tp.update(get_generic_type_parameters(t.element_type))
+            return tp
         case GenericParameter():
-            return 1
+            return {t}
+        case GenericStructureType():
+            tp: set[GenericParameter] = set()
+            for f in t.fields.values():
+                tp.update(get_generic_type_parameters(f))
+            return tp
+
         case _:
-            msg = f"Cannot get {get_generic_type_parameters_count.__name__}!"
-            raise ValueError(msg)
+            return set()

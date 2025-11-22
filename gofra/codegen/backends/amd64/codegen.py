@@ -217,9 +217,9 @@ def amd64_operator_instructions(
         case OperatorType.DEBUGGER_BREAKPOINT:
             context.write("int3")
         case OperatorType.STRUCT_FIELD_OFFSET:
-            assert isinstance(operator.operand, str)
-            struct, field = operator.operand.split(".", maxsplit=1)
-            field_offset = program.structures[struct].get_field_offset(field)
+            assert isinstance(operator.operand, tuple)
+            struct, field = operator.operand
+            field_offset = struct.get_field_offset(field)
             if field_offset:
                 # only relatable as operation is pointer is not already at first structure field
                 pop_cells_from_stack_into_registers(

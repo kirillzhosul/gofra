@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from gofra.hir.function import Function
-from gofra.hir.operator import Operator, OperatorType
+from gofra.hir.operator import Operator, OperatorType, StructAccessor
 from gofra.lexer import Token
 from gofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from gofra.types.composite.structure import StructureType
@@ -156,7 +156,7 @@ class ParserContext(PeekableTokenizer):
         self,
         type: OperatorType,  # noqa: A002
         token: Token,
-        operand: float | str | Type | None = None,
+        operand: float | str | Type | StructAccessor | None = None,
         *,
         is_contextual: bool = False,
     ) -> None:

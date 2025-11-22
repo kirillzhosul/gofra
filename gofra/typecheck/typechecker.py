@@ -460,8 +460,10 @@ def emulate_type_stack_for_operators(
                     raise TypeError(msg)
 
                 struct_type = struct_pointer_type.points_to
-                assert isinstance(operator.operand, str)
-                _, struct_field = operator.operand.split(".", maxsplit=1)
+                assert isinstance(operator.operand, tuple)
+                _, struct_field = (
+                    operator.operand
+                )  # TODO(@kirillzhosul): Checkout same struct
                 assert isinstance(struct_field, str), (
                     "Expected struct field as an string in operand"
                 )
@@ -470,7 +472,7 @@ def emulate_type_stack_for_operators(
                     raise TypeError(msg)
 
                 if struct_field not in struct_type.fields:
-                    msg = f"Unknown field {struct_field} for known-structure {struct_type}"
+                    msg = f"Unknown field '{struct_field}' for known-structure {struct_type}"
                     raise ValueError(msg)
 
                 context.push_types(

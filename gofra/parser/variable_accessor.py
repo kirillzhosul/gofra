@@ -135,7 +135,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         context.push_new_operator(
             type=OperatorType.STRUCT_FIELD_OFFSET,
             token=token,
-            operand=f"{struct.name}.{field}",
+            operand=(struct, field),
         )
 
     if array_index_at is not None:

@@ -3,6 +3,7 @@ from enum import Enum, auto
 
 from gofra.lexer.tokens import Token, TokenLocation
 from gofra.types._base import Type
+from gofra.types.composite.structure import StructureType
 
 
 class OperatorType(Enum):
@@ -95,11 +96,14 @@ class OperatorType(Enum):
     DEBUGGER_BREAKPOINT = auto()
 
 
+type StructAccessor = tuple[StructureType, str]  # TODO (@kirillzhosul): must refactor
+
+
 @dataclass(frozen=False, slots=True)
 class Operator:
     type: OperatorType
     token: Token
-    operand: int | float | str | Type | None
+    operand: int | float | str | Type | StructAccessor | None
 
     jumps_to_operator_idx: int | None = None
 
