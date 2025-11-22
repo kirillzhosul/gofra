@@ -13,7 +13,6 @@ func int pow[int base, int exponent]
     while exponent 0 > do
         &result result base * !<
         &exponent exponent 1 - !<
-        result print_int64
     end
 
     result return
