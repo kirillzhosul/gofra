@@ -11,6 +11,7 @@ from gofra.codegen.backends.amd64.frame import (
 from gofra.codegen.frame import build_local_variables_frame_offsets
 from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
+from gofra.exceptions import GofraError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -74,13 +75,13 @@ def push_integer_onto_stack(
     TODO(@kirillzhosul, @stepanzubkov): Negative numbers IS disallowed
     TODO(@kirillzhosul, @stepanzubkov): Review max and etc like in AARCH64_MacOS
     """
-    assert value >= 0, "Tried to push negative integer onto stack!"
-
-    if value.bit_count() > 8 * 8:
-        msg = "Can push only integers within 64 bits range (8 bytes, x64)"
-        raise ValueError(msg)
+    assert value.bit_count() <= 8 * 8, "Can push only integers within 64 bits range (8 bytes, x64)"
+    is_negative = value < 0
+    value = abs(value)
 
     store_integer_into_register(context, register="rax", value=value)
+    if is_negative:
+        context.write("neg %rax")
     push_register_onto_stack(context, register="rax")
 
 
@@ -132,9 +133,8 @@ def initialize_static_data_section(
             if type_size == 0:
                 continue
             assert variable.initial_value is not None
-            assert isinstance(variable.initial_value, int), (
-                "Array initializer is not implemented on AMD64"
-            )
+            if not isinstance(variable.initial_value, int):
+                raise GofraError("Array initializer is not implemented on AMD64")
 
             if type_size == 1:
                 context.write(f"{name}: .byte {variable.initial_value}")
