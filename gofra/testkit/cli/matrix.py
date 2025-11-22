@@ -5,6 +5,7 @@ COLORS: dict[TestStatus, str] = {
     TestStatus.SUCCESS: CLIColor.GREEN,
     TestStatus.TOOLCHAIN_ERROR: CLIColor.RED,
     TestStatus.EXECUTION_STATUS_ERROR: CLIColor.RED,
+    TestStatus.EXECUTION_TIMEOUT_ERROR: CLIColor.RED,
     TestStatus.SKIPPED: CLIColor.RESET,
 }
 

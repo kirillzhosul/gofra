@@ -11,6 +11,7 @@ from gofra.hir.operator import Operator, OperatorType
 from gofra.hir.variable import VariableStorageClass
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from gofra.types.primitive.void import VoidType
+from gofra.types.primitive.integers import I64Type
 
 from ._context import AMD64CodegenContext
 from .assembly import (
@@ -226,7 +227,7 @@ def amd64_operator_instructions(
                     context,
                     "rax",
                 )  # struct pointer (*struct)
-                context.write(f"addq ${field_offset} %rax")
+                context.write(f"addq ${field_offset}, %rax")
                 push_register_onto_stack(context, "rax")
         case OperatorType.PUSH_FLOAT:
             msg = "FPU is not implemented on amd64"
@@ -283,11 +284,12 @@ def amd64_program_entry_point(
     )
 
     # Prepare and execute main function
+    assert isinstance(entry_point.return_type, VoidType | I64Type)
     function_call(
         context,
         name=entry_point.name,
         type_contract_in=[],
-        type_contract_out=VoidType(),
+        type_contract_out=entry_point.return_type,
     )
 
     if isinstance(entry_point.return_type, VoidType):
