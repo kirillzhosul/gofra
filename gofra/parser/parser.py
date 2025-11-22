@@ -32,13 +32,13 @@ from gofra.parser.functions.parser import (
     consume_function_definition,
 )
 from gofra.parser.structures import unpack_structure_definition_from_token
-from gofra.parser.typecast import unpack_typecast_from_token
-from gofra.parser.typedef import unpack_type_definition_from_token
-from gofra.parser.types import (
+from gofra.parser.type_parser import (
     parse_concrete_type_from_tokenizer,
 )
-from gofra.parser.variables import (
-    try_push_variable_reference,
+from gofra.parser.typecast import unpack_typecast_from_token
+from gofra.parser.typedef import unpack_type_definition_from_token
+from gofra.parser.variable_accessor import try_push_variable_reference
+from gofra.parser.variable_definition import (
     unpack_variable_definition_from_token,
 )
 from gofra.types.composite.string import StringType

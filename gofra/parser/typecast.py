@@ -1,7 +1,7 @@
 from gofra.hir.operator import OperatorType
 from gofra.lexer.tokens import Token
 from gofra.parser._context import ParserContext
-from gofra.parser.types import (
+from gofra.parser.type_parser import (
     parse_concrete_type_from_tokenizer,
 )
 

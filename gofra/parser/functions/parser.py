@@ -20,7 +20,7 @@ from gofra.lexer import Token
 from gofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
 from gofra.lexer.tokens import TokenType
 from gofra.parser._context import ParserContext
-from gofra.parser.types import (
+from gofra.parser.type_parser import (
     parse_concrete_type_from_tokenizer,
 )
 from gofra.types import Type

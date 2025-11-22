@@ -3,7 +3,7 @@ from gofra.parser._context import ParserContext
 from gofra.parser.errors.type_definition_already_exists import (
     TypeDefinitionAlreadyExistsError,
 )
-from gofra.parser.types import (
+from gofra.parser.type_parser import (
     consume_generic_type_parameters,
     parse_generic_type_alias_from_tokenizer,
 )
