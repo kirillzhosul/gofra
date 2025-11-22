@@ -133,6 +133,7 @@ def initialize_static_data_section(
             if type_size == 0:
                 continue
             assert variable.initial_value is not None
+            # NOTE: Temprorary raising GofraError here just to make tests working
             if not isinstance(variable.initial_value, int):
                 raise GofraError("Array initializer is not implemented on AMD64")
 
