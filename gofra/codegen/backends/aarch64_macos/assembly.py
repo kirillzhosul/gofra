@@ -18,6 +18,7 @@ from gofra.hir.initializer import (
     VariableStringPtrInitializerValue,
 )
 from gofra.hir.operator import OperatorType
+from gofra.types._base import PrimitiveType
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.string import StringType
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
     from gofra.codegen.abi import AARCH64ABI
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.hir.variable import Variable
-    from gofra.types._base import PrimitiveType, Type
+    from gofra.types._base import Type
 
 # Static symbol (data) sections
 SYM_SECTION_BSS = "__DATA,__bss"
@@ -341,8 +342,11 @@ def _write_static_segment_const_variable_initializer(
             ):
                 # Must initialize in same order!
                 assert t_field_name == init_field_name
+                field_t = variable.type.fields[t_field_name]
+                assert isinstance(field_t, PrimitiveType)
+                ddd = _get_ddd_for_type(field_t)
                 context.fd.write(
-                    f"\t.quad {init_field_value}\n",
+                    f"\t{ddd} {init_field_value}\n",
                 )
         case _:
             msg = f"Has no known initializer codegen logic for type {variable.type}"
@@ -567,7 +571,11 @@ def _write_initializer_for_stack_variable(
         context.write(f"str X0, [X29, -{offset}]")
         return
 
-    if isinstance(initial_value, VariableIntFieldedStructureInitializerValue):  # pyright: ignore[reportUnnecessaryIsInstance]
+    if isinstance(
+        initial_value,
+        VariableIntFieldedStructureInitializerValue
+        | VariableStringPtrArrayInitializerValue,
+    ):  # pyright: ignore[reportUnnecessaryIsInstance]
         msg = f"{initial_value} is not implemented on-stack within codegen"
         raise NotImplementedError(msg)
 
