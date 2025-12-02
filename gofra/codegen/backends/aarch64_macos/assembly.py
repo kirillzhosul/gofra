@@ -10,13 +10,14 @@ from gofra.codegen.backends.aarch64_macos.frame import (
     restore_calee_frame,
 )
 from gofra.codegen.frame import build_local_variables_frame_offsets
-from gofra.hir.operator import OperatorType
-from gofra.hir.variable import (
+from gofra.hir.initializer import (
     T_AnyVariableInitializer,
     VariableIntArrayInitializerValue,
     VariableIntFieldedStructureInitializerValue,
-    VariableStringInitializerValue,
+    VariableStringPtrArrayInitializerValue,
+    VariableStringPtrInitializerValue,
 )
+from gofra.hir.operator import OperatorType
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.string import StringType
@@ -309,8 +310,19 @@ def _write_static_segment_const_variable_initializer(
                 bytes_taken = len(values) * element_size
                 bytes_free = bytes_total - bytes_taken
                 context.fd.write(f"\t.zero {bytes_free}\n")
+        case ArrayType(element_type=PointerType(points_to=StringType())):
+            assert isinstance(
+                variable.initial_value,
+                VariableStringPtrArrayInitializerValue,
+            )
+
+            values = variable.initial_value.values
+            f_values = ", ".join(map(context.load_string, values))
+
+            context.fd.write(f"{symbol_name}: \n\t.quad {f_values}\n")
+
         case PointerType(points_to=StringType()):
-            assert isinstance(variable.initial_value, VariableStringInitializerValue)
+            assert isinstance(variable.initial_value, VariableStringPtrInitializerValue)
             string_raw = variable.initial_value.string
             context.fd.write(
                 f"{symbol_name}: \n\t.quad {context.load_string(string_raw)}\n",
@@ -321,6 +333,7 @@ def _write_static_segment_const_variable_initializer(
                 VariableIntFieldedStructureInitializerValue,
             )
             # TODO(@kirillzhosul): Validate fields types before plain initialization
+            context.fd.write(f"{symbol_name}: \n")
             for t_field_name, (init_field_name, init_field_value) in zip(
                 variable.type.fields_ordering,
                 variable.initial_value.values.items(),
@@ -329,7 +342,7 @@ def _write_static_segment_const_variable_initializer(
                 # Must initialize in same order!
                 assert t_field_name == init_field_name
                 context.fd.write(
-                    f"{symbol_name}: \n\t.quad {init_field_value}\n",
+                    f"\t.quad {init_field_value}\n",
                 )
         case _:
             msg = f"Has no known initializer codegen logic for type {variable.type}"
@@ -543,7 +556,7 @@ def _write_initializer_for_stack_variable(
         context.write(f"str X0, [X29, -{offset}]")
         return
 
-    if isinstance(initial_value, VariableStringInitializerValue):
+    if isinstance(initial_value, VariableStringPtrInitializerValue):
         # Load string as static string and dispatch pointer on entry
         static_blob_sym = context.load_string(initial_value.string)
         assert isinstance(var_type, PointerType)

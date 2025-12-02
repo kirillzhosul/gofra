@@ -1,9 +1,12 @@
-from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 from gofra.lexer.tokens import TokenLocation
 from gofra.types._base import Type
+
+if TYPE_CHECKING:
+    from gofra.hir.initializer import T_AnyVariableInitializer
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,39 +73,3 @@ class VariableScopeClass(Enum):
 
     # Function scope - owner is an function and mostly has VariableStorageClass.STACK
     FUNCTION = auto()
-
-
-@dataclass(frozen=True, slots=True)
-class VariableIntArrayInitializerValue:
-    """HIR value parsed from initializer for int array.
-
-    Variable must be initialized with this value.
-    """
-
-    default: int
-    values: list[int]
-
-
-@dataclass(frozen=True, slots=True)
-class VariableIntFieldedStructureInitializerValue:
-    """HIR value parsed from initializer for structure where all fields are integers and fulfilled."""
-
-    values: Mapping[str, int]
-
-
-@dataclass(frozen=True, slots=True)
-class VariableStringInitializerValue:
-    """HIR value parsed from initializer for string (e.g *string / string).
-
-    Variable must be initialized with this value.
-    """
-
-    string: str
-
-
-T_AnyVariableInitializer = (
-    int
-    | VariableIntArrayInitializerValue
-    | VariableStringInitializerValue
-    | VariableIntFieldedStructureInitializerValue
-)
