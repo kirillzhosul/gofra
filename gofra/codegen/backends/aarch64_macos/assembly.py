@@ -544,8 +544,15 @@ def _write_initializer_for_stack_variable(
         return
 
     if isinstance(initial_value, VariableStringInitializerValue):
-        msg = "Stack initializer for string is not implemented in codegen."
-        raise NotImplementedError(msg)
+        # Load string as static string and dispatch pointer on entry
+        static_blob_sym = context.load_string(initial_value.string)
+        assert isinstance(var_type, PointerType)
+        context.write(
+            f"adrp X0, {static_blob_sym}@PAGE",
+            f"add X0, X0, {static_blob_sym}@PAGEOFF",
+        )
+        context.write(f"str X0, [X29, -{offset}]")
+        return
 
     if isinstance(initial_value, VariableIntFieldedStructureInitializerValue):  # pyright: ignore[reportUnnecessaryIsInstance]
         msg = f"{initial_value} is not implemented on-stack within codegen"
