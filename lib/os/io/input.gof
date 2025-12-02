@@ -4,6 +4,7 @@
 
 #include "os/general.gof"
 #include "std_handles.gof"
+#include "types.gof"
 
 // TODO: Add proper OR to preprocessor
 // TODO: Inline functions has bad debug options and produce improper error messages
@@ -23,18 +24,18 @@ func int open_file_fd_ro[*string sv] sv 0 0 call open_file_fd_raw end
 
 // Read file into SV (string), and return same pointer
 // reads same amount as string view len, returns null ptr (0) on error
-func *string read_file_sv[int fd, *string sv]
+func bool read_file_sv[int fd, *string sv]
     fd
     sv.data
     sv.len
     call input_fd
 
     0 < if
-        NULL_PTR
+        false
         return
     end
 
-    sv return
+    true return
 end
 
 // Consume all character bytes from input buffer (e.g `input_fd`)
