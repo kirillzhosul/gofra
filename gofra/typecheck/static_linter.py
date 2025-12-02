@@ -44,3 +44,37 @@ def lint_unused_function_local_variables(
         cli_linter_warning(
             f"Unused function variable '{varname}' declared at {var.defined_at}, either remove it or use it",
         )
+
+
+def emit_no_return_attribute_propagation_warning(function: Function) -> None:
+    cli_linter_warning(
+        f"Function '{function.name}' defined at {function.defined_at} calls to no-return function inside no conditional blocks, consider propagate no-return attribute",
+    )
+
+
+def emit_unreachable_code_after_early_return_warning(
+    function: Function,
+    return_at: TokenLocation,
+    unreachable_at: TokenLocation,
+) -> None:
+    cli_linter_warning(
+        f"Function '{function.name}' has operators after early-return at {return_at}! This is unreachable code starting at {unreachable_at}!",
+    )
+
+
+def emit_unused_global_variable_warning(variable: Variable[Type]) -> None:
+    cli_linter_warning(
+        f"Unused non-constant global variable '{variable.name}' defined at {variable.defined_at}",
+    )
+
+
+def emit_unreachable_code_after_no_return_call_warning(
+    call_from: Function,
+    call_at: TokenLocation,
+    callee: Function,
+    unreachable_at: TokenLocation,
+) -> None:
+    assert callee.is_no_return
+    cli_linter_warning(
+        f"Function '{call_from.name}' has operators after calling no-return function '{callee.name}' at {call_at}! This is unreachable code starting at {unreachable_at}!",
+    )

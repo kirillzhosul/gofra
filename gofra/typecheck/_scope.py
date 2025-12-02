@@ -23,15 +23,15 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=False)
-class TypecheckContext:
-    """Context for type checking which only required for internal usages."""
+class TypecheckScope:
+    """Scope (context) for type checking which only required for internal usages."""
 
     # Typechecker is an emulated type stack, e.g 1 2 would produce [INT, INT] ino type stack
-    emulated_stack_types: MutableSequence[Type]
+    types: MutableSequence[Type]
 
     def push_types(self, *types: Type) -> None:
         """Push given types onto emulated types stack."""
-        self.emulated_stack_types.extend(types)
+        self.types.extend(types)
 
     def raise_for_enough_arguments(
         self,
@@ -39,17 +39,17 @@ class TypecheckContext:
         required_args: int,
     ) -> None:
         """Expect that stack has N arguments."""
-        stack_size = len(self.emulated_stack_types)
+        stack_size = len(self.types)
         if stack_size < required_args:
             raise TypecheckNotEnoughOperatorArgumentsError(
                 operator=operator,
-                types_on_stack=self.emulated_stack_types,
+                types_on_stack=self.types,
                 required_args=required_args,
             )
 
     def pop_type_from_stack(self) -> Type:
         """Pop current type on the stack."""
-        return self.emulated_stack_types.pop()
+        return self.types.pop()
 
     def consume_n_arguments(self, args_to_consume: int) -> None:
         """Pop N arguments from stack of any type."""
@@ -66,10 +66,10 @@ class TypecheckContext:
 
         Types are reversed so call will look like original stack.
         """
-        stack_size = len(self.emulated_stack_types)
+        stack_size = len(self.types)
         if stack_size < len(callee.parameters):
             raise MissingFunctionArgumentsTypecheckError(
-                typestack=self.emulated_stack_types,
+                typestack=self.types,
                 callee=callee,
                 caller=caller,
                 at=at.location,
@@ -110,7 +110,7 @@ class TypecheckContext:
         )
 
         # Store shallow copy as we mutate that but want to display proper error with stack before our manipulations
-        _reference_type_stack = self.emulated_stack_types[::]
+        _reference_type_stack = self.types[::]
 
         for expected_type in expected_types[::-1]:
             argument_type = self.pop_type_from_stack()

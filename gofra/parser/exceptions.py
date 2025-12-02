@@ -159,14 +159,6 @@ class ParserEmptyIfBodyError(GofraError):
 If condition should always have body as otherwise this has no effect!"""
 
 
-class ParserNoEntryFunctionError(GofraError):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-    def __repr__(self) -> str:
-        return f"""Expected entry point function '{GOFRA_ENTRY_POINT}' but it does not exists!"""
-
-
 class ParserEntryPointFunctionModifiersError(GofraError):
     def __init__(self, *args: object) -> None:
         super().__init__(*args)

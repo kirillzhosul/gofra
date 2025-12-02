@@ -30,8 +30,7 @@ func void main[]
 
     // Read file
 
-    fd &sv call read_file_sv
-    typecast int NULL_PTR typecast int == if 
+    fd &sv call read_file_sv false == if 
         "Unable to read given file\n" eprint_fatal 
     end
 
