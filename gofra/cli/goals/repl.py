@@ -203,12 +203,12 @@ def _compile_file_to_execute(
         # TODO(@kirillzhosul): This may be more performant if we inject HIR loader
         # If do not have type stack, calculate first
         entry_point = module.functions[GOFRA_ENTRY_POINT]
-        new_immediate_type_stack, _, _ = emulate_type_stack_for_operators(
+        new_immediate_type_stack = emulate_type_stack_for_operators(
             entry_point.operators[:-1],  # Remove last return - no meaning here
             module=module,
             initial_type_stack=[],
             current_function=entry_point,
-        )
+        ).types
 
         return _compile_file_to_execute(
             args,
