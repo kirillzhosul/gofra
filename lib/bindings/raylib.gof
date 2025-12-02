@@ -8,7 +8,34 @@
 
 #include "types.gof"
 
-type RaylibColor int
+#ifdef RAYLIB_STRUCT_COLORS
+    struct Color
+        r char        // Color red value
+        g char        // Color green value
+        b char        // Color blue value
+        a char        // Color alpha value
+    end
+
+    extern func void _ClearBackground[Color color]                 #define ClearBackground _ClearBackground 
+    extern func void _DrawText[CStr,int,int,int,Color]             #define DrawText _DrawText
+    extern func void _DrawLine[int,int,int,int,Color]              #define DrawLine _DrawLine
+    extern func void _DrawRectangle[int,int,int,int,Color]         #define DrawRectangle _DrawRectangle
+
+    const WHITE Color = {r = 255, g = 255, b = 255, a = 255}
+    const BLACK Color = {r = 0, g = 0, b = 0, a = 255}
+#endif 
+
+#ifndef RAYLIB_STRUCT_COLORS
+    type Color int
+
+    extern func void _ClearBackground[Color color]                 #define ClearBackground _ClearBackground 
+    extern func void _DrawText[CStr,int,int,int,Color]             #define DrawText _DrawText
+    extern func void _DrawLine[int,int,int,int,Color]              #define DrawLine _DrawLine
+    extern func void _DrawRectangle[int,int,int,int,Color]         #define DrawRectangle _DrawRectangle
+
+    const var WHITE = 0xFFFFFFFF
+    const var BLACK = 0xFF000000
+#endif 
 
 extern func void _InitWindow[int width,int height,CStr name]   #define InitWindow _InitWindow
 extern func bool _WindowShouldClose[]                          #define WindowShouldClose _WindowShouldClose
@@ -16,16 +43,11 @@ extern func void _CloseWindow[]                                #define CloseWind
 extern func void _SetTargetFPS[int fps]                        #define SetTargetFPS _SetTargetFPS
 extern func void _BeginDrawing[]                               #define BeginDrawing _BeginDrawing
 extern func void _EndDrawing[]                                 #define EndDrawing _EndDrawing
-extern func void _ClearBackground[RaylibColor color]           #define ClearBackground _ClearBackground 
-extern func void _DrawRectangle[int,int,int,int,RaylibColor]   #define DrawRectangle _DrawRectangle
-extern func void _DrawLine[int,int,int,int,RaylibColor]        #define DrawLine _DrawLine
 extern func bool _IsKeyPressed[int keycode]                    #define IsKeyPressed _IsKeyPressed
 extern func bool _IsKeyDown[int keycode]                       #define IsKeyDown _IsKeyDown
-extern func void _DrawText[CStr,int,int,int,int]               #define DrawText _DrawText
 extern func void _DrawFPS[int x,int y]                         #define DrawFPS _DrawFPS
 
-// As we cannot pass color struct to Raylib, we pack this as an integer by ourselves
-func RaylibColor rgba_to_raylib_argb[int,int,int,int]
+func int rgba_to_raylib_argb[int,int,int,int]
     var color int = 0;
 
     &color swap 24 << color | !<
@@ -36,5 +58,5 @@ func RaylibColor rgba_to_raylib_argb[int,int,int,int]
     color return
 end
 
-const var WHITE = 0xFFFFFFFF
-const var BLACK = 0xFF000000
+
+// TODO: Proper initializer and default colors

@@ -5,10 +5,10 @@
 // MacOS: `-lraylib`
 // ==============================================
 
+#define RAYLIB_STRUCT_COLORS
 #include "bindings/raylib.gof"
 #include "std.gof"
 
-const PADDLE_DEFAULT_SPEED = 3
 const PADDLE_WIDTH = 25
 const PADDLE_HEIGHT = 120
 struct Paddle
@@ -17,9 +17,17 @@ struct Paddle
     x int y int
 end
 
-var player Paddle
-var enemy  Paddle
-
+#define PADDLE_DEFAULT_SPEED 3 
+var player Paddle = {
+    speed = PADDLE_DEFAULT_SPEED,
+    score = 0,
+    x = 0, y = 0,
+}
+var enemy Paddle = {
+    speed = PADDLE_DEFAULT_SPEED,
+    score = 0,
+    x = 0, y = 0,
+}
 #define BALL_COLOR WHITE
 const BALL_SIZE = 20
 const BALL_SPEED = 3
@@ -34,7 +42,7 @@ var ball Ball
 var difficulty int = 5
 
 #define BACKGROUND_COLOR BLACK
-#define WINDOW_NAME   "Gofra Pong"
+const WINDOW_NAME   = "Gofra Pong"
 const WINDOW_WIDTH  = 1200
 const WINDOW_HEIGHT = 800
 const WINDOW_FPS    = 120
@@ -45,7 +53,6 @@ inline func void update_ball_movement[]
     &ball.x ball.x ball.speed_x + !<
     &ball.y ball.y ball.speed_y + !<
 end
-
 
 func void increase_score[*Paddle paddle] // TODO: refactor with Paddle struct?
     &paddle.score copy ?> 1 + !<
@@ -68,19 +75,14 @@ func void init_game[]
     &ball.x WINDOW_WIDTH  2 / BALL_SIZE - !<
     &ball.y WINDOW_HEIGHT 2 / BALL_SIZE - !<
 
-    &player.score 15 !<
-    &enemy.score  32 !<
-
     &ball.speed_x BALL_SPEED !<
     &ball.speed_y BALL_SPEED !<
 
     &player.x WINDOW_WIDTH PADDLE_WIDTH - 10 - !<
     &player.y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
-    &player.speed PADDLE_DEFAULT_SPEED !<
-
+    
     &enemy.x 10 !<
     &enemy.y WINDOW_HEIGHT 2 / PADDLE_HEIGHT 2 / - !<
-    &enemy.speed PADDLE_DEFAULT_SPEED !<
 
     call update_difficulty
 end
@@ -88,7 +90,7 @@ end
 func void init_raylib[]
      WINDOW_WIDTH
      WINDOW_HEIGHT
-     WINDOW_NAME to_cstr_ptr
+     WINDOW_NAME.data
     call InitWindow
 
      WINDOW_FPS
