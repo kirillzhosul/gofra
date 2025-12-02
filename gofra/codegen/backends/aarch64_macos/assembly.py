@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 from gofra.cli.output import cli_message
 from gofra.codegen.backends.aarch64_macos.frame import (
@@ -12,12 +12,15 @@ from gofra.codegen.backends.aarch64_macos.frame import (
 from gofra.codegen.frame import build_local_variables_frame_offsets
 from gofra.hir.operator import OperatorType
 from gofra.hir.variable import (
+    T_AnyVariableInitializer,
     VariableIntArrayInitializerValue,
+    VariableIntFieldedStructureInitializerValue,
     VariableStringInitializerValue,
 )
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.string import StringType
+from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
@@ -273,6 +276,7 @@ def _write_static_segment_const_variable_initializer(
     assert variable.initial_value is not None
     match variable.type:
         case CharType() | I64Type():
+            assert isinstance(variable.initial_value, int)
             if type_size == 0:
                 cli_message(
                     "WARNING",
@@ -311,7 +315,22 @@ def _write_static_segment_const_variable_initializer(
             context.fd.write(
                 f"{symbol_name}: \n\t.quad {context.load_string(string_raw)}\n",
             )
-
+        case StructureType():
+            assert isinstance(
+                variable.initial_value,
+                VariableIntFieldedStructureInitializerValue,
+            )
+            # TODO(@kirillzhosul): Validate fields types before plain initialization
+            for t_field_name, (init_field_name, init_field_value) in zip(
+                variable.type.fields_ordering,
+                variable.initial_value.values.items(),
+                strict=True,
+            ):
+                # Must initialize in same order!
+                assert t_field_name == init_field_name
+                context.fd.write(
+                    f"{symbol_name}: \n\t.quad {init_field_value}\n",
+                )
         case _:
             msg = f"Has no known initializer codegen logic for type {variable.type}"
             raise ValueError(msg)
@@ -503,9 +522,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
 
 def _write_initializer_for_stack_variable(
     context: AARCH64CodegenContext,
-    initial_value: int
-    | VariableIntArrayInitializerValue
-    | VariableStringInitializerValue,
+    initial_value: T_AnyVariableInitializer,
     var_type: Type,
     offset: int,
 ) -> None:
@@ -526,9 +543,15 @@ def _write_initializer_for_stack_variable(
         context.write(f"str X0, [X29, -{offset}]")
         return
 
-    if isinstance(initial_value, VariableStringInitializerValue):  # pyright: ignore[reportUnnecessaryIsInstance]
+    if isinstance(initial_value, VariableStringInitializerValue):
         msg = "Stack initializer for string is not implemented in codegen."
         raise NotImplementedError(msg)
+
+    if isinstance(initial_value, VariableIntFieldedStructureInitializerValue):  # pyright: ignore[reportUnnecessaryIsInstance]
+        msg = f"{initial_value} is not implemented on-stack within codegen"
+        raise NotImplementedError(msg)
+
+    assert_never(initial_value)
 
 
 def function_end_with_epilogue(

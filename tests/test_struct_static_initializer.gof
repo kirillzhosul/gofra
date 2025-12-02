@@ -1,0 +1,14 @@
+/// Tests that structure initializer works for static allocated struct
+
+#define TESTKIT_EXPECTED_EXIT_CODE 32
+
+struct S
+    A int
+end
+
+var x S = {A = TESTKIT_EXPECTED_EXIT_CODE};
+
+func int main[]
+    x.A return
+end
+

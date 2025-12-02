@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -30,7 +31,7 @@ class Variable[T: Type]:
 
     # Value which this variables is filled by default
     # None means it has not initialized and must be zero-initialized
-    initial_value: "VariableIntArrayInitializerValue | VariableStringInitializerValue | int | None" = None
+    initial_value: "T_AnyVariableInitializer | None" = None
 
     @property
     def is_global_scope(self) -> bool:
@@ -83,6 +84,13 @@ class VariableIntArrayInitializerValue:
 
 
 @dataclass(frozen=True, slots=True)
+class VariableIntFieldedStructureInitializerValue:
+    """HIR value parsed from initializer for structure where all fields are integers and fulfilled."""
+
+    values: Mapping[str, int]
+
+
+@dataclass(frozen=True, slots=True)
 class VariableStringInitializerValue:
     """HIR value parsed from initializer for string (e.g *string / string).
 
@@ -90,3 +98,11 @@ class VariableStringInitializerValue:
     """
 
     string: str
+
+
+T_AnyVariableInitializer = (
+    int
+    | VariableIntArrayInitializerValue
+    | VariableStringInitializerValue
+    | VariableIntFieldedStructureInitializerValue
+)

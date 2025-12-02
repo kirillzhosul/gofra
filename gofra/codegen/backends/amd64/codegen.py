@@ -10,8 +10,8 @@ from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import Operator, OperatorType
 from gofra.hir.variable import VariableStorageClass
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.types.primitive.void import VoidType
 from gofra.types.primitive.integers import I64Type
+from gofra.types.primitive.void import VoidType
 
 from ._context import AMD64CodegenContext
 from .assembly import (

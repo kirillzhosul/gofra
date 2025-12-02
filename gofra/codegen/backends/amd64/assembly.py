@@ -9,9 +9,9 @@ from gofra.codegen.backends.amd64.frame import (
     restore_calee_frame,
 )
 from gofra.codegen.frame import build_local_variables_frame_offsets
+from gofra.exceptions import GofraError
 from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
-from gofra.exceptions import GofraError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -75,7 +75,9 @@ def push_integer_onto_stack(
     TODO(@kirillzhosul, @stepanzubkov): Negative numbers IS disallowed
     TODO(@kirillzhosul, @stepanzubkov): Review max and etc like in AARCH64_MacOS
     """
-    assert value.bit_count() <= 8 * 8, "Can push only integers within 64 bits range (8 bytes, x64)"
+    assert value.bit_count() <= 8 * 8, (
+        "Can push only integers within 64 bits range (8 bytes, x64)"
+    )
     is_negative = value < 0
     value = abs(value)
 
@@ -133,9 +135,10 @@ def initialize_static_data_section(
             if type_size == 0:
                 continue
             assert variable.initial_value is not None
-            # NOTE: Temprorary raising GofraError here just to make tests working
+            # NOTE: Temporary raising GofraError here just to make tests working
             if not isinstance(variable.initial_value, int):
-                raise GofraError("Array initializer is not implemented on AMD64")
+                msg = "Non-int initializer is not implemented on AMD64"
+                raise GofraError(msg)
 
             if type_size == 1:
                 context.write(f"{name}: .byte {variable.initial_value}")
@@ -271,7 +274,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
         if initial_value is None:
             continue
         assert isinstance(variable.initial_value, int), (
-            "Array initializer is not implemented on AMD64"
+            "Non-int initializer is not implemented on AMD64"
         )
 
         current_offset = offsets.offsets[variable.name]

@@ -1,5 +1,9 @@
+from collections.abc import Mapping
+
 from gofra.hir.variable import (
+    T_AnyVariableInitializer,
     VariableIntArrayInitializerValue,
+    VariableIntFieldedStructureInitializerValue,
     VariableStringInitializerValue,
 )
 from gofra.lexer.tokens import Token, TokenType
@@ -17,6 +21,7 @@ from gofra.types._base import Type
 from gofra.types.composite.array import ArrayType
 from gofra.types.composite.pointer import PointerType
 from gofra.types.composite.string import StringType
+from gofra.types.composite.structure import StructureType
 from gofra.types.primitive.boolean import BoolType
 from gofra.types.primitive.character import CharType
 from gofra.types.primitive.integers import I64Type
@@ -26,10 +31,7 @@ def consume_variable_initializer(
     context: ParserContext,
     var_t: Type | None,
     varname_token: Token,
-) -> tuple[
-    int | VariableIntArrayInitializerValue | VariableStringInitializerValue,
-    Type,
-]:
+) -> tuple[T_AnyVariableInitializer, Type]:
     if var_t is None:
         var_t = _infer_auto_variable_type_from_initializer(context, varname_token)
 
@@ -103,6 +105,50 @@ def consume_variable_initializer(
                 default=0,
                 values=values,
             ), var_t
+
+        case StructureType():
+            context.expect_token(TokenType.LCURLY)
+            context.advance_token()
+
+            # TODO(@kirillzhosul): Same as other similar blocks - requires whitespace by lexer ERROR
+            int_fields: Mapping[str, int] = {}
+            while token := context.peek_token():
+                if token.type == TokenType.RCURLY:
+                    context.advance_token()
+                    break
+                context.expect_token(TokenType.IDENTIFIER)
+                field_name_token = context.next_token()
+                field_name = field_name_token.text
+
+                context.expect_token(TokenType.ASSIGNMENT)
+                context.advance_token()
+
+                if context.peek_token().type == TokenType.INTEGER:
+                    tok = context.next_token()
+                    assert isinstance(tok.value, int)
+                    int_fields[field_name] = tok.value
+                else:
+                    msg = f"Only integer literal structure fields initializer are allowed for now at {context.peek_token().location}"
+                    raise ValueError(msg)
+
+                t = context.peek_token()
+                if t.type == TokenType.RCURLY:
+                    context.advance_token()
+                    break
+                context.expect_token(TokenType.COMMA)
+                _ = context.next_token()
+
+            abnormals_fields = set(int_fields.keys()).difference(var_t.fields)
+            if abnormals_fields:
+                msg = f"Abnormal field(s) for structure initializer: {abnormals_fields} at {varname_token.location}"
+                raise ValueError(msg)
+
+            missing_fields = set(var_t.fields).difference(int_fields.keys())
+            if missing_fields:
+                msg = f"Missing field(s) for structure initializer: {missing_fields} at {varname_token.location}"
+                raise ValueError(msg)
+
+            return VariableIntFieldedStructureInitializerValue(values=int_fields), var_t
         case _:
             raise TypeHasNoCompileTimeInitializerParserError(
                 type_with_no_initializer=var_t,
