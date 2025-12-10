@@ -10,8 +10,8 @@ from gofra.codegen.backends.aarch64_macos.assembly import (
     debugger_breakpoint_trap,
     drop_stack_slots,
     evaluate_conditional_block_on_stack_with_jump,
+    function_abi_call_by_symbol,
     function_begin_with_prologue,
-    function_call,
     function_end_with_epilogue,
     initialize_static_data_section,
     ipc_syscall_macos,
@@ -78,7 +78,6 @@ def aarch64_macos_instruction_set(
 ) -> None:
     """Write executable instructions from given operators."""
     for idx, operator in enumerate(operators):
-        context.write(f"// {idx=} {operator=}")
         aarch64_macos_operator_instructions(
             context,
             operator,
@@ -155,6 +154,7 @@ def aarch64_macos_operator_instructions(
                 context,
                 has_preserved_frame=True,
                 return_type=owner_function.return_type,
+                is_early_return=True,
             )
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
@@ -162,11 +162,11 @@ def aarch64_macos_operator_instructions(
             assert operator.operand in program.functions, operator.location
             function = program.functions[operator.operand]
 
-            function_call(
+            function_abi_call_by_symbol(
                 context,
                 name=function.name,
-                type_contract_in=function.parameters,
-                type_contract_out=function.return_type,
+                parameters=function.parameters,
+                return_type=function.return_type,
             )
         case OperatorType.STATIC_TYPE_CAST:
             # Skip that as it is typechecker only.
@@ -265,6 +265,7 @@ def aarch64_macos_executable_functions(
             context,
             has_preserved_frame=True,
             return_type=function.return_type,
+            is_early_return=False,
         )
 
 
@@ -285,11 +286,11 @@ def aarch64_macos_program_entry_point(
 
     # Prepare and execute main function
     assert isinstance(entry_point.return_type, VoidType | I64Type)
-    function_call(
+    function_abi_call_by_symbol(
         context,
         name=entry_point.name,
-        type_contract_in=[],
-        type_contract_out=entry_point.return_type,
+        parameters=[],
+        return_type=entry_point.return_type,
     )
 
     # Call syscall to exit without accessing protected system memory.
@@ -316,8 +317,8 @@ def aarch64_macos_program_entry_point(
     function_end_with_epilogue(
         context=context,
         has_preserved_frame=False,
-        execution_trap_instead_return=True,
         return_type=VoidType(),
+        is_early_return=False,
     )
 
 

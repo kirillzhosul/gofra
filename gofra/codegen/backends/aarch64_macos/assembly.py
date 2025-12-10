@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING, assert_never, cast
 
 from gofra.cli.output import cli_message
 from gofra.codegen.backends.aarch64_macos.frame import (
@@ -28,6 +28,7 @@ from gofra.types.primitive.integers import I64Type
 from gofra.types.primitive.void import VoidType
 
 from .registers import (
+    AARCH64_ABI_W_REGISTERS,
     AARCH64_DOUBLE_WORD_BITS,
     AARCH64_GP_REGISTERS,
     AARCH64_HALF_WORD_BITS,
@@ -38,7 +39,6 @@ from .registers import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from gofra.codegen.abi import AARCH64ABI
     from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
     from gofra.hir.variable import Variable
     from gofra.types._base import Type
@@ -79,10 +79,10 @@ def pop_cells_from_stack_into_registers(
     """
     assert registers, "Expected registers to store popped result into!"
 
+    # TODO(@kirillzhosul): LDP for pairs
     for register in registers:
         context.write(
-            f"ldr {register}, [SP]",
-            f"add SP, SP, #{AARCH64_STACK_ALIGNMENT}",
+            f"ldr {register}, [SP], #{AARCH64_STACK_ALIGNMENT}",
         )
 
 
@@ -131,12 +131,11 @@ def push_integer_onto_stack(
     is_negative = value < 0
     value = abs(value)
 
-    context.write("// push integer")
     if value <= AARCH64_HALF_WORD_BITS:
         # We have small immediate value which we may just store without shifts
         context.write(f"mov X0, #{value}")
         if is_negative:
-            context.write("sub X0, XZR, X0")
+            context.write("neg X0, X0")
         push_register_onto_stack(context, register="X0")
         return
 
@@ -200,10 +199,7 @@ def evaluate_conditional_block_on_stack_with_jump(
     If condition is false (value on stack) then jump out that conditional block to `jump_over_label`
     """
     pop_cells_from_stack_into_registers(context, "X0")
-    context.write(
-        "cmp X0, #0",
-        f"beq {jump_over_label}",
-    )
+    context.write(f"cbz X0, {jump_over_label}")
 
 
 def initialize_static_data_section(
@@ -216,7 +212,6 @@ def initialize_static_data_section(
     Section is an tuple (label, data)
     Data is an string (raw ASCII) or number (zeroed memory blob)
     """
-
     bss_variables = {
         k: v for k, v in static_variables.items() if v.initial_value is None
     }
@@ -407,6 +402,8 @@ def ipc_syscall_macos(
 
     # System calls always returns `long` type (e.g integer 64 bits (default one for Gofra))
     if store_retval_onto_stack:
+        # TODO(@kirillzhosul): Research refactoring with using calling-convention system (e.g for system calls (syscall/cffi/fast-call convention))
+        # TODO(@kirillzhosul): Research weirdness of kernel `errno`, not setting carry flag
         push_register_onto_stack(
             context,
             abi.retval_primitive_64bit_register,
@@ -422,7 +419,6 @@ def perform_operation_onto_stack(
     pop_cells_from_stack_into_registers(context, *registers)
 
     # TODO(@kirillzhosul): Optimize inc / dec (++, --) when incrementing / decrementing by known values
-    context.write(f"// OP on-stack {operation}")
     match operation:
         case OperatorType.ARITHMETIC_PLUS:
             context.write("add X0, X1, X0")
@@ -508,10 +504,11 @@ def function_begin_with_prologue(  # noqa: PLR0913
     """
     local_offsets = build_local_variables_frame_offsets(local_variables)
     if global_name:
-        context.fd.write(f".global {global_name}\n")
+        context.fd.write(f".globl {global_name}\n")
 
-    context.fd.write(f".align {AARCH64_STACK_ALIGNMENT_BIN}\n")
+    context.fd.write(f".p2align {AARCH64_STACK_ALIGNMENT_BIN // 2}\n")
     context.fd.write(f"{name}:\n")
+    context.write(".cfi_startproc")
 
     if preserve_frame:
         preserve_calee_frame(context, local_space_size=local_offsets.local_space_size)
@@ -519,7 +516,6 @@ def function_begin_with_prologue(  # noqa: PLR0913
     abi = context.abi
     if arguments_count:
         registers = abi.arguments_64bit_registers[:arguments_count]
-        context.write("// C-FFI arguments")
         for register in registers:
             push_register_onto_stack(context, register)
 
@@ -543,22 +539,28 @@ def _write_initializer_for_stack_variable(
     var_type: Type,
     offset: int,
 ) -> None:
-    if initial_value == 0:
-        # wzr for 32 bits later
-        context.write(f"str XZR, [X29, -{offset}]")
+    assert offset > 0
+
+    if isinstance(initial_value, int):
+        return _set_local_numeric_var_immediate(
+            context,
+            initial_value,
+            var_type,
+            offset,
+        )
 
     if isinstance(initial_value, VariableIntArrayInitializerValue):
         assert isinstance(var_type, ArrayType)
-        for i, value in enumerate(initial_value.values):
-            element_relative_offset = var_type.get_index_offset(i)
-            context.write(f"mov X0, #{value}")
-            context.write(f"str X0, [X29, -{offset - element_relative_offset}]")
-        return
-    if isinstance(initial_value, int):
-        # Default int initializer
-        context.write(f"mov X0, #{initial_value}")
-        context.write(f"str X0, [X29, -{offset}]")
-        return
+        values = initial_value.values
+        setters = ((var_type.get_index_offset(i), v) for i, v in enumerate(values))
+        for relative_offset, value in setters:
+            _set_local_numeric_var_immediate(
+                context,
+                value,
+                var_type.element_type,
+                offset=offset + relative_offset,
+            )
+        return None
 
     if isinstance(initial_value, VariableStringPtrInitializerValue):
         # Load string as static string and dispatch pointer on entry
@@ -569,7 +571,7 @@ def _write_initializer_for_stack_variable(
             f"add X0, X0, {static_blob_sym}@PAGEOFF",
         )
         context.write(f"str X0, [X29, -{offset}]")
-        return
+        return None
 
     if isinstance(
         initial_value,
@@ -582,12 +584,34 @@ def _write_initializer_for_stack_variable(
     assert_never(initial_value)
 
 
+def _set_local_numeric_var_immediate(
+    context: AARCH64CodegenContext,
+    value: int,
+    t: Type,
+    offset: int,
+) -> None:
+    """Set immediate numeric value for local variable at given offset. Respects memory store instructions."""
+    assert 0 < t.size_in_bytes <= 8, "Too big type to store into"
+
+    # Use half-word instruction set (W register, half store)
+    is_hword = t.size_in_bytes <= 4
+    bit_count = 8 * t.size_in_bytes
+    sr = ("XZR", "WZR")[is_hword] if value == 0 else ("X0", "W0")[is_hword]
+
+    if sr in ("X0", "W0"):
+        assert value.bit_count() <= bit_count
+        context.write(f"mov {sr}, #{value}")
+
+    instr = "strb" if t.size_in_bytes == 1 else ("strh" if is_hword else "str")
+    context.write(f"{instr} {sr}, [X29, -{offset}]")
+
+
 def function_end_with_epilogue(
     context: AARCH64CodegenContext,
     *,
     has_preserved_frame: bool = True,
-    execution_trap_instead_return: bool = False,
     return_type: Type,
+    is_early_return: bool,
 ) -> None:
     """End function with proper epilogue.
 
@@ -599,18 +623,19 @@ def function_end_with_epilogue(
     """
     if not isinstance(return_type, VoidType):
         if return_type.size_in_bytes == 0:
-            msg = "Cannot return value with size in bytes zero!"
-            raise ValueError(msg)
-        acquire_return_value_from_abi_call(context, context.abi, return_type)
+            cli_message(
+                "WARNING",
+                f"Skipped return value acquire at codegen for t={return_type}, size is zero!",
+            )
+        _load_return_value_from_stack_into_abi_registers(context, t=return_type)
 
     if has_preserved_frame:
         restore_calee_frame(context)
 
-    if execution_trap_instead_return:
-        execution_guard_trap(context)
-        return
-
     context.write("ret")
+
+    if not is_early_return:
+        context.write(".cfi_endproc")
 
 
 def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> None:
@@ -620,29 +645,18 @@ def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> Non
     Also due to being an trap (e.g execution will be caught) allows to trap some execution places.
     (e.g start entry exit failure)
     """
-    if not (0 <= number <= AARCH64_HALF_WORD_BITS):
-        msg = "Expected 16-bit immediate for breakpoint trap number!"
-        raise ValueError(msg)
-    context.write(f"brk #{number & AARCH64_HALF_WORD_BITS}")
+    assert 0 < number < AARCH64_HALF_WORD_BITS
+    context.write(f"brk #{number}")
 
 
-def execution_guard_trap(context: AARCH64CodegenContext) -> None:
-    """Place a trap to prevent execution after function return.
-
-    Prevents fatal errors when execution falls through exit call into
-    unbound memory.
-    """
-    debugger_breakpoint_trap(context, number=0)
-
-
-def function_call(
+def function_abi_call_by_symbol(
     context: AARCH64CodegenContext,
     *,
     name: str,
-    type_contract_in: Sequence[Type],
-    type_contract_out: Type,
+    parameters: Sequence[Type],
+    return_type: Type,
 ) -> None:
-    """Call an function using C ABI (Gofra native and C-FFI both functions).
+    """Call an function using C ABI (Gofra native and C-FFI both uses C-ABI).
 
     As Gofra under the hood uses C call convention for functions, this simplifies differences between C and Gofra calls.
 
@@ -652,93 +666,174 @@ def function_call(
 
     Most of the call logic is covered into function own prologue, which unpacks arguments and stores calee stack frame
     """
+    # Branch with link to call a subroutine with loading arguments and and acquire retval
+    # TODO(@kirillzhosul): Research refactoring with using calling-convention system (e.g for system calls (syscall/cffi/fast-call convention))
+
+    _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
+    context.write(f"bl {name}")
+    _load_return_value_from_abi_registers_into_stack(context, t=return_type)
+
+
+def _load_arguments_for_abi_call_into_registers_from_stack(
+    context: AARCH64CodegenContext,
+    parameters: Sequence[Type],
+) -> None:
+    """Load arguments from stack into registers to perform an ABI call, if necessary leftover arguments are spilled on stack.
+
+    For example on Darwin ABI with params (x, y, z):
+        R0=z (W0/X0)
+        R1=y (W1/X1)
+        R2=x (W2/X2)
+    """
     abi = context.abi
+    assert len(parameters) >= 0
+    if not parameters:
+        return  # Has nothing to pass (e.g empty parameter signature)
 
-    integer_arguments_count = len(type_contract_in)
-    store_return_value = not isinstance(type_contract_out, VoidType)
+    # How much params we can pass by registers
+    max_abi_registers = len(abi.arguments_64bit_registers)
 
-    if integer_arguments_count > len(abi.arguments_64bit_registers):
-        msg = (
-            f"C-FFI function call with {integer_arguments_count} arguments not supported. "
-            f"Maximum {len(context.abi.arguments_64bit_registers)} register arguments supported. "
-            "Stack argument passing not implemented."
-        )
+    # Wt/Xt registers for non fp/vector arguments
+    int_abi_registers = abi.arguments_64bit_registers[: len(parameters)]
+
+    # Reversed pop from stack
+    # stack: x y z
+    # load in order: z y x (R2, R1, R0)
+    # TODO(@kirillzhosul): Possible if we stick with stack approach, define own call-abi to not perform abi call preparation for internal functions (unlike c-ffi)
+    registers_to_load: list[AARCH64_GP_REGISTERS] = []
+    for register, param_type in zip(
+        reversed(int_abi_registers),
+        reversed(parameters[:max_abi_registers]),
+        strict=True,
+    ):
+        if param_type.is_fp:
+            # TODO(@kirillzhosul): Proper return value for floating point types (S0, D0, V0)
+            msg = f"FP argument passing not implemented in codegen ({param_type})!"
+            raise NotImplementedError(msg)
+
+        assert param_type.size_in_bytes > 0
+        if param_type.size_in_bytes <= 4:
+            # 32bit type register (e.g char, bool)
+            # truncate to lower register
+            registers_to_load.append(_truncate_register_to_32bit_version(register))
+            continue
+        if param_type.size_in_bytes <= 8:
+            # Full 64bit register - e.g full int, pointer
+            registers_to_load.append(register)
+            continue
+        if param_type.size_in_bytes <= 16:
+            # TODO(@kirillzhosul): Introduce register spill for arguments
+            msg = f"Composite param register spill required for param type {param_type}! Not implemented in AARCH64 codegen!"
+            raise NotImplementedError(msg)
+
+        # TODO(@kirillzhosul): Introduce indirect allocation for arguments
+        msg = f"Indirect allocation required for param type {param_type}! Not implemented in AARCH64 codegen!"
         raise NotImplementedError(msg)
 
-    if integer_arguments_count < 0:
-        msg = f"Tried to call function `{name}` with negative arguments count"
-        raise ValueError(msg)
-
-    if integer_arguments_count:
-        registers = abi.arguments_64bit_registers[:integer_arguments_count][::-1]
-        context.write("// C-FFI arguments")
-        pop_cells_from_stack_into_registers(context, *registers)
-
-    context.write(f"bl {name}")
-
-    if store_return_value:
-        retval_t = type_contract_out
-        if retval_t.size_in_bytes <= 4:
-            # Primitive return value as 32 bit
-            # directly store into return register (lower 32 bits)
-            push_register_onto_stack(context, abi.retval_primitive_32bit_register)
-        elif retval_t.size_in_bytes <= 8:
-            # Primitive return value as 64 bit
-            # directly store into return register (full 64 bits)
-            push_register_onto_stack(context, abi.retval_primitive_64bit_register)
-        elif retval_t.size_in_bytes <= 16:
-            # Composite return value up to 128 bits
-            # store two segments as registers where lower bytes are in first register (always 64 bit)
-            # and remaining bytes in second register
-            push_register_onto_stack(context, abi.retval_primitive_64bit_register)
-            remaining_bytes = retval_t.size_in_bytes - 8
-            if remaining_bytes <= 4:
-                push_register_onto_stack(context, abi.retval_composite_32bit_register)
-            else:
-                push_register_onto_stack(context, abi.retval_composite_64bit_register)
-        else:
-            msg = "Indirect allocation required, not implemented!"
-            raise ValueError(msg)
+    # Leftover arguments already spilled on stack
+    # calee will treat these by itself
+    pop_cells_from_stack_into_registers(context, *registers_to_load)
 
 
-def acquire_return_value_from_abi_call(
+def _truncate_register_to_32bit_version(
+    register: AARCH64_GP_REGISTERS,
+) -> AARCH64_ABI_W_REGISTERS:
+    """Truncate 64bit version of register into corresponding 32bit version (e.g X0 to W0).
+
+    Accepts only Xt registers (XZR prohibited)
+    """
+    if register.startswith("X"):
+        return cast("AARCH64_ABI_W_REGISTERS", register.replace("X", "W"))
+
+    if register.startswith("W"):
+        assert register != "WZR"
+        return cast("AARCH64_ABI_W_REGISTERS", register)
+
+    msg = f"Cannot truncate register {register} to corresponding 32bit version!"
+    raise NotImplementedError(msg)
+
+
+def _load_return_value_from_abi_registers_into_stack(
     context: AARCH64CodegenContext,
-    abi: AARCH64ABI,
-    retval: Type,
+    t: Type,
 ) -> None:
-    if retval.size_in_bytes <= 4:
-        # Primitive return value as 32 bit
+    """Emit code that loads return value by acquiring it from subroutine ABI call registers and spilling onto stack."""
+    if t.is_fp:
+        # TODO(@kirillzhosul): Proper return value for floating point types (S0, D0, V0)
+        msg = f"FP return value not implemented in codegen ({t})!"
+        raise NotImplementedError(msg)
+
+    if t.size_in_bytes <= 0:
+        return None  # E.g void, has nothing in return
+
+    abi = context.abi
+    if t.size_in_bytes <= 4:
+        # Primitive return value as 32 bit (e.g char, bool)
+        # directly load from return register (lower 32 bits)
+        return push_register_onto_stack(context, abi.retval_primitive_32bit_register)
+
+    if t.size_in_bytes <= 8:
+        # Primitive return value as 64 bit (e.g default int)
+        # directly load from return register (full 64 bits)
+        return push_register_onto_stack(context, abi.retval_primitive_64bit_register)
+    if t.size_in_bytes <= 16:
+        # Composite return value up to 128 bits
+        # load two segments as registers where lower bytes are in first register (always 64 bit)
+        # and remaining bytes in second register
+        push_register_onto_stack(context, abi.retval_primitive_64bit_register)
+        remaining_bytes = t.size_in_bytes - 8
+        leftover_reg = (
+            abi.retval_composite_32bit_register
+            if remaining_bytes <= 4
+            else abi.retval_composite_64bit_register
+        )
+        return push_register_onto_stack(context, leftover_reg)
+
+    # TODO(@kirillzhosul): Introduce indirect allocation for return types
+    msg = f"Indirect allocation required for return type {t}! Not implemented in AARCH64 codegen!"
+    raise NotImplementedError(msg)
+
+
+def _load_return_value_from_stack_into_abi_registers(
+    context: AARCH64CodegenContext,
+    t: Type,
+) -> None:
+    """Emit code that prepares return value by acquiring it from stack and storing into ABI return value register."""
+    if t.is_fp:
+        # TODO(@kirillzhosul): Proper return value for floating point types (S0, D0, V0)
+        msg = f"FP return value not implemented in codegen ({t})!"
+        raise NotImplementedError(msg)
+
+    if t.size_in_bytes <= 0:
+        return None  # E.g void, has nothing to return
+
+    abi = context.abi
+    if t.size_in_bytes <= 4:
+        # Primitive return value as 32 bit (e.g char, bool)
         # directly store into return register (lower 32 bits)
-        pop_cells_from_stack_into_registers(
-            context,
-            abi.retval_primitive_32bit_register,
-        )
-    elif retval.size_in_bytes <= 8:
-        # Primitive return value as 64 bit
+        register = abi.retval_primitive_32bit_register
+        return pop_cells_from_stack_into_registers(context, register)
+
+    if t.size_in_bytes <= 8:
+        # Primitive return value as 64 bit (e.g default int)
         # directly store into return register (full 64 bits)
-        pop_cells_from_stack_into_registers(
-            context,
-            abi.retval_primitive_64bit_register,
-        )
-    elif retval.size_in_bytes <= 16:
+        register = abi.retval_primitive_64bit_register
+        return pop_cells_from_stack_into_registers(context, register)
+
+    if t.size_in_bytes <= 16:
         # Composite return value up to 128 bits
         # store two segments as registers where lower bytes are in first register (always 64 bit)
         # and remaining bytes in second register
-        pop_cells_from_stack_into_registers(
-            context,
-            abi.retval_primitive_64bit_register,
+        registers: set[AARCH64_GP_REGISTERS] = {abi.retval_primitive_64bit_register}
+        remaining_bytes = t.size_in_bytes - 8
+        leftover_reg = (
+            abi.retval_composite_32bit_register
+            if remaining_bytes <= 4
+            else abi.retval_composite_64bit_register
         )
-        remaining_bytes = retval.size_in_bytes - 8
-        if remaining_bytes <= 4:
-            pop_cells_from_stack_into_registers(
-                context,
-                abi.retval_composite_32bit_register,
-            )
-        else:
-            pop_cells_from_stack_into_registers(
-                context,
-                abi.retval_composite_64bit_register,
-            )
-    else:
-        msg = "Indirect allocation required, not implemented!"
-        raise ValueError(msg)
+        registers.add(leftover_reg)
+        return pop_cells_from_stack_into_registers(context, *registers)
+
+    # TODO(@kirillzhosul): Introduce indirect allocation for return types
+    msg = f"Indirect allocation required for return type {t}! Not implemented in AARCH64 codegen!"
+    raise NotImplementedError(msg)

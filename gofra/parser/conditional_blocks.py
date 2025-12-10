@@ -299,7 +299,7 @@ def parse_for_range_qualifier(
             )
 
     elif context.peek_token().type != TokenType.INTEGER:
-        msg = f"For loop at {in_token.location} expects integer or identifier as range qualifier but got {context.peek_token().type}"
+        msg = f"For loop at {in_token.location} expects integer or identifier as range qualifier but got {context.peek_token().type.name}"
         raise ValueError(msg)
 
     step = 1

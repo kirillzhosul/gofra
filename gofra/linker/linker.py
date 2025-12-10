@@ -57,5 +57,4 @@ def link_object_files(  # noqa: PLR0913
     )
 
 
-# TODO(@kirillzhosul): pkg-config
 # TODO(@kirillzhosul): logging

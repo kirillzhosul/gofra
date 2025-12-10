@@ -10,6 +10,8 @@ class Type(Protocol):
 
     size_in_bytes: int
 
+    is_fp: bool = False
+
 
 # Base class for Primitive | Composite types
 class PrimitiveType(Type): ...

@@ -82,6 +82,5 @@ def restore_calee_frame(context: AARCH64CodegenContext) -> None:
     Read more in: `preserve_callee_frame`
     """
     assert FRAME_HEAD_SIZE % 16 == 0, "Frame head must be aligned by 16 bytes"
-    context.comment("; Restore frame (LR, FP, SP)")
     context.write("mov SP, X29")
     context.write(f"ldp X29, X30, [SP], #{FRAME_HEAD_SIZE}")
