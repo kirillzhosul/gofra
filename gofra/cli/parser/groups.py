@@ -14,14 +14,6 @@ def add_debug_group(parser: ArgumentParser) -> None:
     )
 
     group.add_argument(
-        "--display-lir",
-        dest="lir",
-        required=False,
-        action="store_true",
-        help="If passed will just emit IR (low-level, codegen specific) of provided file(s) into stdin.",
-    )
-
-    group.add_argument(
         "--debug-symbols",
         "-g",
         required=False,

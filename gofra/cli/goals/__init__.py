@@ -31,9 +31,6 @@ def perform_desired_toolchain_goal(args: CLIArguments) -> NoReturn:
         if args.hir:
             return cli_perform_hir_goal(args)
 
-        if args.lir:
-            return cli_perform_hir_goal(args)
-
         return cli_perform_compile_goal(args)
     except SystemExit as e:
         end = perf_counter_ns()

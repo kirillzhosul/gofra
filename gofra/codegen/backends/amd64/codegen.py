@@ -252,7 +252,7 @@ def amd64_executable_functions(
         function_begin_with_prologue(
             context,
             local_variables=function.variables,
-            arguments_count=function.arguments_count,
+            arguments_count=len(function.parameters),
             function_name=function.name,
             preserve_frame=True,
             as_global_linker_symbol=function.is_global,

@@ -3,13 +3,6 @@ from dataclasses import dataclass, field
 from typing import IO
 
 from gofra.codegen.abi import AARCH64ABI
-from gofra.codegen.backends.aarch64_macos.registers import AARCH64_GP_REGISTERS
-from gofra.codegen.lir.registers import LIRVirtualRegisterAllocator
-
-_virtual_registers: tuple[AARCH64_GP_REGISTERS, ...] = (
-    "X0",
-    "X1",
-)
 
 
 @dataclass(frozen=True)
@@ -24,12 +17,6 @@ class AARCH64CodegenContext:
     strings: MutableMapping[str, str] = field()
     float_constants: MutableMapping[float, str] = field()
     abi: AARCH64ABI
-
-    vreg_allocator: LIRVirtualRegisterAllocator = field(
-        default_factory=lambda: LIRVirtualRegisterAllocator(
-            list(_virtual_registers),
-        ),
-    )
 
     def write(self, *lines: str) -> int:
         return self.fd.write("\t" + "\n\t".join(lines) + "\n")

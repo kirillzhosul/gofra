@@ -5,24 +5,29 @@ from __future__ import annotations
 from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.abi import DarwinAARCH64ABI
-from gofra.codegen.backends.aarch64_macos._context import AARCH64CodegenContext
+from gofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+from gofra.codegen.backends.aarch64.primitive_instructions import (
+    drop_stack_slots,
+    push_float_onto_stack,
+    push_integer_onto_stack,
+    push_static_address_onto_stack,
+)
+from gofra.codegen.backends.aarch64_macos.abi_call_convention import (
+    function_abi_call_by_symbol,
+)
 from gofra.codegen.backends.aarch64_macos.assembly import (
     debugger_breakpoint_trap,
-    drop_stack_slots,
     evaluate_conditional_block_on_stack_with_jump,
-    function_abi_call_by_symbol,
     function_begin_with_prologue,
     function_end_with_epilogue,
+    function_return,
     initialize_static_data_section,
     ipc_syscall_macos,
     load_memory_from_stack_arguments,
     perform_operation_onto_stack,
     pop_cells_from_stack_into_registers,
-    push_float_onto_stack,
-    push_integer_onto_stack,
     push_local_variable_address_from_frame_offset,
     push_register_onto_stack,
-    push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
 )
 from gofra.codegen.backends.aarch64_macos.registers import (
@@ -150,11 +155,10 @@ def aarch64_macos_operator_instructions(
                 segment=context.load_string(string_raw),
             )
         case OperatorType.FUNCTION_RETURN:
-            function_end_with_epilogue(
+            function_return(
                 context,
                 has_preserved_frame=True,
                 return_type=owner_function.return_type,
-                is_early_return=True,
             )
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, str)
@@ -255,7 +259,7 @@ def aarch64_macos_executable_functions(
             local_variables=function.variables,
             global_name=function.name if function.is_global else None,
             preserve_frame=True,
-            arguments_count=function.arguments_count,
+            parameters=function.parameters,
         )
 
         aarch64_macos_instruction_set(context, function.operators, program, function)
@@ -281,7 +285,7 @@ def aarch64_macos_program_entry_point(
         global_name=LINKER_EXPECTED_ENTRY_POINT,
         preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
         local_variables={},
-        arguments_count=0,
+        parameters=[],
     )
 
     # Prepare and execute main function

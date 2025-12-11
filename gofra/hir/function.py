@@ -106,11 +106,6 @@ class Function:
         """Function has one or more local variables."""
         return bool(self.variables)
 
-    @property
-    def arguments_count(self) -> int:
-        """Arguments (parameters) amount which this function expects."""
-        return len(self.parameters)
-
     @classmethod
     def create_external(
         cls,

@@ -26,7 +26,6 @@ class CLIArguments:
     repl: bool
 
     hir: bool
-    lir: bool
     preprocess_only: bool
 
     assembler_flags: list[str]

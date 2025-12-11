@@ -43,7 +43,6 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         version=bool(args.version),
         repl=bool(args.repl),
         hir=bool(args.hir),
-        lir=bool(args.lir),
         preprocess_only=bool(args.preprocess_only),
         # Rest of these are mostly goal-specific
         execute_after_compilation=bool(args.execute),
@@ -130,10 +129,7 @@ def _process_linker_executable(args: Namespace) -> Path | None:
 
 def _validate_mutually_exclusive_goals(args: Namespace) -> None:
     """Validate that goal flags is not present as mutually exclusive."""
-    if sum([args.version, args.preprocess_only, args.hir, args.lir, args.repl]) in (
-        0,
-        1,
-    ):
+    if sum([args.version, args.preprocess_only, args.hir, args.repl]) in (0, 1):
         return None
 
     cli_message("ERROR", "Goal flags is mutually exclusive!")

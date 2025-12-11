@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from gofra.codegen.backends.aarch64_macos.registers import AARCH64_GP_REGISTERS
+from gofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
 from gofra.codegen.backends.amd64.registers import AMD64_GP_REGISTERS
 
 
