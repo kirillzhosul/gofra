@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import IO, TYPE_CHECKING, assert_never
 
 from libgofra.codegen.abi import DarwinAARCH64ABI
@@ -57,10 +58,17 @@ class AARCH64CodegenBackend:
     module: Module
     context: AARCH64CodegenContext
 
-    def __init__(self, target: Target, module: Module, fd: IO[str]) -> None:
+    def __init__(
+        self,
+        target: Target,
+        module: Module,
+        fd: IO[str],
+        on_warning: Callable[[str], None],
+    ) -> None:
         self.target = target
         self.module = module
         self.context = AARCH64CodegenContext(
+            on_warning=on_warning,
             fd=fd,
             abi=DarwinAARCH64ABI(),
             target=self.target,

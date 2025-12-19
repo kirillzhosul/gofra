@@ -34,6 +34,7 @@ from libgofra.preprocessor.macros.registry import (
 from libgofra.targets.infer_host import infer_host_target
 from libgofra.typecheck.typechecker import (
     emulate_type_stack_for_operators,
+    on_lint_warning_suppressed,
     validate_type_safety,
 )
 from libgofra.types._base import Type
@@ -207,6 +208,7 @@ def _compile_file_to_execute(
             entry_point.operators[:-1],  # Remove last return - no meaning here
             module=module,
             initial_type_stack=[],
+            on_lint_warning=on_lint_warning_suppressed,
             current_function=entry_point,
         ).types
 
@@ -219,7 +221,7 @@ def _compile_file_to_execute(
 
     if not args.skip_typecheck:
         try:
-            validate_type_safety(module)
+            validate_type_safety(module, on_lint_warning=on_lint_warning_suppressed)
         except (ValueError, AssertionError, GofraError) as e:
             print(f"!!! REPL Error: {e!r}")
             return None
@@ -229,7 +231,12 @@ def _compile_file_to_execute(
         args.target.file_assembly_suffix,
     )
 
-    generate_code_for_assembler(assembly_filepath, module, args.target)
+    generate_code_for_assembler(
+        assembly_filepath,
+        module,
+        args.target,
+        on_warning=on_lint_warning_suppressed,
+    )
 
     object_filepath = (cache_dir / file_to_execute.name).with_suffix(
         args.target.file_object_suffix,

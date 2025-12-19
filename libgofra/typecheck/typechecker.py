@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Literal, assert_never
 from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.hir.operator import OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
-from libgofra.lexer.tokens import TokenLocation
 from libgofra.typecheck.entry_point import validate_entry_point_signature
 from libgofra.typecheck.errors.no_main_entry_function import NoMainEntryFunctionError
 from libgofra.typecheck.errors.return_value_missing import (
@@ -41,11 +40,12 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import MutableMapping, Sequence
+    from collections.abc import Callable, MutableMapping, Sequence
 
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module
     from libgofra.hir.operator import Operator
+    from libgofra.lexer.tokens import TokenLocation
 
 # TODO!!!(@kirillzhosul): Typechecker may skip typechecking if early-return is occurred  # noqa: TD002, TD004
 
@@ -71,12 +71,20 @@ class EmulatedTypeBlock:
         }
 
 
+def on_lint_warning_suppressed(_: str) -> None:
+    return None
+
+
 def validate_type_safety(
     module: Module,
     *,
     strict_expect_entry_point: bool = True,
+    on_lint_warning: Callable[[str], None] | None,
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
+    if on_lint_warning is None:
+        on_lint_warning = on_lint_warning_suppressed
+
     entry_point = module.functions.get(GOFRA_ENTRY_POINT)
     if entry_point:
         validate_entry_point_signature(entry_point)
@@ -93,6 +101,7 @@ def validate_type_safety(
         func_block = validate_function_type_safety(
             function=function,
             module=module,
+            on_lint_warning=on_lint_warning,
         )
         global_var_references |= func_block.global_references_variables
 
@@ -104,31 +113,38 @@ def validate_type_safety(
         if variable.is_constant:
             # TODO(@kirillzhosul): Compiler (parser) actually inlines them and TC does not knows about their usages
             continue
-        emit_unused_global_variable_warning(variable)
+        emit_unused_global_variable_warning(on_lint_warning, variable)
 
 
 def validate_function_type_safety(
     function: Function,
     module: Module,
+    *,
+    on_lint_warning: Callable[[str], None],
 ) -> EmulatedTypeBlock:
     """Emulate and validate function type safety inside."""
     func_block = emulate_type_stack_for_operators(
         operators=function.operators,
         module=module,
         initial_type_stack=list(function.parameters),
+        on_lint_warning=on_lint_warning,
         current_function=function,
     )
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
 
     if func_block.reason == "no-return-func-call" and not function.is_no_return:
-        emit_no_return_attribute_propagation_warning(function)
+        emit_no_return_attribute_propagation_warning(on_lint_warning, function)
 
     if function.is_no_return and function.has_return_value():
         msg = f"Cannot return value from function '{function.name}' defined at {function.defined_at}, it has no_return attribute"
         raise ValueError(msg)
 
-    lint_unused_function_local_variables(function, func_block.references_variables)
+    lint_unused_function_local_variables(
+        on_lint_warning,
+        function,
+        func_block.references_variables,
+    )
     if not function.has_return_value() and func_block.types:
         # function must not return any
         raise TypecheckFunctionTypeContractOutViolatedError(
@@ -139,7 +155,7 @@ def validate_function_type_safety(
     _validate_retval_stack(function, func_block.types, return_hit_at=None)
     if function.has_return_value():  # and reason != "no-return-func-call":
         retval_t = func_block.types[0]
-        lint_stack_memory_retval(function, retval_t)
+        lint_stack_memory_retval(on_lint_warning, function, retval_t)
 
     return func_block
 
@@ -149,6 +165,7 @@ def emulate_type_stack_for_operators(
     module: Module,
     initial_type_stack: Sequence[Type],
     current_function: Function,
+    on_lint_warning: Callable[[str], None],
     blocks_idx_shift: int = 0,
     references_variables: MutableMapping[str, Variable[Type]] | None = None,
 ) -> EmulatedTypeBlock:
@@ -189,6 +206,7 @@ def emulate_type_stack_for_operators(
                     initial_type_stack=scope.types[::],
                     blocks_idx_shift=blocks_idx_shift + idx,
                     current_function=current_function,
+                    on_lint_warning=on_lint_warning,
                     references_variables=references_variables,
                 )
 
@@ -218,6 +236,7 @@ def emulate_type_stack_for_operators(
                     scope,
                     references_variables,
                     idx,
+                    on_lint_warning,
                 )
                 if etb:
                     return etb
@@ -237,6 +256,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
     scope: TypecheckScope,
     references_variables: MutableMapping[str, Variable[Type]],
     idx: int,
+    on_lint_warning: Callable[[str], None],
 ) -> EmulatedTypeBlock | None:
     match operator.type:
         case (
@@ -288,6 +308,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             )
             if operators[idx:]:
                 emit_unreachable_code_after_early_return_warning(
+                    on_lint_warning,
                     current_function,
                     return_at=operator.location,
                     unreachable_at=operators[idx].location,
@@ -317,6 +338,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             if function.is_no_return:
                 if operators[idx:]:
                     emit_unreachable_code_after_no_return_call_warning(
+                        on_lint_warning,
                         call_from=current_function,
                         call_at=operator.location,
                         unreachable_at=operators[idx].location,
@@ -484,6 +506,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             scope.raise_for_enough_arguments(operator, required_args=1)
             previous_type = scope.pop_type_from_stack()
             lint_typecast_same_type(
+                on_lint_warning,
                 t_from=previous_type,
                 t_to=to_type_cast,
                 at=operator.token.location,

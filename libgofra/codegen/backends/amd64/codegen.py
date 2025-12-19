@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import IO, TYPE_CHECKING, assert_never
 
 from libgofra.codegen.abi import LinuxAMD64ABI
@@ -49,7 +50,13 @@ class AMD64CodegenBackend:
     target: Target
     module: Module
 
-    def __init__(self, target: Target, module: Module, fd: IO[str]) -> None:
+    def __init__(
+        self,
+        target: Target,
+        module: Module,
+        fd: IO[str],
+        on_warning: Callable[[str], None],  # noqa: ARG002
+    ) -> None:
         assert target.operating_system == "Linux"
         self.target = target
         self.module = module

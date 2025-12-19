@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
-from gofra.cli.output import cli_message
+from gofra.cli.output import cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import (
@@ -80,6 +80,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             is_executable = args.output_format == "executable"
             validate_type_safety(
                 module,
+                on_lint_warning=cli_linter_warning,
                 strict_expect_entry_point=is_executable,
             )
 
@@ -101,7 +102,16 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     )
 
     with wrap_with_perf_time_taken("Codegen", verbose=args.verbose):
-        generate_code_for_assembler(assembly_filepath, module, args.target)
+        generate_code_for_assembler(
+            assembly_filepath,
+            module,
+            args.target,
+            on_warning=lambda message: cli_message(
+                level="WARNING",
+                text=message,
+                verbose=args.verbose,
+            ),
+        )
 
     object_filepath = (cache_dir / output.name).with_suffix(
         args.target.file_object_suffix,

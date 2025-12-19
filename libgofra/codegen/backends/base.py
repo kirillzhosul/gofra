@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import IO, Protocol
 
 from libgofra.hir.module import Module
@@ -15,6 +16,7 @@ class CodeGeneratorBackend(Protocol):
         target: Target,
         module: Module,
         fd: IO[str],
+        on_warning: Callable[[str], None],
     ) -> None: ...
 
     def emit(self) -> None: ...

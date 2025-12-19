@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from gofra.cli.output import cli_message
 from libgofra.codegen.sections._factory import SectionType
 from libgofra.hir.initializer import (
     VariableIntArrayInitializerValue,
@@ -68,8 +67,7 @@ def _write_static_segment_const_variable_initializer(
         case CharType() | I64Type():
             assert isinstance(variable.initial_value, int)
             if type_size == 0:
-                cli_message(
-                    "WARNING",
+                context.on_warning(
                     f"Variable {variable.name} has zero byte size (type {variable.type}) this variable will be not defined as symbol!",
                 )
                 return

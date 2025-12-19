@@ -1,4 +1,4 @@
-from collections.abc import MutableMapping
+from collections.abc import Callable, MutableMapping
 from dataclasses import dataclass, field
 from typing import IO
 
@@ -15,6 +15,7 @@ class AARCH64CodegenContext:
     @kirillzhosul: Refactor at some point
     """
 
+    on_warning: Callable[[str], None]
     fd: IO[str]
     abi: AARCH64ABI
     target: Target

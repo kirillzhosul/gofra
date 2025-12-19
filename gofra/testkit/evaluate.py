@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, TimeoutExpired
 
-from gofra.cli.output import cli_message
+from gofra.cli.output import cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import (
@@ -40,12 +40,25 @@ def toolchain_assembly_executable(
         include_paths=args.include_paths,
         macros=macros,
     )
-    validate_type_safety(module)
+    validate_type_safety(
+        module,
+        strict_expect_entry_point=True,
+        on_lint_warning=cli_linter_warning,
+    )
     artifact_path = cache_directory / f"{path.with_suffix('').name}"
     artifact_object_file = artifact_path.with_suffix(".o")
     artifact_assembly_file = artifact_path.with_suffix(".s")
 
-    generate_code_for_assembler(artifact_assembly_file, module, build_target)
+    generate_code_for_assembler(
+        artifact_assembly_file,
+        module,
+        build_target,
+        on_warning=lambda text: cli_message(
+            "WARNING",
+            text=text,
+            verbose=args.verbose,
+        ),
+    )
     assemble_object_from_codegen_assembly(
         assembly=artifact_assembly_file,
         output=artifact_object_file,
