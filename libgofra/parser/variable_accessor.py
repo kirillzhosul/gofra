@@ -183,11 +183,10 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
                 operand=variable.type.element_type.size_in_bytes,
             )
             context.push_new_operator(
-                OperatorType.PUSH_VARIABLE_ADDRESS,
+                OperatorType.PUSH_VARIABLE_VALUE,
                 token,
                 operand=array_index_at.name,
             )
-            context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
             if FEATURE_RUNTIME_ARRAY_OOB_CHECKS:
                 assert isinstance(array_index_at.type, (I64Type, CharType))
                 array_index_at = cast("Variable[I64Type]", array_index_at)

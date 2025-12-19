@@ -162,13 +162,9 @@ def consume_conditional_block_keyword_from_token(
                             operand=qualifier.iterator.name,
                         )
                         context.push_new_operator(
-                            OperatorType.PUSH_VARIABLE_ADDRESS,
+                            OperatorType.PUSH_VARIABLE_VALUE,
                             token=token,
                             operand=qualifier.iterator.name,
-                        )
-                        context.push_new_operator(
-                            OperatorType.MEMORY_VARIABLE_READ,
-                            token=token,
                         )
                         context.push_new_operator(
                             OperatorType.PUSH_INTEGER,
@@ -440,13 +436,9 @@ def unwrap_for_operators_syntactical_sugar(
     context.context_stack.append((*loop_context[:2], qualifier))
 
     context.push_new_operator(
-        OperatorType.PUSH_VARIABLE_ADDRESS,
+        OperatorType.PUSH_VARIABLE_VALUE,
         token=token,
         operand=qualifier.iterator.name,
-    )
-    context.push_new_operator(
-        OperatorType.MEMORY_VARIABLE_READ,
-        token=token,
     )
     context.push_new_operator(
         OperatorType.STATIC_TYPE_CAST,
@@ -494,13 +486,9 @@ def operators_read_sint64_variable(
     """Write operators to read specified variable onto stack."""
     # TODO(@kirillzhosul): This probably must form new HIR operation after we rework memory I/O and other stuff
     context.push_new_operator(
-        OperatorType.PUSH_VARIABLE_ADDRESS,
+        OperatorType.PUSH_VARIABLE_VALUE,
         token=token,
         operand=variable.name,
-    )
-    context.push_new_operator(
-        OperatorType.MEMORY_VARIABLE_READ,
-        token=token,
     )
 
 

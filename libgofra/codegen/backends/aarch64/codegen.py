@@ -239,6 +239,26 @@ def aarch64_operator_instructions(
             load_memory_from_stack_arguments(context)
         case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)
+        case OperatorType.PUSH_VARIABLE_VALUE:
+            assert isinstance(operator.operand, str)
+
+            # TODO(@kirillzhosul): This was merged from two operations - must be refactored (and also optimized)
+            if operator.operand in owner_function.variables:
+                hir_local_variable = owner_function.variables[operator.operand]
+                assert hir_local_variable.is_function_scope
+                if hir_local_variable.storage_class != VariableStorageClass.STACK:
+                    msg = (
+                        "Non stack local variables storage class is not implemented yet"
+                    )
+                    raise NotImplementedError(msg)
+                push_local_variable_address_from_frame_offset(
+                    context,
+                    owner_function.variables,
+                    operator.operand,
+                )
+            else:
+                push_static_address_onto_stack(context, operator.operand)
+            load_memory_from_stack_arguments(context)
         case OperatorType.DEBUGGER_BREAKPOINT:
             debugger_breakpoint_trap(context, number=1)
         case OperatorType.STRUCT_FIELD_OFFSET:

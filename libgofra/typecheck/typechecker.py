@@ -428,6 +428,24 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             if isinstance(revealed_type, ArrayType):
                 revealed_type = revealed_type.element_type
             scope.push_types(revealed_type)
+        case OperatorType.PUSH_VARIABLE_VALUE:
+            # TODO(@kirillzhosul): Should be refactored as consist of PUSH_VARIABLE_ADDRESS + MEMORY_VARIABLE_READ
+            assert isinstance(operator.operand, str)
+            varname = operator.operand
+            variable = {**module.variables, **current_function.variables}[varname]
+
+            # Track usages of each variable
+            references_variables[varname] = variable
+
+            memory_location = {
+                VariableStorageClass.STACK: PointerMemoryLocation.STACK,
+                VariableStorageClass.STATIC: PointerMemoryLocation.STATIC,
+            }[variable.storage_class]
+
+            revealed_type = variable.type
+            if isinstance(revealed_type, ArrayType):
+                revealed_type = revealed_type.element_type
+            scope.push_types(revealed_type)
         case OperatorType.STACK_COPY:
             scope.raise_for_enough_arguments(operator, required_args=1)
             argument_type = scope.pop_type_from_stack()

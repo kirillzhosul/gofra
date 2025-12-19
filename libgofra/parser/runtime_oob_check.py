@@ -27,11 +27,10 @@ def emit_runtime_hir_oob_check(
         raise ValueError(msg)
     panic_msg = "Runtime OOB error: tried to access array with out-of-bounds index, step into debugger for help!\\n"
     context.push_new_operator(
-        OperatorType.PUSH_VARIABLE_ADDRESS,
+        OperatorType.PUSH_VARIABLE_VALUE,
         token,
         operand=index_var.name,
     )
-    context.push_new_operator(OperatorType.MEMORY_VARIABLE_READ, token)
     context.push_new_operator(
         OperatorType.PUSH_INTEGER,
         operand=elements_const,

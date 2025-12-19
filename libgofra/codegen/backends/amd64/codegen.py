@@ -93,6 +93,29 @@ def amd64_instruction_set(
         )
 
 
+def _push_variable_address(
+    context: AMD64CodegenContext,
+    owner_function: Function,
+    variable: str,
+):
+    if variable in owner_function.variables:
+        # Local variable
+        hir_local_variable = owner_function.variables[variable]
+        assert hir_local_variable.is_function_scope
+        if hir_local_variable.storage_class != VariableStorageClass.STACK:
+            msg = "Non stack local variables storage class is not implemented yet"
+            raise NotImplementedError(msg)
+        push_local_variable_address_from_frame_offset(
+            context,
+            owner_function.variables,
+            variable,
+        )
+        return
+
+    # Global variable access
+    push_static_address_onto_stack(context, variable)
+
+
 def amd64_operator_instructions(
     context: AMD64CodegenContext,
     operator: Operator,
@@ -103,26 +126,7 @@ def amd64_operator_instructions(
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:
             assert isinstance(operator.operand, str)
-
-            variable = operator.operand
-            if variable in owner_function.variables:
-                # Local variable
-                hir_local_variable = owner_function.variables[operator.operand]
-                assert hir_local_variable.is_function_scope
-                if hir_local_variable.storage_class != VariableStorageClass.STACK:
-                    msg = (
-                        "Non stack local variables storage class is not implemented yet"
-                    )
-                    raise NotImplementedError(msg)
-                push_local_variable_address_from_frame_offset(
-                    context,
-                    owner_function.variables,
-                    operator.operand,
-                )
-                return
-
-            # Global variable access
-            push_static_address_onto_stack(context, variable)
+            _push_variable_address(context, owner_function, variable=operator.operand)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
@@ -222,6 +226,10 @@ def amd64_operator_instructions(
                 injected_args=[],
             )
         case OperatorType.MEMORY_VARIABLE_READ:
+            load_memory_from_stack_arguments(context)
+        case OperatorType.PUSH_VARIABLE_VALUE:
+            assert isinstance(operator.operand, str)
+            _push_variable_address(context, owner_function, variable=operator.operand)
             load_memory_from_stack_arguments(context)
         case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)

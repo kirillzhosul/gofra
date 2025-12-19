@@ -26,6 +26,10 @@ class OperatorType(Enum):
     # Push address of variable (local or global one, storage class is not specified)
     PUSH_VARIABLE_ADDRESS = auto()
 
+    # Read value from variable and push on stack
+    # (alternative to PUSH_VARIABLE_ADDRESS -> MEMORY_VARIABLE_READ)
+    PUSH_VARIABLE_VALUE = auto()
+
     # Shift current pointer to an struct for given structure field
     STRUCT_FIELD_OFFSET = auto()
 
