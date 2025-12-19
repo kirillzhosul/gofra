@@ -231,6 +231,14 @@ def amd64_operator_instructions(
             assert isinstance(operator.operand, str)
             _push_variable_address(context, owner_function, variable=operator.operand)
             load_memory_from_stack_arguments(context)
+        case OperatorType.LOAD_PARAM_ARGUMENT:
+            assert isinstance(operator.operand, str)
+            _push_variable_address(context, owner_function, variable=operator.operand)
+            # swap
+            pop_cells_from_stack_into_registers(context, "rax", "rbx")
+            push_register_onto_stack(context, "rax")
+            push_register_onto_stack(context, "rbx")
+            store_into_memory_from_stack_arguments(context)
         case OperatorType.MEMORY_VARIABLE_WRITE:
             store_into_memory_from_stack_arguments(context)
         case OperatorType.DEBUGGER_BREAKPOINT:

@@ -108,6 +108,28 @@ def aarch64_instruction_set(
         )
 
 
+def _push_variable_address(
+    context: AARCH64CodegenContext,
+    owner_function: Function,
+    variable: str,
+) -> None:
+    if variable in owner_function.variables:
+        hir_local_variable = owner_function.variables[variable]
+        assert hir_local_variable.is_function_scope
+        if hir_local_variable.storage_class != VariableStorageClass.STACK:
+            msg = "Non stack local variables storage class is not implemented yet"
+            raise NotImplementedError(msg)
+        push_local_variable_address_from_frame_offset(
+            context,
+            owner_function.variables,
+            variable,
+        )
+        return
+
+    # Global variable or memory
+    push_static_address_onto_stack(context, variable)
+
+
 def aarch64_operator_instructions(
     context: AARCH64CodegenContext,
     operator: Operator,
@@ -119,24 +141,7 @@ def aarch64_operator_instructions(
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:
             assert isinstance(operator.operand, str)
-
-            if operator.operand in owner_function.variables:
-                hir_local_variable = owner_function.variables[operator.operand]
-                assert hir_local_variable.is_function_scope
-                if hir_local_variable.storage_class != VariableStorageClass.STACK:
-                    msg = (
-                        "Non stack local variables storage class is not implemented yet"
-                    )
-                    raise NotImplementedError(msg)
-                push_local_variable_address_from_frame_offset(
-                    context,
-                    owner_function.variables,
-                    operator.operand,
-                )
-                return
-
-            # Global variable or memory
-            push_static_address_onto_stack(context, operator.operand)
+            _push_variable_address(context, owner_function, variable=operator.operand)
         case OperatorType.PUSH_INTEGER:
             assert isinstance(operator.operand, int)
             push_integer_onto_stack(context, operator.operand)
@@ -243,22 +248,20 @@ def aarch64_operator_instructions(
             assert isinstance(operator.operand, str)
 
             # TODO(@kirillzhosul): This was merged from two operations - must be refactored (and also optimized)
-            if operator.operand in owner_function.variables:
-                hir_local_variable = owner_function.variables[operator.operand]
-                assert hir_local_variable.is_function_scope
-                if hir_local_variable.storage_class != VariableStorageClass.STACK:
-                    msg = (
-                        "Non stack local variables storage class is not implemented yet"
-                    )
-                    raise NotImplementedError(msg)
-                push_local_variable_address_from_frame_offset(
-                    context,
-                    owner_function.variables,
-                    operator.operand,
-                )
-            else:
-                push_static_address_onto_stack(context, operator.operand)
+            _push_variable_address(context, owner_function, operator.operand)
             load_memory_from_stack_arguments(context)
+        case OperatorType.LOAD_PARAM_ARGUMENT:
+            assert isinstance(operator.operand, str)
+            # TODO(@kirillzhosul): This was merged from two operations - must be refactored (and also optimized)
+            _push_variable_address(context, owner_function, operator.operand)
+
+            # swap stack
+            pop_cells_from_stack_into_registers(context, "X0", "X1")
+            push_register_onto_stack(context, "X0")
+            push_register_onto_stack(context, "X1")
+
+            store_into_memory_from_stack_arguments(context)
+
         case OperatorType.DEBUGGER_BREAKPOINT:
             debugger_breakpoint_trap(context, number=1)
         case OperatorType.STRUCT_FIELD_OFFSET:

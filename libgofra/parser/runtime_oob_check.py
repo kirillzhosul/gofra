@@ -38,21 +38,22 @@ def emit_runtime_hir_oob_check(
     )
     context.push_new_operator(OperatorType.COMPARE_GREATER_EQUALS, token)
     context.push_new_operator(OperatorType.CONDITIONAL_IF, token, is_contextual=True)
-    context.push_new_operator(
-        OperatorType.PUSH_STRING,
-        operand=panic_msg,
-        token=Token(
-            type=TokenType.STRING,
-            text=f'"{panic_msg}"',
-            value=panic_msg,
-            location=token.location,
-        ),
-    )
-    context.push_new_operator(
-        OperatorType.FUNCTION_CALL,
-        token=token,
-        operand="eprint_fatal",
-    )
+    if True:
+        context.push_new_operator(
+            OperatorType.PUSH_STRING,
+            operand=panic_msg,
+            token=Token(
+                type=TokenType.STRING,
+                text=f'"{panic_msg}"',
+                value=panic_msg,
+                location=token.location,
+            ),
+        )
+        context.push_new_operator(
+            OperatorType.FUNCTION_CALL,
+            token=token,
+            operand="eprint_fatal",
+        )
     context.push_new_operator(OperatorType.CONDITIONAL_END, token=token)
     _, if_op, _ = context.pop_context_stack()
     if_op.jumps_to_operator_idx = context.current_operator - 1

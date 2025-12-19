@@ -417,6 +417,9 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 (PointerType,),
                 (I64Type, PointerType, BoolType, CharType),
             )
+        case OperatorType.LOAD_PARAM_ARGUMENT:
+            scope.raise_for_enough_arguments(operator, required_args=1)
+            scope.consume_n_arguments(1)
         case OperatorType.MEMORY_VARIABLE_READ:
             scope.raise_for_enough_arguments(operator, 1)
             ptr_t = scope.pop_type_from_stack()

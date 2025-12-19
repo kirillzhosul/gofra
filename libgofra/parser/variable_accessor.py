@@ -99,11 +99,30 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         )
         return True
 
-    context.push_new_operator(
-        type=OperatorType.PUSH_VARIABLE_ADDRESS,
-        token=token,
-        operand=varname,
-    )
+    if is_reference and variable.is_constant:
+        msg = f"Tried to get reference of constant variable {variable.name} at {token.location}"
+        raise ValueError(msg)
+    if (
+        not is_reference
+        and variable.type.size_in_bytes > 8
+        and not (array_index_at is not None or struct_field_accessor)
+    ):
+        msg = f"Cannot load variable {variable.name} of type {variable.type} as it has size {variable.type.size_in_bytes} in bytes (stack-cell-overflow) at {token.location}"
+        raise ValueError(msg)
+
+    if struct_field_accessor or array_index_at is not None or is_reference:
+        context.push_new_operator(
+            type=OperatorType.PUSH_VARIABLE_ADDRESS,
+            token=token,
+            operand=varname,
+        )
+    else:
+        context.push_new_operator(
+            type=OperatorType.PUSH_VARIABLE_VALUE,
+            token=token,
+            operand=varname,
+        )
+        return True
 
     if struct_field_accessor:
         if not isinstance(variable.type, StructureType) and not isinstance(
@@ -199,15 +218,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
             context.push_new_operator(OperatorType.ARITHMETIC_MULTIPLY, token)
             context.push_new_operator(OperatorType.ARITHMETIC_PLUS, token)
 
-    if is_reference and variable.is_constant:
-        msg = f"Tried to get reference of constant variable {variable.name} at {token.location}"
-        raise ValueError(msg)
     if not is_reference:
-        if variable.type.size_in_bytes > 8 and not (
-            array_index_at is not None or struct_field_accessor
-        ):
-            msg = f"Cannot load variable {variable.name} of type {variable.type} as it has size {variable.type.size_in_bytes} in bytes (stack-cell-overflow) at {token.location}"
-            raise ValueError(msg)
         context.push_new_operator(
             type=OperatorType.MEMORY_VARIABLE_READ,
             token=token,

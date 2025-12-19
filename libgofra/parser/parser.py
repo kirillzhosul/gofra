@@ -346,13 +346,10 @@ def _unpack_function_definition_from_token(
             initial_value=None,
         )
         new_context.push_new_operator(
-            OperatorType.PUSH_VARIABLE_ADDRESS,
+            OperatorType.LOAD_PARAM_ARGUMENT,
             token,
             operand=param_name,
         )
-        new_context.push_new_operator(OperatorType.STACK_SWAP, token)
-        new_context.push_new_operator(OperatorType.MEMORY_VARIABLE_WRITE, token)
-
     _parse_from_context_into_operators(context=new_context)
 
     if f_header_def.qualifiers.is_inline:

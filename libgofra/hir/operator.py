@@ -30,6 +30,11 @@ class OperatorType(Enum):
     # (alternative to PUSH_VARIABLE_ADDRESS -> MEMORY_VARIABLE_READ)
     PUSH_VARIABLE_VALUE = auto()
 
+    # Internal operation when function has parameters
+    # Specifies that parameter local variable must be loaded right now
+    # (moved from stack, registers) into local argument variable location
+    LOAD_PARAM_ARGUMENT = auto()
+
     # Shift current pointer to an struct for given structure field
     STRUCT_FIELD_OFFSET = auto()
 
