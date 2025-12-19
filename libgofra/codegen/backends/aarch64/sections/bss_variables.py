@@ -34,7 +34,7 @@ def write_uninitialized_data_section(
 
         # TODO(@kirillzhosul): Align by specifications of type not general byte size
         alignment = get_type_data_alignment(variable.type)
-        if alignment != aligned_by:
+        if alignment and alignment != aligned_by:
             aligned_by = alignment
             context.fd.write(f".p2align {alignment}\n")
 
