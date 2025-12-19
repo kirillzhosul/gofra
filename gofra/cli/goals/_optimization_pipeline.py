@@ -1,7 +1,7 @@
 from gofra.cli.output import cli_message
 from gofra.cli.parser.arguments import CLIArguments
-from gofra.hir.module import Module
-from gofra.optimizer.pipeline import create_optimizer_pipeline
+from libgofra.hir.module import Module
+from libgofra.optimizer.pipeline import create_optimizer_pipeline
 
 
 def cli_process_optimization_pipeline(

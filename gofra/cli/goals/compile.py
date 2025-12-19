@@ -6,25 +6,25 @@ from contextlib import contextmanager
 from time import perf_counter_ns
 from typing import TYPE_CHECKING, NoReturn
 
-from gofra.assembler.assembler import (
-    assemble_object_from_codegen_assembly,
-)
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
 from gofra.cli.output import cli_message
-from gofra.codegen.generator import generate_code_for_assembler
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
-from gofra.gofra import process_input_file
-from gofra.lexer.tokens import TokenLocation
-from gofra.linker.apple.command_composer import compose_apple_linker_command
-from gofra.linker.command_composer import get_linker_command_composer_backend
-from gofra.linker.gnu.command_composer import compose_gnu_linker_command
-from gofra.linker.linker import link_object_files
-from gofra.linker.output_format import LinkerOutputFormat
-from gofra.linker.pkgconfig.pkgconfig import pkgconfig_get_library_search_paths
-from gofra.preprocessor.macros.registry import registry_from_raw_definitions
-from gofra.typecheck import validate_type_safety
+from libgofra.assembler.assembler import (
+    assemble_object_from_codegen_assembly,
+)
+from libgofra.codegen.generator import generate_code_for_assembler
+from libgofra.gofra import process_input_file
+from libgofra.lexer.tokens import TokenLocation
+from libgofra.linker.apple.command_composer import compose_apple_linker_command
+from libgofra.linker.command_composer import get_linker_command_composer_backend
+from libgofra.linker.gnu.command_composer import compose_gnu_linker_command
+from libgofra.linker.linker import link_object_files
+from libgofra.linker.output_format import LinkerOutputFormat
+from libgofra.linker.pkgconfig.pkgconfig import pkgconfig_get_library_search_paths
+from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
+from libgofra.typecheck import validate_type_safety
 
 if TYPE_CHECKING:
     from collections.abc import Generator

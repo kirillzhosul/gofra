@@ -1,1 +1,1 @@
-"""Cache logic for toolchain processing."""
+"""Cache helper logic for toolchain processing."""

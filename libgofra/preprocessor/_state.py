@@ -1,0 +1,58 @@
+from collections import deque
+from collections.abc import Generator, Iterable, Iterator
+from pathlib import Path
+
+from libgofra.lexer import Token
+
+from .macros import MacrosRegistry
+
+
+class PreprocessorState:
+    """State of an preprocessor stage."""
+
+    # Current file which is being processed
+    path: Path
+
+    # Lexical token streams from lexer or preprocessor itself
+    # by default first is one from lexer and then it is extended by preprocessor to also consume next tokens from it until exhausted
+    tokenizers: deque[Iterator[Token]]
+
+    # Remember which paths was included to not include them again.
+    already_included_paths: list[Path]
+
+    # Where to additionally search for paths
+    include_search_paths: Iterable[Path]
+
+    macros: MacrosRegistry
+
+    def __init__(
+        self,
+        path: Path,
+        lexer: Generator[Token],
+        include_search_paths: Iterable[Path],
+        macros: MacrosRegistry,
+    ) -> None:
+        # Do not strictly resolve that path as this being lazy-toolchain and will cause to errors from lexer or previous stage to bloat preprocessor
+        self.path = path.resolve(strict=False)
+
+        self.include_search_paths = include_search_paths
+        self.already_included_paths = [path]
+
+        self.macros = macros
+
+        self.tokenizers = deque((lexer,))
+        self.tokenizer = self.iterate_tokenizers()
+
+    def iterate_tokenizers(self) -> Generator[Token]:
+        """Consume tokens from each tokenizers until all exhausted."""
+        while self.tokenizers:
+            # Consume token from current (last) tokenizer
+            tokenizer = self.tokenizers[-1]
+            token = next(tokenizer, None)
+
+            if token:
+                yield token
+                continue
+
+            # Current tokenizer exhausted and must be removed
+            self.tokenizers.pop()

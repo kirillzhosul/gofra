@@ -9,7 +9,6 @@ from collections.abc import MutableSequence, Sequence
 from pathlib import Path
 from typing import NoReturn
 
-from gofra.assembler.assembler import assemble_object_from_codegen_assembly
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.parser.arguments import CLIArguments
 from gofra.cli.readline import (
@@ -17,29 +16,30 @@ from gofra.cli.readline import (
     read_multiline_input,
     try_setup_readline,
 )
-from gofra.codegen.generator import generate_code_for_assembler
-from gofra.consts import GOFRA_ENTRY_POINT
-from gofra.exceptions import GofraError
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
-from gofra.gofra import process_input_file
-from gofra.lexer.tokens import TokenLocation
-from gofra.linker.linker import link_object_files
-from gofra.linker.output_format import LinkerOutputFormat
-from gofra.linker.profile import LinkerProfile
-from gofra.preprocessor.macros.registry import (
+from libgofra.assembler.assembler import assemble_object_from_codegen_assembly
+from libgofra.codegen.generator import generate_code_for_assembler
+from libgofra.consts import GOFRA_ENTRY_POINT
+from libgofra.exceptions import GofraError
+from libgofra.gofra import process_input_file
+from libgofra.lexer.tokens import TokenLocation
+from libgofra.linker.linker import link_object_files
+from libgofra.linker.output_format import LinkerOutputFormat
+from libgofra.linker.profile import LinkerProfile
+from libgofra.preprocessor.macros.registry import (
     MacrosRegistry,
     registry_from_raw_definitions,
 )
-from gofra.targets.infer_host import infer_host_target
-from gofra.typecheck.typechecker import (
+from libgofra.targets.infer_host import infer_host_target
+from libgofra.typecheck.typechecker import (
     emulate_type_stack_for_operators,
     validate_type_safety,
 )
-from gofra.types._base import Type
-from gofra.types.composite.pointer import PointerType
-from gofra.types.composite.string import StringType
-from gofra.types.primitive.integers import I64Type
+from libgofra.types._base import Type
+from libgofra.types.composite.pointer import PointerType
+from libgofra.types.composite.string import StringType
+from libgofra.types.primitive.integers import I64Type
 
 HIST_FILE = Path("~").expanduser() / ".gofra_repl_history"
 

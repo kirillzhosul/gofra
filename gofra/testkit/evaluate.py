@@ -3,26 +3,26 @@ import sys
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, TimeoutExpired
 
-from gofra.assembler.assembler import (
-    assemble_object_from_codegen_assembly,
-)
 from gofra.cli.output import cli_message
-from gofra.codegen.generator import generate_code_for_assembler
-from gofra.exceptions import GofraError
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
-from gofra.gofra import process_input_file
-from gofra.lexer.tokens import TokenLocation
-from gofra.linker.linker import link_object_files
-from gofra.linker.output_format import LinkerOutputFormat
-from gofra.linker.profile import LinkerProfile
-from gofra.preprocessor.macros import registry_from_raw_definitions
-from gofra.preprocessor.macros.defaults import (
+from libgofra.assembler.assembler import (
+    assemble_object_from_codegen_assembly,
+)
+from libgofra.codegen.generator import generate_code_for_assembler
+from libgofra.exceptions import GofraError
+from libgofra.gofra import process_input_file
+from libgofra.lexer.tokens import TokenLocation
+from libgofra.linker.linker import link_object_files
+from libgofra.linker.output_format import LinkerOutputFormat
+from libgofra.linker.profile import LinkerProfile
+from libgofra.preprocessor.macros import registry_from_raw_definitions
+from libgofra.preprocessor.macros.defaults import (
     construct_propagated_toolchain_definitions,
 )
-from gofra.preprocessor.macros.registry import MacrosRegistry
-from gofra.targets import Target
-from gofra.typecheck.typechecker import validate_type_safety
+from libgofra.preprocessor.macros.registry import MacrosRegistry
+from libgofra.targets import Target
+from libgofra.typecheck.typechecker import validate_type_safety
 
 from .cli.arguments import CLIArguments
 from .test import Test, TestStatus

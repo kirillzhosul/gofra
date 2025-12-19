@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING
 
 from gofra.cli.errors.error_handler import cli_gofra_error_handler
 from gofra.cli.output import cli_message
-from gofra.exceptions import GofraError
-from gofra.targets.infer_host import infer_host_target
 from gofra.testkit.cli.matrix import display_test_matrix
 from gofra.testkit.test import TestStatus
+from libgofra.exceptions import GofraError
+from libgofra.targets.infer_host import infer_host_target
 
 from .cli.arguments import CLIArguments, parse_cli_arguments
 from .evaluate import evaluate_test_case
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
-    from gofra.targets.target import Target
+    from libgofra.targets.target import Target
 
     from .test import Test
 

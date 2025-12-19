@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from gofra.linker.profile import LinkerProfile
-from gofra.optimizer.config import OptimizerConfig
-from gofra.targets.target import Target
+from libgofra.linker.profile import LinkerProfile
+from libgofra.optimizer.config import OptimizerConfig
+from libgofra.targets.target import Target
 
 
 @dataclass(slots=True, frozen=True)

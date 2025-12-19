@@ -5,8 +5,8 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
 
-from gofra.cli.executable import cli_get_executable_program
-from gofra.preprocessor.include.distribution import infer_distribution_library_paths
+from gofra.executable import cli_get_executable_program
+from libgofra.preprocessor.include.distribution import infer_distribution_library_paths
 
 THREAD_OPTIMAL_WORKERS_COUNT = (os.cpu_count() or 1) * 2
 
@@ -54,7 +54,7 @@ def _construct_argument_parser() -> ArgumentParser:
     parser = ArgumentParser(
         description="Gofra Testkit - CLI for testing internals of Gofra programming language",
         add_help=True,
-        prog=cli_get_executable_program(override=None, warn_proper_installation=False),
+        prog=cli_get_executable_program(),
     )
 
     parser.add_argument(

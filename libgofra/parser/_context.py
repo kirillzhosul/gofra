@@ -1,0 +1,173 @@
+from __future__ import annotations
+
+from collections import deque
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+from libgofra.hir.function import Function
+from libgofra.hir.operator import Operator, OperatorType, StructAccessor
+from libgofra.lexer import Token
+from libgofra.parser.errors.general_expect_token import ExpectedTokenByParserError
+from libgofra.types.composite.structure import StructureType
+from libgofra.types.registry import DEFAULT_PRIMITIVE_TYPE_REGISTRY, TypeRegistry
+
+if TYPE_CHECKING:
+    from collections.abc import (
+        Generator,
+        MutableMapping,
+        MutableSequence,
+    )
+
+    from libgofra.hir.variable import Variable
+    from libgofra.lexer.tokens import TokenType
+    from libgofra.parser.conditional_blocks import RangeQualifier
+    from libgofra.types._base import Type
+    from libgofra.types.generics import GenericParametrizedType
+
+
+@dataclass
+class PeekableTokenizer:
+    _tokenizer: Generator[Token] = field()
+    _peeked: deque[Token] = field(default_factory=deque[Token])
+
+    def next_token(self) -> Token:
+        if self._peeked:
+            return self._peeked.popleft()
+        return next(self._tokenizer)
+
+    def advance_token(self) -> None:
+        self.next_token()
+
+    def peek_token(self) -> Token:
+        if not self._peeked:
+            self._peeked.append(next(self._tokenizer))
+        return self._peeked[0]
+
+    def expect_token(self, type: TokenType) -> None:  # noqa: A002
+        token = self.peek_token()
+        if token.type != type:
+            raise ExpectedTokenByParserError(expected=type, got=token)
+
+    def push_token_back_upfront_peeked(self, token: Token) -> None:
+        """Push token in front of peeked ones, so next/peek will take it last in order of peeked."""
+        self._peeked.appendleft(token)
+
+
+@dataclass(frozen=False)
+class ParserContext(PeekableTokenizer):
+    """Context for parsing which only required from internal usages."""
+
+    parent: ParserContext | None = field(default=None)
+
+    # Resulting operators from parsing
+    operators: MutableSequence[Operator] = field(default_factory=list[Operator])
+
+    context_stack: deque[tuple[int, Operator, RangeQualifier | None]] = field(
+        default_factory=lambda: deque(),
+    )
+
+    variables: MutableMapping[str, Variable[Type]] = field(
+        default_factory=dict[str, "Variable[Type]"],
+    )
+
+    structs: MutableMapping[str, StructureType] = field(
+        default_factory=dict[str, StructureType],
+    )
+    functions: MutableMapping[str, Function] = field(
+        default_factory=dict[str, Function],
+    )
+    types: TypeRegistry = field(
+        default_factory=lambda: DEFAULT_PRIMITIVE_TYPE_REGISTRY.copy(),
+    )
+
+    # No function calls in that context
+    # Maybe should be refactored
+    is_leaf_context: bool = True
+
+    def name_is_already_taken(self, name: str) -> bool:
+        is_taken = any(
+            name in container
+            for container in (self.structs, self.variables, self.functions, self.types)
+        )
+
+        if not is_taken and self.parent:
+            return self.parent.name_is_already_taken(name)
+        return is_taken
+
+    def has_context_stack(self) -> bool:
+        return len(self.context_stack) > 0
+
+    def get_struct(self, name: str) -> StructureType | None:
+        if name in self.structs:
+            return self.structs[name]
+        if self.parent:
+            return self.parent.get_struct(name)
+        return None
+
+    def get_type(self, name: str) -> Type | GenericParametrizedType | None:
+        if name in self.types:
+            return self.types[name]
+        if self.parent:
+            return self.parent.get_type(name)
+        return None
+
+    def add_function(self, function: Function) -> Function:
+        self.functions[function.name] = function
+
+        return function
+
+    def search_variable_in_context_parents(
+        self,
+        variable: str,
+    ) -> Variable[Type] | None:
+        context_ref = self
+
+        while True:
+            if variable in context_ref.variables:
+                return context_ref.variables[variable]
+
+            if context_ref.parent:
+                context_ref = context_ref.parent
+                continue
+
+            return None
+
+    @property
+    def is_top_level(self) -> bool:
+        return self.parent is None
+
+    @property
+    def current_operator(self) -> int:
+        return len(self.operators)
+
+    def expand_from_inline_block(self, inline_block: Function) -> None:
+        if inline_block.is_external:
+            msg = "Cannot expand extern function."
+            raise ValueError(msg)
+        if any(op.type == OperatorType.FUNCTION_CALL for op in inline_block.operators):
+            self.is_leaf_context = False
+
+        self.operators.extend(inline_block.operators)
+
+    def pop_context_stack(self) -> tuple[int, Operator, RangeQualifier | None]:
+        return self.context_stack.pop()
+
+    def push_new_operator(
+        self,
+        type: OperatorType,  # noqa: A002
+        token: Token,
+        operand: float | str | Type | StructAccessor | None = None,
+        *,
+        is_contextual: bool = False,
+    ) -> None:
+        if type == OperatorType.FUNCTION_CALL:
+            self.is_leaf_context = False
+
+        operator = Operator(
+            type=type,
+            token=token,
+            operand=operand,
+        )
+        self.operators.append(operator)
+        if is_contextual:
+            self.context_stack.append((self.current_operator - 1, operator, None))

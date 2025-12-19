@@ -10,7 +10,7 @@ maintainers = []
 keywords = ["compiler", "language"]
 
 [project.scripts]
-gofra = "gofra.__main__:cli_entry_point"
+gofra = "gofra.cli.__main__:cli_entry_point"
 gofra-ld = "gofra.linker.__main__:main"
 gofra-testkit = "gofra.testkit.__main__:main"
 

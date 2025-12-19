@@ -4,11 +4,11 @@ import sys
 from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cli.output import cli_message
-from gofra.lexer import tokenize_from_raw
-from gofra.lexer.io.io import open_source_file_line_stream
-from gofra.lexer.tokens import TokenLocation
-from gofra.preprocessor.macros.registry import registry_from_raw_definitions
-from gofra.preprocessor.preprocessor import preprocess_file
+from libgofra.lexer import tokenize_from_raw
+from libgofra.lexer.io.io import open_source_file_line_stream
+from libgofra.lexer.tokens import TokenLocation
+from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
+from libgofra.preprocessor.preprocessor import preprocess_file
 
 if TYPE_CHECKING:
     from gofra.cli.parser.arguments import CLIArguments

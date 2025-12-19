@@ -5,7 +5,7 @@ from subprocess import CalledProcessError
 from typing import NoReturn
 
 from gofra.cli.output import cli_message
-from gofra.exceptions import GofraError
+from libgofra.exceptions import GofraError
 
 
 @contextmanager

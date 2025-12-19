@@ -3,11 +3,11 @@ from platform import platform, python_implementation, python_version
 from typing import NoReturn
 
 from gofra.cli.parser.arguments import CLIArguments
-from gofra.feature_flags import (
+from libgofra.feature_flags import (
     FEATURE_ALLOW_FPU,
     FEATURE_RUNTIME_ARRAY_OOB_CHECKS,
 )
-from gofra.linker.command_composer import get_linker_command_composer_backend
+from libgofra.linker.command_composer import get_linker_command_composer_backend
 
 
 def cli_perform_version_goal(args: CLIArguments) -> NoReturn:

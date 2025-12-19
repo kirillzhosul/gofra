@@ -2,11 +2,11 @@ import sys
 
 from gofra.cli.errors.error_handler import cli_gofra_error_handler
 from gofra.cli.output import cli_message
-from gofra.linker.apple.command_composer import compose_apple_linker_command
 from gofra.linker.cli.arguments import parse_cli_arguments
-from gofra.linker.command_composer import get_linker_command_composer_backend
-from gofra.linker.gnu.command_composer import compose_gnu_linker_command
-from gofra.linker.linker import link_object_files
+from libgofra.linker.apple.command_composer import compose_apple_linker_command
+from libgofra.linker.command_composer import get_linker_command_composer_backend
+from libgofra.linker.gnu.command_composer import compose_gnu_linker_command
+from libgofra.linker.linker import link_object_files
 
 
 def cli_entry_point() -> None:

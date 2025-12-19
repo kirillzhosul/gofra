@@ -6,14 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from gofra.cli.executable import cli_get_executable_program
 from gofra.cli.output import cli_message
-from gofra.linker.apple.libraries import APPLE_LINKER_DEFAULT_LIBRARIES_SEARCH_PATHS
-from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.linker.output_format import LinkerOutputFormat
-from gofra.linker.profile import LinkerProfile
-from gofra.targets.infer_host import infer_host_target
-from gofra.targets.target import Target
+from gofra.executable import cli_get_executable_program, warn_on_improper_installation
+from libgofra.linker.apple.libraries import APPLE_LINKER_DEFAULT_LIBRARIES_SEARCH_PATHS
+from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
+from libgofra.linker.output_format import LinkerOutputFormat
+from libgofra.linker.profile import LinkerProfile
+from libgofra.targets.infer_host import infer_host_target
+from libgofra.targets.target import Target
 
 
 @dataclass(frozen=True)
@@ -98,7 +98,8 @@ def parse_cli_arguments() -> CLIArguments:
 
 def _construct_argument_parser() -> ArgumentParser:
     """Get argument parser instance to parse incoming arguments."""
-    prog = cli_get_executable_program(override=None, warn_proper_installation=False)
+    prog = cli_get_executable_program()
+    warn_on_improper_installation(prog)
 
     parser = ArgumentParser(
         description="Gofra LD - Linker command line interface for Gofra object files. Same linker is used with Gofra toolchain beside it is not called from shell, as `gofra-ld` being only interface for underlying linker API",

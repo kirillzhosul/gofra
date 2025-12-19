@@ -6,18 +6,18 @@ from typing import TYPE_CHECKING, Literal, cast, get_args, get_type_hints
 
 from gofra.cli.output import cli_message
 from gofra.cli.parser.arguments import CLIArguments
-from gofra.linker.profile import LinkerProfile
-from gofra.optimizer.config import (
+from libgofra.linker.profile import LinkerProfile
+from libgofra.optimizer.config import (
     OptimizerConfig,
     build_default_optimizer_config_from_level,
     merge_into_optimizer_config,
 )
-from gofra.preprocessor.include.distribution import (
+from libgofra.preprocessor.include.distribution import (
     infer_distribution_library_paths,
 )
-from gofra.targets import Target
-from gofra.targets.infer_host import infer_host_target
-from gofra.targets.target import Triplet
+from libgofra.targets import Target
+from libgofra.targets.infer_host import infer_host_target
+from libgofra.targets.target import Triplet
 
 if TYPE_CHECKING:
     from argparse import Namespace

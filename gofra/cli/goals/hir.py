@@ -5,15 +5,15 @@ from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
 from gofra.cli.output import cli_message
-from gofra.gofra import process_input_file
-from gofra.hir.operator import Operator, OperatorType
-from gofra.lexer.tokens import TokenLocation
-from gofra.preprocessor.macros.registry import registry_from_raw_definitions
+from libgofra.gofra import process_input_file
+from libgofra.hir.operator import Operator, OperatorType
+from libgofra.lexer.tokens import TokenLocation
+from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
 
 if TYPE_CHECKING:
     from gofra.cli.parser.arguments import CLIArguments
-    from gofra.hir.function import Function
-    from gofra.hir.module import Module
+    from libgofra.hir.function import Function
+    from libgofra.hir.module import Module
 
 
 def cli_perform_hir_goal(args: CLIArguments) -> NoReturn:
