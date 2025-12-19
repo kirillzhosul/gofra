@@ -6,6 +6,7 @@ from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.abi import LinuxAMD64ABI
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
+from gofra.codegen.sections._factory import SectionType
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import Operator, OperatorType
 from gofra.hir.variable import VariableStorageClass
@@ -44,26 +45,29 @@ if TYPE_CHECKING:
     from gofra.targets.target import Target
 
 
-def generate_amd64_backend(
-    fd: IO[str],
-    program: Module,
-    target: Target,
-) -> None:
-    """AMD64 code generation backend."""
-    match (target.architecture, target.operating_system):
-        case ("AMD64", "Linux"):
-            abi = LinuxAMD64ABI()
-        case _:
-            msg = f"Unknown ABI for {target.architecture}x{target.operating_system}"
-            raise ValueError(msg)
+class AMD64CodegenBackend:
+    target: Target
+    module: Module
 
-    context = AMD64CodegenContext(fd=fd, strings={}, target=target, abi=abi)
+    def __init__(self, target: Target, module: Module, fd: IO[str]) -> None:
+        assert target.operating_system == "Linux"
+        self.target = target
+        self.module = module
+        self.context = AMD64CodegenContext(
+            fd=fd,
+            strings={},
+            target=self.target,
+            abi=LinuxAMD64ABI(),
+        )
 
-    amd64_executable_functions(context, program)
-    if GOFRA_ENTRY_POINT in program.functions:
-        entry_point = program.functions[GOFRA_ENTRY_POINT]
-        amd64_program_entry_point(context, entry_point)
-    amd64_data_section(context, program)
+    def emit(self) -> None:
+        """AMD64 code generation backend."""
+        self.context.section(SectionType.INSTRUCTIONS)
+        amd64_executable_functions(self.context, self.module)
+        if GOFRA_ENTRY_POINT in self.module.functions:
+            entry_point = self.module.functions[GOFRA_ENTRY_POINT]
+            amd64_program_entry_point(self.context, entry_point)
+        amd64_data_section(self.context, self.module)
 
 
 def amd64_instruction_set(
@@ -244,11 +248,7 @@ def amd64_executable_functions(
 
     Provides an prolog and epilogue.
     """
-    functions = filter(
-        lambda f: not f.is_external,
-        program.functions.values(),
-    )
-    for function in functions:
+    for function in program.executable_functions:
         function_begin_with_prologue(
             context,
             local_variables=function.variables,

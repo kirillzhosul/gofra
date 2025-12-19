@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
+
+from gofra.hir.operator import OperatorType
 
 from .registers import (
+    AARCH64_ABI_W_REGISTERS,
     AARCH64_DOUBLE_WORD_BITS,
     AARCH64_GP_REGISTERS,
     AARCH64_HALF_WORD_BITS,
@@ -68,12 +71,7 @@ def store_integer_into_register(
 
 
 def push_float_onto_stack(context: AARCH64CodegenContext, value: float) -> None:
-    assert value > 0
-    context.float_constants[value] = f"__gofra_float{len(context.float_constants)}"
-    f_const = context.float_constants[value]
-    context.write(f"adrp X0, {f_const}@PAGE")
-    context.write(f"ldr D0, [X0, {f_const}@PAGEOFF]")
-    push_register_onto_stack(context, register="D0")
+    raise NotImplementedError
 
 
 def push_integer_onto_stack(
@@ -135,3 +133,120 @@ def push_static_address_onto_stack(
         f"add X0, X0, {segment}@PAGEOFF",
     )
     push_register_onto_stack(context, register="X0")
+
+
+def load_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
+    """Load memory as value using arguments from stack."""
+    pop_cells_from_stack_into_registers(context, "X0")
+    context.write("ldr X0, [X0]")
+    push_register_onto_stack(context, "X0")
+
+
+def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
+    """Store value into memory pointer, pointer and value acquired from stack."""
+    pop_cells_from_stack_into_registers(context, "X0", "X1")
+    context.write("str X0, [X1]")
+
+
+def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> None:
+    """Place an debugger breakpoint (e.g trace trap).
+
+    Will halt execution to the debugger, useful for debugging purposes.
+    Also due to being an trap (e.g execution will be caught) allows to trap some execution places.
+    (e.g start entry exit failure)
+    """
+    assert 0 < number < AARCH64_HALF_WORD_BITS
+    context.write(f"brk #{number}")
+
+
+def perform_operation_onto_stack(
+    context: AARCH64CodegenContext,
+    operation: OperatorType,
+) -> None:
+    """Perform *math* operation onto stack (pop arguments and push back result)."""
+    registers = ("X0", "X1")
+    pop_cells_from_stack_into_registers(context, *registers)
+
+    # TODO(@kirillzhosul): Optimize inc / dec (++, --) when incrementing / decrementing by known values
+    match operation:
+        case OperatorType.ARITHMETIC_PLUS:
+            context.write("add X0, X1, X0")
+        case OperatorType.ARITHMETIC_MINUS:
+            context.write("sub X0, X1, X0")
+        case OperatorType.ARITHMETIC_MULTIPLY:
+            context.write("mul X0, X1, X0")
+        case OperatorType.ARITHMETIC_DIVIDE:
+            context.write("sdiv X0, X1, X0")
+        case OperatorType.ARITHMETIC_MODULUS:
+            context.write(
+                "udiv X2, X1, X0",
+                "mul X2, X2, X0",
+                "sub X0, X1, X2",
+            )
+        case OperatorType.LOGICAL_OR | OperatorType.BITWISE_OR:
+            # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
+            context.write("orr X0, X0, X1")
+        case OperatorType.SHIFT_RIGHT:
+            context.write("lsr X0, X1, X0")
+        case OperatorType.SHIFT_LEFT:
+            context.write("lsl X0, X1, X0")
+        case OperatorType.BITWISE_AND | OperatorType.LOGICAL_AND:
+            # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
+            context.write("and X0, X0, X1")
+        case OperatorType.BITWISE_XOR:
+            context.write("eor X0, X0, X1")
+
+        case (
+            OperatorType.COMPARE_EQUALS
+            | OperatorType.COMPARE_GREATER
+            | OperatorType.COMPARE_GREATER_EQUALS
+            | OperatorType.COMPARE_LESS
+            | OperatorType.COMPARE_NOT_EQUALS
+            | OperatorType.COMPARE_LESS_EQUALS
+        ):
+            logic_op = {
+                OperatorType.COMPARE_NOT_EQUALS: "ne",
+                OperatorType.COMPARE_GREATER_EQUALS: "ge",
+                OperatorType.COMPARE_LESS_EQUALS: "le",
+                OperatorType.COMPARE_LESS: "lt",
+                OperatorType.COMPARE_GREATER: "gt",
+                OperatorType.COMPARE_EQUALS: "eq",
+            }
+            context.write(
+                "cmp X1, X0",
+                f"cset X0, {logic_op[operation]}",
+            )
+        case _:
+            msg = f"{operation} cannot be performed by codegen `{perform_operation_onto_stack.__name__}`"
+            raise ValueError(msg)
+    push_register_onto_stack(context, "X0")
+
+
+def evaluate_conditional_block_on_stack_with_jump(
+    context: AARCH64CodegenContext,
+    jump_over_label: str,
+) -> None:
+    """Evaluate conditional block by popping current value under SP against zero.
+
+    If condition is false (value on stack) then jump out that conditional block to `jump_over_label`
+    """
+    pop_cells_from_stack_into_registers(context, "X0")
+    context.write(f"cbz X0, {jump_over_label}")
+
+
+def truncate_register_to_32bit_version(
+    register: AARCH64_GP_REGISTERS,
+) -> AARCH64_ABI_W_REGISTERS:
+    """Truncate 64bit version of register into corresponding 32bit version (e.g X0 to W0).
+
+    Accepts only Xt registers (XZR prohibited)
+    """
+    if register.startswith("X"):
+        return cast("AARCH64_ABI_W_REGISTERS", register.replace("X", "W"))
+
+    if register.startswith("W"):
+        assert register != "WZR"
+        return cast("AARCH64_ABI_W_REGISTERS", register)
+
+    msg = f"Cannot truncate register {register} to corresponding 32bit version!"
+    raise NotImplementedError(msg)

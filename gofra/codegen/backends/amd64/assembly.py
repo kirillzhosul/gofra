@@ -8,7 +8,8 @@ from gofra.codegen.backends.amd64.frame import (
     preserve_calee_frame,
     restore_calee_frame,
 )
-from gofra.codegen.frame import build_local_variables_frame_offsets
+from gofra.codegen.backends.frame import build_local_variables_frame_offsets
+from gofra.codegen.sections._factory import SectionType
 from gofra.exceptions import GofraError
 from gofra.hir.operator import OperatorType
 from gofra.types.primitive.void import VoidType
@@ -108,7 +109,7 @@ def initialize_static_data_section(
     TODO(@kirillzhosul, @stepanzubkov): Review alignment for data sections.
     """
     if static_strings:
-        context.fd.write(".section .rodata\n")
+        context.section(SectionType.STRINGS)
         for name, data in static_strings.items():
             context.write(f'{name}: .asciz "{data}"')
 
@@ -120,7 +121,7 @@ def initialize_static_data_section(
     }
 
     if bss_variables:
-        context.fd.write(".section .bss\n")
+        context.section(SectionType.BSS)
         for name, variable in bss_variables.items():
             type_size = variable.size_in_bytes
             if type_size == 0:
@@ -129,7 +130,7 @@ def initialize_static_data_section(
             context.write(f"{name}: .space {type_size}")
 
     if data_variables:
-        context.fd.write(".section .data\n")
+        context.section(SectionType.DATA)
         for name, variable in data_variables.items():
             type_size = variable.size_in_bytes
             if type_size == 0:

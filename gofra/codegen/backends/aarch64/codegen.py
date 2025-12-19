@@ -6,41 +6,43 @@ from typing import IO, TYPE_CHECKING, assert_never
 
 from gofra.codegen.abi import DarwinAARCH64ABI
 from gofra.codegen.backends.aarch64._context import AARCH64CodegenContext
-from gofra.codegen.backends.aarch64.primitive_instructions import (
-    drop_stack_slots,
-    push_float_onto_stack,
-    push_integer_onto_stack,
-    push_static_address_onto_stack,
-)
-from gofra.codegen.backends.aarch64_macos.abi_call_convention import (
+from gofra.codegen.backends.aarch64.abi_call_convention import (
     function_abi_call_by_symbol,
 )
-from gofra.codegen.backends.aarch64_macos.assembly import (
+from gofra.codegen.backends.aarch64.executable_entry_point import (
+    aarch64_program_entry_point,
+)
+from gofra.codegen.backends.aarch64.frame import (
+    push_local_variable_address_from_frame_offset,
+)
+from gofra.codegen.backends.aarch64.primitive_instructions import (
     debugger_breakpoint_trap,
+    drop_stack_slots,
     evaluate_conditional_block_on_stack_with_jump,
-    function_begin_with_prologue,
-    function_end_with_epilogue,
-    function_return,
-    initialize_static_data_section,
-    ipc_syscall_macos,
     load_memory_from_stack_arguments,
     perform_operation_onto_stack,
     pop_cells_from_stack_into_registers,
-    push_local_variable_address_from_frame_offset,
+    push_float_onto_stack,
+    push_integer_onto_stack,
     push_register_onto_stack,
+    push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
 )
-from gofra.codegen.backends.aarch64_macos.registers import (
-    AARCH64_MACOS_EPILOGUE_EXIT_CODE,
-    AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
+from gofra.codegen.backends.aarch64.static_data_section import (
+    aarch64_data_section,
 )
+from gofra.codegen.backends.aarch64.subroutines import (
+    function_begin_with_prologue,
+    function_end_with_epilogue,
+    function_return,
+)
+from gofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
 from gofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
+from gofra.codegen.sections import SectionType
 from gofra.consts import GOFRA_ENTRY_POINT
 from gofra.hir.operator import Operator, OperatorType
 from gofra.hir.variable import VariableStorageClass
 from gofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from gofra.types.primitive.integers import I64Type
-from gofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -50,32 +52,43 @@ if TYPE_CHECKING:
     from gofra.targets.target import Target
 
 
-def generate_aarch64_macos_backend(
-    fd: IO[str],
-    program: Module,
-    target: Target,
-) -> None:
-    """AARCH64 MacOS code generation backend."""
-    _ = target
-    context = AARCH64CodegenContext(
-        fd=fd,
-        strings={},
-        abi=DarwinAARCH64ABI(),
-        float_constants={},
-    )
+class AARCH64CodegenBackend:
+    target: Target
+    module: Module
+    context: AARCH64CodegenContext
 
-    # Executable section with instructions only (pure_instructions)
-    context.write(".section __TEXT,__text,regular,pure_instructions")
-
-    aarch64_macos_executable_functions(context, program)
-    if GOFRA_ENTRY_POINT in program.functions:
-        # TODO(@kirillzhosul): Treat entry point as separate concept, and probably treat as an warning for executables
-        entry_point = program.functions[GOFRA_ENTRY_POINT]
-        aarch64_macos_program_entry_point(context, entry_point)
-    aarch64_macos_data_section(context, program)
+    def __init__(self, target: Target, module: Module, fd: IO[str]) -> None:
+        self.target = target
+        self.module = module
+        self.context = AARCH64CodegenContext(
+            fd=fd,
+            abi=DarwinAARCH64ABI(),
+            target=self.target,
+        )
 
 
-def aarch64_macos_instruction_set(
+    def emit(
+        self
+    ) -> None:
+        """AARCH64 code generation backend."""
+
+        # Executable section with instructions only (pure_instructions)
+        self.context.section(SectionType.INSTRUCTIONS)
+
+        aarch64_executable_functions(self.context, self.module)
+        if GOFRA_ENTRY_POINT in self.module.functions:
+            # TODO(@kirillzhosul): Treat entry point as separate concept, and probably treat as an warning for executables
+            entry_point = self.module.functions[GOFRA_ENTRY_POINT]
+            aarch64_program_entry_point(
+                self.context,
+                system_entry_point_name=LINKER_EXPECTED_ENTRY_POINT,
+                entry_point=entry_point,
+                target=self.target,
+            )
+        aarch64_data_section(self.context, self.module)
+
+
+def aarch64_instruction_set(
     context: AARCH64CodegenContext,
     operators: Sequence[Operator],
     program: Module,
@@ -83,7 +96,7 @@ def aarch64_macos_instruction_set(
 ) -> None:
     """Write executable instructions from given operators."""
     for idx, operator in enumerate(operators):
-        aarch64_macos_operator_instructions(
+        aarch64_operator_instructions(
             context,
             operator,
             program,
@@ -92,13 +105,14 @@ def aarch64_macos_instruction_set(
         )
 
 
-def aarch64_macos_operator_instructions(
+def aarch64_operator_instructions(
     context: AARCH64CodegenContext,
     operator: Operator,
     program: Module,
     idx: int,
     owner_function: Function,
 ) -> None:
+    # TODO(@kirillzhosul): Assumes Apple aapcs64
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:
             assert isinstance(operator.operand, str)
@@ -171,6 +185,7 @@ def aarch64_macos_operator_instructions(
                 name=function.name,
                 parameters=function.parameters,
                 return_type=function.return_type,
+                call_convention="apple_aapcs64",
             )
         case OperatorType.STATIC_TYPE_CAST:
             # Skip that as it is typechecker only.
@@ -211,7 +226,7 @@ def aarch64_macos_operator_instructions(
             )
         case OperatorType.SYSCALL:
             assert isinstance(operator.operand, int)
-            ipc_syscall_macos(
+            ipc_aarch64_syscall(
                 context,
                 arguments_count=operator.operand,
                 store_retval_onto_stack=True,
@@ -239,7 +254,7 @@ def aarch64_macos_operator_instructions(
             assert_never(operator.type)
 
 
-def aarch64_macos_executable_functions(
+def aarch64_executable_functions(
     context: AARCH64CodegenContext,
     program: Module,
 ) -> None:
@@ -247,12 +262,7 @@ def aarch64_macos_executable_functions(
 
     Provides an prolog and epilogue.
     """
-    # Define only function that contains anything to execute
-    functions = filter(
-        lambda f: not f.is_external,
-        program.functions.values(),
-    )
-    for function in functions:
+    for function in program.executable_functions:
         function_begin_with_prologue(
             context,
             name=function.name,
@@ -262,7 +272,7 @@ def aarch64_macos_executable_functions(
             parameters=function.parameters,
         )
 
-        aarch64_macos_instruction_set(context, function.operators, program, function)
+        aarch64_instruction_set(context, function.operators, program, function)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
         function_end_with_epilogue(
@@ -271,68 +281,3 @@ def aarch64_macos_executable_functions(
             return_type=function.return_type,
             is_early_return=False,
         )
-
-
-def aarch64_macos_program_entry_point(
-    context: AARCH64CodegenContext,
-    entry_point: Function,
-) -> None:
-    """Write program entry, used to not segfault due to returning into protected system memory."""
-    # This is an executable entry point
-    function_begin_with_prologue(
-        context,
-        name=LINKER_EXPECTED_ENTRY_POINT,
-        global_name=LINKER_EXPECTED_ENTRY_POINT,
-        preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
-        local_variables={},
-        parameters=[],
-    )
-
-    # Prepare and execute main function
-    assert isinstance(entry_point.return_type, VoidType | I64Type)
-    function_abi_call_by_symbol(
-        context,
-        name=entry_point.name,
-        parameters=[],
-        return_type=entry_point.return_type,
-    )
-
-    # Call syscall to exit without accessing protected system memory.
-    # `ret` into return-address will fail with segfault
-    if isinstance(entry_point.return_type, VoidType):
-        ipc_syscall_macos(
-            context,
-            arguments_count=1,
-            store_retval_onto_stack=False,
-            injected_args=[
-                AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
-                AARCH64_MACOS_EPILOGUE_EXIT_CODE,
-            ],
-        )
-    else:
-        push_integer_onto_stack(context, AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER)
-        ipc_syscall_macos(
-            context,
-            arguments_count=1,
-            store_retval_onto_stack=False,
-            injected_args=None,
-        )
-
-    function_end_with_epilogue(
-        context=context,
-        has_preserved_frame=False,
-        return_type=VoidType(),
-        is_early_return=False,
-    )
-
-
-def aarch64_macos_data_section(
-    context: AARCH64CodegenContext,
-    program: Module,
-) -> None:
-    """Write program static data section filled with static strings and memory blobs."""
-    initialize_static_data_section(
-        context,
-        static_strings=context.strings,
-        static_variables=program.variables,
-    )

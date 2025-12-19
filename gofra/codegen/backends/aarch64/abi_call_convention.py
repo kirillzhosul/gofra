@@ -1,16 +1,20 @@
+"""AAPCS64 call convention must work for Apple AAPCS64/System-V AAPCS64."""
+
 from collections.abc import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Literal
 
 from gofra.codegen.backends.aarch64._context import AARCH64CodegenContext
 from gofra.codegen.backends.aarch64.primitive_instructions import (
     pop_cells_from_stack_into_registers,
     push_register_onto_stack,
-)
-from gofra.codegen.backends.aarch64.registers import (
-    AARCH64_ABI_W_REGISTERS,
-    AARCH64_GP_REGISTERS,
+    truncate_register_to_32bit_version,
 )
 from gofra.types._base import Type
+
+if TYPE_CHECKING:
+    from gofra.codegen.backends.aarch64.registers import (
+        AARCH64_GP_REGISTERS,
+    )
 
 
 def function_abi_call_by_symbol(
@@ -19,6 +23,7 @@ def function_abi_call_by_symbol(
     name: str,
     parameters: Sequence[Type],
     return_type: Type,
+    call_convention: Literal["apple_aapcs64"],
 ) -> None:
     """Call an function using C ABI (Gofra native and C-FFI both uses C-ABI).
 
@@ -33,6 +38,7 @@ def function_abi_call_by_symbol(
     # Branch with link to call a subroutine with loading arguments and and acquire retval
     # TODO(@kirillzhosul): Research refactoring with using calling-convention system (e.g for system calls (syscall/cffi/fast-call convention))
 
+    assert call_convention == "apple_aapcs64"
     _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
     context.write(f"bl {name}")
     _load_return_value_from_abi_registers_into_stack(context, t=return_type)
@@ -124,7 +130,7 @@ def _load_arguments_for_abi_call_into_registers_from_stack(
         if param_type.size_in_bytes <= 4:
             # 32bit type register (e.g char, bool)
             # truncate to lower register
-            registers_to_load.append(_truncate_register_to_32bit_version(register))
+            registers_to_load.append(truncate_register_to_32bit_version(register))
             continue
         if param_type.size_in_bytes <= 8:
             # Full 64bit register - e.g full int, pointer
@@ -182,22 +188,4 @@ def _load_return_value_from_abi_registers_into_stack(
 
     # TODO(@kirillzhosul): Introduce indirect allocation for return types
     msg = f"Indirect allocation required for return type {t}! Not implemented in AARCH64 codegen!"
-    raise NotImplementedError(msg)
-
-
-def _truncate_register_to_32bit_version(
-    register: AARCH64_GP_REGISTERS,
-) -> AARCH64_ABI_W_REGISTERS:
-    """Truncate 64bit version of register into corresponding 32bit version (e.g X0 to W0).
-
-    Accepts only Xt registers (XZR prohibited)
-    """
-    if register.startswith("X"):
-        return cast("AARCH64_ABI_W_REGISTERS", register.replace("X", "W"))
-
-    if register.startswith("W"):
-        assert register != "WZR"
-        return cast("AARCH64_ABI_W_REGISTERS", register)
-
-    msg = f"Cannot truncate register {register} to corresponding 32bit version!"
     raise NotImplementedError(msg)

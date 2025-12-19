@@ -12,7 +12,7 @@ def generate_code_for_assembler(
     target: Target,
 ) -> None:
     """Generate assembly from given program context and specified ARCHxOS pair into given file."""
-    backend = get_backend_for_target(target)
+    backend_cls = get_backend_for_target(target)
 
     output_path.parent.mkdir(exist_ok=True)
     with output_path.open(
@@ -22,4 +22,5 @@ def generate_code_for_assembler(
         newline="",
         encoding="UTF-8",
     ) as fd:
-        return backend(fd, module, target)
+        backend = backend_cls(fd=fd, target=target, module=module)
+        return backend.emit()

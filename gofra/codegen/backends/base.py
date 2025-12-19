@@ -10,9 +10,11 @@ class CodeGeneratorBackend(Protocol):
     All backends inherited from this protocol.
     """
 
-    def __call__(
+    def __init__(
         self,
-        fd: IO[str],
-        program: Module,
         target: Target,
+        module: Module,
+        fd: IO[str],
     ) -> None: ...
+
+    def emit(self) -> None: ...

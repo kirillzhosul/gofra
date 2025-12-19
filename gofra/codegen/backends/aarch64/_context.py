@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from typing import IO
 
 from gofra.codegen.abi import AARCH64ABI
+from gofra.codegen.sections._factory import SectionType, get_os_assembler_section
+from gofra.targets.target import Target
 
 
 @dataclass(frozen=True)
@@ -14,17 +16,24 @@ class AARCH64CodegenContext:
     """
 
     fd: IO[str]
-    strings: MutableMapping[str, str] = field()
-    float_constants: MutableMapping[float, str] = field()
     abi: AARCH64ABI
+    target: Target
+    strings: MutableMapping[str, str] = field(
+        default_factory=dict[str, str],
+    )
 
     def write(self, *lines: str) -> int:
         return self.fd.write("\t" + "\n\t".join(lines) + "\n")
+
+    def section(self, section: SectionType) -> int:
+        return self.fd.write(
+            f".section {get_os_assembler_section(section, self.target)}\n",
+        )
 
     def comment(self, line: str) -> int:
         return self.write(f"// {line}")
 
     def load_string(self, string: str) -> str:
-        string_key = "str%d" % len(self.strings)
+        string_key = ".str%d" % len(self.strings)
         self.strings[string_key] = string
         return string_key

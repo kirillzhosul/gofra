@@ -3,12 +3,12 @@
 Provides code generation backends (codegen) for emitting assembly from IR.
 """
 
-from .aarch64_macos.codegen import generate_aarch64_macos_backend
-from .amd64.codegen import generate_amd64_backend
+from .aarch64.codegen import AARCH64CodegenBackend
+from .amd64.codegen import AMD64CodegenBackend
 from .base import CodeGeneratorBackend
 
 __all__ = [
+    "AARCH64CodegenBackend",
+    "AMD64CodegenBackend",
     "CodeGeneratorBackend",
-    "generate_aarch64_macos_backend",
-    "generate_amd64_backend",
 ]

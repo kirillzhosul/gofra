@@ -34,3 +34,10 @@ class Module:
     # Structures that this module defines (can be unused)
     structures: MutableMapping[str, StructureType]
 
+
+    @property
+    def executable_functions(self) -> filter[Function]:
+        return filter(
+            lambda f: not f.is_external,
+            self.functions.values(),
+        )

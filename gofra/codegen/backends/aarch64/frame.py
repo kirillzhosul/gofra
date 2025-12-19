@@ -1,4 +1,12 @@
+from collections.abc import Mapping
+
 from gofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+from gofra.codegen.backends.aarch64.primitive_instructions import (
+    push_register_onto_stack,
+)
+from gofra.codegen.backends.frame import build_local_variables_frame_offsets
+from gofra.hir.variable import Variable
+from gofra.types._base import Type
 
 # Size of frame head (FP, LR registers)
 FRAME_HEAD_SIZE = 8 * 2
@@ -49,3 +57,20 @@ def restore_calee_frame(context: AARCH64CodegenContext) -> None:
     assert FRAME_HEAD_SIZE % 16 == 0, "Frame head must be aligned by 16 bytes"
     context.write("mov SP, X29")
     context.write(f"ldp X29, X30, [SP], #{FRAME_HEAD_SIZE}")
+
+
+def push_local_variable_address_from_frame_offset(
+    context: AARCH64CodegenContext,
+    local_variables: Mapping[str, Variable[Type]],
+    local_variable: str,
+) -> None:
+    # Calculate negative offset from X29
+    current_offset = build_local_variables_frame_offsets(local_variables).offsets[
+        local_variable
+    ]
+
+    context.write(
+        "mov X0, X29",
+        f"sub X0, X0, #{current_offset}",
+    )
+    push_register_onto_stack(context, register="X0")
