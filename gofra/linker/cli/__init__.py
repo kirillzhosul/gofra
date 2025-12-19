@@ -1,1 +1,0 @@
-"""Gofra LD linker CLI."""
