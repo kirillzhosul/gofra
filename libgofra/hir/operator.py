@@ -26,6 +26,11 @@ class OperatorType(Enum):
     # Push address of variable (local or global one, storage class is not specified)
     PUSH_VARIABLE_ADDRESS = auto()
 
+    # Direct inline string of assembly syntax for codegen
+    # Does not specify clobbered registries and memory
+    # just direct pasting of assembly
+    INLINE_RAW_ASM = auto()
+
     # Read value from variable and push on stack
     # (alternative to PUSH_VARIABLE_ADDRESS -> MEMORY_VARIABLE_READ)
     PUSH_VARIABLE_VALUE = auto()

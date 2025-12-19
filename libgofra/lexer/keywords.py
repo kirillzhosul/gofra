@@ -22,6 +22,8 @@ class Keyword(Enum):
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
 
+    INLINE_RAW_ASM = auto()
+
     STRUCT = auto()
 
     CONST = auto()
@@ -81,6 +83,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "end": Keyword.END,
     # Statements / operators
     "call": Keyword.FUNCTION_CALL,
+    "inline_raw_asm": Keyword.INLINE_RAW_ASM,
     "return": Keyword.FUNCTION_RETURN,
     "sizeof": Keyword.SIZEOF,
     "typecast": Keyword.TYPE_CAST,

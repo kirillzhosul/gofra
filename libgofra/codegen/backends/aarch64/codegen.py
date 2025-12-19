@@ -264,6 +264,9 @@ def aarch64_operator_instructions(
 
         case OperatorType.DEBUGGER_BREAKPOINT:
             debugger_breakpoint_trap(context, number=1)
+        case OperatorType.INLINE_RAW_ASM:
+            assert isinstance(operator.operand, str)
+            context.write(*operator.operand.splitlines())
         case OperatorType.STRUCT_FIELD_OFFSET:
             assert isinstance(operator.operand, tuple)
             struct, field = operator.operand

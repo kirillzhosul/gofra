@@ -187,4 +187,12 @@
         "Zubkov"
     ],
     "cSpell.enabled": true,
+    "files.exclude": {
+        ".VSCodeCounter": true,
+        ".pytest_cache": true,
+        ".gitattributes": true,
+        "poetry.lock": true,
+        ".ruff_cache": true,
+        "LICENSE": true,
+    },
 }

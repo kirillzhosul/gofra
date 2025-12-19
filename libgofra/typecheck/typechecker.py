@@ -561,6 +561,8 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             scope.push_types(
                 PointerType(points_to=struct_type.fields[struct_field]),
             )
+        case OperatorType.INLINE_RAW_ASM:
+            ...
         case _:
             assert_never(operator.type)
 

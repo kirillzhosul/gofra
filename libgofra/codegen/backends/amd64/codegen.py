@@ -258,6 +258,9 @@ def amd64_operator_instructions(
         case OperatorType.PUSH_FLOAT:
             msg = "FPU is not implemented on amd64"
             raise ValueError(msg)
+        case OperatorType.INLINE_RAW_ASM:
+            assert isinstance(operator.operand, str)
+            context.write(*operator.operand.splitlines())
         case _:
             assert_never(operator.type)
 
