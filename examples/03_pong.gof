@@ -143,7 +143,6 @@ func void draw_game[]
      WHITE
     call DrawRectangle
 
-    0 0 call DrawFPS
 end
 
 func void handle_enemy_ai[]
