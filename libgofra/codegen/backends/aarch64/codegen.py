@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import IO, TYPE_CHECKING, assert_never
 
 from libgofra.codegen.abi import DarwinAARCH64ABI
@@ -46,7 +45,7 @@ from libgofra.hir.variable import VariableStorageClass
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module
@@ -76,7 +75,6 @@ class AARCH64CodegenBackend:
 
     def emit(self) -> None:
         """AARCH64 code generation backend."""
-
         # Executable section with instructions only (pure_instructions)
         self.context.section(SectionType.INSTRUCTIONS)
 

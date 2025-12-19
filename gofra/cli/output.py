@@ -1,5 +1,6 @@
+import sys
 from sys import stderr, stdout
-from typing import Literal
+from typing import Literal, NoReturn
 
 type MessageLevel = Literal["INFO", "ERROR", "WARNING", "SUCCESS"]
 
@@ -27,6 +28,11 @@ def cli_message(level: MessageLevel, text: str, *, verbose: bool = True) -> None
         f"{color_mapping.get(level, CLIColor.RESET)}[{level}] {text}{CLIColor.RESET}",
         file=fd,
     )
+
+
+def cli_fatal_abort(text: str) -> NoReturn:
+    cli_message(level="ERROR", text=text, verbose=True)
+    sys.exit(1)
 
 
 def cli_linter_warning(text: str, *, verbose: bool = True) -> None:

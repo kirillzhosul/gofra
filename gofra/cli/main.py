@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import sys
-
 from gofra.cli.errors.error_handler import cli_gofra_error_handler
 from gofra.cli.goals import perform_desired_toolchain_goal
 from gofra.cli.parser.builder import build_cli_parser
 from gofra.cli.parser.parser import parse_cli_arguments
 from gofra.executable import cli_get_executable_program, warn_on_improper_installation
 
-from .output import cli_message
+from .output import cli_fatal_abort
 
 
 def cli_entry_point() -> None:
@@ -27,8 +25,7 @@ def cli_entry_point() -> None:
         perform_desired_toolchain_goal(args)
 
     # This is unreachable but error wrapper must fail
-    cli_message("ERROR", "Bug in a CLI: toolchain must perform at least one goal!")
-    sys.exit(1)
+    cli_fatal_abort("Bug in a CLI: toolchain must perform at least one goal!")
 
 
 if __name__ == "__main__":

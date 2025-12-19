@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
-from gofra.cli.output import cli_linter_warning, cli_message
+from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import (
@@ -50,11 +50,7 @@ def wrap_with_perf_time_taken(message: str, *, verbose: bool) -> Generator[None]
 def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     """Process full toolchain onto input source files."""
     if len(args.source_filepaths) > 1:
-        cli_message(
-            level="ERROR",
-            text="Compiling several files not implemented.",
-        )
-        return sys.exit(1)
+        return cli_fatal_abort("Compiling several files not implemented.")
     cli_message(level="INFO", text="Parsing input files...", verbose=args.verbose)
 
     macros_registry = registry_from_raw_definitions(
@@ -190,11 +186,9 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
 
     if args.execute_after_compilation:
         if args.output_format != "executable":
-            cli_message(
-                level="ERROR",
+            return cli_fatal_abort(
                 text="Cannot execute after compilation due to output format is not set to an executable!",
             )
-            sys.exit(1)
         with wrap_with_perf_time_taken("Execution", verbose=args.verbose):
             cli_execute_after_compilation(args)
 

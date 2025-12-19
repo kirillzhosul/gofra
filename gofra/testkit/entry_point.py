@@ -8,7 +8,7 @@ from subprocess import TimeoutExpired
 from typing import TYPE_CHECKING
 
 from gofra.cli.errors.error_handler import cli_gofra_error_handler
-from gofra.cli.output import cli_message
+from gofra.cli.output import cli_fatal_abort, cli_message
 from gofra.testkit.cli.matrix import display_test_matrix
 from gofra.testkit.test import TestStatus
 from libgofra.exceptions import GofraError
@@ -62,11 +62,9 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
 
     target = infer_host_target()
     if target is None:
-        cli_message(
-            level="ERROR",
+        return cli_fatal_abort(
             text="Unable to infer compilation target due to no fallback for current operating system",
         )
-        sys.exit(1)
     start_time = time.perf_counter_ns()
     test_matrix = evaluate_test_matrix_threaded(
         test_paths,

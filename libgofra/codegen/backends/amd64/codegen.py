@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import IO, TYPE_CHECKING, assert_never
 
 from libgofra.codegen.abi import LinuxAMD64ABI
@@ -39,7 +38,7 @@ from .registers import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module

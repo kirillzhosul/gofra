@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from platform import system
 from subprocess import CompletedProcess, run
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
+
+from gofra.cli.output import cli_fatal_abort
+
+from .clang import clang_driver_is_installed, compose_clang_assembler_command
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from pathlib import Path
 
     from libgofra.targets import Target
 
@@ -22,6 +24,9 @@ def assemble_object_from_codegen_assembly(
     additional_assembler_flags: list[str],
 ) -> CompletedProcess[bytes]:
     """Convert given program into object using assembler for next linkage step."""
+    if not clang_driver_is_installed():
+        cli_fatal_abort("Clang driver is not installed, cannot assemble, aborting!")
+
     clang_command = compose_clang_assembler_command(
         assembly,
         output,
@@ -36,54 +41,3 @@ def assemble_object_from_codegen_assembly(
     )
     process.check_returncode()
     return process
-
-
-# Path to binary with clang (e.g `CC`)
-# Both Apple Clang / base Clang is allowed
-CLANG_EXECUTABLE_PATH = Path("/usr/bin/clang")
-
-
-def compose_clang_assembler_command(  # noqa: PLR0913
-    machine_assembly_file: Path,
-    output_object_file: Path,
-    target: Target,
-    *,
-    additional_assembler_flags: Iterable[str],
-    debug_information: bool,
-    verbose: bool = False,
-) -> list[str]:
-    """Compose command for clang driver to be used as assembler."""
-    command = [str(CLANG_EXECUTABLE_PATH)]
-
-    match target.triplet:
-        case "arm64-apple-darwin" | "amd64-unknown-linux" | "amd64-unknown-windows":
-            clang_target = target.triplet
-        case _:
-            assert_never(target.triplet)
-
-    command.extend(("-target", clang_target))
-
-    # Treat and pass input as an assembly file - we are in assembler module
-    # and use Clang only as assembler
-    command.extend(("-c", "-x", "assembler", str(machine_assembly_file)))
-
-    # Remove
-    command.append("-nostdlib")
-
-    if debug_information:
-        command.append("-g")
-
-    # Emit all commands and information that clang runs
-    if verbose:
-        command.append("-v")
-
-    ### Apple Clang specific
-    command.append("-integrated-as")
-    # Quite wrong assumption - but stick to that for now
-    is_apple_clang = system() == "Darwin"
-    if is_apple_clang and target.architecture == "ARM64":
-        command.extend(("-arch", "arm64"))
-
-    command.extend(additional_assembler_flags)
-    command.extend(("-o", str(output_object_file)))
-    return command

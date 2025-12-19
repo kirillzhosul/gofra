@@ -160,7 +160,7 @@ def validate_function_type_safety(
     return func_block
 
 
-def emulate_type_stack_for_operators(
+def emulate_type_stack_for_operators(  # noqa: PLR0913
     operators: Sequence[Operator],
     module: Module,
     initial_type_stack: Sequence[Type],
@@ -268,7 +268,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
         case OperatorType.DEBUGGER_BREAKPOINT:
             ...
         case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
-            raise Exception
+            raise AssertionError
         case OperatorType.PUSH_STRING:
             assert isinstance(operator.operand, str)
             scope.push_types(

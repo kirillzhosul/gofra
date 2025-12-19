@@ -4,7 +4,7 @@ import sys
 from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
-from gofra.cli.output import cli_message
+from gofra.cli.output import cli_fatal_abort
 from libgofra.gofra import process_input_file
 from libgofra.hir.operator import Operator, OperatorType
 from libgofra.lexer.tokens import TokenLocation
@@ -22,18 +22,14 @@ def cli_perform_hir_goal(args: CLIArguments) -> NoReturn:
     assert not args.lexer_debug_emit_lexemes, "Try use compile goal"
 
     if args.output_file_is_specified:
-        cli_message(
-            "ERROR",
-            "Output file has no effect for HIR only goal, please pipe output via posix pipe (`>`) into desired file!",
+        return cli_fatal_abort(
+            text="Output file has no effect for HIR only goal, please pipe output via posix pipe (`>`) into desired file!",
         )
-        return sys.exit(1)
 
     if len(args.source_filepaths) > 1:
-        cli_message(
-            "ERROR",
-            "Multiple source files has not effect for HIR only goal, as it has no linkage, please specify single file!",
+        return cli_fatal_abort(
+            text="Multiple source files has not effect for HIR only goal, as it has no linkage, please specify single file!",
         )
-        return sys.exit(1)
 
     macros_registry = registry_from_raw_definitions(
         location=TokenLocation.cli(),

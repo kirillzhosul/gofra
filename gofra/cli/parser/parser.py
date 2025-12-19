@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast, get_args, get_type_hints
 
-from gofra.cli.output import cli_message
+from gofra.cli.output import cli_fatal_abort
 from gofra.cli.parser.arguments import CLIArguments
 from libgofra.linker.profile import LinkerProfile
 from libgofra.optimizer.config import (
@@ -122,8 +121,7 @@ def _process_output_format(
 def _process_linker_executable(args: Namespace) -> Path | None:
     executable = Path(args.linker_executable) if args.linker_executable else None
     if executable is not None and not executable.exists():
-        cli_message("ERROR", "Specified linker executable does not exists!")
-        return sys.exit(1)
+        return cli_fatal_abort("Specified linker executable does not exists!")
     return executable
 
 
@@ -132,8 +130,7 @@ def _validate_mutually_exclusive_goals(args: Namespace) -> None:
     if sum([args.version, args.preprocess_only, args.hir, args.repl]) in (0, 1):
         return None
 
-    cli_message("ERROR", "Goal flags is mutually exclusive!")
-    return sys.exit(1)
+    return cli_fatal_abort("Goal flags is mutually exclusive!")
 
 
 def _process_target(args: Namespace) -> Target:
@@ -146,11 +143,9 @@ def _process_target(args: Namespace) -> Target:
         return Target.from_triplet(args.target)
     target = infer_host_target()
     if target is None:
-        cli_message(
-            level="ERROR",
+        return cli_fatal_abort(
             text="Unable to infer compilation target due to no fallback for current operating system",
         )
-        return sys.exit(1)
     return target
 
 
@@ -178,15 +173,13 @@ def _process_source_filepaths(args: Namespace) -> list[Path]:
         return paths
 
     if len(args.source_files) == 0:
-        cli_message("ERROR", "Expected source files to compile!")
-        return sys.exit(1)
+        return cli_fatal_abort("Expected source files to compile!")
 
     if any(not p.exists(follow_symlinks=True) for p in paths):
-        cli_message(
-            level="ERROR",
+        return cli_fatal_abort(
             text="One of input source file is not exists, aborting compilation as safe mechanism.",
         )
-        return sys.exit(1)
+
     return paths
 
 
@@ -197,11 +190,9 @@ def _process_include_paths(args: Namespace) -> list[Path]:
     include_paths = user_includes + infer_distribution_library_paths()
 
     if any(not p.exists(follow_symlinks=True) or not p.is_dir() for p in user_includes):
-        cli_message(
-            level="ERROR",
+        return cli_fatal_abort(
             text="One of user include path is not exists or is not an directory, aborting compilation as safe mechanism.",
         )
-        return sys.exit(1)
 
     return include_paths
 
@@ -228,11 +219,9 @@ def _process_output_path(
         )
     )
     if inferred_output_path in source_filepaths:
-        cli_message(
-            level="ERROR",
+        return cli_fatal_abort(
             text="Inferred/specified output file path will rewrite existing input file, please specify another output path.",
         )
-        return sys.exit(1)
     return inferred_output_path
 
 

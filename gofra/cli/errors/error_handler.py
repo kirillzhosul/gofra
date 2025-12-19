@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from subprocess import CalledProcessError
 from typing import NoReturn
 
-from gofra.cli.output import cli_message
+from gofra.cli.output import cli_fatal_abort, cli_message
 from libgofra.exceptions import GofraError
 
 
@@ -18,8 +18,7 @@ def cli_gofra_error_handler(
         yield
     except GofraError as ge:
         if debug_user_friendly_errors:
-            cli_message("ERROR", repr(ge))
-            return sys.exit(1)
+            return cli_fatal_abort(repr(ge))
         raise  # re-throw exception due to unfriendly flag set for debugging
     except CalledProcessError as pe:
         command = " ".join(pe.cmd)
@@ -34,5 +33,4 @@ def cli_gofra_error_handler(
         cli_message("INFO", "Interrupted by user (Ctrl+C)!")
         return sys.exit(0)
     # This is unreachable but error wrapper must fail
-    cli_message("ERROR", "Bug in a CLI: error handler must has no-return")
-    sys.exit(1)
+    cli_fatal_abort("Bug in a CLI: error handler must has no-return")
