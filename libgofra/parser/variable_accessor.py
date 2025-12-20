@@ -100,6 +100,8 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         return True
 
     if is_reference and variable.is_constant:
+        # Probably we must allow reference but mark them as immutable memory locations
+        # this was easiest solution at that time
         msg = f"Tried to get reference of constant variable {variable.name} at {token.location}"
         raise ValueError(msg)
     if (

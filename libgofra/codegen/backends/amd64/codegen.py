@@ -261,6 +261,8 @@ def amd64_operator_instructions(
         case OperatorType.INLINE_RAW_ASM:
             assert isinstance(operator.operand, str)
             context.write(*operator.operand.splitlines())
+        case OperatorType.COMPILE_TIME_ERROR:
+            ...  # Linter / typechecker
         case _:
             assert_never(operator.type)
 

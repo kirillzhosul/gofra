@@ -11,6 +11,9 @@ from libgofra.typecheck.errors.no_main_entry_function import NoMainEntryFunction
 from libgofra.typecheck.errors.return_value_missing import (
     ReturnValueMissingTypecheckError,
 )
+from libgofra.typecheck.errors.user_defined_compile_time_error import (
+    UserDefinedCompileTimeError,
+)
 from libgofra.typecheck.static_linter import (
     emit_no_return_attribute_propagation_warning,
     emit_unreachable_code_after_early_return_warning,
@@ -259,6 +262,20 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
     on_lint_warning: Callable[[str], None],
 ) -> EmulatedTypeBlock | None:
     match operator.type:
+        case OperatorType.INLINE_RAW_ASM:
+            # Assembly cannot be typechecked
+            # unless we introduce more powerful constructions of inlining assembly
+            # (potentially this allows typechecking)
+            ...
+        case OperatorType.COMPILE_TIME_ERROR:
+            # Raise an error if this code is reachable at type checking stage
+            # possibly, this can be not a part of typechecker
+            # but currently only typechecker validates any sort of DCE
+            assert isinstance(operator.operand, str)
+            raise UserDefinedCompileTimeError(
+                message=operator.operand,
+                at=operator.token.location,
+            )
         case (
             OperatorType.CONDITIONAL_WHILE
             | OperatorType.CONDITIONAL_FOR
@@ -561,8 +578,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             scope.push_types(
                 PointerType(points_to=struct_type.fields[struct_field]),
             )
-        case OperatorType.INLINE_RAW_ASM:
-            ...
+
         case _:
             assert_never(operator.type)
 

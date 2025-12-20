@@ -31,7 +31,7 @@ class Function:
     `Inline` functions will be expanded within call (macros expansion) and will not be called like normal function
     """
 
-    # Function will be called by that name in Gofra source
+    # Function will is callable by this name in Gofra source
     name: str
 
     # Location of the function definition

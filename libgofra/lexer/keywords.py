@@ -23,6 +23,7 @@ class Keyword(Enum):
     FUNCTION_CALL = auto()
 
     INLINE_RAW_ASM = auto()
+    COMPILE_TIME_ERROR = auto()
 
     STRUCT = auto()
 
@@ -83,6 +84,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "end": Keyword.END,
     # Statements / operators
     "call": Keyword.FUNCTION_CALL,
+    "compile_error": Keyword.COMPILE_TIME_ERROR,
     "inline_raw_asm": Keyword.INLINE_RAW_ASM,
     "return": Keyword.FUNCTION_RETURN,
     "sizeof": Keyword.SIZEOF,

@@ -246,6 +246,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             raise KeywordInWithoutLoopBlockError(token)
         case Keyword.INLINE_RAW_ASM:
             return _unpack_inline_raw_assembly(context, token)
+        case Keyword.COMPILE_TIME_ERROR:
+            return _unpack_compile_time_error(context, token)
         case Keyword.TYPE_DEFINE:
             if (
                 (peeked := context.peek_token())
@@ -259,6 +261,18 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return unpack_type_definition_from_token(context)
         case _:
             assert_never(token.value)
+
+
+def _unpack_compile_time_error(context: ParserContext, token: Token) -> None:
+    context.expect_token(TokenType.STRING)
+    message_tok = context.next_token()
+    assert isinstance(message_tok.value, str)
+    context.push_new_operator(
+        OperatorType.COMPILE_TIME_ERROR,
+        token=token,
+        operand=message_tok.value,
+        is_contextual=False,
+    )
 
 
 def _unpack_inline_raw_assembly(context: ParserContext, token: Token) -> None:

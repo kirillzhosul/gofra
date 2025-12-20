@@ -31,6 +31,10 @@ class OperatorType(Enum):
     # just direct pasting of assembly
     INLINE_RAW_ASM = auto()
 
+    # If this operator is reachable (as far as compiler can tell)
+    # raise and error and stop compilation with proper message
+    COMPILE_TIME_ERROR = auto()
+
     # Read value from variable and push on stack
     # (alternative to PUSH_VARIABLE_ADDRESS -> MEMORY_VARIABLE_READ)
     PUSH_VARIABLE_VALUE = auto()

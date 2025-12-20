@@ -279,6 +279,8 @@ def aarch64_operator_instructions(
                 )  # struct pointer (*struct)
                 context.write(f"add X0, X0, #{field_offset}")
                 push_register_onto_stack(context, "X0")
+        case OperatorType.COMPILE_TIME_ERROR:
+            ...  # Linter / typechecker
         case _:
             assert_never(operator.type)
 
