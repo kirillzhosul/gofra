@@ -81,7 +81,11 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             )
 
     with wrap_with_perf_time_taken("Optimizer", verbose=args.verbose):
-        cli_process_optimization_pipeline(module, args)
+        cli_message(
+            level="INFO",
+            text=f"Applying optimizer pipeline (From base optimization level: {args.optimizer.level})",
+            verbose=args.verbose,
+        )
 
     cli_message(
         level="INFO",
