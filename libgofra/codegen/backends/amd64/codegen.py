@@ -5,14 +5,15 @@ from __future__ import annotations
 from typing import IO, TYPE_CHECKING, assert_never
 
 from libgofra.codegen.abi import LinuxAMD64ABI
+from libgofra.codegen.backends.amd64.executable_entry_point import (
+    amd64_program_entry_point,
+)
 from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.sections._factory import SectionType
 from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.hir.operator import Operator, OperatorType
 from libgofra.hir.variable import VariableStorageClass
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
-from libgofra.types.primitive.integers import I64Type
-from libgofra.types.primitive.void import VoidType
 
 from ._context import AMD64CodegenContext
 from .assembly import (
@@ -31,10 +32,6 @@ from .assembly import (
     push_register_onto_stack,
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
-)
-from .registers import (
-    AMD64_LINUX_EPILOGUE_EXIT_CODE,
-    AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER,
 )
 
 if TYPE_CHECKING:
@@ -72,7 +69,12 @@ class AMD64CodegenBackend:
         amd64_executable_functions(self.context, self.module)
         if GOFRA_ENTRY_POINT in self.module.functions:
             entry_point = self.module.functions[GOFRA_ENTRY_POINT]
-            amd64_program_entry_point(self.context, entry_point)
+            amd64_program_entry_point(
+                self.context,
+                LINKER_EXPECTED_ENTRY_POINT,
+                entry_point,
+                self.target,
+            )
         amd64_data_section(self.context, self.module)
 
 
@@ -97,7 +99,7 @@ def _push_variable_address(
     context: AMD64CodegenContext,
     owner_function: Function,
     variable: str,
-):
+) -> None:
     if variable in owner_function.variables:
         # Local variable
         hir_local_variable = owner_function.variables[variable]
@@ -293,61 +295,6 @@ def amd64_executable_functions(
             has_preserved_frame=True,
             return_type=function.return_type,
         )
-
-
-def amd64_program_entry_point(
-    context: AMD64CodegenContext,
-    entry_point: Function,
-) -> None:
-    """Write program entry, used to not segfault due to returning into protected system memory."""
-    # This is an executable entry point
-    function_begin_with_prologue(
-        context,
-        function_name=LINKER_EXPECTED_ENTRY_POINT,
-        arguments_count=0,
-        as_global_linker_symbol=True,
-        preserve_frame=False,  # Unable to end with epilogue, but not required as this done via kernel OS
-        local_variables={},
-    )
-
-    # Prepare and execute main function
-    assert isinstance(entry_point.return_type, VoidType | I64Type)
-    function_call(
-        context,
-        name=entry_point.name,
-        type_contract_in=[],
-        type_contract_out=entry_point.return_type,
-    )
-
-    if isinstance(entry_point.return_type, VoidType):
-        assert context.target.operating_system != "Windows"
-        # TODO!(@kirillzhosul): review exit code on Windows  # noqa: TD002, TD004
-        # Call syscall to exit without accessing protected system memory.
-        # `ret` into return-address will fail with segfault
-        ipc_syscall_linux(
-            context,
-            arguments_count=1,
-            store_retval_onto_stack=False,
-            injected_args=[
-                AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER,
-                AMD64_LINUX_EPILOGUE_EXIT_CODE,
-            ],
-        )
-    else:
-        push_integer_onto_stack(context, AMD64_LINUX_EPILOGUE_EXIT_SYSCALL_NUMBER)
-        ipc_syscall_linux(
-            context,
-            arguments_count=1,
-            store_retval_onto_stack=False,
-            injected_args=None,
-        )
-
-    function_end_with_epilogue(
-        context=context,
-        has_preserved_frame=False,
-        execution_trap_instead_return=True,
-        return_type=VoidType(),
-    )
 
 
 def amd64_data_section(

@@ -65,7 +65,7 @@ def _linux_sys_exit_epilogue(
 ) -> None:
     # Call syscall to exit without accessing protected system memory.
     # `ret` into return-address will fail with segfault
-    if isinstance(entry_point.return_type, VoidType):
+    if not entry_point.has_return_value():
         # TODO!(@kirillzhosul): review exit code on Windows  # noqa: TD002, TD004
         # Call syscall to exit without accessing protected system memory.
         # `ret` into return-address will fail with segfault
@@ -94,7 +94,7 @@ def _windows_sys_exit_epilogue(
 ) -> None:
     # Call syscall to exit without accessing protected system memory.
     # `ret` into return-address will fail with segfault
-    if isinstance(entry_point.return_type, VoidType):
+    if not entry_point.has_return_value():
         push_integer_onto_stack(context, 0)
     # TODO(@kirillzhosul): review exit code on Windows
     _win_resolve_import("kernel32.dll", "ExitProcess")

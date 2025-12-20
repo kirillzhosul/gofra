@@ -58,7 +58,15 @@ def _darwin_sys_exit_epilogue(
 ) -> None:
     # Call syscall to exit without accessing protected system memory.
     # `ret` into return-address will fail with segfault
-    if isinstance(entry_point.return_type, VoidType):
+    if entry_point.has_return_value():
+        push_integer_onto_stack(context, AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER)
+        ipc_aarch64_syscall(
+            context,
+            arguments_count=1,
+            store_retval_onto_stack=False,
+            injected_args=None,
+        )
+    else:
         ipc_aarch64_syscall(
             context,
             arguments_count=1,
@@ -67,12 +75,4 @@ def _darwin_sys_exit_epilogue(
                 AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER,
                 AARCH64_MACOS_EPILOGUE_EXIT_CODE,
             ],
-        )
-    else:
-        push_integer_onto_stack(context, AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER)
-        ipc_aarch64_syscall(
-            context,
-            arguments_count=1,
-            store_retval_onto_stack=False,
-            injected_args=None,
         )
