@@ -1,7 +1,7 @@
 /// Test that booleans are working and logic operators too
 
-#include "types.gof"
-#include "assert.gof"
+#include "std/types.gof"
+#include "std/assert.gof"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 0 
 

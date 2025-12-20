@@ -32,7 +32,7 @@ Does not removes `public` functions as their usage is outside of an Gofra progra
 For example this function may be removed by DCE
 ```gofra
 // [Additionally, most of binary size comes for example from libraries which gives you a lot of functions]
-include "std.gof"
+include "std"
 
 func void test_function[]
     // This function is unused so it will be safely remove

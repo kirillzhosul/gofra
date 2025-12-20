@@ -1,5 +1,5 @@
 /// Tests that passing structure as pointer to another function works and allows to work with that
-#include "std.gof"
+#include "std"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 

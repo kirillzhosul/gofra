@@ -1,6 +1,6 @@
 /// Test simple N iterations with while loop
-#include "os/general.gof"
-#include "assert.gof"
+#include "std/os/general.gof"
+#include "std/assert.gof"
 
 const ITERATIONS = 10
 

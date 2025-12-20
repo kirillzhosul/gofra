@@ -4,7 +4,7 @@
 // Print an series of Fibonacci numbers up to N
 // ==============================================
 
-#include "std.gof"
+#include "std"
 
 const N = 4181;
 

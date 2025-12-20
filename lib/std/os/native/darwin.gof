@@ -7,7 +7,7 @@
 // TODO: Add x86-64 Darwin layer
 // TODO: Add variadic function for `sc_syscall`
 
-#include "types.gof"
+#include "std/types.gof"
 
 // File access mode flags
 #define O_RDONLY   0x0000  // Open for reading only

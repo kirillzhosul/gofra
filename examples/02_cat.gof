@@ -4,7 +4,7 @@
 // Opens an text file from PATH macro and emits it content into standard
 // ==============================================
 
-#include "std.gof"
+#include "std"
 
 // TODO(@kirillzhosul): Research why non-existent file returns STDERR FD
 // TODO: add argc argv

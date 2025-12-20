@@ -18,6 +18,8 @@ class Keyword(Enum):
     ATTR_FUNC_PUBLIC = auto()
     ATTR_FUNC_NO_RETURN = auto()
 
+    AS = auto()
+
     MODULE_IMPORT = auto()
 
     FUNCTION = auto()
@@ -72,6 +74,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "pub": Keyword.ATTR_FUNC_PUBLIC,
     "no_return": Keyword.ATTR_FUNC_NO_RETURN,
     "extern": Keyword.ATTR_FUNC_EXTERN,
+    "as": Keyword.AS,
     # Other definition
     "const": Keyword.CONST_DEFINE,
     "struct": Keyword.STRUCT,

@@ -4,7 +4,7 @@
 // ==============================================
 
 #include "types.gof"
-#include "os/io/output.gof"
+#include "std/os/io/output.gof"
 
 // TODO: add static assertions (https://github.com/kirillzhosul/gofra/issues/19)
 

@@ -2,9 +2,9 @@
 // Input manipulations based on operating system (wrapper)
 // ==============================================
 
-#include "os/general.gof"
+#include "std/os/general.gof"
 #include "std_handles.gof"
-#include "types.gof"
+#include "std/types.gof"
 
 // TODO: Add proper OR to preprocessor
 // TODO: Inline functions has bad debug options and produce improper error messages

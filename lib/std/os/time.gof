@@ -5,8 +5,8 @@
 
 // TODO: Add different implementation for Windows and non POSIX systems
 
-#include "general.gof"
-#include "types.gof"
+#include "std/os/general.gof"
+#include "std/types.gof"
 
 
 // Get current time of day as seconds from epoch

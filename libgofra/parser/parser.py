@@ -299,30 +299,40 @@ def _try_resolve_and_find_real_include_path(
         *search_paths,
     )
     for search_path in traversed_paths:
-        if (probable_path := search_path.joinpath(path)).exists(follow_symlinks=True):
-            if probable_path.is_file():
-                # We found an straightforward file reference
-                return probable_path
-
-            # Non-existent file here or directory reference.
-            if not probable_path.is_dir():
+        probable_path = search_path.joinpath(path)
+        if not probable_path.exists(follow_symlinks=True):
+            probable_path = search_path.joinpath(path).with_suffix(".gof")
+            if not probable_path.exists(follow_symlinks=True):
                 continue
 
-            probable_package = Path(probable_path / probable_path.name).with_suffix(
-                ".gof",
-            )
-            if probable_package.exists():
-                return probable_package
+        if probable_path.is_file():
+            # We found an straightforward file reference
+            return probable_path
+
+        # Non-existent file here or directory reference.
+        if not probable_path.is_dir():
+            continue
+
+        probable_package = Path(probable_path / probable_path.name).with_suffix(
+            ".gof",
+        )
+        if probable_package.exists():
+            return probable_package
     return None
 
 
 def _unpack_import(context: ParserContext, token: Token) -> None:
     requested_import_path = _consume_import_raw_path_from_token(context, token)
 
-    context.expect_token(TokenType.STRING)
-    as_name_tok = context.next_token()
-    assert isinstance(as_name_tok.value, str)
-    named_import_as_name = as_name_tok.value
+    # `as` expected
+    context.expect_token(TokenType.KEYWORD)
+    assert context.peek_token().value == Keyword.AS
+    context.advance_token()
+
+    as_name_token = context.next_token()
+    assert isinstance(as_name_token.value, str)
+    assert as_name_token.type in (TokenType.IDENTIFIER, TokenType.STRING)
+    named_import_as_name = as_name_token.value
 
     if requested_import_path.resolve(strict=False) == context.path:
         raise Exception(token)
@@ -333,12 +343,8 @@ def _unpack_import(context: ParserContext, token: Token) -> None:
         search_paths=context.import_search_paths,
     )
     if import_path is None:
-        msg = "Cannot find import path"
-        raise ValueError(
-            msg,
-            token,
-            requested_import_path,
-        )
+        msg = f"Cannot find import path for module '{requested_import_path}' at {token.location}"
+        raise ValueError(msg)
 
     already_imported_paths = (m.path for m in context.module_dependencies.values())
     if import_path in already_imported_paths:
@@ -373,8 +379,9 @@ def _consume_import_raw_path_from_token(
     import_token = context.next_token()
     if not import_token:
         raise Exception("no import name")
-    if import_token.type != TokenType.STRING:
-        raise Exception("import not a string")
+    if import_token.type not in (TokenType.STRING, TokenType.IDENTIFIER):
+        msg = f"import not a string or identifier at {import_token.location}"
+        raise ValueError(msg)
 
     include_path_raw = import_token.value
     assert isinstance(include_path_raw, str)

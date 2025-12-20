@@ -6,7 +6,7 @@
 // TODO(@kirillzhosul): We cannot pass color struct within C ABI, use `rgba_to_raylib_argb`
 // TODO(@kirillzhosul): Cannot pass floats into C ABI
 
-#include "types.gof"
+#include "std/types.gof"
 
 #ifdef RAYLIB_STRUCT_COLORS
     struct Color

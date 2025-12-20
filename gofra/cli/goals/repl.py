@@ -45,7 +45,7 @@ from libgofra.types.primitive.integers import I64Type
 HIST_FILE = Path("~").expanduser() / ".gofra_repl_history"
 
 # Source that is compiled separately and contains any global variables / functions that is defined within REPL session
-session_loader_source: list[str] = ['#include "std.gof"']
+session_loader_source: list[str] = ['#include "std"']
 
 CACHE_SUBDIR = Path(".__repl__")
 SRT_FILEPATH = CACHE_SUBDIR / "session_runtime_loader.gof"

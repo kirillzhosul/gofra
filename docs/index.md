@@ -12,7 +12,7 @@ Programs are written using [Reverse Polish notation](https://en.wikipedia.org/wi
 
 Here's a simple **"Hello, World!"** example:
 ```gofra
-include "std.gof"
+include "std"
 
 func void main
     "Hello, World!" println

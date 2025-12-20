@@ -27,7 +27,7 @@ Operator =
 VariableReference = ["&"], Identifier, ["[", [PositiveNumber | Identifier], "]"] | [".", Identifier];
 
 FunctionDef = 
-    ['inline'], ['global'], ['extern'], 
+    ['inline'], ['pub'], ['extern'], ['no_return'], 
     "func", TypeExpr, Identifier, "[", [Params], "]", [Newline], 
         {Statement | VariableDefinition}, 
     "end";

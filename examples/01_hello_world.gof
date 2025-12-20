@@ -3,7 +3,7 @@
 // Print an known string into console
 // ==============================================
 
-#include "std.gof"
+#include "std"
 
 func void main[]
     "Hello, World!" println

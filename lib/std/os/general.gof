@@ -3,9 +3,9 @@
 // ==============================================
 
 // OS-dependant native abstraction layer
-#ifdef OS_WINDOWS #include "os/native/windows.gof" #endif
-#ifdef OS_DARWIN  #include "os/native/darwin.gof"  #endif
-#ifdef OS_LINUX   #include "os/native/linux.gof"   #endif
+#ifdef OS_WINDOWS #include "std/os/native/windows.gof" #endif
+#ifdef OS_DARWIN  #include "std/os/native/darwin.gof"  #endif
+#ifdef OS_LINUX   #include "std/os/native/linux.gof"   #endif
 
 // Exit an program with given exit code
 #ifdef OS_LINUX   no_return func void exit[int] call sc_exit  end #endif // TODO: must infer no return ?

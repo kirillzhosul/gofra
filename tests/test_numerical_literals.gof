@@ -1,6 +1,6 @@
 /// Test all numerical literals on stack
 
-#include "assert.gof"
+#include "std/assert.gof"
 
 func int main[]
     0        drop

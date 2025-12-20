@@ -1,6 +1,6 @@
 /// Test min value function from math library
-#include "os/io"
-#include "math.gof"
+#include "std/os/io"
+#include "std/math.gof"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 120
 

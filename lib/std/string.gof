@@ -5,7 +5,7 @@
 // TODO: Move back string length helpers, as they currently broken due to probably memory reading pollution (e.g read only single char byte instead of CPU WORD
 // TODO: idk how to express that but we possibly may introduce swapping variable address with an other address, or this may be fixed with named arguments
 // TODO: This requires legacy variant with callee-allocated buffer for int64_to_cstr
-#include "os/io/output.gof"
+#include "std/os/io/output.gof"
 
 
 // Convert int64 to string
