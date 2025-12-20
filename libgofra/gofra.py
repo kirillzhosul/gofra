@@ -57,16 +57,14 @@ def _validate_function_existence(root: Module) -> None:
         for op in func.operators:
             if op.type == OperatorType.FUNCTION_CALL:
                 assert isinstance(op.operand, FunctionCallOperand), op.operand
-                if op.operand.module is not None:
-                    continue
-
                 resolved_symbol = root.resolve_function_dependency(
                     op.operand.module,
                     op.operand.func_name,
                 )
                 if resolved_symbol is None:
                     raise ParserUnknownFunctionError(
-                        token=op.token,
+                        at=op.token.location,
+                        name=op.operand.func_name,
                         functions_available=[],
                         best_match=None,
                     )

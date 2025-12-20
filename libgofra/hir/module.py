@@ -71,7 +71,11 @@ class Module:
         """
         if module is None:
             return self.functions.get(func)
-        return self.dependencies[module].resolve_function_dependency(
+
+        hir_module = self.dependencies.get(module)
+        if not hir_module:
+            return None  # Module is not an dependency of current module
+        return hir_module.resolve_function_dependency(
             module=None,
             func=func,
         )

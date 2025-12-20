@@ -98,10 +98,6 @@ class ParserContext(PeekableTokenizer):
         default_factory=lambda: DEFAULT_PRIMITIVE_TYPE_REGISTRY.copy(),
     )
 
-    function_dependency: MutableSequence[FunctionCallOperand] = field(
-        default_factory=list[FunctionCallOperand],
-    )
-
     # No function calls in that context
     # Maybe should be refactored
     is_leaf_context: bool = True

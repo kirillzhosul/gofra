@@ -58,6 +58,7 @@ from .exceptions import (
     ParserExhaustiveContextStackError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
+    ParserUnknownFunctionError,
     ParserUnknownIdentifierError,
 )
 from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
@@ -173,10 +174,10 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
     if _try_push_intrinsic_operator(context, token):
         return
 
-    if try_push_variable_reference(context, token):
+    if _try_unpack_function_call_from_identifier_token(context, token):
         return
 
-    if _try_unpack_function_call_from_identifier_token(context, token):
+    if try_push_variable_reference(context, token):
         return
 
     raise ParserUnknownIdentifierError(
@@ -280,6 +281,9 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
                 return unpack_structure_definition_from_token(context)
 
             return unpack_type_definition_from_token(context)
+        case Keyword.AS:
+            msg = f"As keyword may used only in import statements for now at {token.location}"
+            raise ValueError(msg)
         case _:
             assert_never(token.value)
 
@@ -325,17 +329,18 @@ def _unpack_import(context: ParserContext, token: Token) -> None:
     requested_import_path = _consume_import_raw_path_from_token(context, token)
 
     # `as` expected
-    context.expect_token(TokenType.KEYWORD)
-    assert context.peek_token().value == Keyword.AS
-    context.advance_token()
-
-    as_name_token = context.next_token()
-    assert isinstance(as_name_token.value, str)
-    assert as_name_token.type in (TokenType.IDENTIFIER, TokenType.STRING)
-    named_import_as_name = as_name_token.value
+    peeked = context.peek_token()
+    named_import_as_name = str(requested_import_path)
+    if peeked.type == TokenType.KEYWORD and peeked.value == Keyword.AS:
+        context.advance_token()  # consume `as`
+        as_name_token = context.next_token()
+        assert isinstance(as_name_token.value, str)
+        assert as_name_token.type in (TokenType.IDENTIFIER, TokenType.STRING)
+        named_import_as_name = as_name_token.value
 
     if requested_import_path.resolve(strict=False) == context.path:
-        raise Exception(token)
+        msg = f"Tried to import self at {context.path}"
+        raise ValueError(msg)
 
     import_path = _try_resolve_and_find_real_include_path(
         requested_import_path,
@@ -443,7 +448,6 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
     name = name_token.text
     function = context.functions.get(name)
     call_spec = FunctionCallOperand(module=owner_module, func_name=name)
-    context.function_dependency.append(call_spec)
 
     if function and function.is_inline:
         assert not function.is_external
@@ -562,28 +566,20 @@ def _try_unpack_function_call_from_identifier_token(
 ) -> bool:
     assert token.type == TokenType.IDENTIFIER
 
-    name_token = token
-    owner_module: str | None = None
-    if context.peek_token().type == TokenType.DOT:
-        # Module level call
-        context.advance_token()
-        context.expect_token(TokenType.IDENTIFIER)
-        module_tok = context.next_token()
-        module_tok, name_token = name_token, module_tok
-        assert isinstance(module_tok.value, str)
-        owner_module = module_tok.value
-
-    name = name_token.text
-    call_spec = FunctionCallOperand(module=owner_module, func_name=name)
-    context.function_dependency.append(call_spec)
-
-    context.push_new_operator(
-        type=OperatorType.FUNCTION_CALL,
-        token=token,
-        operand=call_spec,
-    )
-
-    return True
+    name = token.text
+    function = context.functions.get(name, None)
+    if function:
+        if function.is_inline:
+            context.expand_from_inline_block(function)
+            return True
+        call_spec = FunctionCallOperand(module=None, func_name=name)
+        context.push_new_operator(
+            type=OperatorType.FUNCTION_CALL,
+            token=token,
+            operand=call_spec,
+        )
+        return True
+    return False
 
 
 def _push_string_operator(context: ParserContext, token: Token) -> None:
