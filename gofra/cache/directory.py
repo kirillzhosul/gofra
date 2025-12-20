@@ -22,6 +22,8 @@ def cleanup_build_cache_directory(path: Path) -> None:
     """
     # TODO(@kirillzhosul): Cleanup of cache directory is not implemented yet.
     for file in path.iterdir():
+        if not file.is_file():
+            continue
         if not _is_cache_file_removable(path, file):
             return
         file.unlink(missing_ok=True)
