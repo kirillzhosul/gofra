@@ -166,6 +166,7 @@
         "timespec",
         "timeval",
         "tvos",
+        "typedef",
         "typestack",
         "udiv",
         "uninteonal",

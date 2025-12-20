@@ -2,7 +2,7 @@
 
 Function attributes in Gofra are defined like so:
 ```ebnf
-FunctionDef = {"global" | "extern" | "no_return" | "inline}, "func", ...FunctionRestDef
+FunctionDef = {"pub" | "extern" | "no_return" | "inline}, "func", ...FunctionRestDef
 ```
 
 Here is description of each attribute
@@ -82,6 +82,6 @@ This means function symbol `_puts` is not available inside current object file (
 For more information what is FFI look into [FFI](./ffi.md) documentation
 
 
-## `global` attribute
+## `pub` attribute
 
-Function marked with `global` attribute are opposite to `extern` ones - they expose this function symbol to object file and allow other object files to link with it
+Function marked with `pub` attribute are opposite to `extern` ones - they expose this function symbol to object file and allow other object files to link with it

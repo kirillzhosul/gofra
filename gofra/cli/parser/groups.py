@@ -283,7 +283,7 @@ def add_optimizer_group(parser: ArgumentParser) -> None:
         dest="optimizer_do_dead_code_elimination",
         action="store_const",
         const=True,
-        help="[Enabled at -O1 and above] Force enable DCE (dead-code-elimination) optimization. Removes unused functions (no calls to them inside final program), except explicit 'global' ones.",
+        help="[Enabled at -O1 and above] Force enable DCE (dead-code-elimination) optimization. Removes unused functions (no calls to them inside final program), except explicit 'public' ones.",
     )
     group_dce.add_argument(
         "-fno-dce",

@@ -28,5 +28,5 @@ def search_unused_functions(program: Module) -> Iterable[Function]:
     return [
         f
         for f in program.functions.values()
-        if not f.is_global and not is_function_has_callers(program, f.name)
+        if not f.is_public and not is_function_has_callers(program, f.name)
     ]

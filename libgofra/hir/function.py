@@ -22,6 +22,12 @@ type PARAMS_T = Sequence[Type]
 
 
 class Visibility(Enum):
+    """How this symbol (e.g function, variable) is visible to other modules.
+
+    E.g with public visibility - anyone can access that symbol and it will be visible
+    with private - only usage in owner module itself is allowed (must not be linked with other object files)
+    """
+
     PUBLIC = auto()  # Allowed from everywhere
     PRIVATE = auto()  # Only inside current module
 
@@ -76,10 +82,6 @@ class Function:
     # Code generator takes care of that calls and specifies extern function requests if needed (aggregates them for that)
     is_external: bool
 
-    # If true, marks that function as *global* for linkage with another objects
-    # Global functions can be linked with other binary files after compilation (e.g for libraries development)
-    is_global: bool
-
     # If true, function has no calls to other functions
     # compiler may perform some optimizations for these
     is_leaf: bool
@@ -93,6 +95,10 @@ class Function:
         """Check is given function returns an void type (e.g no return type)."""
         # This meant to be something like generic function class / type guards but Python is shi...
         return not isinstance(self.return_type, VoidType)
+
+    @property
+    def is_public(self) -> bool:
+        return self.visibility == Visibility.PUBLIC
 
     @property
     def is_recursive(self) -> bool:
@@ -136,7 +142,6 @@ class Function:
             operators=None,
             is_leaf=False,
             is_inline=False,
-            is_global=False,
             is_external=True,
         )
 
@@ -160,7 +165,6 @@ class Function:
             variables=None,
             is_leaf=False,
             is_inline=True,
-            is_global=False,
             is_external=False,
         )
 
@@ -174,7 +178,6 @@ class Function:
         variables: Mapping[str, Variable[Type]],
         operators: Sequence[Operator],
         return_type: Type,
-        is_global: bool,
         is_leaf: bool,
     ) -> Function:
         """Create function that is internal and not inline, with propagated flags set."""
@@ -186,7 +189,6 @@ class Function:
             variables=variables,
             operators=operators,
             is_leaf=is_leaf,
-            is_global=is_global,
             is_inline=False,
             is_external=False,
         )
@@ -201,7 +203,6 @@ class Function:
         variables: Mapping[str, Variable[Type]] | None,
         operators: Sequence[Operator] | None,
         return_type: Type,
-        is_global: bool,
         is_leaf: bool,
         is_inline: bool,
         is_external: bool,
@@ -216,7 +217,6 @@ class Function:
         function.return_type = return_type
         function.variables = variables or {}
         function.operators = operators or []
-        function.is_global = is_global
         function.is_leaf = is_leaf
         function.is_inline = is_inline
         function.is_external = is_external

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from difflib import get_close_matches
-from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.cli.output import cli_message
 from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.feature_flags import FEATURE_ALLOW_FPU
-from libgofra.hir.function import Function
+from libgofra.hir.function import Function, Visibility
 from libgofra.hir.module import Module
 from libgofra.hir.operator import FunctionCallOperand
 from libgofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
@@ -50,7 +49,6 @@ from libgofra.parser.variable_accessor import try_push_variable_reference
 from libgofra.parser.variable_definition import (
     unpack_variable_definition_from_token,
 )
-from libgofra.preprocessor.macros.registry import MacrosRegistry
 from libgofra.preprocessor.preprocessor import preprocess_file
 from libgofra.types.composite.string import StringType
 
@@ -66,6 +64,8 @@ from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+
+    from libgofra.preprocessor.macros.registry import MacrosRegistry
 
 
 def parse_module_from_tokenizer(
@@ -201,18 +201,18 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
     assert isinstance(token.value, Keyword)
 
     TOP_LEVEL_KEYWORD = (  # noqa: N806
-        Keyword.INLINE,
-        Keyword.EXTERN,
-        Keyword.NO_RETURN,
+        Keyword.ATTR_FUNC_INLINE,
+        Keyword.ATTR_FUNC_EXTERN,
+        Keyword.ATTR_FUNC_NO_RETURN,
         Keyword.FUNCTION,
-        Keyword.GLOBAL,
+        Keyword.ATTR_FUNC_PUBLIC,
         Keyword.STRUCT,
         Keyword.TYPE_DEFINE,
-        Keyword.IMPORT,
+        Keyword.MODULE_IMPORT,
     )
 
     BOTH_LEVEL_KEYWORD = (  # noqa: N806
-        Keyword.CONST,
+        Keyword.CONST_DEFINE,
         Keyword.END,
         Keyword.VARIABLE_DEFINE,
     )
@@ -226,11 +226,11 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         case Keyword.IF | Keyword.DO | Keyword.WHILE | Keyword.END | Keyword.FOR:
             return consume_conditional_block_keyword_from_token(context, token)
         case (
-            Keyword.INLINE
-            | Keyword.EXTERN
-            | Keyword.FUNCTION
-            | Keyword.GLOBAL
-            | Keyword.NO_RETURN
+            Keyword.FUNCTION
+            | Keyword.ATTR_FUNC_INLINE
+            | Keyword.ATTR_FUNC_EXTERN
+            | Keyword.ATTR_FUNC_PUBLIC
+            | Keyword.ATTR_FUNC_NO_RETURN
         ):
             return _unpack_function_definition_from_token(context, token)
         case Keyword.FUNCTION_CALL:
@@ -239,7 +239,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return context.push_new_operator(OperatorType.FUNCTION_RETURN, token=token)
         case Keyword.TYPE_CAST:
             return unpack_typecast_from_token(context, token)
-        case Keyword.VARIABLE_DEFINE | Keyword.CONST:
+        case Keyword.VARIABLE_DEFINE | Keyword.CONST_DEFINE:
             return unpack_variable_definition_from_token(context, token)
         case Keyword.SYSCALL:
             return context.push_new_operator(
@@ -267,7 +267,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return _unpack_inline_raw_assembly(context, token)
         case Keyword.COMPILE_TIME_ERROR:
             return _unpack_compile_time_error(context, token)
-        case Keyword.IMPORT:
+        case Keyword.MODULE_IMPORT:
             return _unpack_import(context, token)
         case Keyword.TYPE_DEFINE:
             if (
@@ -368,7 +368,7 @@ def _consume_import_raw_path_from_token(
 ) -> Path:
     """Consume include path from `include` construction."""
     assert include_token.type == TokenType.KEYWORD
-    assert include_token.value == Keyword.IMPORT
+    assert include_token.value == Keyword.MODULE_IMPORT
 
     import_token = context.next_token()
     if not import_token:
@@ -518,6 +518,9 @@ def _unpack_function_definition_from_token(
 
     if f_header_def.qualifiers.is_inline:
         assert not new_context.variables, "Inline functions cannot have local variables"
+        assert not f_header_def.qualifiers.is_public, (
+            "Inline functions is always internal private - cannot do public"
+        )
         function = Function.create_internal_inline(
             name=f_header_def.name,
             defined_at=token.location,
@@ -529,7 +532,7 @@ def _unpack_function_definition_from_token(
         context.add_function(function)
         return
     if f_header_def.name == GOFRA_ENTRY_POINT:
-        f_header_def.qualifiers.is_global = True
+        f_header_def.qualifiers.is_public = True
 
     function = Function.create_internal(
         name=f_header_def.name,
@@ -538,9 +541,10 @@ def _unpack_function_definition_from_token(
         variables=new_context.variables,
         parameters=params,
         return_type=f_header_def.return_type,
-        is_global=f_header_def.qualifiers.is_global,
         is_leaf=new_context.is_leaf_context,
     )
+    if f_header_def.qualifiers.is_public:
+        function.visibility = Visibility.PUBLIC
     function.is_no_return = f_header_def.qualifiers.is_no_return
     context.add_function(function)
 

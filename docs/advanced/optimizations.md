@@ -26,7 +26,7 @@ Impact: **Reduced binary size**
 Flag: `-fdce`, `fno-dce`
 
 DCE searches for functions that is not being called at least once and removes them from final IR so them does not appear in final binary as being unused.
-Does not removes `global` functions as their usage is outside of an Gofra program.
+Does not removes `public` functions as their usage is outside of an Gofra program.
 
 
 For example this function may be removed by DCE

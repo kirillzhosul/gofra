@@ -13,36 +13,36 @@ class Keyword(Enum):
 
     END = auto()
 
-    EXTERN = auto()
-    INLINE = auto()
-    GLOBAL = auto()
-    NO_RETURN = auto()
+    ATTR_FUNC_EXTERN = auto()
+    ATTR_FUNC_INLINE = auto()
+    ATTR_FUNC_PUBLIC = auto()
+    ATTR_FUNC_NO_RETURN = auto()
+
+    MODULE_IMPORT = auto()
 
     FUNCTION = auto()
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
-
-    IMPORT = auto()
 
     INLINE_RAW_ASM = auto()
     COMPILE_TIME_ERROR = auto()
 
     STRUCT = auto()
 
-    CONST = auto()
+    CONST_DEFINE = auto()
     VARIABLE_DEFINE = auto()
 
     TYPE_CAST = auto()
     TYPE_DEFINE = auto()
 
     SIZEOF = auto()
+
     SYSCALL = auto()
 
     COPY = auto()
     DROP = auto()
     SWAP = auto()
 
-    # Additional operations that may/or not be an part of language
     DEBUGGER_BREAKPOINT = auto()
 
 
@@ -68,12 +68,12 @@ WORD_TO_PREPROCESSOR_KEYWORD = {
 WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     # Function definition
     "func": Keyword.FUNCTION,
-    "inline": Keyword.INLINE,
-    "global": Keyword.GLOBAL,
-    "no_return": Keyword.NO_RETURN,
-    "extern": Keyword.EXTERN,
+    "inline": Keyword.ATTR_FUNC_INLINE,
+    "pub": Keyword.ATTR_FUNC_PUBLIC,
+    "no_return": Keyword.ATTR_FUNC_NO_RETURN,
+    "extern": Keyword.ATTR_FUNC_EXTERN,
     # Other definition
-    "const": Keyword.CONST,
+    "const": Keyword.CONST_DEFINE,
     "struct": Keyword.STRUCT,
     "var": Keyword.VARIABLE_DEFINE,
     "type": Keyword.TYPE_DEFINE,
@@ -86,7 +86,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "end": Keyword.END,
     # Statements / operators
     "call": Keyword.FUNCTION_CALL,
-    "import": Keyword.IMPORT,
+    "import": Keyword.MODULE_IMPORT,
     "compile_error": Keyword.COMPILE_TIME_ERROR,
     "inline_raw_asm": Keyword.INLINE_RAW_ASM,
     "return": Keyword.FUNCTION_RETURN,

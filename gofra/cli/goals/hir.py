@@ -116,9 +116,9 @@ def _emit_ir_operator(operator: Operator, context_block_shift: int) -> None:  # 
             return print(f"{shift}" + "}")
         case OperatorType.FUNCTION_CALL:
             if isinstance(operator.operand, FunctionCallOperand):
-                return print(
-                    f"{shift}{operator.operand.module}.{operator.operand.func_name}()"
-                )
+                mod = operator.operand.module
+                func = operator.operand.func_name
+                return print(f"{shift}{mod}.{func}()")
             return print(f"{shift}{operator.operand}()")
         case _:
             if operator.operand:
@@ -133,7 +133,7 @@ def _emit_ir_function_signature(function: Function) -> None:
         return
     print(f"[function symbol '{function.name}'", end=" ")
     print(f"({function.parameters} -> {function.return_type})", end=" ")
-    print(f"(global={function.is_global})]", end=" ")
+    print(f"(public={function.is_public})]", end=" ")
     print(f"({len(function.variables)} local variables)", end=" ")
     if function.is_leaf:
         print("[has_leaf_property]", end="")

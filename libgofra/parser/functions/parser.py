@@ -42,7 +42,7 @@ _ = ParserFunctionInvalidTypeError
 class FunctionHeaderQualifiers:
     is_inline: bool
     is_extern: bool
-    is_global: bool
+    is_public: bool
     is_no_return: bool
 
 
@@ -84,17 +84,17 @@ def consume_function_qualifiers(
     # Function modifier parsing must be started from modifier or start
     assert token.type == TokenType.KEYWORD
     assert token.value in (
-        Keyword.INLINE,
-        Keyword.EXTERN,
         Keyword.FUNCTION,
-        Keyword.GLOBAL,
-        Keyword.NO_RETURN,
+        Keyword.ATTR_FUNC_INLINE,
+        Keyword.ATTR_FUNC_EXTERN,
+        Keyword.ATTR_FUNC_PUBLIC,
+        Keyword.ATTR_FUNC_NO_RETURN,
     )
 
     qualifiers = FunctionHeaderQualifiers(
         is_inline=False,
         is_extern=False,
-        is_global=False,
+        is_public=False,
         is_no_return=False,
     )
 
@@ -104,13 +104,13 @@ def consume_function_qualifiers(
             raise ParserExpectedFunctionKeywordError(token=next_token)
 
         match next_token.value:
-            case Keyword.INLINE:
+            case Keyword.ATTR_FUNC_INLINE:
                 if qualifiers.is_inline:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
                 qualifiers.is_inline = True
-            case Keyword.EXTERN:
+            case Keyword.ATTR_FUNC_EXTERN:
                 if qualifiers.is_extern:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
@@ -118,13 +118,13 @@ def consume_function_qualifiers(
                 qualifiers.is_extern = True
             case Keyword.FUNCTION:
                 break
-            case Keyword.GLOBAL:
-                if qualifiers.is_global:
+            case Keyword.ATTR_FUNC_PUBLIC:
+                if qualifiers.is_public:
                     raise ParserFunctionModifierReappliedError(
                         modifier_token=next_token,
                     )
-                qualifiers.is_global = True
-            case Keyword.NO_RETURN:
+                qualifiers.is_public = True
+            case Keyword.ATTR_FUNC_NO_RETURN:
                 qualifiers.is_no_return = True
             case _:
                 raise ParserExpectedFunctionKeywordError(token=next_token)

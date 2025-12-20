@@ -303,7 +303,7 @@ def aarch64_executable_functions(
             context,
             name=function.name,
             local_variables=function.variables,
-            global_name=function.name if function.is_global else None,
+            global_name=function.name if function.is_public else None,
             preserve_frame=True,
             parameters=function.parameters,
         )
