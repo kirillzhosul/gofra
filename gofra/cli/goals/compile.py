@@ -27,7 +27,8 @@ from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
 from libgofra.typecheck import validate_type_safety
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, MutableSequence
+    from pathlib import Path
 
     from gofra.cli.parser.arguments import CLIArguments
 
@@ -49,6 +50,8 @@ def wrap_with_perf_time_taken(message: str, *, verbose: bool) -> Generator[None]
 
 def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     """Process full toolchain onto input source files."""
+    cache_gc: MutableSequence[Path] = []
+
     if len(args.source_filepaths) > 1:
         return cli_fatal_abort("Compiling several files not implemented.")
     cli_message(level="INFO", text="Parsing input files...", verbose=args.verbose)
@@ -59,12 +62,19 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     ).inject_propagated_defaults(target=args.target)
 
     with wrap_with_perf_time_taken("Core (lex/parse/pp)", verbose=args.verbose):
-        module = process_input_file(
+        # That module may have dependencies that is compiled separately from root
+        root_module = process_input_file(
             args.source_filepaths[0],
             args.include_paths,
             macros=macros_registry,
             _debug_emit_lexemes=args.lexer_debug_emit_lexemes,
         )
+
+    cli_message(
+        "INFO",
+        f"Collected {len(root_module.flatten_dependencies_paths(include_self=False))} + 1 modules to compile.",
+        verbose=args.verbose,
+    )
 
     if not args.skip_typecheck:
         cli_message(
@@ -74,11 +84,13 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         )
         with wrap_with_perf_time_taken("Typecheck and lint", verbose=args.verbose):
             is_executable = args.output_format == "executable"
-            validate_type_safety(
-                module,
-                on_lint_warning=cli_linter_warning,
-                strict_expect_entry_point=is_executable,
-            )
+            for mod in root_module.visit_dependencies(include_self=True):
+                is_root = mod == root_module
+                validate_type_safety(
+                    mod,
+                    on_lint_warning=cli_linter_warning,
+                    strict_expect_entry_point=is_executable and is_root,
+                )
 
     with wrap_with_perf_time_taken("Optimizer", verbose=args.verbose):
         cli_message(
@@ -86,6 +98,8 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             text=f"Applying optimizer pipeline (From base optimization level: {args.optimizer.level})",
             verbose=args.verbose,
         )
+        for mod in root_module.visit_dependencies(include_self=True):
+            cli_process_optimization_pipeline(mod, args)
 
     cli_message(
         level="INFO",
@@ -101,10 +115,11 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         args.target.file_assembly_suffix,
     )
 
+    modules_assembly: dict[Path, Path] = {}
     with wrap_with_perf_time_taken("Codegen", verbose=args.verbose):
         generate_code_for_assembler(
             assembly_filepath,
-            module,
+            root_module,
             args.target,
             on_warning=lambda message: cli_message(
                 level="WARNING",
@@ -113,9 +128,29 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             ),
         )
 
+        for mod in root_module.visit_dependencies(include_self=False):
+            mod_assembly_path = (
+                assembly_filepath.parent
+                / (f"{root_module.path.name}" + "$mod_dependencies")
+                / str(hash(mod.path))
+            ).with_suffix(args.target.file_assembly_suffix)
+            generate_code_for_assembler(
+                mod_assembly_path,
+                mod,
+                args.target,
+                on_warning=lambda message: cli_message(
+                    level="WARNING",
+                    text=message,
+                    verbose=args.verbose,
+                ),
+            )
+            modules_assembly[mod.path] = mod_assembly_path
+
     object_filepath = (cache_dir / output.name).with_suffix(
         args.target.file_object_suffix,
     )
+
+    modules_objects: dict[Path, Path] = {}
 
     with wrap_with_perf_time_taken("Assembler", verbose=args.verbose):
         assemble_object_from_codegen_assembly(
@@ -125,9 +160,23 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             additional_assembler_flags=args.assembler_flags,
             debug_information=args.debug_symbols,
         )
+        for mod in root_module.visit_dependencies(include_self=False):
+            mod_object_path = (
+                object_filepath.parent
+                / (f"{root_module.path.name}" + "$mod_dependencies")
+                / str(hash(mod.path))
+            ).with_suffix(args.target.file_object_suffix)
+            assemble_object_from_codegen_assembly(
+                assembly=modules_assembly[mod.path],
+                output=mod_object_path,
+                target=args.target,
+                additional_assembler_flags=args.assembler_flags,
+                debug_information=args.debug_symbols,
+            )
+            modules_objects[mod.path] = mod_object_path
 
-    if args.delete_build_cache:
-        assembly_filepath.unlink()
+    cache_gc.append(assembly_filepath)
+    cache_gc.extend(modules_assembly.values())
 
     if args.output_format in ("library", "executable"):
         cli_message(
@@ -159,7 +208,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                     libraries_search_paths += paths
         with wrap_with_perf_time_taken("Linker", verbose=args.verbose):
             linker_process = link_object_files(
-                objects=[object_filepath],
+                objects=[object_filepath, *modules_objects.values()],
                 target=args.target,
                 output=args.output_filepath,
                 libraries=args.linker_libraries,
@@ -174,7 +223,8 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             linker_process.check_returncode()
 
     if args.delete_build_cache:
-        object_filepath.unlink()
+        cache_gc.append(object_filepath)
+        cache_gc.extend(modules_objects.values())
 
     if args.output_format == "executable":
         apply_file_executable_permissions(args.output_filepath)
@@ -188,6 +238,14 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         verbose=args.verbose,
     )
 
+    if args.delete_build_cache:
+        cli_message(
+            level="INFO",
+            text=f"Cleaning up {len(cache_gc)} cache files...",
+            verbose=args.verbose,
+        )
+        for item in cache_gc:
+            item.unlink(missing_ok=True)
     if args.execute_after_compilation:
         if args.output_format != "executable":
             return cli_fatal_abort(

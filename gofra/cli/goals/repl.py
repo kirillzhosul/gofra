@@ -192,6 +192,7 @@ def _compile_file_to_execute(
             args.include_paths,
             macros=ref_macros_registry.copy(),
         )
+        assert not module.dependencies, "not implemented"
     except (
         ValueError,
         AssertionError,

@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 from difflib import get_close_matches
+from itertools import chain
+from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
+from gofra.cli.output import cli_message
 from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.feature_flags import FEATURE_ALLOW_FPU
 from libgofra.hir.function import Function
 from libgofra.hir.module import Module
+from libgofra.hir.operator import FunctionCallOperand
 from libgofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from libgofra.lexer import (
     Keyword,
     Token,
     TokenType,
 )
+from libgofra.lexer.io.io import open_source_file_line_stream
 from libgofra.lexer.keywords import PreprocessorKeyword
+from libgofra.lexer.lexer import tokenize_from_raw
+from libgofra.lexer.tokens import TokenLocation
 from libgofra.parser.conditional_blocks import (
     consume_conditional_block_keyword_from_token,
 )
@@ -43,6 +50,8 @@ from libgofra.parser.variable_accessor import try_push_variable_reference
 from libgofra.parser.variable_definition import (
     unpack_variable_definition_from_token,
 )
+from libgofra.preprocessor.macros.registry import MacrosRegistry
+from libgofra.preprocessor.preprocessor import preprocess_file
 from libgofra.types.composite.string import StringType
 
 from ._context import ParserContext
@@ -51,19 +60,27 @@ from .exceptions import (
     ParserExhaustiveContextStackError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
-    ParserUnknownFunctionError,
     ParserUnknownIdentifierError,
 )
 from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-    from pathlib import Path
+    from collections.abc import Generator, Iterable
 
 
-def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Module:
+def parse_module_from_tokenizer(
+    path: Path,
+    tokenizer: Generator[Token],
+    macros: MacrosRegistry,
+    include_paths: Iterable[Path],
+) -> Module:
     """Load file for parsing into operators."""
-    context = ParserContext(_tokenizer=tokenizer)
+    context = ParserContext(
+        _tokenizer=tokenizer,
+        path=path,
+        import_search_paths=list(include_paths),
+        macros_registry=macros.copy(),  # mutable copy
+    )
     _parse_from_context_into_operators(context=context)
 
     assert context.is_top_level, (
@@ -78,6 +95,7 @@ def parse_module_from_tokenizer(path: Path, tokenizer: Generator[Token]) -> Modu
         functions=context.functions,
         variables=context.variables,
         structures=context.structs,
+        dependencies=context.module_dependencies,
     )
 
 
@@ -152,13 +170,13 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:  #
 
 
 def _consume_word_token(token: Token, context: ParserContext) -> None:
-    if _try_unpack_function_call_from_identifier_token(context, token):
-        return
-
     if _try_push_intrinsic_operator(context, token):
         return
 
     if try_push_variable_reference(context, token):
+        return
+
+    if _try_unpack_function_call_from_identifier_token(context, token):
         return
 
     raise ParserUnknownIdentifierError(
@@ -190,6 +208,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         Keyword.GLOBAL,
         Keyword.STRUCT,
         Keyword.TYPE_DEFINE,
+        Keyword.IMPORT,
     )
 
     BOTH_LEVEL_KEYWORD = (  # noqa: N806
@@ -248,6 +267,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return _unpack_inline_raw_assembly(context, token)
         case Keyword.COMPILE_TIME_ERROR:
             return _unpack_compile_time_error(context, token)
+        case Keyword.IMPORT:
+            return _unpack_import(context, token)
         case Keyword.TYPE_DEFINE:
             if (
                 (peeked := context.peek_token())
@@ -261,6 +282,103 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return unpack_type_definition_from_token(context)
         case _:
             assert_never(token.value)
+
+
+def _try_resolve_and_find_real_include_path(
+    path: Path,
+    current_path: Path,
+    search_paths: Iterable[Path],
+) -> Path | None:
+    """Resolve real import path and try to search for possible location of include (include directories system)."""
+    traversed_paths = (
+        # 1. Try path where callee request an include
+        current_path.parent,
+        # 2. Try CLI toolchain call directory
+        Path("./"),
+        # 3. Traverse each search path
+        *search_paths,
+    )
+    for search_path in traversed_paths:
+        if (probable_path := search_path.joinpath(path)).exists(follow_symlinks=True):
+            if probable_path.is_file():
+                # We found an straightforward file reference
+                return probable_path
+
+            # Non-existent file here or directory reference.
+            if not probable_path.is_dir():
+                continue
+
+            probable_package = Path(probable_path / probable_path.name).with_suffix(
+                ".gof",
+            )
+            if probable_package.exists():
+                return probable_package
+    return None
+
+
+def _unpack_import(context: ParserContext, token: Token) -> None:
+    requested_import_path = _consume_import_raw_path_from_token(context, token)
+
+    context.expect_token(TokenType.STRING)
+    as_name_tok = context.next_token()
+    assert isinstance(as_name_tok.value, str)
+    named_import_as_name = as_name_tok.value
+
+    if requested_import_path.resolve(strict=False) == context.path:
+        raise Exception(token)
+
+    import_path = _try_resolve_and_find_real_include_path(
+        requested_import_path,
+        current_path=context.path,
+        search_paths=context.import_search_paths,
+    )
+    if import_path is None:
+        msg = "Cannot find import path"
+        raise ValueError(
+            msg,
+            token,
+            requested_import_path,
+        )
+
+    already_imported_paths = (m.path for m in context.module_dependencies.values())
+    if import_path in already_imported_paths:
+        cli_message("WARNING", "Tried to import already imported module -> rejecting")
+        return
+
+    io = open_source_file_line_stream(import_path)
+    lexer = tokenize_from_raw(import_path, io)
+    preprocessor = preprocess_file(
+        import_path,
+        lexer,
+        context.import_search_paths,
+        context.macros_registry,
+    )
+    imported_module = parse_module_from_tokenizer(
+        import_path,
+        tokenizer=preprocessor,
+        macros=context.macros_registry,
+        include_paths=context.import_search_paths,
+    )
+    context.module_dependencies[named_import_as_name] = imported_module
+
+
+def _consume_import_raw_path_from_token(
+    context: ParserContext,
+    include_token: Token,
+) -> Path:
+    """Consume include path from `include` construction."""
+    assert include_token.type == TokenType.KEYWORD
+    assert include_token.value == Keyword.IMPORT
+
+    import_token = context.next_token()
+    if not import_token:
+        raise Exception("no import name")
+    if import_token.type != TokenType.STRING:
+        raise Exception("import not a string")
+
+    include_path_raw = import_token.value
+    assert isinstance(include_path_raw, str)
+    return Path(include_path_raw)
 
 
 def _unpack_compile_time_error(context: ParserContext, token: Token) -> None:
@@ -305,17 +423,22 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
         msg = "expected function name as identifier after `call`"
         raise ValueError(msg)
 
+    owner_module: str | None = None
+    if context.peek_token().type == TokenType.DOT:
+        # Module level call
+        context.advance_token()
+        context.expect_token(TokenType.IDENTIFIER)
+        module_tok = context.next_token()
+        module_tok, name_token = name_token, module_tok
+        assert isinstance(module_tok.value, str)
+        owner_module = module_tok.value
+
     name = name_token.text
     function = context.functions.get(name)
+    call_spec = FunctionCallOperand(module=owner_module, func_name=name)
+    context.function_dependency.append(call_spec)
 
-    if not function:
-        raise ParserUnknownFunctionError(
-            token=name_token,
-            functions_available=context.functions.keys(),
-            best_match=_best_match_for_word(context, token.text),
-        )
-
-    if function.is_inline:
+    if function and function.is_inline:
         assert not function.is_external
         context.expand_from_inline_block(function)
         return
@@ -323,7 +446,7 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
     context.push_new_operator(
         OperatorType.FUNCTION_CALL,
         token=token,
-        operand=function.name,
+        operand=call_spec,
     )
 
 
@@ -350,10 +473,23 @@ def _unpack_function_definition_from_token(
         msg = f"Function name {f_header_def.name} is already taken by other definition"
         raise ValueError(msg)
 
+    def _fixed_tokenizer() -> Generator[Token]:
+        # TODO(@kirillzhosul): This must removed or refactored
+        # refactored so single peek can always find an place where to peek
+        # otherwise will release tokenizer from parse
+        yield from consume_function_body_tokens(context)
+        yield Token(
+            type=TokenType.EOL,
+            text="",
+            value="",
+            location=TokenLocation.toolchain(),
+        )
+
     new_context = ParserContext(
-        _tokenizer=consume_function_body_tokens(context),
+        _tokenizer=_fixed_tokenizer(),
         functions=context.functions,
         parent=context,
+        path=context.path,
     )
 
     param_names = [p[0] for p in f_header_def.parameters]
@@ -415,19 +551,28 @@ def _try_unpack_function_call_from_identifier_token(
 ) -> bool:
     assert token.type == TokenType.IDENTIFIER
 
-    function = context.functions.get(token.text, None)
-    if function:
-        if function.is_inline:
-            context.expand_from_inline_block(function)
-            return True
-        context.push_new_operator(
-            type=OperatorType.FUNCTION_CALL,
-            token=token,
-            operand=function.name,
-        )
-        return True
+    name_token = token
+    owner_module: str | None = None
+    if context.peek_token().type == TokenType.DOT:
+        # Module level call
+        context.advance_token()
+        context.expect_token(TokenType.IDENTIFIER)
+        module_tok = context.next_token()
+        module_tok, name_token = name_token, module_tok
+        assert isinstance(module_tok.value, str)
+        owner_module = module_tok.value
 
-    return False
+    name = name_token.text
+    call_spec = FunctionCallOperand(module=owner_module, func_name=name)
+    context.function_dependency.append(call_spec)
+
+    context.push_new_operator(
+        type=OperatorType.FUNCTION_CALL,
+        token=token,
+        operand=call_spec,
+    )
+
+    return True
 
 
 def _push_string_operator(context: ParserContext, token: Token) -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -33,6 +34,56 @@ class Module:
 
     # Structures that this module defines (can be unused)
     structures: MutableMapping[str, StructureType]
+
+    # TODO(@kirillzhosul): This must be refactored into graph not within module itself.
+    dependencies: MutableMapping[str, Module]
+
+    def visit_dependencies(
+        self,
+        *,
+        include_self: bool,
+    ) -> Generator[Module]:
+        if include_self:
+            yield self
+
+        visited: list[Module] = []
+        pending: list[Module] = list(self.dependencies.values())
+        while pending:
+            current = pending.pop()
+            if current in visited:
+                continue
+            visited.append(current)
+            yield current
+            if current.dependencies:
+                pending.extend(current.dependencies.values())
+
+    def resolve_function_dependency(
+        self,
+        module: str | None,
+        func: str,
+    ) -> Function | None:
+        """Find given function named inside current module and its dependencies.
+
+        If function is not found returns None.
+        When module is None - search only in current module.
+
+        Module specifies which module name (import as) holds that function symbol
+        """
+        if module is None:
+            return self.functions.get(func)
+        return self.dependencies[module].resolve_function_dependency(
+            module=None,
+            func=func,
+        )
+
+    def flatten_dependencies_paths(self, *, include_self: bool) -> set[Path]:
+        flatten: set[Path] = {self.path} if include_self else set()
+        for children in (
+            m.flatten_dependencies_paths(include_self=True)
+            for m in self.dependencies.values()
+        ):
+            flatten.update(children)
+        return flatten
 
     @property
     def executable_functions(self) -> filter[Function]:

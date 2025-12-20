@@ -40,6 +40,7 @@ def toolchain_assembly_executable(
         include_paths=args.include_paths,
         macros=macros,
     )
+    assert not module.dependencies, "not implemented"
     validate_type_safety(
         module,
         strict_expect_entry_point=True,
