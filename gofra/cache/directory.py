@@ -8,7 +8,6 @@ EXCLUDED_CLEANUP_FILENAMES = {".gitignore"}
 
 def prepare_build_cache_directory(path: Path) -> None:
     """Try to create and fill cache directory with required files."""
-    cleanup_build_cache_directory(path)
     if path.exists():
         return
 
