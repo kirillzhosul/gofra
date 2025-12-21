@@ -5,6 +5,7 @@ from typing import NoReturn
 from gofra.cli.parser.arguments import CLIArguments
 from libgofra.feature_flags import (
     FEATURE_ALLOW_FPU,
+    FEATURE_ALLOW_MODULES,
     FEATURE_RUNTIME_ARRAY_OOB_CHECKS,
 )
 from libgofra.linker.command_composer import get_linker_command_composer_backend
@@ -30,4 +31,6 @@ def cli_perform_version_goal(args: CLIArguments) -> NoReturn:
     print("Features:")
     print(f"\tFEATURE_ALLOW_FPU = {FEATURE_ALLOW_FPU}")
     print(f"\tFEATURE_RUNTIME_ARRAY_OOB_CHECKS = {FEATURE_RUNTIME_ARRAY_OOB_CHECKS}")
+    print(f"\tFEATURE_ALLOW_MODULES = {FEATURE_ALLOW_MODULES}")
+
     return sys.exit(0)

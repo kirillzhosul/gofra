@@ -13,3 +13,7 @@ FEATURE_ALLOW_FPU = False
 # on OOB within array access
 # Merge plan: add under flag, optimize usages of OOB check (not always)
 FEATURE_RUNTIME_ARRAY_OOB_CHECKS = False
+
+# Will be `import` allowed?
+# Merge plan: Finish implementation, close caveats, remove preprocessor direct include? (with exchange)
+FEATURE_ALLOW_MODULES = False

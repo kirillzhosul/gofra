@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, assert_never
 
 from gofra.cli.output import cli_message
 from libgofra.consts import GOFRA_ENTRY_POINT
-from libgofra.feature_flags import FEATURE_ALLOW_FPU
+from libgofra.feature_flags import FEATURE_ALLOW_FPU, FEATURE_ALLOW_MODULES
 from libgofra.hir.function import Function, Visibility
 from libgofra.hir.module import Module
 from libgofra.hir.operator import FunctionCallOperand
@@ -325,6 +325,9 @@ def _try_resolve_and_find_real_include_path(
 
 
 def _unpack_import(context: ParserContext, token: Token) -> None:
+    if not FEATURE_ALLOW_MODULES:
+        msg = "Import feature is not enabled, required to import modules\nModules is still Work-In-Progress, expect possible errors and caveats while using them"
+        raise ValueError(msg)
     requested_import_path = _consume_import_raw_path_from_token(context, token)
 
     # `as` expected
