@@ -3,16 +3,18 @@ from __future__ import annotations
 import signal
 import sys
 from contextlib import contextmanager
-from hashlib import md5
 from time import perf_counter_ns
 from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
+from gofra.cli.mod_hashing import (
+    get_module_hash,
+    is_module_needs_rebuild,
+)
 from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
-from gofra.testkit.cli.arguments import THREAD_OPTIMAL_WORKERS_COUNT
 from libgofra.assembler.assembler import (
     assemble_object_from_codegen_assembly,
 )
@@ -58,31 +60,6 @@ def on_warning_wrapper(*, verbose: bool) -> Callable[[str], None]:
         text=text,
         verbose=verbose,
     )
-
-
-def get_module_hash(mod: Module) -> str:
-    return md5(str(mod.path.absolute()).encode()).hexdigest()  # noqa: S324
-
-
-def is_module_needs_rebuild(
-    args: CLIArguments,
-    mod: Module,
-    rebuild_artifact: Path,
-) -> bool:
-    # Possibly, this may fail due to incremental compilation
-    # if some dependency was invalidated ?
-    if not args.incremental_compilation:
-        return True
-    if not rebuild_artifact.exists(follow_symlinks=False):
-        return True
-    return _is_file_modified_after(rebuild_artifact, mod.path)
-
-
-def _is_file_modified_after(a: Path, b: Path) -> bool:
-    """Return true if *b* is modified after than *a*."""
-    a_mat = a.stat().st_mtime
-    b_mat = b.stat().st_mtime
-    return b_mat >= a_mat
 
 
 def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
