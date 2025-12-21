@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import MutableMapping
+    from collections.abc import Generator, MutableMapping
     from pathlib import Path
 
     from libgofra.hir.function import Function

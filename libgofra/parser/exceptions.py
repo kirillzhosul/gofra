@@ -4,12 +4,11 @@ from typing import TYPE_CHECKING
 
 from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.exceptions import GofraError
-from libgofra.lexer.tokens import TokenLocation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from libgofra.lexer.tokens import Token
+    from libgofra.lexer.tokens import Token, TokenLocation
 
 
 class ParserDirtyNonPreprocessedTokenError(GofraError):

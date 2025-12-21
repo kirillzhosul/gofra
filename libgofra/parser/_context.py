@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
         Generator,
         MutableMapping,
         MutableSequence,
+        Sequence,
     )
 
     from libgofra.hir.variable import Variable

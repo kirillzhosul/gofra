@@ -382,7 +382,8 @@ def _consume_import_raw_path_from_token(
 
     import_token = context.next_token()
     if not import_token:
-        raise Exception("no import name")
+        msg = "no import name"
+        raise ValueError(msg)
     if import_token.type not in (TokenType.STRING, TokenType.IDENTIFIER):
         msg = f"import not a string or identifier at {import_token.location}"
         raise ValueError(msg)
