@@ -190,7 +190,7 @@ def aarch64_operator_instructions(
                 operator.operand.func_name,
             )
             assert function is not None, (
-                f"Cannot find function symbol `{operator.operand.func_name}` in module `{operator.operand.func_name}, will emit linkage error"
+                f"Cannot find function symbol `{operator.operand.func_name}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
             )
 
             function_abi_call_by_symbol(
