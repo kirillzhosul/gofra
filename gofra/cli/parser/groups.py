@@ -29,6 +29,16 @@ def add_debug_group(parser: ArgumentParser) -> None:
         help="If passed will enable INFO level logs from compiler.",
     )
 
+    group.add_argument(
+        "--no-lint",
+        "--no-lint-warnings",
+        dest="display_lint_warnings",
+        action="store_false",
+        default=True,
+        required=False,
+        help="If passed, will hide linter warnings (e.g unused functions and etc)",
+    )
+
 
 def add_additional_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with extra options that does not hits any existent group into given parser."""
@@ -149,7 +159,18 @@ def add_cache_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with cache options into given parser."""
     group = parser.add_argument_group(
         title="Cache",
-        description="Build cache and artifacts",
+        description="Build cache and artifacts (incremental compilation)",
+    )
+
+    group.add_argument(
+        "--always-rebuild",
+        "--clean-build",
+        "--no-incremental",
+        dest="incremental_compilation",
+        default=False,
+        action="store_true",
+        required=False,
+        help="If passed, disables incremental compilation with rebuilding only modified artifacts",
     )
 
     group.add_argument(

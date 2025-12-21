@@ -25,6 +25,9 @@ class CLIArguments:
     version: bool
     repl: bool
 
+    display_lint_warnings: bool
+    incremental_compilation: bool
+
     hir: bool
     preprocess_only: bool
 

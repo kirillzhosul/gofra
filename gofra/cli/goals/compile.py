@@ -12,6 +12,7 @@ from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipe
 from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
+from gofra.testkit.cli.arguments import THREAD_OPTIMAL_WORKERS_COUNT
 from libgofra.assembler.assembler import (
     assemble_object_from_codegen_assembly,
 )
@@ -39,10 +40,6 @@ if TYPE_CHECKING:
 NANOS_TO_SECONDS = 1_000_000_000
 
 
-ALWAYS_RECOMPILE = False
-DISABLE_LINT_WARNINGS = True
-
-
 @contextmanager
 def wrap_with_perf_time_taken(message: str, *, verbose: bool) -> Generator[None]:
     start_time = perf_counter_ns()
@@ -67,10 +64,14 @@ def get_module_hash(mod: Module) -> str:
     return md5(str(mod.path.absolute()).encode()).hexdigest()  # noqa: S324
 
 
-def is_module_needs_rebuild(mod: Module, rebuild_artifact: Path) -> bool:
+def is_module_needs_rebuild(
+    args: CLIArguments,
+    mod: Module,
+    rebuild_artifact: Path,
+) -> bool:
     # Possibly, this may fail due to incremental compilation
     # if some dependency was invalidated ?
-    if ALWAYS_RECOMPILE:
+    if not args.incremental_compilation:
         return True
     if not rebuild_artifact.exists(follow_symlinks=False):
         return True
@@ -142,7 +143,11 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         verbose=args.verbose,
     )
     with wrap_with_perf_time_taken("Codegen", verbose=args.verbose):
-        if is_module_needs_rebuild(root_module, rebuild_artifact=assembly_filepath):
+        if is_module_needs_rebuild(
+            args,
+            root_module,
+            rebuild_artifact=assembly_filepath,
+        ):
             generate_code_for_assembler(
                 assembly_filepath,
                 root_module,
@@ -154,7 +159,11 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             mod_assembly_path = (
                 modules_dependencies_dir / get_module_hash(mod)
             ).with_suffix(args.target.file_assembly_suffix)
-            if not is_module_needs_rebuild(mod, rebuild_artifact=mod_assembly_path):
+            if not is_module_needs_rebuild(
+                args,
+                mod,
+                rebuild_artifact=mod_assembly_path,
+            ):
                 modules_assembly[mod.path] = mod_assembly_path
                 continue
             generate_code_for_assembler(
@@ -172,7 +181,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     modules_objects: dict[Path, Path] = {}
 
     with wrap_with_perf_time_taken("Assembler", verbose=args.verbose):
-        if is_module_needs_rebuild(root_module, rebuild_artifact=object_filepath):
+        if is_module_needs_rebuild(args, root_module, rebuild_artifact=object_filepath):
             assemble_object_from_codegen_assembly(
                 assembly=assembly_filepath,
                 output=object_filepath,
@@ -184,7 +193,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             mod_object_path = (
                 modules_dependencies_dir / get_module_hash(mod)
             ).with_suffix(args.target.file_object_suffix)
-            if not is_module_needs_rebuild(mod, rebuild_artifact=mod_object_path):
+            if not is_module_needs_rebuild(args, mod, rebuild_artifact=mod_object_path):
                 modules_objects[mod.path] = mod_object_path
                 continue
             assemble_object_from_codegen_assembly(
@@ -334,9 +343,9 @@ def _perform_typechecker(args: CLIArguments, root_module: Module) -> None:
             )  # Main required for root module and only if executable
             validate_type_safety(
                 mod,
-                on_lint_warning=on_lint_warning_suppressed
-                if DISABLE_LINT_WARNINGS
-                else cli_linter_warning,
+                on_lint_warning=cli_linter_warning
+                if args.display_lint_warnings
+                else on_lint_warning_suppressed,
                 strict_expect_entry_point=must_has_entry_point,
             )
 
