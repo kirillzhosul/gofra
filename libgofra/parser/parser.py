@@ -58,7 +58,6 @@ from .exceptions import (
     ParserExhaustiveContextStackError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
-    ParserUnknownFunctionError,
     ParserUnknownIdentifierError,
 )
 from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
@@ -477,6 +476,7 @@ def _unpack_function_definition_from_token(
             return_type=f_header_def.return_type,
         )
         function.is_no_return = f_header_def.qualifiers.is_no_return
+        function.module_path = context.path
         context.add_function(function)
         return
 
@@ -540,6 +540,7 @@ def _unpack_function_definition_from_token(
             parameters=params,
         )
         function.is_no_return = f_header_def.qualifiers.is_no_return
+        function.module_path = context.path
         context.add_function(function)
         return
     if f_header_def.name == GOFRA_ENTRY_POINT:
@@ -557,6 +558,8 @@ def _unpack_function_definition_from_token(
     if f_header_def.qualifiers.is_public:
         function.visibility = Visibility.PUBLIC
     function.is_no_return = f_header_def.qualifiers.is_no_return
+    function.module_path = context.path
+
     context.add_function(function)
 
 

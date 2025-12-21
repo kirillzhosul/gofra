@@ -11,6 +11,7 @@ from libgofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from pathlib import Path
 
     from libgofra.hir.operator import Operator
     from libgofra.hir.variable import Variable
@@ -42,6 +43,9 @@ class Function:
     `Extern` functions has no body and just an link for an external function
     `Inline` functions will be expanded within call (macros expansion) and will not be called like normal function
     """
+
+    # Path to an module which defined that function
+    module_path: Path
 
     # Function will is callable by this name in Gofra source
     name: str

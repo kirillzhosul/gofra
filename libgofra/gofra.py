@@ -47,30 +47,39 @@ def process_input_file(
         macros=macros,
         include_paths=include_paths,
     )
-    _validate_function_existence(core_module)
+    _validate_function_existence_and_visibility(root=core_module, module=core_module)
     return core_module
 
 
-def _validate_function_existence(root: Module) -> None:
+def _validate_function_existence_and_visibility(root: Module, module: Module) -> None:
     # TODO(@kirillzhosul): This must be refactored - as implemented new dependency system
-    for func in root.executable_functions:
+    for func in module.executable_functions:
         for op in func.operators:
             if op.type == OperatorType.FUNCTION_CALL:
                 assert isinstance(op.operand, FunctionCallOperand), op.operand
-                resolved_symbol = root.resolve_function_dependency(
+                resolved_symbol = module.resolve_function_dependency(
                     op.operand.module,
                     op.operand.func_name,
                 )
                 if resolved_symbol is None:
+                    print(f"[help] Tried to resolve import from {op.operand.module}")
                     raise ParserUnknownFunctionError(
                         at=op.token.location,
                         name=op.operand.func_name,
                         functions_available=[],
                         best_match=None,
                     )
+                if op.operand.module is not None:
+                    func_owner_mod = module.dependencies[op.operand.module]
+                    if (
+                        not resolved_symbol.is_public
+                        and func_owner_mod.path != root.path
+                    ):
+                        msg = f"Tried to call private/internal function symbol {resolved_symbol.name} (defined at {resolved_symbol.defined_at}) from module named as `{op.operand.module}` (import from {func_owner_mod.path}):\nEither make it public or not use prohibited symbols!"
+                        raise ValueError(msg)
 
-    for mod in root.dependencies.values():
-        _validate_function_existence(mod)
+    for children_module in module.dependencies.values():
+        _validate_function_existence_and_visibility(root=root, module=children_module)
 
 
 def _debug_lexer_wrapper(lexer: Generator[Token]) -> Generator[Token]:
