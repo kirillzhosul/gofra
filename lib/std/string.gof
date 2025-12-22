@@ -12,7 +12,7 @@
 // TODO: negative numbers is not supported
 var int64_to_cstr_swap_buf char[20] // Max 64 bit cap
 var int64_to_cstr_buf      char[20] // Max 64 bit cap
-func CStr int64_to_cstr[int num]
+pub func CStr int64_to_cstr[int num]
     var idx int = 0;
 
     num 0 < if
@@ -52,7 +52,5 @@ func CStr int64_to_cstr[int num]
 
     &int64_to_cstr_buf return
 end
-
-
 
 inline func CStr int_to_cstr[int] call int64_to_cstr end // Alias as default int is 64 bits

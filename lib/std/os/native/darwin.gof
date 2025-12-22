@@ -65,66 +65,66 @@ type fd_t int
 // These are the preferred way to make syscalls.
 #ifdef ARCH_ARM64
     // Terminates the current process. Does not return.
-    no_return func void sc_exit[int exit_code] exit_code DARWIN_SYSCALL_EXIT syscall1 drop end
+    pub no_return func void sc_exit[int exit_code] exit_code DARWIN_SYSCALL_EXIT syscall1 drop end
 
     // Reads from a file descriptor.
     // fd: file descriptor, buf: buffer pointer, count: number of bytes to read
     // Returns number of bytes read, 0 on EOF, or -1 on error.
-    func int sc_read[fd_t fd, CStr buf, int count] fd buf count DARWIN_SYSCALL_READ syscall3 end
+    pub func int sc_read[fd_t fd, CStr buf, int count] fd buf count DARWIN_SYSCALL_READ syscall3 end
 
     // Writes to a file descriptor.
     // fd: file descriptor, buf: buffer pointer, count: number of bytes to write
     // Returns number of bytes written, or -1 on error.
-    func int sc_write[fd_t fd, CStr buf, int count] fd buf count DARWIN_SYSCALL_WRITE syscall3 end
+    pub func int sc_write[fd_t fd, CStr buf, int count] fd buf count DARWIN_SYSCALL_WRITE syscall3 end
 
     // Opens a file.
     // path: pathname pointer, flags: open flags (O_RDONLY, etc.), mode: file permissions (if O_CREAT)
     // Returns file descriptor, or -1 on error.
-    func int sc_open[CStr path, int flags, int mode] path flags mode DARWIN_SYSCALL_OPEN syscall3 end
+    pub func int sc_open[CStr path, int flags, int mode] path flags mode DARWIN_SYSCALL_OPEN syscall3 end
 
     // Closes a file descriptor.
-    func int sc_close[fd_t fd] fd DARWIN_SYSCALL_CLOSE syscall1 end
+    pub func int sc_close[fd_t fd] fd DARWIN_SYSCALL_CLOSE syscall1 end
 
     // Creates a new process. Returns 0 to child, PID to parent, or -1 on error.
-    func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
+    pub func int sc_fork[] DARWIN_SYSCALL_FORK syscall0 end
 
     // Get PID of current process
-    func int sc_getpid[] DARWIN_SYSCALL_GETPID syscall0 end
+    pub func int sc_getpid[] DARWIN_SYSCALL_GETPID syscall0 end
 
     // Get PID of parent process
-    func int sc_getppid[] DARWIN_SYSCALL_GETPPID syscall0 end
+    pub func int sc_getppid[] DARWIN_SYSCALL_GETPPID syscall0 end
 
     // Abort current process execution (process suicide) and reincarnation as specified executable
     // Does not returns anything unless no errors occurred, otherwise always returns -1
-    func int sc_execve[CStr pathname, sc_argvp argv, sc_envp envp] pathname argv envp DARWIN_SYSCALL_EXECVE syscall3 end
+    pub func int sc_execve[CStr pathname, sc_argvp argv, sc_envp envp] pathname argv envp DARWIN_SYSCALL_EXECVE syscall3 end
 
     // Accept pending connections on given socket and return client socket
-    func int sc_accept[int socket, *sockaddr_in address, int address_len] socket address address_len DARWIN_SYSCALL_ACCEPT syscall3 end
+    pub func int sc_accept[int socket, *sockaddr_in address, int address_len] socket address address_len DARWIN_SYSCALL_ACCEPT syscall3 end
 
     // Creates an socket FD
     // [domain,type,protocol]
-    func fd_t sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
+    pub func fd_t sc_socket[int,int,int] DARWIN_SYSCALL_SOCKET syscall3 end
 
     // Bind given socket to given address
-    func int sc_bind[fd_t, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
+    pub func int sc_bind[fd_t, *sockaddr_in, int] DARWIN_SYSCALL_BIND syscall3 end
 
     // Listen to an socket with specified backlog
-    func int sc_listen[fd_t, int] DARWIN_SYSCALL_LISTEN syscall2 end
+    pub func int sc_listen[fd_t, int] DARWIN_SYSCALL_LISTEN syscall2 end
 
     // Get current time of day
     // Notice that timezone usage is discouraged so pass NULL always
-    func void sc_gettimeofday[*timeval tv, *timezone tz] tv tz DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
+    pub func void sc_gettimeofday[*timeval tv, *timezone tz] tv tz DARWIN_SYSCALL_GETTIMEOFDAY syscall2 drop end
 
     // Await given descriptors to be ready
     // Signature: [nfds, readfds, writefds, exceptfds, timeout]
-    func int sc_select[int nfds, *void readfds, *void writefds, *void exceptfds, *timeval timeout]
+    pub func int sc_select[int nfds, *void readfds, *void writefds, *void exceptfds, *timeval timeout]
         nfds readfds writefds exceptfds timeout DARWIN_SYSCALL_SELECT syscall5 
     end
 
     // Map memory (allocate it)
     // Signature: [address, size, prot, flags, fd, offset]
     // TODO!: Return at the end as parser/lexer eats some identifiers...
-    func *void sc_mmap[int address, int size, int prot, int flags, int fd , int offset] 
+    pub func *void sc_mmap[int address, int size, int prot, int flags, int fd , int offset] 
         address size prot flags fd offset DARWIN_SYSCALL_MMAP syscall6 
         typecast *void return 
     end

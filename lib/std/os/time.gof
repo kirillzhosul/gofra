@@ -10,7 +10,7 @@
 
 
 // Get current time of day as seconds from epoch
-func int time_seconds_since_epoch[]
+pub func int time_seconds_since_epoch[]
     var tv timeval
 
     &tv NULL typecast *timezone sc_gettimeofday
@@ -20,7 +20,7 @@ end
 
 
 // Sleep for given amount of seconds
-func void sleep[int seconds]
+pub func void sleep[int seconds]
     var tv timeval
 
     &tv.tv_sec seconds !<
@@ -30,7 +30,7 @@ func void sleep[int seconds]
 end
 
 // Sleep for given amount of microseconds
-func void sleep_ms[int ms]
+pub func void sleep_ms[int ms]
     var tv timeval
 
     &tv.tv_sec ms 1000 /         !<
