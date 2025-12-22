@@ -110,8 +110,7 @@
 <h2 id="current-limitations-and-known-problems">Current limitations and known problems</h2>
 <p>These must be resolved later
 - Applying generic type requires type parameter name
-- Cannot use literals (e.g <code>int[T]</code>)
-- Cannot define generic for function or struct
+- Cannot define generic for function
 - Cannot apply/reference generic in form of defining another generic</p>
 <h2 id="concrete-types">Concrete types</h2>
 <p>By default any primitives type (<code>int</code>, <code>char</code>, ...) are concrete types, this means they have known size in bytes, and structure field / variable can has type of concrete kind.</p>
@@ -124,6 +123,16 @@ type Identity{T} = T
 
 // Pointer to generic type parameter
 type XT{T} = *T 
+
+// Array of type T with size N (where N is value type parameter)
+type Array{T, N} = T[N]
+
+// Sort of dynamic array / slice view with generics
+// Struct will be different each application into concrete one
+struct Slice{T, K}
+    data *T[K]
+    len int
+end
 </code></pre>
 <h2 id="applying-generic-types-into-concrete-one">Applying generic types into concrete one</h2>
 <p>As far you know - generic types cannot be used outside of <code>type</code> definition, you need to apply them otherwise</p>
@@ -133,6 +142,9 @@ type XT{T} = *T
 // Applying generic type into concrete (expanding type parameters)
 var HasConcreteType = Identity{T = int}
 // typeof is `int`
+
+// With value type arguments
+var arr Array{T = int, N = 3}
 </code></pre>
 <h2 id="terminology">Terminology</h2>
 <ul>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Module and imports system - Gofra</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Gofra</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">About</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../installation/" class="nav-link">Installation</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../tutorial/" class="nav-link">Tutorial</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../" class="nav-link">Advanced</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/module-import-system.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#module-and-imports-system" class="nav-link">Module and imports system</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#definition-of-an-module" class="nav-link">Definition of an module</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#importing-an-module" class="nav-link">Importing an module</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#visibility-of-symbols" class="nav-link">Visibility of symbols</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#known-problems-and-limitations" class="nav-link">Known problems and limitations</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#resolving-circular-dependencies" class="nav-link">Resolving circular dependencies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#module-symbol-mangling-for-external-linkage-and-ffi" class="nav-link">Module symbol mangling for external linkage and FFI</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#order-of-searching-modules" class="nav-link">Order of searching modules</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#incremental-compilation" class="nav-link">Incremental compilation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#order-of-dependencies" class="nav-link">Order of dependencies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#typechecking-and-optimizations-for-dependencies" class="nav-link">Typechecking and optimizations for dependencies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="module-and-imports-system">Module and imports system</h1>
+<p>[This is WIP feature, both documentation and implementation is unfinished, use at your own risk]</p>
+<p>Currently, <em>Gofra</em> has 2 ways of injecting code from other files, <em>C/C++</em> way with preprocessor: <code>#include</code> (read more at preprocessor page), and new Work-In-Progress module system that must be enabled with <code>libgofra</code> <code>FEATURE_ALLOW_MODULES</code> flag</p>
+<h1 id="definition-of-an-module">Definition of an module</h1>
+<p>Module in <em>Gofra</em> context - is an single file that is treated as module, and compiled internally separately into its own object file.</p>
+<p>For example lets define two modules:</p>
+<pre><code class="language-gofra">// &gt; a.gof
+import b;
+
+func void main[]
+    call b.hello_world;
+end
+</code></pre>
+<pre><code class="language-gofra">// &gt; b.gof
+#include &quot;std&quot;
+
+pub func void hello_world[]
+    &quot;Hello, World!&quot; call println
+end
+</code></pre>
+<p>First one, <code>a</code>, is our root module for compilation - we compile from <code>gofra a.gof</code>, as it is defines entry point (<em>main</em>)</p>
+<p>Under the hood, <em>Gofra</em> will start from compiling <code>a.gof</code>, find <code>import</code> statement and try to process <code>b.gof</code> module, when it is processed, compiler, and <code>a.gof</code> processing especially, knowns that it depends on <code>b.gof</code> and call to <code>b.hello_world</code> must be resolved (public function is available for root module), after parsing and processing, it will be compiled to <code>a.o</code> (core object file) and <code>a$mod_dependencies</code> (inside cache), which holds <code>b.o</code> that is linked against root <code>a.o</code> to single <code>a</code> executable!</p>
+<h1 id="importing-an-module">Importing an module</h1>
+<pre><code class="language-gofra">import a; // implicitly `a.gof` as `a`
+import a as my_module; // implicitly `a.gof` as `my_module`
+import &quot;my_file.gof&quot; as m; // explicitly `my_file.gof` as `m`
+
+//(in both above string allowed)
+</code></pre>
+<h1 id="visibility-of-symbols">Visibility of symbols</h1>
+<p>By default, all symbols treated as <em>private</em> you must mark exposed symbols via <code>pub</code> attribute modifier</p>
+<table>
+<thead>
+<tr>
+<th>Visibility</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Public</td>
+<td>Symbol is available both inside own module and its dependant modules</td>
+</tr>
+<tr>
+<td>Private</td>
+<td>Symbol is available only within its own module</td>
+</tr>
+</tbody>
+</table>
+<p>If you try to call private symbol from other module, compiler will emit an error and stop compilation:</p>
+<pre><code>Tried to call private/internal function symbol ... (defined at ...) from module named as `...` (import from ...):
+Either make it public or not use prohibited symbols!
+</code></pre>
+<h1 id="known-problems-and-limitations">Known problems and limitations</h1>
+<ul>
+<li>Inline functions cannot be exposed</li>
+<li>Types, definition and structs cannot be exposed</li>
+<li>Cannot alias import symbol</li>
+<li>Cannot partially import symbols from module</li>
+<li>REPL does not supports modules</li>
+<li>Testkit does not supports modules</li>
+<li>Possibly, pollution of internal macros registry when including other files (TBD)</li>
+<li>Duplicate symbol reference (no implicit name mangling)</li>
+<li>(only linear dependency graph is possible to resolve for now)</li>
+</ul>
+<h1 id="resolving-circular-dependencies">Resolving circular dependencies</h1>
+<p>TBD (circular dependencies drop compiler, not implemented in any way)</p>
+<h1 id="module-symbol-mangling-for-external-linkage-and-ffi">Module symbol mangling for external linkage and FFI</h1>
+<p>Currently, there is no mangling, but it is temporary problem/luck
+This prohibits to have non-linear/real graph dependencies, yet allows simple FFI calls</p>
+<p>Later (TODO), symbols will be always/conditionally mangled for resolving problems of duplicate symbols in object files</p>
+<h1 id="order-of-searching-modules">Order of searching modules</h1>
+<p>Search algorithm is same as preprocessor include: 
+- Try module name from current directory
+- Try CLI toolchain directory
+- Try include paths (obscured with CLI flag for preprocessor)</p>
+<h1 id="incremental-compilation">Incremental compilation</h1>
+<p>By default, modules always compiled incrementally and does not being rebuilt when no changes found, this behavior can be overridden with <code>--no-incremental</code>/<code>--always-rebuild</code>/<code>--clean-build</code>, internally compiler decide to not rebuild based on modified time difference from artifact (object/assembly file) and original module file (*.gof)</p>
+<h1 id="order-of-dependencies">Order of dependencies</h1>
+<p>Dependencies compiled and resolved based on order from source e.g if <em>a</em> import <em>b</em> and then <em>c</em> with <em>e</em> compiled will build linear graph like this:</p>
+<pre><code>a -&gt; b -+-&gt; c
+        |
+        +-&gt; d
+</code></pre>
+<p>There is some sort of DAG topological sorting applied to compiled modules (a-&gt;b-&gt;c-&gt;d), final resolving is on back of LTO and linkage.</p>
+<p>Notice that currently, possible of recompiling modules when there is same dependency over an graph on multiple nodes</p>
+<h1 id="typechecking-and-optimizations-for-dependencies">Typechecking and optimizations for dependencies</h1>
+<p>Typechecking is applied to every module, each function symbol is re-typechecked on compilation</p>
+<p>For optimizer passes, firstly <em>Gofra</em> traverses and optimizes dependencies in topological sort order (DAG TSO), then applies final optimizer pass for root module (rule: dependencies first, to perform expensive and high-level optimizations within root module over already-optimized dependencies)</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -89,7 +89,7 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#global-attribute" class="nav-link">global attribute</a>
+            <li class="nav-item" data-bs-level="2"><a href="#pub-attribute" class="nav-link">pub attribute</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -102,7 +102,7 @@
 
 <h1 id="function-attributes">Function Attributes</h1>
 <p>Function attributes in Gofra are defined like so:</p>
-<pre><code class="language-ebnf">FunctionDef = {&quot;global&quot; | &quot;extern&quot; | &quot;no_return&quot; | &quot;inline}, &quot;func&quot;, ...FunctionRestDef
+<pre><code class="language-ebnf">FunctionDef = {&quot;pub&quot; | &quot;extern&quot; | &quot;no_return&quot; | &quot;inline}, &quot;func&quot;, ...FunctionRestDef
 </code></pre>
 <p>Here is description of each attribute</p>
 <h2 id="no_return-attribute"><code>no_return</code> attribute</h2>
@@ -158,8 +158,8 @@ end
 </code></pre>
 <p>This means function symbol <code>_puts</code> is not available inside current object file (co-program) but will appear later at linkage step within another object file (library)</p>
 <p>For more information what is FFI look into <a href="../ffi/">FFI</a> documentation</p>
-<h2 id="global-attribute"><code>global</code> attribute</h2>
-<p>Function marked with <code>global</code> attribute are opposite to <code>extern</code> ones - they expose this function symbol to object file and allow other object files to link with it</p></div>
+<h2 id="pub-attribute"><code>pub</code> attribute</h2>
+<p>Function marked with <code>pub</code> attribute are opposite to <code>extern</code> ones - they expose this function symbol to object file and allow other object files to link with it</p></div>
             </div>
         </div>
 
