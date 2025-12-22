@@ -11,7 +11,7 @@ from libgofra.codegen.backends.amd64.executable_entry_point import (
 from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.sections._factory import SectionType
 from libgofra.consts import GOFRA_ENTRY_POINT
-from libgofra.hir.operator import Operator, OperatorType
+from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import VariableStorageClass
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 
@@ -164,9 +164,16 @@ def amd64_operator_instructions(
 
             push_integer_onto_stack(context, value=len(decoded_string))
         case OperatorType.FUNCTION_CALL:
-            assert isinstance(operator.operand, str)
+            assert isinstance(operator.operand, FunctionCallOperand)
 
-            function = program.functions[operator.operand]
+            function = program.resolve_function_dependency(
+                operator.operand.module,
+                operator.operand.func_name,
+            )
+            assert function is not None, (
+                f"Cannot find function symbol `{operator.operand.func_name}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
+            )
+
             function_call(
                 context,
                 name=function.name,
