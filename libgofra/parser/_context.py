@@ -2,12 +2,20 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from libgofra.hir.function import Function
-from libgofra.hir.operator import Operator, OperatorType, StructAccessor
+from libgofra.hir.module import Module
+from libgofra.hir.operator import (
+    FunctionCallOperand,
+    Operator,
+    OperatorType,
+    StructAccessor,
+)
 from libgofra.lexer import Token
 from libgofra.parser.errors.general_expect_token import ExpectedTokenByParserError
+from libgofra.preprocessor.macros.registry import MacrosRegistry
 from libgofra.types.composite.structure import StructureType
 from libgofra.types.registry import DEFAULT_PRIMITIVE_TYPE_REGISTRY, TypeRegistry
 
@@ -16,6 +24,7 @@ if TYPE_CHECKING:
         Generator,
         MutableMapping,
         MutableSequence,
+        Sequence,
     )
 
     from libgofra.hir.variable import Variable
@@ -40,7 +49,8 @@ class PeekableTokenizer:
 
     def peek_token(self) -> Token:
         if not self._peeked:
-            self._peeked.append(next(self._tokenizer))
+            n = next(self._tokenizer)
+            self._peeked.append(n)
         return self._peeked[0]
 
     def expect_token(self, type: TokenType) -> None:  # noqa: A002
@@ -57,7 +67,15 @@ class PeekableTokenizer:
 class ParserContext(PeekableTokenizer):
     """Context for parsing which only required from internal usages."""
 
+    path: Path = field(default_factory=Path)
     parent: ParserContext | None = field(default=None)
+
+    macros_registry: MacrosRegistry = field(default_factory=MacrosRegistry)
+
+    module_dependencies: MutableMapping[str, Module] = field(
+        default_factory=dict[str, Module],
+    )
+    import_search_paths: Sequence[Path] = field(default_factory=list[Path])
 
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=list[Operator])
@@ -79,6 +97,9 @@ class ParserContext(PeekableTokenizer):
     types: TypeRegistry = field(
         default_factory=lambda: DEFAULT_PRIMITIVE_TYPE_REGISTRY.copy(),
     )
+
+    # Runtime arrays Out-Of-Bounds check
+    rt_array_oob_check: bool = field(default=False)
 
     # No function calls in that context
     # Maybe should be refactored
@@ -156,7 +177,12 @@ class ParserContext(PeekableTokenizer):
         self,
         type: OperatorType,  # noqa: A002
         token: Token,
-        operand: float | str | Type | StructAccessor | None = None,
+        operand: float
+        | str
+        | Type
+        | StructAccessor
+        | FunctionCallOperand
+        | None = None,
         *,
         is_contextual: bool = False,
     ) -> None:

@@ -32,7 +32,7 @@ def _consume_variable_modifier_is_const(
     """
     assert begin_token.type == TokenType.KEYWORD, "Expected keyword (e.g const / var)"
 
-    if begin_token.value != Keyword.CONST:
+    if begin_token.value != Keyword.CONST_DEFINE:
         return False
 
     peeked = context.peek_token()

@@ -1,6 +1,6 @@
 /// Test that characters correspond to their value as integer respectfully
 
-#include "assert.gof"
+#include "std/assert.gof"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 0
 

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, assert_never
 
 from libgofra.consts import GOFRA_ENTRY_POINT
-from libgofra.hir.operator import OperatorType
+from libgofra.hir.operator import FunctionCallOperand, OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
 from libgofra.typecheck.entry_point import validate_entry_point_signature
 from libgofra.typecheck.errors.no_main_entry_function import NoMainEntryFunctionError
@@ -338,10 +338,17 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             )
             return type_block
         case OperatorType.FUNCTION_CALL:
-            assert isinstance(operator.operand, str)
+            assert isinstance(operator.operand, FunctionCallOperand)
 
-            function = module.functions[operator.operand]
+            operand = operator.operand
+            function = module.resolve_function_dependency(
+                operand.module,
+                operand.func_name,
+            )
 
+            assert function is not None, (
+                "Function existence must be resolved before typechecker stage!"
+            )
             if function.parameters:
                 scope.raise_for_function_arguments(
                     callee=function,

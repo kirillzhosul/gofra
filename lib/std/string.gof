@@ -5,14 +5,14 @@
 // TODO: Move back string length helpers, as they currently broken due to probably memory reading pollution (e.g read only single char byte instead of CPU WORD
 // TODO: idk how to express that but we possibly may introduce swapping variable address with an other address, or this may be fixed with named arguments
 // TODO: This requires legacy variant with callee-allocated buffer for int64_to_cstr
-#include "os/io/output.gof"
+#include "std/os/io/output.gof"
 
 
 // Convert int64 to string
 // TODO: negative numbers is not supported
 var int64_to_cstr_swap_buf char[20] // Max 64 bit cap
 var int64_to_cstr_buf      char[20] // Max 64 bit cap
-func CStr int64_to_cstr[int num]
+pub func CStr int64_to_cstr[int num]
     var idx int = 0;
 
     num 0 < if
@@ -52,7 +52,5 @@ func CStr int64_to_cstr[int num]
 
     &int64_to_cstr_buf return
 end
-
-
 
 inline func CStr int_to_cstr[int] call int64_to_cstr end // Alias as default int is 64 bits

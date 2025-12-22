@@ -40,7 +40,7 @@ from libgofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
 from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.sections import SectionType
 from libgofra.consts import GOFRA_ENTRY_POINT
-from libgofra.hir.operator import Operator, OperatorType
+from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import VariableStorageClass
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 
@@ -183,10 +183,15 @@ def aarch64_operator_instructions(
                 return_type=owner_function.return_type,
             )
         case OperatorType.FUNCTION_CALL:
-            assert isinstance(operator.operand, str)
+            assert isinstance(operator.operand, FunctionCallOperand)
 
-            assert operator.operand in program.functions, operator.location
-            function = program.functions[operator.operand]
+            function = program.resolve_function_dependency(
+                operator.operand.module,
+                operator.operand.func_name,
+            )
+            assert function is not None, (
+                f"Cannot find function symbol `{operator.operand.func_name}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
+            )
 
             function_abi_call_by_symbol(
                 context,
@@ -298,7 +303,7 @@ def aarch64_executable_functions(
             context,
             name=function.name,
             local_variables=function.variables,
-            global_name=function.name if function.is_global else None,
+            global_name=function.name if function.is_public else None,
             preserve_frame=True,
             parameters=function.parameters,
         )

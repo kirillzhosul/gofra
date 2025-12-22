@@ -1,5 +1,5 @@
 /// Test that assignment of default to stack/static variable works
-#include "std.gof"
+#include "std"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 30
 

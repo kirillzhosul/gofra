@@ -1,0 +1,67 @@
+// ==============================================
+// Network (TCP/UDP) helpers and wrappers
+// ==============================================
+
+// TODO: Add Windows support
+// TODO: Add proper OR to preprocessor
+// TODO: Inline functions has bad debug options and produce improper error messages
+#include "general.gof"
+
+// --- Network constants ---
+// Address family
+#define AF_UNIX    1
+#define AF_INET    2
+#define AF_INET6   10
+// Socket type
+#define SOCK_STREAM 1
+#define SOCK_DGRAM  2 
+#define SOCK_RAW    3
+// Other
+#ifdef OS_LINUX   #define SOMAXCONN 128        #endif
+#ifdef OS_DARWIN  #define SOMAXCONN 128        #endif
+#ifdef OS_WINDOWS #define SOMAXCONN 0x7FFFFFFF #endif
+
+
+#ifdef OS_DARWIN
+    // System call wrappers
+    pub func int net_socket[int, int, int]          call sc_socket end
+    pub func int net_bind[int, *sockaddr_in, int]   call sc_bind   end
+    pub func int net_listen[int, int]               call sc_listen end
+    pub func int net_accept[int, *sockaddr_in, int] call sc_accept end
+    pub func int net_read[int, CStr, int]           call sc_read   end
+    pub func int net_write[int, CStr, int]          call sc_write  end
+    pub func int net_close[int]                     call sc_close  end
+
+    // Accept without a client address - only server socket is required
+    pub func int net_accept_sink[int socket] socket 0 typecast *sockaddr_in 0 call net_accept end
+
+    // Create an IPv4 TCP socket
+    pub func int net_ipv4_tcp_socket[]
+        AF_INET 
+        SOCK_STREAM 
+        0 
+        call net_socket
+    end
+#endif
+
+#ifdef OS_LINUX
+    // System call wrappers
+    pub func int net_socket[int, int, int]        call sc_socket end
+    pub func int net_bind[int, *sockaddr_in, int] call sc_bind   end
+    pub func int net_listen[int, int]             call sc_listen end
+    pub func int net_accept[int, int, int]        call sc_accept end
+    pub func int net_read[int, CStr, int]         call sc_read   end
+    pub func int net_write[int, CStr, int]        call sc_write  end
+    pub func int net_close[int]                   call sc_close  end
+
+    // Accept without a client address - only server socket is required
+    pub func int net_accept_sink[int] 0 0 call net_accept end
+
+    // Create an IPv4 TCP socket
+    pub func int net_ipv4_tcp_socket[]
+        AF_INET 
+        SOCK_STREAM 
+        0 
+        call net_socket
+    end
+#endif

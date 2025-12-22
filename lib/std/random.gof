@@ -8,12 +8,12 @@
 var std_prng_random_state int
 
 // Set an given number as seed (PRNG random state)
-func void set_random_seed[int seed]
+pub func void set_random_seed[int seed]
     &std_prng_random_state seed !<
 end
 
 // Randomize current PRNG random state
-func void prng_randomize_state_xorshift[] 
+pub func void prng_randomize_state_xorshift[] 
     // Uses Xorshift generator algorithm
     // &rs rs rs 13 << ^ !<
     // &rs rs rs 17 << ^ !<
@@ -38,14 +38,14 @@ func void prng_randomize_state_xorshift[]
 end
 
 // Get random number from PRNG
-func int random[]
+pub func int random[]
     call prng_randomize_state_xorshift
 
     std_prng_random_state return // TODO: Fix parser/lexer eats identifiers
 end
 
 // Get random number from PRNG withing range from 0 to argument
-func int random_range[int to]
+pub func int random_range[int to]
     call random
     to %
 end

@@ -1,5 +1,5 @@
 /// Test that using `for-in` expression works
-#include "std.gof"
+#include "std"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 100
 

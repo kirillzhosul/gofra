@@ -1,5 +1,5 @@
 /// Test that static global variables are zero-initialized
-#include "std.gof"
+#include "std"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 0
 

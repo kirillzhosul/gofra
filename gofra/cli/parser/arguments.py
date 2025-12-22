@@ -25,6 +25,9 @@ class CLIArguments:
     version: bool
     repl: bool
 
+    display_lint_warnings: bool
+    incremental_compilation: bool
+
     hir: bool
     preprocess_only: bool
 
@@ -40,6 +43,8 @@ class CLIArguments:
     delete_build_cache: bool
 
     linker_profile: LinkerProfile
+
+    runtime_array_oob_checks: bool
 
     linker_additional_flags: list[str]
     linker_libraries: list[str]

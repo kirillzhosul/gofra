@@ -2,9 +2,9 @@
 // Output manipulations based on operating system (wrapper)
 // ==============================================
 
-#include "os/general.gof"
+#include "std/os/general.gof"
 #include "std_handles.gof"
-#include "types.gof"
+#include "std/types.gof"
 
 // TODO: Add proper OR to preprocessor
 // TODO: Inline functions has bad debug options and produce improper error messages
@@ -12,25 +12,25 @@
 // TODO: Allow forward referencing functions
 
 // Print an string into given file descriptor / handle and return bytes written
-#ifdef OS_DARWIN  func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
-#ifdef OS_LINUX   func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
-#ifdef OS_WINDOWS func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call win_write end #endif
+#ifdef OS_DARWIN  pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
+#ifdef OS_LINUX   pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
+#ifdef OS_WINDOWS pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call win_write end #endif
 
 // Print an string into standard console output stream
-func void print[*string sv]
+pub func void print[*string sv]
     STD_OUT
     sv
     call print_fd drop
 end
 
 // Print an string into standard console with trailing newline
-func void println[*string sv]
+pub func void println[*string sv]
     sv call print
     "\n" call print
 end
 
 // Print an string into standard console error stream
-func void eprint[*string sv]
+pub func void eprint[*string sv]
     STD_ERR
     sv
     print_fd drop
@@ -38,7 +38,7 @@ end
 
 // Print an string into standard error console stream and abort execution
 // TODO: Probably must refactored into panic system or something like that as this is not I/O responsibility
-no_return func void eprint_fatal[*string sv]
+pub no_return func void eprint_fatal[*string sv]
     "FATAL: " call eprint
     sv call eprint
     call abort
@@ -47,7 +47,7 @@ end
 // Print given number into given file descriptor / handle
 // does not emit '\n' at the end
 var print_int64_buf char[20] // Max 64 bit cap
-func void print_int64_fd[int fd, int num]
+pub func void print_int64_fd[int fd, int num]
     var idx int = 0;
     var is_negative bool = 0;
     var str_view string;
@@ -113,7 +113,7 @@ end
 // Print given number into given file descriptor / handle as hexadecimal 0x
 // does not emit '\n' at the end
 var print_int64_hex_buf char[16] // Max 64 bit cap
-func void print_int64_hex_fd[
+pub func void print_int64_hex_fd[
     int fd, 
     int num, 
     bool show_hex_prefix, 
@@ -204,19 +204,19 @@ end
 
 
 // Print given number into standard console output
-func void print_int64[int]
+pub func void print_int64[int]
     STD_OUT swap call print_int64_fd
 end
 // Print given number as hexadecimal into standard console output
-func void print_int64_hex[int]
+pub func void print_int64_hex[int]
     STD_OUT swap true true call print_int64_hex_fd
 end
 
 
 // Print given pointer (TODO: Requires static cast) as hex-addr
-func void print_ptr[*void]
+pub func void print_ptr[*void]
     typecast int 
     call print_int64_hex
 end
 
-#define print_int print_int64 // Alias as default int is 64 bits
+pub func void print_int[int number] number print_int64 end // Alias as default int is 64 bits

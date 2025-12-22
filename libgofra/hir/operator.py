@@ -117,11 +117,17 @@ class OperatorType(Enum):
 type StructAccessor = tuple[StructureType, str]  # TODO (@kirillzhosul): must refactor
 
 
+@dataclass
+class FunctionCallOperand:
+    module: str | None
+    func_name: str
+
+
 @dataclass(frozen=False, slots=True)
 class Operator:
     type: OperatorType
     token: Token
-    operand: int | float | str | Type | StructAccessor | None
+    operand: int | float | str | Type | StructAccessor | FunctionCallOperand | None
 
     jumps_to_operator_idx: int | None = None
 

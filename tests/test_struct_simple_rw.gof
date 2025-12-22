@@ -1,5 +1,5 @@
 /// Test that structs simply works by writing and reading value from its field
-#include "std.gof"
+#include "std"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 

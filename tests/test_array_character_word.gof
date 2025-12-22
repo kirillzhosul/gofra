@@ -1,24 +1,24 @@
 /// Test that storing an word in array as characters and printing it shows that word
 
-#include "os/io/output.gof"
-#include "os/general.gof"
+#include "std/os/io/output.gof"
+#include "std/os/general.gof"
 #define TESTKIT_EXPECTED_EXIT_CODE 0
 #define TESTKIT_EXPECTED_STDOUT "Global\nLocal\n"
 
-var global_ char[7]; // TODO: `global` is treated as keyword
+var global char[7];
 
 func void test_array_global_character_word[]
     var sv string;
 
-    &global_[0] 'G'  !<
-    &global_[1] 'l'  !<
-    &global_[2] 'o'  !<
-    &global_[3] 'b'  !<
-    &global_[4] 'a'  !<
-    &global_[5] 'l'  !<
-    &global_[6] '\n' !<
+    &global[0] 'G'  !<
+    &global[1] 'l'  !<
+    &global[2] 'o'  !<
+    &global[3] 'b'  !<
+    &global[4] 'a'  !<
+    &global[5] 'l'  !<
+    &global[6] '\n' !<
 
-    &sv.data &global_ !<
+    &sv.data &global !<
     &sv.len 7 !<
 
     &sv print

@@ -2,7 +2,7 @@
 // Simple input from user console
 // ==============================================
 
-#include "std.gof"
+#include "std"
 
 var buf char[16]
 

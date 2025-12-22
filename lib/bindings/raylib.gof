@@ -6,7 +6,7 @@
 // TODO(@kirillzhosul): We cannot pass color struct within C ABI, use `rgba_to_raylib_argb`
 // TODO(@kirillzhosul): Cannot pass floats into C ABI
 
-#include "types.gof"
+#include "std/types.gof"
 
 #ifdef RAYLIB_STRUCT_COLORS
     struct Color
@@ -16,11 +16,6 @@
         a char        // Color alpha value
     end
 
-    extern func void _ClearBackground[Color color]                 #define ClearBackground _ClearBackground 
-    extern func void _DrawText[CStr,int,int,int,Color]             #define DrawText _DrawText
-    extern func void _DrawLine[int,int,int,int,Color]              #define DrawLine _DrawLine
-    extern func void _DrawRectangle[int,int,int,int,Color]         #define DrawRectangle _DrawRectangle
-
     const WHITE Color = {r = 255, g = 255, b = 255, a = 255}
     const BLACK Color = {r = 0, g = 0, b = 0, a = 255}
 #endif 
@@ -28,26 +23,28 @@
 #ifndef RAYLIB_STRUCT_COLORS
     type Color int
 
-    extern func void _ClearBackground[Color color]                 #define ClearBackground _ClearBackground 
-    extern func void _DrawText[CStr,int,int,int,Color]             #define DrawText _DrawText
-    extern func void _DrawLine[int,int,int,int,Color]              #define DrawLine _DrawLine
-    extern func void _DrawRectangle[int,int,int,int,Color]         #define DrawRectangle _DrawRectangle
 
     const var WHITE = 0xFFFFFFFF
     const var BLACK = 0xFF000000
 #endif 
 
-extern func void _InitWindow[int width,int height,CStr name]   #define InitWindow _InitWindow
-extern func bool _WindowShouldClose[]                          #define WindowShouldClose _WindowShouldClose
-extern func void _CloseWindow[]                                #define CloseWindow _CloseWindow
-extern func void _SetTargetFPS[int fps]                        #define SetTargetFPS _SetTargetFPS
-extern func void _BeginDrawing[]                               #define BeginDrawing _BeginDrawing
-extern func void _EndDrawing[]                                 #define EndDrawing _EndDrawing
-extern func bool _IsKeyPressed[int keycode]                    #define IsKeyPressed _IsKeyPressed
-extern func bool _IsKeyDown[int keycode]                       #define IsKeyDown _IsKeyDown
-extern func void _DrawFPS[int x,int y]                         #define DrawFPS _DrawFPS
 
-func int rgba_to_raylib_argb[int,int,int,int]
+extern pub func void _ClearBackground[Color color]                 pub func void ClearBackground[Color color] color _ClearBackground  end
+extern pub func void _DrawText[CStr,int,int,int,Color]             pub func void DrawText[CStr,int,int,int,Color] _DrawText end
+extern pub func void _DrawLine[int,int,int,int,Color]              pub func void DrawLine[int,int,int,int,Color] _DrawLine end
+extern pub func void _DrawRectangle[int,int,int,int,Color]         pub func void DrawRectangle[int,int,int,int,Color] _DrawRectangle end
+
+extern pub func void _InitWindow[int width,int height,CStr name]   pub func void InitWindow[int width,int height,CStr name] width height name call _InitWindow end
+extern pub func bool _WindowShouldClose[]                          pub func bool WindowShouldClose[] call _WindowShouldClose end
+extern pub func void _CloseWindow[]                                pub func void CloseWindow[] call _CloseWindow end
+extern pub func void _SetTargetFPS[int fps]                        pub func void SetTargetFPS[int fps] fps call _SetTargetFPS end
+extern pub func void _BeginDrawing[]                               pub func void BeginDrawing[] call _BeginDrawing end
+extern pub func void _EndDrawing[]                                 pub func void EndDrawing[] call _EndDrawing end
+extern pub func bool _IsKeyPressed[int keycode]                    pub func bool IsKeyPressed[int keycode] keycode call _IsKeyPressed end
+extern pub func bool _IsKeyDown[int keycode]                       pub func bool IsKeyDown[int keycode] keycode call _IsKeyDown end
+extern pub func void _DrawFPS[int x,int y]                         pub func void DrawFPS[int x,int y] x y call _DrawFPS end
+
+pub func int rgba_to_raylib_argb[int,int,int,int]
     var color int = 0;
 
     &color swap 24 << color | !<

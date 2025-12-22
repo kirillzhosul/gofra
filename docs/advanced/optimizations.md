@@ -26,13 +26,13 @@ Impact: **Reduced binary size**
 Flag: `-fdce`, `fno-dce`
 
 DCE searches for functions that is not being called at least once and removes them from final IR so them does not appear in final binary as being unused.
-Does not removes `global` functions as their usage is outside of an Gofra program.
+Does not removes `public` functions as their usage is outside of an Gofra program.
 
 
 For example this function may be removed by DCE
 ```gofra
 // [Additionally, most of binary size comes for example from libraries which gives you a lot of functions]
-include "std.gof"
+include "std"
 
 func void test_function[]
     // This function is unused so it will be safely remove

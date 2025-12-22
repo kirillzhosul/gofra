@@ -1,5 +1,5 @@
 /// Test simple sizeof of char array (e.g mostly string), does not test for complex sizeof examples (e.g struct field sizeof, TODO)
-#include "std.gof"
+#include "std"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 32
 

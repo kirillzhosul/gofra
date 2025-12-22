@@ -7,8 +7,8 @@
 // TODO!!!!!: This example at some point has broken!
 // TODO: Remove and feature `pack_sockaddr`
 
-#include "std.gof"
-#include "os/network.gof"
+#include "std"
+#include "std/os/network.gof"
 #include "http"
 
 // TODO: Some static structs are invariant by default

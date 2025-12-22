@@ -8,7 +8,7 @@ from libgofra.exceptions import GofraError
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from libgofra.lexer.tokens import Token
+    from libgofra.lexer.tokens import Token, TokenLocation
 
 
 class ParserDirtyNonPreprocessedTokenError(GofraError):
@@ -82,17 +82,21 @@ class ParserUnknownFunctionError(GofraError):
     def __init__(
         self,
         *args: object,
-        token: Token,
+        at: TokenLocation,
+        name: str,
         functions_available: Iterable[str],
         best_match: str | None = None,
     ) -> None:
         super().__init__(*args)
-        self.token = token
+        self.at = at
+        self.name = name
         self.functions_available = functions_available
         self.best_match = best_match
 
     def __repr__(self) -> str:
-        return f"""Encountered an unknown function name '{self.token.text}' at {self.token.location}!
+        return f"""Encountered an unknown function name '{self.name}' at {self.at}!
+
+(If you using module style imports please `call` operator syntax, as modules is WIP features)
 
 Available function names: {", ".join(self.functions_available) or "..."}""" + (
             f"\nDid you mean '{self.best_match}'?" if self.best_match else ""

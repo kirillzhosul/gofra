@@ -29,6 +29,16 @@ def add_debug_group(parser: ArgumentParser) -> None:
         help="If passed will enable INFO level logs from compiler.",
     )
 
+    group.add_argument(
+        "--no-lint",
+        "--no-lint-warnings",
+        dest="display_lint_warnings",
+        action="store_false",
+        default=True,
+        required=False,
+        help="If passed, will hide linter warnings (e.g unused functions and etc)",
+    )
+
 
 def add_additional_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with extra options that does not hits any existent group into given parser."""
@@ -42,6 +52,16 @@ def add_additional_group(parser: ArgumentParser) -> None:
         nargs="?",
         default=[],
     )
+    group.add_argument(
+        "--rt-bounds-checks",
+        "--oob-checks",
+        action="store_true",
+        default=False,
+        dest="runtime_array_oob_checks",
+        required=False,
+        help="If passed, will enable injecting Out-Of-Bounds (OOB) checks into runtime when accessing arrays(!), WIP feature that must be treated as feature flag",
+    )
+
     group.add_argument(
         "--skip-typecheck",
         "-nt",
@@ -149,7 +169,18 @@ def add_cache_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with cache options into given parser."""
     group = parser.add_argument_group(
         title="Cache",
-        description="Build cache and artifacts",
+        description="Build cache and artifacts (incremental compilation)",
+    )
+
+    group.add_argument(
+        "--always-rebuild",
+        "--clean-build",
+        "--no-incremental",
+        dest="incremental_compilation",
+        default=False,
+        action="store_true",
+        required=False,
+        help="If passed, disables incremental compilation with rebuilding only modified artifacts",
     )
 
     group.add_argument(
@@ -283,7 +314,7 @@ def add_optimizer_group(parser: ArgumentParser) -> None:
         dest="optimizer_do_dead_code_elimination",
         action="store_const",
         const=True,
-        help="[Enabled at -O1 and above] Force enable DCE (dead-code-elimination) optimization. Removes unused functions (no calls to them inside final program), except explicit 'global' ones.",
+        help="[Enabled at -O1 and above] Force enable DCE (dead-code-elimination) optimization. Removes unused functions (no calls to them inside final program), except explicit 'public' ones.",
     )
     group_dce.add_argument(
         "-fno-dce",

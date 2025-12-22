@@ -1,7 +1,7 @@
 /// Test random number generation from standard library
-#include "os/general.gof"
-#include "random.gof"
-#include "os/time.gof"
+#include "std/os/general.gof"
+#include "std/random.gof"
+#include "std/os/time.gof"
 
 #define TESTKIT_EXPECTED_EXIT_CODE 0
 

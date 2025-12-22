@@ -2,9 +2,9 @@
 // Input manipulations based on operating system (wrapper)
 // ==============================================
 
-#include "os/general.gof"
+#include "std/os/general.gof"
 #include "std_handles.gof"
-#include "types.gof"
+#include "std/types.gof"
 
 // TODO: Add proper OR to preprocessor
 // TODO: Inline functions has bad debug options and produce improper error messages
@@ -20,11 +20,11 @@
 
 
 // Open file in read-only mode
-func int open_file_fd_ro[*string sv] sv 0 0 call open_file_fd_raw end
+pub func int open_file_fd_ro[*string sv] sv 0 0 call open_file_fd_raw end
 
 // Read file into SV (string), and return same pointer
 // reads same amount as string view len, returns null ptr (0) on error
-func bool read_file_sv[int fd, *string sv]
+pub func bool read_file_sv[int fd, *string sv]
     fd
     sv.data
     sv.len
@@ -40,7 +40,7 @@ end
 
 // Consume all character bytes from input buffer (e.g `input_fd`)
 // Use as safety method as reading and letting some character leak through 
-func void input_exhaust_buffer[]
+pub func void input_exhaust_buffer[]
     var buffer char = 1;
 
     // TODO: Allow to compare non-integer types (e.g char)
@@ -60,7 +60,7 @@ end
 // Input a string from standard console input stream
 // Safe to buffer overflows, as exhaust all remaining IO buffer
 // TODO: Unsafe to big buffers, requires introducing testkit test cases for that
-func void input[CStr ptr, int len]
+pub func void input[CStr ptr, int len]
     STD_IN
     ptr
     len

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum, auto
 from typing import TYPE_CHECKING, Self
 
 from libgofra.hir.operator import OperatorType
@@ -10,6 +11,7 @@ from libgofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from pathlib import Path
 
     from libgofra.hir.operator import Operator
     from libgofra.hir.variable import Variable
@@ -18,6 +20,17 @@ if TYPE_CHECKING:
 
 
 type PARAMS_T = Sequence[Type]
+
+
+class Visibility(Enum):
+    """How this symbol (e.g function, variable) is visible to other modules.
+
+    E.g with public visibility - anyone can access that symbol and it will be visible
+    with private - only usage in owner module itself is allowed (must not be linked with other object files)
+    """
+
+    PUBLIC = auto()  # Allowed from everywhere
+    PRIVATE = auto()  # Only inside current module
 
 
 @dataclass(frozen=False, slots=True, init=False)
@@ -30,6 +43,9 @@ class Function:
     `Extern` functions has no body and just an link for an external function
     `Inline` functions will be expanded within call (macros expansion) and will not be called like normal function
     """
+
+    # Path to an module which defined that function
+    module_path: Path
 
     # Function will is callable by this name in Gofra source
     name: str
@@ -52,6 +68,10 @@ class Function:
     # e.g type contract-in
     parameters: PARAMS_T
 
+    # Sharing of this functions within exports/modules
+    # By default all are private
+    visibility: Visibility = field(default=Visibility.PRIVATE)
+
     # If true, calling that function instead of actual calling into that function
     # just expands body of the function inside call location
     is_inline: bool
@@ -66,17 +86,23 @@ class Function:
     # Code generator takes care of that calls and specifies extern function requests if needed (aggregates them for that)
     is_external: bool
 
-    # If true, marks that function as *global* for linkage with another objects
-    # Global functions can be linked with other binary files after compilation (e.g for libraries development)
-    is_global: bool
-
-    # If true, means function has no calls to other functions
-    # Allows some HIR (but mostly treated as metadata for LIR optimizations)
+    # If true, function has no calls to other functions
+    # compiler may perform some optimizations for these
     is_leaf: bool
 
-    # Value type for retval (e.g type of the value which function returns)
-    # Void type means function has no return value and codegen must omit storing retval
+    # Type of return value (type of data which this functions returns after call)
+    # When there is void / never type - function does not have return type
+    # compiler in this case may omit return value and perform general optimizations based on return value
     return_type: Type
+
+    def has_return_value(self) -> bool:
+        """Check is given function returns an void type (e.g no return type)."""
+        # This meant to be something like generic function class / type guards but Python is shi...
+        return not isinstance(self.return_type, VoidType)
+
+    @property
+    def is_public(self) -> bool:
+        return self.visibility == Visibility.PUBLIC
 
     @property
     def is_recursive(self) -> bool:
@@ -90,11 +116,6 @@ class Function:
             and operator.operand == self.name
             for operator in self.operators
         )
-
-    def has_return_value(self) -> bool:
-        """Check is given function returns an void type (e.g no return type)."""
-        # This meant to be something like generic function class / type guards but Python is shi...
-        return not isinstance(self.return_type, VoidType)
 
     @property
     def has_executable_operators(self) -> bool:
@@ -125,7 +146,6 @@ class Function:
             operators=None,
             is_leaf=False,
             is_inline=False,
-            is_global=False,
             is_external=True,
         )
 
@@ -149,7 +169,6 @@ class Function:
             variables=None,
             is_leaf=False,
             is_inline=True,
-            is_global=False,
             is_external=False,
         )
 
@@ -163,7 +182,6 @@ class Function:
         variables: Mapping[str, Variable[Type]],
         operators: Sequence[Operator],
         return_type: Type,
-        is_global: bool,
         is_leaf: bool,
     ) -> Function:
         """Create function that is internal and not inline, with propagated flags set."""
@@ -175,7 +193,6 @@ class Function:
             variables=variables,
             operators=operators,
             is_leaf=is_leaf,
-            is_global=is_global,
             is_inline=False,
             is_external=False,
         )
@@ -190,13 +207,13 @@ class Function:
         variables: Mapping[str, Variable[Type]] | None,
         operators: Sequence[Operator] | None,
         return_type: Type,
-        is_global: bool,
         is_leaf: bool,
         is_inline: bool,
         is_external: bool,
     ) -> Self:
         """Alternative for __init__ that is wrapped by factory methods (`create_*`)."""
         function = cls()
+        function.visibility = Visibility.PRIVATE
         function.name = name
         function.defined_at = defined_at
         function.defined_at = defined_at
@@ -204,7 +221,6 @@ class Function:
         function.return_type = return_type
         function.variables = variables or {}
         function.operators = operators or []
-        function.is_global = is_global
         function.is_leaf = is_leaf
         function.is_inline = is_inline
         function.is_external = is_external

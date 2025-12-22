@@ -1,6 +1,6 @@
 /// Test that RW for variables is working (both static and stack)
-#include "std.gof"
-#include "assert.gof"
+#include "std"
+#include "std/assert.gof"
 
 #define NUMBER 32
 var static int

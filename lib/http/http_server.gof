@@ -2,8 +2,8 @@
 // HTTP server implementation
 // ==============================================
 
-#include "os/network.gof"
-#include "types.gof"
+#include "std/os/network.gof"
+#include "std/types.gof"
 
 // TODO: Add async/thread support
 

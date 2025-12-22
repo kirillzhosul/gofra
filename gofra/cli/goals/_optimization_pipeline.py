@@ -9,12 +9,6 @@ def cli_process_optimization_pipeline(
     args: CLIArguments,
 ) -> None:
     """Apply optimization pipeline for program according to CLI arguments."""
-    cli_message(
-        level="INFO",
-        text=f"Applying optimizer pipeline (From base optimization level: {args.optimizer.level})",
-        verbose=args.verbose,
-    )
-
     pipeline = create_optimizer_pipeline(args.optimizer)
     for optimizer_pass, optimizer_pass_name in pipeline:
         cli_message(
