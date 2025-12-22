@@ -41,6 +41,7 @@ class Module:
         self,
         *,
         include_self: bool,
+        _flatten: bool = True,
     ) -> Generator[Module]:
         if include_self:
             yield self
@@ -49,7 +50,9 @@ class Module:
         pending: list[Module] = list(self.dependencies.values())
         while pending:
             current = pending.pop()
-            if current in visited:
+            if current in visited or (
+                _flatten and current.path in [m.path for m in visited]
+            ):
                 continue
             visited.append(current)
             yield current

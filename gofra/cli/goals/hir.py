@@ -49,7 +49,7 @@ def cli_perform_hir_goal(args: CLIArguments) -> NoReturn:
 
     cli_process_optimization_pipeline(module, args)
     if FULL_DEPENDENCY_GRAPH_HIR:
-        for dep in module.visit_dependencies(include_self=True):
+        for dep in module.visit_dependencies(include_self=True, _flatten=True):
             _emit_hir_into_stdout(dep)
     else:
         _emit_hir_into_stdout(module)
