@@ -44,6 +44,7 @@ def cli_perform_hir_goal(args: CLIArguments) -> NoReturn:
         args.source_filepaths[0],
         args.include_paths,
         macros=macros_registry,
+        rt_array_oob_check=args.runtime_array_oob_checks,
     )
 
     cli_process_optimization_pipeline(module, args)

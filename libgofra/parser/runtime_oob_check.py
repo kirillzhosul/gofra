@@ -1,6 +1,3 @@
-from libgofra.feature_flags import (
-    FEATURE_RUNTIME_ARRAY_OOB_CHECKS,
-)
 from libgofra.hir.operator import OperatorType
 from libgofra.hir.variable import (
     Variable,
@@ -21,9 +18,9 @@ def emit_runtime_hir_oob_check(
     TODO(@kirillzhosul): Must be reworked into runtime lib?:
     Possibly introduce runtime include library, should requires via something like `require_runtime_function`
     """
-    assert FEATURE_RUNTIME_ARRAY_OOB_CHECKS
+    assert context.rt_array_oob_check
     if "eprint_fatal" not in context.functions:
-        msg = "Cannot do FEATURE_RUNTIME_ARRAY_OOB_CHECKS unless stdlib (`eprint_fatal`) is available for panic"
+        msg = "Cannot do runtime array oob check unless stdlib (`eprint_fatal`) is available for panic"
         raise ValueError(msg)
     panic_msg = "Runtime OOB error: tried to access array with out-of-bounds index, step into debugger for help!\\n"
     context.push_new_operator(

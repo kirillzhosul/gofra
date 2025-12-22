@@ -44,6 +44,8 @@ class CLIArguments:
 
     linker_profile: LinkerProfile
 
+    runtime_array_oob_checks: bool
+
     linker_additional_flags: list[str]
     linker_libraries: list[str]
     linker_libraries_search_paths: list[Path]

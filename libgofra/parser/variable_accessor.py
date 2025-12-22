@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, cast
 
-from libgofra.feature_flags import FEATURE_RUNTIME_ARRAY_OOB_CHECKS
 from libgofra.hir.operator import OperatorType
 from libgofra.hir.variable import (
     Variable,
@@ -208,7 +207,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
                 token,
                 operand=array_index_at.name,
             )
-            if FEATURE_RUNTIME_ARRAY_OOB_CHECKS:
+            if context.rt_array_oob_check:
                 assert isinstance(array_index_at.type, (I64Type, CharType))
                 array_index_at = cast("Variable[I64Type]", array_index_at)
                 emit_runtime_hir_oob_check(

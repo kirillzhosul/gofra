@@ -53,6 +53,16 @@ def add_additional_group(parser: ArgumentParser) -> None:
         default=[],
     )
     group.add_argument(
+        "--rt-bounds-checks",
+        "--oob-checks",
+        action="store_true",
+        default=False,
+        dest="runtime_array_oob_checks",
+        required=False,
+        help="If passed, will enable injecting Out-Of-Bounds (OOB) checks into runtime when accessing arrays(!), WIP feature that must be treated as feature flag",
+    )
+
+    group.add_argument(
         "--skip-typecheck",
         "-nt",
         action="store_true",

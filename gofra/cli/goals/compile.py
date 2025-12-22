@@ -84,6 +84,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             args.include_paths,
             macros=macros_registry,
             _debug_emit_lexemes=args.lexer_debug_emit_lexemes,
+            rt_array_oob_check=args.runtime_array_oob_checks,
         )
 
     if root_module.dependencies and args.output_format not in ("executable", "library"):

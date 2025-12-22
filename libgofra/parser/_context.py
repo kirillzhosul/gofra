@@ -98,6 +98,9 @@ class ParserContext(PeekableTokenizer):
         default_factory=lambda: DEFAULT_PRIMITIVE_TYPE_REGISTRY.copy(),
     )
 
+    # Runtime arrays Out-Of-Bounds check
+    rt_array_oob_check: bool = field(default=False)
+
     # No function calls in that context
     # Maybe should be refactored
     is_leaf_context: bool = True

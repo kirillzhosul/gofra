@@ -19,6 +19,7 @@ def process_input_file(
     include_paths: Iterable[Path],
     *,
     macros: MacrosRegistry,
+    rt_array_oob_check: bool = False,
     _debug_emit_lexemes: bool = False,
 ) -> Module:
     """Core entry for Gofra API.
@@ -46,6 +47,7 @@ def process_input_file(
         preprocessor,
         macros=macros,
         include_paths=include_paths,
+        rt_array_oob_check=rt_array_oob_check,
     )
     _validate_function_existence_and_visibility(root=core_module, module=core_module)
     return core_module

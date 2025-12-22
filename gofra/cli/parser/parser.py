@@ -72,6 +72,7 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         cli_debug_user_friendly_errors=bool(args.cli_debug_user_friendly_errors),
         incremental_compilation=bool(args.incremental_compilation),
         display_lint_warnings=bool(args.display_lint_warnings),
+        runtime_array_oob_checks=bool(args.runtime_array_oob_checks),
     )
 
 

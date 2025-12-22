@@ -73,6 +73,8 @@ def parse_module_from_tokenizer(
     tokenizer: Generator[Token],
     macros: MacrosRegistry,
     include_paths: Iterable[Path],
+    *,
+    rt_array_oob_check: bool = False,
 ) -> Module:
     """Load file for parsing into operators."""
     context = ParserContext(
@@ -80,6 +82,7 @@ def parse_module_from_tokenizer(
         path=path,
         import_search_paths=list(include_paths),
         macros_registry=macros.copy(),  # mutable copy
+        rt_array_oob_check=rt_array_oob_check,
     )
     _parse_from_context_into_operators(context=context)
 
@@ -371,6 +374,7 @@ def _unpack_import(context: ParserContext, token: Token) -> None:
         tokenizer=preprocessor,
         macros=context.macros_registry,
         include_paths=context.import_search_paths,
+        rt_array_oob_check=context.rt_array_oob_check,
     )
     context.module_dependencies[named_import_as_name] = imported_module
 
