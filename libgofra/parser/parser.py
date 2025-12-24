@@ -50,6 +50,9 @@ from libgofra.parser.variable_definition import (
     unpack_variable_definition_from_token,
 )
 from libgofra.preprocessor.preprocessor import preprocess_file
+from libgofra.typecheck.errors.user_defined_compile_time_error import (
+    UserDefinedCompileTimeError,
+)
 from libgofra.types.composite.string import StringType
 
 from ._context import ParserContext
@@ -218,6 +221,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         Keyword.CONST_DEFINE,
         Keyword.END,
         Keyword.VARIABLE_DEFINE,
+        Keyword.COMPILE_TIME_ERROR,
     )
     if context.is_top_level:
         if token.value not in (*TOP_LEVEL_KEYWORD, *BOTH_LEVEL_KEYWORD):
@@ -404,6 +408,9 @@ def _unpack_compile_time_error(context: ParserContext, token: Token) -> None:
     context.expect_token(TokenType.STRING)
     message_tok = context.next_token()
     assert isinstance(message_tok.value, str)
+    if context.parent is None:
+        # If global scope - emit right now
+        raise UserDefinedCompileTimeError(at=token.location, message=message_tok.value)
     context.push_new_operator(
         OperatorType.COMPILE_TIME_ERROR,
         token=token,
