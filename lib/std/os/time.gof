@@ -21,20 +21,30 @@ end
 
 // Sleep for given amount of seconds
 pub func void sleep[int seconds]
-    var tv timeval
+    #ifndef OS_DARWIN
+        compile_error "`sleep` is not implemented for Non-Darwin"
+    #endif
+    #ifdef OS_DARWIN
+        var tv timeval
 
-    &tv.tv_sec seconds !<
-    &tv.tv_usec 0 !<
+        &tv.tv_sec seconds !<
+        &tv.tv_usec 0 !<
 
-    0 NULL_PTR NULL_PTR NULL_PTR &tv call sc_select drop
+        0 NULL_PTR NULL_PTR NULL_PTR &tv call sc_select drop
+    #endif
 end
 
 // Sleep for given amount of microseconds
 pub func void sleep_ms[int ms]
-    var tv timeval
+    #ifndef OS_DARWIN
+        compile_error "`sleep_ms` is not implemented for Non-Darwin"
+    #endif
+    #ifdef OS_DARWIN
+        var tv timeval
 
-    &tv.tv_sec ms 1000 /         !<
-    &tv.tv_usec ms 1000 % 1000 * !<
+        &tv.tv_sec ms 1000 /         !<
+        &tv.tv_usec ms 1000 % 1000 * !<
 
-    0 NULL_PTR NULL_PTR NULL_PTR &tv call sc_select drop
+        0 NULL_PTR NULL_PTR NULL_PTR &tv call sc_select drop
+    #endif 
 end

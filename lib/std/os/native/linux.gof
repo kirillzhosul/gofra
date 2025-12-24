@@ -4,7 +4,7 @@
 // ==============================================
 
 // TODO: Add AARCH64 Linux layer
-#include "types.gof"
+#include "std/types.gof"
 
 // File access mode flags
 #define O_RDONLY   0x0000  // Open for reading only
@@ -17,6 +17,12 @@
 #define STD_ERR_FD 2
 
 #define OS_LINESEP "\n" // Line separator
+
+type timezone char[16]
+type struct timeval
+    tv_sec int
+    tv_usec int
+end
 
 // Network socket address in structure (posix/unix only)
 struct sockaddr_in
