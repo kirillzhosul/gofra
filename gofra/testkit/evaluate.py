@@ -1,8 +1,8 @@
-import signal
 import sys
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, TimeoutExpired
 
+from gofra.cli.is_segmentation_fault import is_segmentation_fault
 from gofra.cli.output import cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
@@ -125,7 +125,9 @@ def evaluate_test_case(
         0 if not expected_exit_code_macro else expected_exit_code_macro.tokens[0].value
     )
 
-    if expected_exit_code in (-signal.SIGSEGV, signal.SIGSEGV, 128 + signal.SIGSEGV):
+    if isinstance(expected_exit_code, int) and is_segmentation_fault(
+        expected_exit_code,
+    ):
         cli_message(
             "WARNING",
             f"Expected exit code is equals to SIGSEGV signal ({expected_exit_code}) this may cause invalid error messages when testing",

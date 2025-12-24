@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import signal
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -8,6 +7,7 @@ from subprocess import TimeoutExpired
 from typing import TYPE_CHECKING
 
 from gofra.cli.errors.error_handler import cli_gofra_error_handler
+from gofra.cli.is_segmentation_fault import is_segmentation_fault
 from gofra.cli.output import cli_fatal_abort, cli_message
 from gofra.testkit.cli.matrix import display_test_matrix
 from gofra.testkit.test import TestStatus
@@ -145,12 +145,7 @@ def display_test_errors(matrix: list[Test]) -> None:
             continue
 
         exit_code = test.error.returncode
-        is_sigsegv = exit_code in (
-            signal.SIGSEGV,
-            -signal.SIGSEGV,
-            128 + signal.SIGSEGV,
-        )
-        if is_sigsegv:
+        if is_segmentation_fault(exit_code):
             cli_message(
                 "ERROR",
                 f"Execution failed with segmentation fault (SIGSEGV, {exit_code})!",

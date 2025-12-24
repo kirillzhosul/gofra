@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import signal
 import sys
 from contextlib import contextmanager
 from time import perf_counter_ns
@@ -8,6 +7,7 @@ from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
+from gofra.cli.is_segmentation_fault import is_segmentation_fault
 from gofra.cli.mod_hashing import (
     get_module_hash,
     is_module_needs_rebuild,
@@ -361,7 +361,7 @@ def _log_child_exit_code(args: CLIArguments, exit_code: int) -> None:
             verbose=args.verbose,
         )
 
-    if _is_segmentation_fault(exit_code):
+    if is_segmentation_fault(exit_code):
         return cli_message(
             "ERROR",
             f"Program finished with segmentation fault exit code (SIGSEGV, {exit_code})!",
@@ -371,12 +371,4 @@ def _log_child_exit_code(args: CLIArguments, exit_code: int) -> None:
         "ERROR",
         f"Program finished with fail exit code {exit_code}!",
         verbose=args.verbose,
-    )
-
-
-def _is_segmentation_fault(exit_code: int) -> bool:
-    return exit_code in (
-        signal.SIGSEGV,
-        -signal.SIGSEGV,
-        128 + signal.SIGSEGV,
     )
