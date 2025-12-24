@@ -14,8 +14,6 @@ class ELFSection:
             "a",  # alloc - occupies memory during execution
             "w",  # write - writable data
             "x",  # execute - executable instructions
-            "M",  # merge - can be merged (for strings)
-            "S",  # strings - contains null-terminated strings
         ]
     ]
 
@@ -45,7 +43,7 @@ ELF_SECTION_DATA = ELFSection(
 
 ELF_SECTION_STRINGS = ELFSection(
     name=".rodata",
-    flags=("a", "S", "M"),
+    flags=("a",),
     type="@progbits",
 )  # Read-only data (strings, constants)
 
