@@ -6,6 +6,7 @@ from libgofra.hir.variable import (
 )
 from libgofra.lexer.tokens import Token, TokenType
 from libgofra.parser._context import ParserContext
+from libgofra.parser.errors.static_array_out_of_bounds import ArrayOutOfBoundsError
 from libgofra.parser.errors.unknown_field_accessor_struct_field import (
     UnknownFieldAccessorStructFieldError,
 )
@@ -176,13 +177,12 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         if isinstance(array_index_at, int):
             # Access by integer (direct int or expanded from constant)
             # Compile-time OOB checks
-            if array_index_at < 0:
-                msg = "Negative indexing inside arrays is prohibited"
-                raise ValueError(msg)
-
             if variable.type.is_index_oob(array_index_at):
-                msg = f"OOB (out-of-bounds) for array access `{token.text}` at {token.location}, array has {variable.type.elements_count} elements but accessed element {array_index_at} (may be expanded from constant)"
-                raise ValueError(msg)
+                raise ArrayOutOfBoundsError(
+                    at=token.location,
+                    variable=cast("Variable[ArrayType]", variable),
+                    array_index_at=array_index_at,
+                )
 
             shift_in_bytes = variable.type.get_index_offset(array_index_at)
             if shift_in_bytes:

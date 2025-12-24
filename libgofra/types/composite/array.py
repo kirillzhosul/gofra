@@ -19,7 +19,7 @@ class ArrayType(CompositeType):
         return self.element_type.size_in_bytes * index
 
     def is_index_oob(self, index: int) -> int:
-        return index >= self.elements_count
+        return index >= self.elements_count or index < 0
 
     def __repr__(self) -> str:
         return f"{self.element_type}[{self.elements_count}]"
