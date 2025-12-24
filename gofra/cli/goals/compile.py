@@ -28,6 +28,7 @@ from libgofra.linker.linker import link_object_files
 from libgofra.linker.output_format import LinkerOutputFormat
 from libgofra.linker.pkgconfig.pkgconfig import pkgconfig_get_library_search_paths
 from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
+from libgofra.targets.infer_host import infer_host_target
 from libgofra.typecheck import validate_type_safety
 from libgofra.typecheck.typechecker import on_lint_warning_suppressed
 
@@ -286,6 +287,16 @@ def _execute_after_compilation(args: CLIArguments) -> None:
     if args.output_format != "executable":
         return cli_fatal_abort(
             text="Cannot execute after compilation due to output format is not set to an executable!",
+        )
+
+    host_target = infer_host_target()
+    assert host_target
+    if (
+        args.target.architecture != host_target.architecture
+        or args.target.operating_system != host_target.operating_system
+    ):
+        cli_fatal_abort(
+            "Target differs from host target, cannot execute on current host, please execute on your own!\nFile was compiled, please remove execute flag!",
         )
 
     cli_message(

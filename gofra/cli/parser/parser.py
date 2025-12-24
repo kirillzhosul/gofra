@@ -91,16 +91,10 @@ def _process_linker_libraries_search_paths(args: Namespace) -> list[Path]:
 
 def _process_linker_backend(
     args: Namespace,
-) -> Literal["gnu-ld", "apple-ld"]:
+) -> Literal["gnu-ld", "apple-ld"] | None:
     """Validate and process linker backend as type safe value."""
-    allowed_formats = get_args(get_type_hints(CLIArguments)["linker_backend"])
-    assert args.linker_backend in (*allowed_formats, None), (
-        f"{args.target} not in {allowed_formats}"
-    )
-    args.linker_backend = cast(
-        'Literal["gnu-ld", "apple-ld"]',
-        args.linker_backend,
-    )
+    assert args.linker_backend in ("gnu-ld", "apple-ld", None)
+    args.linker_backend = args.linker_backend
 
     return args.linker_backend
 

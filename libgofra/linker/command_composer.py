@@ -1,6 +1,5 @@
 from collections.abc import Iterable, MutableSequence
 from pathlib import Path
-from platform import system
 from typing import Protocol
 
 from libgofra.linker.apple.command_composer import compose_apple_linker_command
@@ -29,11 +28,12 @@ class LinkerCommandComposer(Protocol):
 
 
 def get_linker_command_composer_backend(
-    target: Target,  # noqa: ARG001
+    target: Target,
 ) -> LinkerCommandComposer:
-    """Gut linker command composer backend suitable for that target and current host."""
-    if system() == "Darwin":
+    """Get linker command composer backend suitable for that target and current host."""
+    if target.triplet == "arm64-apple-darwin":
         # Always use Apple linker on Darwin (e.g MacOS)
         return compose_apple_linker_command
 
+    # Fallback to GNU
     return compose_gnu_linker_command

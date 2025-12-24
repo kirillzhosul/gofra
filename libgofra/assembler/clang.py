@@ -11,6 +11,9 @@ from libgofra.targets.target import Target
 CLANG_EXECUTABLE_PATH = Path("/usr/bin/clang")
 
 
+# TODO: Possibly, migrate from clang to direct machine instructions
+
+
 def compose_clang_assembler_command(  # noqa: PLR0913
     machine_assembly_file: Path,
     output_object_file: Path,

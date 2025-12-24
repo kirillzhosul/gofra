@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from libgofra.targets import Target
 
 
+# TODO: Possibly remove assembler step or write own assembler (yet costly)
+
+
 def assemble_object_from_codegen_assembly(
     assembly: Path,
     output: Path,
