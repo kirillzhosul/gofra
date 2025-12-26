@@ -11,7 +11,7 @@ def prepare_build_cache_directory(path: Path) -> None:
     if path.exists():
         return
 
-    path.mkdir(exist_ok=False)
+    path.mkdir(exist_ok=False, parents=True)
     create_cache_gitignore(path)
 
 
