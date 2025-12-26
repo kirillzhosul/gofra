@@ -22,7 +22,6 @@ from .assembly import (
     function_begin_with_prologue,
     function_call,
     function_end_with_epilogue,
-    initialize_static_data_section,
     ipc_syscall_linux,
     load_memory_from_stack_arguments,
     perform_operation_onto_stack,
@@ -33,6 +32,7 @@ from .assembly import (
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
 )
+from .static_data_section import initialize_static_data_section
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -51,12 +51,13 @@ class AMD64CodegenBackend:
         target: Target,
         module: Module,
         fd: IO[str],
-        on_warning: Callable[[str], None],  # noqa: ARG002
+        on_warning: Callable[[str], None],
     ) -> None:
         assert target.operating_system == "Linux"
         self.target = target
         self.module = module
         self.context = AMD64CodegenContext(
+            on_warning=on_warning,
             fd=fd,
             strings={},
             target=self.target,

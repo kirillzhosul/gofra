@@ -1,4 +1,4 @@
-from collections.abc import MutableMapping
+from collections.abc import Callable, MutableMapping
 from dataclasses import dataclass, field
 from typing import IO
 
@@ -16,6 +16,8 @@ class AMD64CodegenContext:
     """
 
     fd: IO[str]
+    on_warning: Callable[[str], None]
+
     strings: MutableMapping[str, str] = field()
     target: Target
 

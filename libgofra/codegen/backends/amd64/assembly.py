@@ -9,7 +9,6 @@ from libgofra.codegen.backends.amd64.frame import (
     restore_calee_frame,
 )
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
-from libgofra.codegen.sections._factory import SectionType
 from libgofra.exceptions import GofraError
 from libgofra.hir.operator import OperatorType
 from libgofra.types.primitive.void import VoidType
@@ -95,65 +94,6 @@ def push_static_address_onto_stack(
     """Push executable static memory address onto stack with page dereference."""
     context.write(f"leaq {segment}(%rip), %rax")
     push_register_onto_stack(context, register="rax")
-
-
-def initialize_static_data_section(
-    context: AMD64CodegenContext,
-    static_strings: Mapping[str, str],
-    static_variables: Mapping[str, Variable[Type]],
-) -> None:
-    """Initialize data section fields with given values.
-
-    Section is an tuple (label, data)
-    Data is an string (raw ASCII) or number (zeroed memory blob)
-    TODO(@kirillzhosul, @stepanzubkov): Review alignment for data sections.
-    """
-    if static_strings:
-        context.section(SectionType.STRINGS)
-        for name, data in static_strings.items():
-            context.write(f'{name}: .asciz "{data}"')
-
-    bss_variables = {
-        k: v for k, v in static_variables.items() if v.initial_value is None
-    }
-    data_variables = {
-        k: v for k, v in static_variables.items() if v.initial_value is not None
-    }
-
-    if bss_variables:
-        context.section(SectionType.BSS)
-        for name, variable in bss_variables.items():
-            type_size = variable.size_in_bytes
-            if type_size == 0:
-                continue
-            assert variable.initial_value is None
-            context.write(f"{name}: .space {type_size}")
-
-    if data_variables:
-        context.section(SectionType.DATA)
-        for name, variable in data_variables.items():
-            type_size = variable.size_in_bytes
-            if type_size == 0:
-                continue
-            assert variable.initial_value is not None
-            # NOTE: Temporary raising GofraError here just to make tests working
-            if not isinstance(variable.initial_value, int):
-                msg = "Non-int initializer is not implemented on AMD64"
-                raise GofraError(msg)
-
-            if type_size == 1:
-                context.write(f"{name}: .byte {variable.initial_value}")
-            elif type_size == 2:
-                context.write(f"{name}: .value {variable.initial_value}")
-            elif type_size <= 4:
-                context.write(f"{name}: .long {variable.initial_value}")
-            elif type_size <= 8:
-                context.write(f"{name}: .quad {variable.initial_value}")
-            else:
-                msg = (
-                    "Codegen does not supports initial values that out of 8 bytes range"
-                )
-                raise ValueError(msg)
 
 
 def ipc_syscall_linux(
