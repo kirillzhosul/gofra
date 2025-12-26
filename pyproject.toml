@@ -54,6 +54,7 @@ ignore = [
     "FIX002",  # do not warn on TODOs
     "TD003",   # do not warn on TODOs
     "PLR2004", # We often use something like 8/16 bytes and mostly this is relevant for us
+    "TD002",   # No authors in TODOs
 ]
 
 [build-system]

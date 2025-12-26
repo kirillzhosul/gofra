@@ -153,36 +153,21 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             )
             modules_assembly[mod.path] = mod_assembly_path
 
+    if args.output_format == "assembly":
+        assembly_filepath.replace(args.output_filepath)
+
     object_filepath = (cache_dir / output.name).with_suffix(
         args.target.file_object_suffix,
     )
 
-    modules_objects: dict[Path, Path] = {}
-
-    with wrap_with_perf_time_taken("Assembler", verbose=args.verbose):
-        if is_module_needs_rebuild(args, root_module, rebuild_artifact=object_filepath):
-            assemble_object_from_codegen_assembly(
-                assembly=assembly_filepath,
-                output=object_filepath,
-                target=args.target,
-                additional_assembler_flags=args.assembler_flags,
-                debug_information=args.debug_symbols,
-            )
-        for mod in root_module.visit_dependencies(include_self=False):
-            mod_object_path = (
-                modules_dependencies_dir / get_module_hash(mod)
-            ).with_suffix(args.target.file_object_suffix)
-            if not is_module_needs_rebuild(args, mod, rebuild_artifact=mod_object_path):
-                modules_objects[mod.path] = mod_object_path
-                continue
-            assemble_object_from_codegen_assembly(
-                assembly=modules_assembly[mod.path],
-                output=mod_object_path,
-                target=args.target,
-                additional_assembler_flags=args.assembler_flags,
-                debug_information=args.debug_symbols,
-            )
-            modules_objects[mod.path] = mod_object_path
+    modules_objects = _perform_assembler(
+        args,
+        root_module,
+        modules_dependencies_dir,
+        modules_assembly,
+        assembly_filepath,
+        object_filepath,
+    )
 
     cache_gc.append(assembly_filepath)
     cache_gc.extend(modules_assembly.values())
@@ -215,6 +200,47 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
     _execute_after_compilation(args)
     _cleanup_cache_gc(cache_gc, args)
     return sys.exit(0)
+
+
+def _perform_assembler(  # noqa: PLR0913
+    args: CLIArguments,
+    root_module: Module,
+    modules_dependencies_dir: Path,
+    modules_assembly: dict[Path, Path],
+    assembly_filepath: Path,
+    object_filepath: Path,
+) -> dict[Path, Path]:
+    if args.output_format not in ("library", "object", "executable"):
+        return {}
+
+    modules_objects: dict[Path, Path] = {}
+
+    with wrap_with_perf_time_taken("Assembler", verbose=args.verbose):
+        if is_module_needs_rebuild(args, root_module, rebuild_artifact=object_filepath):
+            assemble_object_from_codegen_assembly(
+                assembly=assembly_filepath,
+                output=object_filepath,
+                target=args.target,
+                additional_assembler_flags=args.assembler_flags,
+                debug_information=args.debug_symbols,
+            )
+        for mod in root_module.visit_dependencies(include_self=False):
+            mod_object_path = (
+                modules_dependencies_dir / get_module_hash(mod)
+            ).with_suffix(args.target.file_object_suffix)
+            if not is_module_needs_rebuild(args, mod, rebuild_artifact=mod_object_path):
+                modules_objects[mod.path] = mod_object_path
+                continue
+            assemble_object_from_codegen_assembly(
+                assembly=modules_assembly[mod.path],
+                output=mod_object_path,
+                target=args.target,
+                additional_assembler_flags=args.assembler_flags,
+                debug_information=args.debug_symbols,
+            )
+            modules_objects[mod.path] = mod_object_path
+
+    return modules_objects
 
 
 def _perform_linker_bundle(
