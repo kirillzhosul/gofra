@@ -20,7 +20,6 @@ def cleanup_build_cache_directory(path: Path) -> None:
 
     (related unless user places any same files in cache directory).
     """
-    # TODO(@kirillzhosul): Cleanup of cache directory is not implemented yet.
     for file in path.iterdir():
         if not file.is_file():
             continue

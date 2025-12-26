@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from subprocess import TimeoutExpired
 from typing import TYPE_CHECKING
 
+from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.errors.error_handler import cli_gofra_error_handler
 from gofra.cli.is_segmentation_fault import is_segmentation_fault
 from gofra.cli.output import cli_fatal_abort, cli_message
@@ -56,9 +57,8 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
         verbose=args.verbose,
     )
 
-    # TODO(@kirillzhosul): If testkit is being ran first time, it skips proper creation of an build cache directory as it is modified by lines below.
     cache_directory = args.build_cache_dir / TESTKIT_CACHE_DIR
-    cache_directory.mkdir(parents=True, exist_ok=True)
+    prepare_build_cache_directory(cache_directory)
 
     target = infer_host_target()
     if target is None:

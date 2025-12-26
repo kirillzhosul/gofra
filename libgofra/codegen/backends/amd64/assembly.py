@@ -306,7 +306,7 @@ def function_call(
             f"Maximum {len(argument_registers)} register arguments supported. "
             "Stack argument passing not implemented."
         )
-        raise NotImplementedError(msg)
+        raise GofraError(msg)
 
     if i64_arguments_count < 0:
         msg = f"Tried to call function `{name}` with negative arguments count"
