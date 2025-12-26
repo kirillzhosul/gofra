@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
+from libgofra.exceptions import GofraError
 from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
 from libgofra.parser._context import ParserContext
@@ -114,3 +115,11 @@ def _consume_concrete_structure_type_definition(
     ref.fields = fields
     ref.fields_ordering = fields_ordering
     ref.recalculate_size_in_bytes()
+
+    if not ref.fields:
+        msg = f"Structure {ref.name} has no fields."
+        raise GofraError(msg)
+
+    if ref.size_in_bytes <= 0:
+        msg = f"Structure {ref.name} has zero size which is prohibited, if you define self-reference type, this leaded to infinite size (0 == inf in type)."
+        raise GofraError(msg)

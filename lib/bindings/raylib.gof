@@ -3,7 +3,6 @@
 // https://www.raylib.com
 // ==============================================
 
-// TODO(@kirillzhosul): We cannot pass color struct within C ABI, use `rgba_to_raylib_argb`
 // TODO(@kirillzhosul): Cannot pass floats into C ABI
 
 #include "std/types.gof"

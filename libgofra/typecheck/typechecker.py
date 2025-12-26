@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from libgofra.hir.operator import Operator
     from libgofra.lexer.tokens import TokenLocation
 
-# TODO!!!(@kirillzhosul): Typechecker may skip typechecking if early-return is occurred  # noqa: TD002, TD004
+# TODO!!!(@kirillzhosul): Typechecker may skip typechecking if early-return is occurred  # noqa: TD004
 
 # TODO(@kirillzhosul): Probably be something like an debug flag
 # Traces each operation on stack to search bugs in typechecker
@@ -240,6 +240,7 @@ def emulate_type_stack_for_operators(  # noqa: PLR0913
                     references_variables,
                     idx,
                     on_lint_warning,
+                    is_sub_scope=blocks_idx_shift == 0,
                 )
                 if etb:
                     return etb
@@ -260,6 +261,8 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
     references_variables: MutableMapping[str, Variable[Type]],
     idx: int,
     on_lint_warning: Callable[[str], None],
+    *,
+    is_sub_scope: bool,
 ) -> EmulatedTypeBlock | None:
     match operator.type:
         case OperatorType.INLINE_RAW_ASM:
@@ -358,6 +361,11 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
 
                 # TODO(@kirillzhosul): Pointers are for now not type-checked at function call level
                 # so passing an *int to *char[] function is valid as they both are an pointer
+
+            if function == current_function and is_sub_scope:
+                on_lint_warning(
+                    f"Function '{current_function.name}' cannot return without recursion. This will lead to infinite recursion loop. Recursive call at {operator.location}",
+                )
 
             if function.is_no_return:
                 if operators[idx:]:

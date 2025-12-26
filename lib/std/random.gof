@@ -41,7 +41,7 @@ end
 pub func int random[]
     call prng_randomize_state_xorshift
 
-    std_prng_random_state return // TODO: Fix parser/lexer eats identifiers
+    std_prng_random_state
 end
 
 // Get random number from PRNG withing range from 0 to argument

@@ -148,6 +148,7 @@
         "scvtf",
         "sdiv",
         "SETSOCKOPT",
+        "sigsegv",
         "SIGSEGV",
         "sockaddr",
         "SOMAXCONN",
