@@ -173,14 +173,12 @@ def add_cache_group(parser: ArgumentParser) -> None:
     )
 
     group.add_argument(
-        "--always-rebuild",
-        "--clean-build",
-        "--no-incremental",
+        "--incremental",
         dest="incremental_compilation",
         default=False,
         action="store_true",
         required=False,
-        help="If passed, disables incremental compilation with rebuilding only modified artifacts",
+        help="If passed, enables incremental compilation with rebuilding only modified artifacts",
     )
 
     group.add_argument(

@@ -91,7 +91,7 @@ Search algorithm is same as preprocessor include:
 
 # Incremental compilation 
 
-By default, modules always compiled incrementally and does not being rebuilt when no changes found, this behavior can be overridden with `--no-incremental`/`--always-rebuild`/`--clean-build`, internally compiler decide to not rebuild based on modified time difference from artifact (object/assembly file) and original module file (*.gof)
+By default, modules never compiled incrementally and always being being rebuilt, this behavior can be overridden with `--incremental` flag, internally compiler decide to not rebuild based on modified time difference from artifact (object/assembly file) and original module file (*.gof)
 
 
 # Order of dependencies
