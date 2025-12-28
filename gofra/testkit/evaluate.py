@@ -7,7 +7,7 @@ from gofra.cli.output import cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import (
-    assemble_object_from_codegen_assembly,
+    assemble_object_file,
 )
 from libgofra.codegen.generator import generate_code_for_assembler
 from libgofra.exceptions import GofraError
@@ -60,13 +60,11 @@ def toolchain_assembly_executable(
             verbose=args.verbose,
         ),
     )
-    assemble_object_from_codegen_assembly(
-        assembly=artifact_assembly_file,
-        output=artifact_object_file,
+    assemble_object_file(
+        in_assembly_file=artifact_assembly_file,
+        out_object_file=artifact_object_file,
         debug_information=True,
         target=build_target,
-        # Probably, at some time this may became configurable for more complex tests.
-        additional_assembler_flags=[],
     )
 
     linker_process = link_object_files(

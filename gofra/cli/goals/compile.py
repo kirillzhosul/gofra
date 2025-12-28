@@ -15,9 +15,7 @@ from gofra.cli.mod_hashing import (
 from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
-from libgofra.assembler.assembler import (
-    assemble_object_from_codegen_assembly,
-)
+from libgofra.assembler.assembler import assemble_object_file
 from libgofra.codegen.generator import generate_code_for_assembler
 from libgofra.gofra import process_input_file
 from libgofra.lexer.tokens import TokenLocation
@@ -216,13 +214,20 @@ def _perform_assembler(  # noqa: PLR0913
     modules_objects: dict[Path, Path] = {}
 
     with wrap_with_perf_time_taken("Assembler", verbose=args.verbose):
-        if is_module_needs_rebuild(args, root_module, rebuild_artifact=object_filepath):
-            assemble_object_from_codegen_assembly(
-                assembly=assembly_filepath,
-                output=object_filepath,
+
+        def _perform_assembler_driver(in_path: Path, out_path: Path) -> None:
+            assemble_object_file(
+                in_assembly_file=in_path,
+                out_object_file=out_path,
                 target=args.target,
-                additional_assembler_flags=args.assembler_flags,
+                extra_flags=args.assembler_flags,
                 debug_information=args.debug_symbols,
+            ).check_returncode()
+
+        if is_module_needs_rebuild(args, root_module, rebuild_artifact=object_filepath):
+            _perform_assembler_driver(
+                in_path=assembly_filepath,
+                out_path=object_filepath,
             )
         for mod in root_module.visit_dependencies(include_self=False):
             mod_object_path = (
@@ -231,12 +236,9 @@ def _perform_assembler(  # noqa: PLR0913
             if not is_module_needs_rebuild(args, mod, rebuild_artifact=mod_object_path):
                 modules_objects[mod.path] = mod_object_path
                 continue
-            assemble_object_from_codegen_assembly(
-                assembly=modules_assembly[mod.path],
-                output=mod_object_path,
-                target=args.target,
-                additional_assembler_flags=args.assembler_flags,
-                debug_information=args.debug_symbols,
+            _perform_assembler_driver(
+                in_path=modules_assembly[mod.path],
+                out_path=mod_object_path,
             )
             modules_objects[mod.path] = mod_object_path
 

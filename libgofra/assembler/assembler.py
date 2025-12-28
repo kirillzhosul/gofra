@@ -2,45 +2,47 @@
 
 from __future__ import annotations
 
-from subprocess import CompletedProcess, run
 from typing import TYPE_CHECKING
 
-from gofra.cli.output import cli_fatal_abort
-
-from .clang import clang_driver_is_installed, compose_clang_assembler_command
+from libgofra.assembler.drivers import AssemblerDriverProtocol, get_assembler_driver
+from libgofra.assembler.errors import NoAssemblerDriverError
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from subprocess import CompletedProcess
 
     from libgofra.targets import Target
 
 
-# TODO: Possibly remove assembler step or write own assembler (yet costly)
-
-
-def assemble_object_from_codegen_assembly(
-    assembly: Path,
-    output: Path,
+def assemble_object_file(  # noqa: PLR0913
+    in_assembly_file: Path,
+    out_object_file: Path,
     target: Target,
     *,
     debug_information: bool,
-    additional_assembler_flags: list[str],
+    extra_flags: list[str] | None = None,
+    driver: AssemblerDriverProtocol | None = None,
 ) -> CompletedProcess[bytes]:
-    """Convert given program into object using assembler for next linkage step."""
-    if not clang_driver_is_installed():
-        cli_fatal_abort("Clang driver is not installed, cannot assemble, aborting!")
+    """Assemble given assembly file into object file using assembler driver.
 
-    clang_command = compose_clang_assembler_command(
-        assembly,
-        output,
+    You supposed to handle errors by assembler via returned process information
+
+    :param target: Compilation target
+    :param in_assembly_file: Path to assembly file as input
+    :param out_object_file: Path to object file as output
+    :param debug_information: If specified, will pass debug info flag to assembler and specify its version
+    :param extra_flags: Any additional flags
+
+    :raises NoAssemblerDriverError: If no suitable driver found
+    """
+    driver = driver or get_assembler_driver(target)
+    if driver is None:
+        raise NoAssemblerDriverError
+
+    return driver.assemble(
         target=target,
+        in_assembly_file=in_assembly_file,
+        out_object_file=out_object_file,
         debug_information=debug_information,
-        additional_assembler_flags=additional_assembler_flags,
+        flags=extra_flags or [],
     )
-    process = run(
-        clang_command,
-        check=False,
-        capture_output=False,
-    )
-    process.check_returncode()
-    return process

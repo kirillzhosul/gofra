@@ -18,7 +18,7 @@ from gofra.cli.readline import (
 )
 from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
-from libgofra.assembler.assembler import assemble_object_from_codegen_assembly
+from libgofra.assembler.assembler import assemble_object_file
 from libgofra.codegen.generator import generate_code_for_assembler
 from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.exceptions import GofraError
@@ -243,11 +243,10 @@ def _compile_file_to_execute(
         args.target.file_object_suffix,
     )
 
-    assemble_object_from_codegen_assembly(
-        assembly=assembly_filepath,
-        output=object_filepath,
+    assemble_object_file(
+        in_assembly_file=assembly_filepath,
+        out_object_file=object_filepath,
         target=args.target,
-        additional_assembler_flags=[],
         debug_information=False,
     )
 

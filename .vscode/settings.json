@@ -74,6 +74,7 @@
         "fmov",
         "FSQRT",
         "funcs",
+        "gdwarf",
         "getpid",
         "getppid",
         "GETPPID",
