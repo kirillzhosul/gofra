@@ -145,7 +145,7 @@ def evaluate_test_case(
             stdout=PIPE,
             stderr=PIPE,
             stdin=PIPE,
-        )
+        ).returncode
     except TimeoutExpired as e:
         return Test(
             target=build_target,

@@ -2,7 +2,7 @@ import sys
 from sys import stderr, stdout
 from typing import Literal, NoReturn
 
-type MessageLevel = Literal["INFO", "ERROR", "WARNING", "SUCCESS"]
+type MessageLevel = Literal["INFO", "ERROR", "WARNING", "SUCCESS", "CMD"]
 
 
 class CLIColor:

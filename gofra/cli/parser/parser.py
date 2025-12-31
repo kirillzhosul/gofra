@@ -49,6 +49,7 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         debug_symbols=bool(args.debug_symbols),
         skip_typecheck=bool(args.skip_typecheck),
         verbose=bool(args.verbose),
+        show_commands=bool(args.show_commands),
         source_filepaths=source_filepaths,
         output_filepath=output,
         output_file_is_specified=bool(args.output),

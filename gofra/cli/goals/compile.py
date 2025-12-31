@@ -33,6 +33,7 @@ from libgofra.typecheck.typechecker import on_lint_warning_suppressed
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, MutableSequence
     from pathlib import Path
+    from subprocess import CompletedProcess
 
     from gofra.cli.parser.arguments import CLIArguments
     from libgofra.hir.module import Module
@@ -216,13 +217,15 @@ def _perform_assembler(  # noqa: PLR0913
     with wrap_with_perf_time_taken("Assembler", verbose=args.verbose):
 
         def _perform_assembler_driver(in_path: Path, out_path: Path) -> None:
-            assemble_object_file(
+            process = assemble_object_file(
                 in_assembly_file=in_path,
                 out_object_file=out_path,
                 target=args.target,
                 extra_flags=args.assembler_flags,
                 debug_information=args.debug_symbols,
-            ).check_returncode()
+            )
+            process.check_returncode()
+            log_command(args, process)
 
         if is_module_needs_rebuild(args, root_module, rebuild_artifact=object_filepath):
             _perform_assembler_driver(
@@ -293,6 +296,7 @@ def _perform_linker_bundle(
             linker_executable=args.linker_executable,
             cache_directory=args.build_cache_dir,
         )
+        log_command(args, linker_process)
         linker_process.check_returncode()
 
 
@@ -306,6 +310,12 @@ def _cleanup_cache_gc(cache_gc: list[Path], args: CLIArguments) -> None:
     )
     for item in cache_gc:
         item.unlink(missing_ok=True)
+
+
+def log_command(args: CLIArguments, process: CompletedProcess[bytes]) -> None:
+    if not args.show_commands:
+        return
+    cli_message("CMD", " ".join(map(str, process.args)))
 
 
 def _execute_after_compilation(args: CLIArguments) -> None:
@@ -335,7 +345,9 @@ def _execute_after_compilation(args: CLIArguments) -> None:
 
     with wrap_with_perf_time_taken("Execution", verbose=args.verbose):
         try:
-            exit_code = execute_binary_executable(args.output_filepath, args=[])
+            process = execute_binary_executable(args.output_filepath, args=[])
+            log_command(args, process)
+            exit_code = process.returncode
         except KeyboardInterrupt:
             cli_message("WARNING", "Execution was interrupted by user!")
             sys.exit(0)

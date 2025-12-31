@@ -34,6 +34,7 @@ class CLIArguments:
     assembler_flags: list[str]
 
     verbose: bool
+    show_commands: bool
 
     target: Target
 

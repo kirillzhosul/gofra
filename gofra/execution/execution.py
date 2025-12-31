@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from subprocess import run
+from subprocess import CompletedProcess, run
 from typing import TYPE_CHECKING, TextIO
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ def execute_binary_executable(  # noqa: PLR0913
     stdin: TextIO | int = sys.stdin,
     stdout: TextIO | int = sys.stdout,
     stderr: TextIO | int = sys.stderr,
-) -> int:
+) -> CompletedProcess[bytes]:
     """Execute given binary executable in an shell and return its exit code.
 
     :param filepath: Path to an executable
@@ -30,7 +30,7 @@ def execute_binary_executable(  # noqa: PLR0913
     """
     executable = filepath.absolute()
 
-    process = run(  # noqa: S602
+    return run(  # noqa: S602
         (executable, *args),
         timeout=timeout,
         stdin=stdin,
@@ -45,5 +45,3 @@ def execute_binary_executable(  # noqa: PLR0913
         group=None,
         process_group=None,
     )
-
-    return process.returncode

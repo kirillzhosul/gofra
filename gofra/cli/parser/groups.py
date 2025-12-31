@@ -30,6 +30,15 @@ def add_debug_group(parser: ArgumentParser) -> None:
     )
 
     group.add_argument(
+        "-vv",
+        "-###",
+        required=False,
+        dest="show_commands",
+        action="store_true",
+        help="If passed will display commands that compiler performed if any.",
+    )
+
+    group.add_argument(
         "--no-lint",
         "--no-lint-warnings",
         dest="display_lint_warnings",
