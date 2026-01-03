@@ -3,6 +3,7 @@ from collections.abc import Iterable, MutableSequence
 from pathlib import Path
 from shutil import which
 
+from gofra.cli.output import cli_message
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.linker.gnu.target_formats import GNU_LINKER_TARGET_FORMAT
 from libgofra.linker.output_format import LinkerOutputFormat
@@ -51,16 +52,32 @@ def compose_gnu_linker_command(  # noqa: PLR0913
 
 def _get_linker_backend_executable_path() -> Path:
     """Acquire executable of GNU linker that is installed and suitable on that host system."""
-    if platform.system() == "Darwin":
-        # MacOS brew workaround for cross-compilation
-        gnu_ld = Path("x86_64-elf-ld")
-        brew_bin = Path("/opt/homebrew/bin/")
-        brew_macos_elf_ld = Path(which(gnu_ld) or brew_bin / gnu_ld)
-        if brew_macos_elf_ld.resolve().exists():
-            return brew_macos_elf_ld
+    if platform.system() == "Darwin" and (
+        ld := _try_find_macos_cross_compilation_driver()
+    ):
+        return ld
 
     # Default
     return Path("ld")
+
+
+def _try_find_macos_cross_compilation_driver(
+    brew_installation_bin: Path = Path("/opt/homebrew/bin/"),
+) -> Path | None:
+    # MacOS brew workaround for cross-compilation
+    gnu_ld = Path("x86_64-linux-gnu-ld")
+    brew_macos_gnu_ld = Path(which(gnu_ld) or brew_installation_bin / gnu_ld)
+    if brew_macos_gnu_ld.resolve().exists():
+        return brew_macos_gnu_ld
+
+    elf_ld = Path("x86_64-elf-ld")
+    brew_macos_elf_ld = Path(which(elf_ld) or brew_installation_bin / elf_ld)
+    if brew_macos_elf_ld.resolve().exists():
+        # Bare metal ELF linker may be unstable for linux
+        cli_message("WARNING", "Using ELF linker as no suitable linker backend found!")
+        return brew_macos_elf_ld
+
+    return None
 
 
 def _compose_raw_gnu_linker_command(  # noqa: PLR0913
