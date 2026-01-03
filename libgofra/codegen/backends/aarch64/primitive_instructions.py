@@ -165,6 +165,8 @@ def perform_operation_onto_stack(
 ) -> None:
     """Perform *math* operation onto stack (pop arguments and push back result)."""
     registers = ("X0", "X1")
+    if operation == OperatorType.LOGICAL_NOT:
+        registers = ("X0",)
     pop_cells_from_stack_into_registers(context, *registers)
 
     # TODO(@kirillzhosul): Optimize inc / dec (++, --) when incrementing / decrementing by known values
@@ -193,9 +195,11 @@ def perform_operation_onto_stack(
         case OperatorType.BITWISE_AND | OperatorType.LOGICAL_AND:
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
             context.write("and X0, X0, X1")
+        case OperatorType.LOGICAL_NOT:
+            # TODO: Must work only for booleans (0, 1), must be fulfilled with codegen tricks
+            context.write("eor X0, X0, 1")
         case OperatorType.BITWISE_XOR:
             context.write("eor X0, X0, X1")
-
         case (
             OperatorType.COMPARE_EQUALS
             | OperatorType.COMPARE_GREATER

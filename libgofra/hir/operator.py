@@ -94,6 +94,7 @@ class OperatorType(Enum):
     # On-stack Logical operations
     LOGICAL_OR = auto()
     LOGICAL_AND = auto()
+    LOGICAL_NOT = auto()
 
     # On-stack bitwise operations
     BITWISE_OR = auto()

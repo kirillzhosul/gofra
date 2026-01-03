@@ -539,6 +539,9 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 (BoolType,),
             )
             scope.push_types(BoolType())
+        case OperatorType.LOGICAL_NOT:
+            scope.raise_for_operator_arguments(operator, (BoolType,))
+            scope.push_types(BoolType())
         case (
             OperatorType.BITWISE_OR
             | OperatorType.BITWISE_AND

@@ -18,6 +18,7 @@ IDENTIFIER_TO_OPERATOR_TYPE = {
     "&&": OperatorType.LOGICAL_AND,
     ">>": OperatorType.SHIFT_RIGHT,
     "<<": OperatorType.SHIFT_LEFT,
+    "lnot": OperatorType.LOGICAL_NOT,
     "|": OperatorType.BITWISE_OR,
     "&": OperatorType.BITWISE_AND,
     "^": OperatorType.BITWISE_XOR,

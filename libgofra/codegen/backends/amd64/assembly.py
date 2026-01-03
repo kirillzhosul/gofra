@@ -280,6 +280,9 @@ def perform_operation_onto_stack(
 ) -> None:
     """Perform *math* operation onto stack (pop arguments and push back result)."""
     registers = ("rax", "rbx")
+    if operation == OperatorType.LOGICAL_NOT:
+        registers = ("rax",)
+
     pop_cells_from_stack_into_registers(context, *registers)
     # TODO(@kirillzhosul): Optimize inc / dec (++, --) when incrementing / decrementing by known values
 
@@ -304,6 +307,9 @@ def perform_operation_onto_stack(
                 "idivq %rbx",
                 "movq %rdx, %rax",
             )
+        case OperatorType.LOGICAL_NOT:
+            context.write("notq %rax")
+
         case OperatorType.BITWISE_XOR:
             context.write("xorq %rbx, %rax")
         case OperatorType.LOGICAL_OR | OperatorType.BITWISE_OR:

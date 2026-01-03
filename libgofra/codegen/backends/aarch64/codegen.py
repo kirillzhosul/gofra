@@ -225,6 +225,7 @@ def aarch64_operator_instructions(
             | OperatorType.COMPARE_LESS
             | OperatorType.COMPARE_GREATER
             | OperatorType.COMPARE_EQUALS
+            | OperatorType.LOGICAL_NOT
             | OperatorType.LOGICAL_AND
             | OperatorType.LOGICAL_OR
             | OperatorType.BITWISE_AND

@@ -208,6 +208,7 @@ def amd64_operator_instructions(
             | OperatorType.COMPARE_LESS_EQUALS
             | OperatorType.COMPARE_LESS
             | OperatorType.COMPARE_GREATER
+            | OperatorType.LOGICAL_NOT
             | OperatorType.COMPARE_EQUALS
             | OperatorType.LOGICAL_OR
             | OperatorType.LOGICAL_AND
