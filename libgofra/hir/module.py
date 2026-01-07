@@ -37,6 +37,9 @@ class Module:
     # TODO(@kirillzhosul): This must be refactored into graph not within module itself.
     dependencies: MutableMapping[str, Module]
 
+    # Reference for symbol that must be treated as entry point if artifact of compilation requires it
+    entry_point_ref: Function | None = None
+
     def visit_dependencies(
         self,
         *,

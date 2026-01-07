@@ -20,7 +20,6 @@ from gofra.execution.execution import execute_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import assemble_object_file
 from libgofra.codegen.generator import generate_code_for_assembler
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.exceptions import GofraError
 from libgofra.gofra import process_input_file
 from libgofra.lexer.tokens import TokenLocation
@@ -164,7 +163,7 @@ def _perform_compiled_binary(executable: Path) -> None:
 
 def _assemble_execute_source(source: Sequence[str], preview_expr: Sequence[str]) -> str:
     return f"""#include "session_runtime_loader.gof"
-func void {GOFRA_ENTRY_POINT}[]
+func void main[]
 {"\n".join([f"\t{line}" for line in source])}
 {"\n".join([f"\t{line}" for line in preview_expr])}
     return
@@ -201,10 +200,11 @@ def _compile_file_to_execute(
         print(f"!!! REPL Error: {e!r}")
         return None
 
+    assert module.entry_point_ref
     if immediate_type_stack is None:
         # TODO(@kirillzhosul): This may be more performant if we inject HIR loader
         # If do not have type stack, calculate first
-        entry_point = module.functions[GOFRA_ENTRY_POINT]
+        entry_point = module.entry_point_ref
         new_immediate_type_stack = emulate_type_stack_for_operators(
             entry_point.operators[:-1],  # Remove last return - no meaning here
             module=module,
@@ -222,7 +222,11 @@ def _compile_file_to_execute(
 
     if not args.skip_typecheck:
         try:
-            validate_type_safety(module, on_lint_warning=on_lint_warning_suppressed)
+            validate_type_safety(
+                module,
+                on_lint_warning=on_lint_warning_suppressed,
+                strict_expect_entry_point=True,
+            )
         except (ValueError, AssertionError, GofraError) as e:
             print(f"!!! REPL Error: {e!r}")
             return None

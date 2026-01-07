@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, assert_never
 
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.hir.operator import FunctionCallOperand, OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
 from libgofra.typecheck.entry_point import validate_entry_point_signature
@@ -83,16 +82,18 @@ def validate_type_safety(
     *,
     strict_expect_entry_point: bool = True,
     on_lint_warning: Callable[[str], None] | None,
+    entry_point_name: str = "main",
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
     if on_lint_warning is None:
         on_lint_warning = on_lint_warning_suppressed
 
-    entry_point = module.functions.get(GOFRA_ENTRY_POINT)
-    if entry_point:
+    if strict_expect_entry_point:
+        entry_point = module.functions.get(entry_point_name)
+
+        if not entry_point:
+            raise NoMainEntryFunctionError(expected_entry_name=entry_point_name)
         validate_entry_point_signature(entry_point)
-    elif strict_expect_entry_point:
-        raise NoMainEntryFunctionError(expected_entry_name=GOFRA_ENTRY_POINT)
 
     global_var_references: MutableMapping[str, Variable[Type]] = {}
     functions = list(module.functions.values())

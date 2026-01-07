@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.cli.output import cli_message
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.feature_flags import FEATURE_ALLOW_FPU, FEATURE_ALLOW_MODULES
 from libgofra.hir.function import Function, Visibility
 from libgofra.hir.module import Module
@@ -102,6 +101,7 @@ def parse_module_from_tokenizer(
         variables=context.variables,
         structures=context.structs,
         dependencies=context.module_dependencies,
+        entry_point_ref=(context.functions.get(context.entry_point_name, None)),
     )
 
 
@@ -516,6 +516,7 @@ def _unpack_function_definition_from_token(
         functions=context.functions,
         parent=context,
         path=context.path,
+        entry_point_name=context.entry_point_name,  # TODO: Refactor
     )
 
     param_names = [p[0] for p in f_header_def.parameters]
@@ -558,7 +559,7 @@ def _unpack_function_definition_from_token(
         function.module_path = context.path
         context.add_function(function)
         return
-    if f_header_def.name == GOFRA_ENTRY_POINT:
+    if f_header_def.name == context.entry_point_name:  # TODO: Refactor
         f_header_def.qualifiers.is_public = True
 
     function = Function.create_internal(
