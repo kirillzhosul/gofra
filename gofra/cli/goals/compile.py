@@ -283,6 +283,7 @@ def _perform_linker_bundle(
                 paths = pkgconfig_get_library_search_paths(library)
                 if paths:
                     libraries_search_paths += paths
+        assert all(isinstance(x, str) for x in args.linker_additional_flags)
         linker_process = link_object_files(
             objects=[root_object, *modules_objects],
             target=args.target,
