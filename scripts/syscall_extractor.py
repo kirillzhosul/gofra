@@ -1,10 +1,17 @@
 """Extract system call numbers from OS headers."""
 
-# TODO(@stepanzubkov, @kirillzhosul): Refactor for Linux also
-
 import subprocess
+import sys
 
-SYSCALL_MACRO_PREFIX = "SYS_"
+
+match sys.platform:
+    case "linux":
+        SYSCALL_MACRO_PREFIX = "__NR_"
+    case "darwin":
+        SYSCALL_MACRO_PREFIX = "SYS_"
+    case _:
+        raise RuntimeError(f"Platform `{sys.platform}` is not supported!")
+
 SYSTEM_INCLUDES = [
     "-isystem",
     "/usr/include",
@@ -45,13 +52,12 @@ def extract_raw_kernel_syscall_macro_definitions(
     )
     for line in it:
         _, name, value, *_ = line.split()
-        if "__" in name:
-            continue
         name = name.removeprefix(SYSCALL_MACRO_PREFIX)
-        syscalls[name] = int(value)
+        if not name.startswith("_"):
+            syscalls[name] = int(value)
 
     if not include_max_syscall:
-        syscalls.pop("MAXSYSCALL")
+        syscalls.pop("MAXSYSCALL", None)
     return dict(sorted(syscalls.items(), key=lambda x: x[1]))
 
 
