@@ -220,7 +220,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
 
         current_offset = offsets.offsets[variable.name]
         context.write(f"movq ${initial_value}, %rax")
-        context.write(f"mov %rax, {current_offset}(%rbp)")
+        context.write(f"movq %rax, {-current_offset}(%rbp)")
 
 
 def function_call(
