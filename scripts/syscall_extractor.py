@@ -3,14 +3,14 @@
 import subprocess
 import sys
 
-
 match sys.platform:
     case "linux":
-        SYSCALL_MACRO_PREFIX = "__NR_"
+        syscall_macro_prefix = "__NR_"
     case "darwin":
-        SYSCALL_MACRO_PREFIX = "SYS_"
+        syscall_macro_prefix = "SYS_"
     case _:
-        raise RuntimeError(f"Platform `{sys.platform}` is not supported!")
+        msg = f"Platform `{sys.platform}` is not supported!"
+        raise RuntimeError(msg)
 
 SYSTEM_INCLUDES = [
     "-isystem",
@@ -48,11 +48,11 @@ def extract_raw_kernel_syscall_macro_definitions(
     it = (
         line
         for line in stdout.split("\n")
-        if line.startswith(f"#define {SYSCALL_MACRO_PREFIX}")
+        if line.startswith(f"#define {syscall_macro_prefix}")
     )
     for line in it:
         _, name, value, *_ = line.split()
-        name = name.removeprefix(SYSCALL_MACRO_PREFIX)
+        name = name.removeprefix(syscall_macro_prefix)
         if not name.startswith("_"):
             syscalls[name] = int(value)
 
