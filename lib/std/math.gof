@@ -44,7 +44,7 @@ pub func int abs[int x]
 end
 
 // Return minimum value from two values
-func int min[int a, int b]
+pub func int min[int a, int b]
     a b <= if a return end
     b return
 end
