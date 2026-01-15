@@ -127,6 +127,7 @@ def _consume_concrete_structure_type_definition(
     fields: dict[str, Type] = {}
     fields_ordering: list[str] = []
 
+    has_forward_reference = False
     while token := context.next_token():
         if token.type == TokenType.KEYWORD and token.value == Keyword.END:
             # End of structure block definition
@@ -138,11 +139,18 @@ def _consume_concrete_structure_type_definition(
             raise ValueError(msg)
         field_name = field_name_token.text
         field_type = parse_concrete_type_from_tokenizer(context)
+        if id(field_type) == id(ref):
+            has_forward_reference = True
         fields_ordering.append(field_name)
         fields[field_name] = field_type
 
     # Back-patch reference
-    ref.backpatch(fields=fields, order=fields_ordering)
+    ref.backpatch(
+        fields=fields,
+        order=fields_ordering,
+        # TODO: proper backpatch
+        has_forward_reference=has_forward_reference,
+    )
 
     if not ref.natural_fields:
         msg = f"Structure {ref.name} has no fields."

@@ -1,0 +1,14 @@
+/// Tests that *reorder* attribute for structure works
+
+
+#define TESTKIT_EXPECTED_EXIT_CODE 16
+
+struct reorder reordered_struct
+    c char // 1
+    b int // 8
+    c char // 1
+end 
+
+func int main[]
+    sizeof reordered_struct
+end

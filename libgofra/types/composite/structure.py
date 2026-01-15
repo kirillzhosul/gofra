@@ -57,7 +57,7 @@ class StructureType(CompositeType):
 
         if self._is_reordering_allowed:
             (self._field_order, self._was_reordered) = reorder_type_fields(
-                unordered=None,
+                unordered=self.natural_order,
                 fields=self.natural_fields,
             )
 
@@ -112,7 +112,13 @@ class StructureType(CompositeType):
         assert field_name in self._natural_fields
         return self._natural_fields[field_name]
 
-    def backpatch(self, fields: Mapping[str, Type], order: Sequence[str]) -> None:
+    def backpatch(
+        self,
+        fields: Mapping[str, Type],
+        order: Sequence[str],
+        *,
+        has_forward_reference: bool = False,
+    ) -> None:
         """Backpatch structure with new fields.
 
         Required when building an structure as *reference* (e.g non-immediate structure parsing)
@@ -121,6 +127,9 @@ class StructureType(CompositeType):
         self._natural_order = order
         self._field_order = self._natural_order
         self._rebuild()
+        if has_forward_reference:
+            # TODO: proper backpatch for forward ref.
+            self._rebuild()
 
     def has_field(self, field_name: str) -> bool:
         """Is structure has this field in natural fields?."""
