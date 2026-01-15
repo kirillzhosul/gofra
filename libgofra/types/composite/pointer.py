@@ -14,6 +14,7 @@ class PointerType(CompositeType):
 
     points_to: Type
     size_in_bytes: int = 8  # Wide pointers as being on 64-bits machine
+    alignment: int = 8
 
     memory_location: PointerMemoryLocation | None = None
 

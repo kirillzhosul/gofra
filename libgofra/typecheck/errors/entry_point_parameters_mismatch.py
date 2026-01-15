@@ -6,7 +6,10 @@ from libgofra.types._base import Type
 
 class EntryPointParametersMismatchTypecheckError(GofraError):
     def __init__(
-        self, *args: object, parameters: Sequence[Type], entry_point_name: str
+        self,
+        *args: object,
+        parameters: Sequence[Type],
+        entry_point_name: str,
     ) -> None:
         super().__init__(*args)
         self.parameters = parameters

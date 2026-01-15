@@ -588,14 +588,14 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 msg = f"Expected PUSH_STRUCT_FIELD_OFFSET to have structure type on type stack but got {struct_type}"
                 raise TypeError(msg)
 
-            if struct_field not in struct_type.fields:
+            if struct_field not in struct_type.natural_fields:
                 msg = (
                     f"Unknown field '{struct_field}' for known-structure {struct_type}"
                 )
                 raise ValueError(msg)
 
             scope.push_types(
-                PointerType(points_to=struct_type.fields[struct_field]),
+                PointerType(points_to=struct_type.get_field_type(struct_field)),
             )
 
         case _:

@@ -9,6 +9,7 @@ class Type(Protocol):
     """
 
     size_in_bytes: int
+    alignment: int = 1
 
     is_fp: bool = False
 

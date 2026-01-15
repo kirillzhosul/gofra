@@ -1,4 +1,3 @@
-from libgofra.feature_flags import FEATURE_ALLOW_FPU
 from libgofra.types._base import PrimitiveType
 
 
@@ -6,11 +5,9 @@ class F64Type(PrimitiveType):
     """Float of size 64 bits."""
 
     size_in_bytes = 8
-    is_fp = True
+    alignment = 8
 
-    def __init__(self) -> None:
-        if not FEATURE_ALLOW_FPU:
-            raise ValueError
+    is_fp = True
 
     def __repr__(self) -> str:
         return "F64"

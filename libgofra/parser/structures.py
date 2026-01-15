@@ -18,6 +18,19 @@ if TYPE_CHECKING:
 
 
 def unpack_structure_definition_from_token(context: ParserContext) -> None:
+    attr_is_packed = True
+
+    if context.peek_token().type == TokenType.KEYWORD:
+        attr_token = context.next_token()
+        assert attr_token.type == TokenType.KEYWORD
+        match attr_token.value:
+            case Keyword.ATTR_STRUCT_ALIGNED:
+                attr_is_packed = False
+            case Keyword.ATTR_STRUCT_PACKED:
+                attr_is_packed = True
+            case _:
+                raise ValueError(attr_token)
+
     name_token = context.next_token()
     if name_token.type != TokenType.IDENTIFIER:
         msg = f"Expected structure name at {name_token.location} to be an identifier but got {name_token.type.name}"
@@ -40,7 +53,11 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
         )
         return
 
-    _consume_concrete_structure_type_definition(context, name)
+    _consume_concrete_structure_type_definition(
+        context,
+        name,
+        attr_is_packed=attr_is_packed,
+    )
 
 
 def _consume_generic_structure_type_definition(
@@ -83,14 +100,16 @@ def _consume_generic_structure_type_definition(
 def _consume_concrete_structure_type_definition(
     context: ParserContext,
     name: str,
+    *,
+    attr_is_packed: bool,
 ) -> None:
     # Forward declare this struct so users may use that type in structure definition
     # this must to be back-patched after parsing types
     ref = StructureType(
         name=name,
         fields={},
-        cpu_alignment_in_bytes=8,  # assume we always on 64 bit machine (TODO)
-        fields_ordering=[],
+        order=[],
+        is_packed=attr_is_packed,
     )
     context.structs[name] = ref
 
@@ -112,11 +131,9 @@ def _consume_concrete_structure_type_definition(
         fields[field_name] = field_type
 
     # Back-patch reference
-    ref.fields = fields
-    ref.fields_ordering = fields_ordering
-    ref.recalculate_size_in_bytes()
+    ref.backpatch(fields=fields, order=fields_ordering)
 
-    if not ref.fields:
+    if not ref.natural_fields:
         msg = f"Structure {ref.name} has no fields."
         raise GofraError(msg)
 

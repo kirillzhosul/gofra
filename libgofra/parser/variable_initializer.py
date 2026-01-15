@@ -204,12 +204,12 @@ def _consume_structure_initializer(
         context.expect_token(TokenType.COMMA)
         _ = context.next_token()
 
-    abnormals_fields = set(int_fields.keys()).difference(var_t.fields)
+    abnormals_fields = set(int_fields.keys()).difference(var_t.natural_fields)
     if abnormals_fields:
         msg = f"Abnormal field(s) for structure initializer: {abnormals_fields} at {varname_token.location}"
         raise ValueError(msg)
 
-    missing_fields = set(var_t.fields).difference(int_fields.keys())
+    missing_fields = set(var_t.natural_fields).difference(int_fields.keys())
     if missing_fields:
         msg = f"Missing field(s) for structure initializer: {missing_fields} at {varname_token.location}"
         raise ValueError(msg)

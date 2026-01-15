@@ -49,7 +49,7 @@ def _compare_types_strict_same_type(a: Type, b: Type) -> bool:  # noqa: PLR0911
     # Both are complex types
 
     if isinstance(a, StructureType) and isinstance(b, StructureType):
-        return a.name == b.name and a.fields_ordering == b.fields_ordering
+        return a.name == b.name and a.natural_order == b.natural_order
 
     if isinstance(a, PointerType) and isinstance(b, PointerType):
         return is_types_same(

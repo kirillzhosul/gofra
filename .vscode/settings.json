@@ -31,6 +31,7 @@
         "argvp",
         "armv",
         "asciz",
+        "backpatch",
         "bangbang",
         "bbox",
         "BBOX",

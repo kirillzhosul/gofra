@@ -129,9 +129,9 @@ def apply_generic_type_into_concrete(
             }
             return StructureType(
                 name=f"=mangled_concrete_generic_{generic.name}",
-                cpu_alignment_in_bytes=8,  # TODO(@kirillzhosul): assume we always on 64 bit machine
                 fields=concrete_fields,
-                fields_ordering=generic.fields_ordering,
+                order=generic.fields_ordering,
+                is_packed=True,  # TODO(@kirillzhosul): Generics does not supports attribute
             )
         case _:
             msg = f"Cannot {apply_generic_type_into_concrete.__name__} for {generic}!"

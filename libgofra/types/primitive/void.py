@@ -9,6 +9,7 @@ class VoidType(PrimitiveType):
     """
 
     size_in_bytes = 0
+    alignment = 0
 
     def __repr__(self) -> str:
         return "VOID"
