@@ -3,7 +3,8 @@
 Emits warning if they succeed to find some possible errors and bad things
 """
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
+from copy import deepcopy
 
 from libgofra.hir.function import Function
 from libgofra.hir.variable import Variable
@@ -11,6 +12,34 @@ from libgofra.lexer.tokens import TokenLocation
 from libgofra.types._base import Type
 from libgofra.types.comparison import is_types_same
 from libgofra.types.composite.pointer import PointerMemoryLocation, PointerType
+from libgofra.types.composite.structure import StructureType
+from libgofra.types.reordering import reorder_type_fields
+
+
+def lint_structure_types(
+    on_lint_warning: Callable[[str], None],
+    structures: MutableMapping[str, StructureType],
+) -> None:
+    for struct in structures.values():
+        if struct.is_reordering_allowed or struct.is_packed:
+            continue
+        new_order, has_possible_reorder = reorder_type_fields(
+            unordered=struct.natural_order,
+            fields=struct.natural_fields,
+        )
+        if not has_possible_reorder:
+            continue
+
+        copy = deepcopy(struct)
+        copy.backpatch(fields=struct.natural_fields, order=new_order)
+
+        diff = struct.size_in_bytes - copy.size_in_bytes
+        if diff <= 0:
+            # TODO(@kirillzhosul): Why diff is zero while reordering is applied -> should be removed from reorder_type_fields?
+            continue
+        on_lint_warning(
+            f"Struct {struct.name} has possible reordering! Padding on current order consumes additional {diff} bytes! ({struct.size_in_bytes}b unordered, {copy.size_in_bytes}b reordered), add `reorder` attribute",
+        )
 
 
 def lint_stack_memory_retval(

@@ -19,6 +19,7 @@ from libgofra.typecheck.static_linter import (
     emit_unreachable_code_after_no_return_call_warning,
     emit_unused_global_variable_warning,
     lint_stack_memory_retval,
+    lint_structure_types,
     lint_typecast_same_type,
     lint_unused_function_local_variables,
 )
@@ -94,6 +95,8 @@ def validate_type_safety(
         if not entry_point:
             raise NoMainEntryFunctionError(expected_entry_name=entry_point_name)
         validate_entry_point_signature(entry_point)
+
+    lint_structure_types(on_lint_warning, module.structures)
 
     global_var_references: MutableMapping[str, Variable[Type]] = {}
     functions = list(module.functions.values())

@@ -1,6 +1,7 @@
 from collections.abc import Mapping, MutableMapping, Sequence
 
 from libgofra.types._base import CompositeType, Type
+from libgofra.types.reordering import reorder_type_fields
 
 
 class StructureType(CompositeType):
@@ -10,7 +11,12 @@ class StructureType(CompositeType):
     _natural_order: Sequence[str]
 
     _field_offsets: MutableMapping[str, int]
+    _field_order: Sequence[str]
+
     _is_packed: bool
+    _is_reordering_allowed: bool
+
+    _was_reordered: bool
 
     name: str
     size_in_bytes: int
@@ -22,21 +28,39 @@ class StructureType(CompositeType):
         order: Sequence[str],
         *,
         is_packed: bool,
+        reorder: bool = False,
     ) -> None:
         self.name = name
+
         self._natural_fields = fields
         self._natural_order = order
+
         self._field_offsets = {}
+        self._field_order = self._natural_order
+
+        self._was_reordered = False
+
         self._is_packed = is_packed
+        self._is_reordering_allowed = reorder
+
         self._rebuild()
 
     def __repr__(self) -> str:
         status = "packed" if self.is_packed else "aligned"
+        if self._was_reordered:
+            status += ", reordered"
         return f"Struct {self.name} ({status})"
 
     def _rebuild(self) -> None:
-        assert list(self.natural_fields.keys()) == list(self.natural_order)
+        assert not set(self.natural_fields.keys()).difference(set(self.natural_order))
         self._field_offsets = {}
+
+        if self._is_reordering_allowed:
+            (self._field_order, self._was_reordered) = reorder_type_fields(
+                unordered=None,
+                fields=self.natural_fields,
+            )
+
         if self.is_packed:
             return self._rebuild_packed()
         return self._rebuild_unpacked()
@@ -46,7 +70,7 @@ class StructureType(CompositeType):
 
         offset = 0
         alignment = 1
-        for field in self.natural_order:
+        for field in self.order:
             field_type = self.get_field_type(field)
             field_alignment = field_type.alignment
             alignment = max(alignment, field_alignment)
@@ -69,7 +93,7 @@ class StructureType(CompositeType):
         assert self.is_packed
 
         offset = 0
-        for field in self._natural_order:
+        for field in self.order:
             assert self.has_field(field)
             self._field_offsets[field] = offset
 
@@ -79,7 +103,7 @@ class StructureType(CompositeType):
         self.size_in_bytes = offset
 
     def get_field_offset(self, field_name: str) -> int:
-        """Get byte offset for given field (to access this field). Applies alignment if packed."""
+        """Get byte offset for given field (to access this field). Applies alignment if unpacked."""
         assert self.has_field(field_name)
         return self._field_offsets[field_name]
 
@@ -95,6 +119,7 @@ class StructureType(CompositeType):
         """
         self._natural_fields = fields
         self._natural_order = order
+        self._field_order = self._natural_order
         self._rebuild()
 
     def has_field(self, field_name: str) -> bool:
@@ -118,3 +143,17 @@ class StructureType(CompositeType):
     def is_packed(self) -> bool:
         """Is structure applies reordering/alignment."""
         return self._is_packed
+
+    @property
+    def order(self) -> Sequence[str]:
+        """Final layout order of memory for that structure fields."""
+        return self._field_order
+
+    @property
+    def is_reordering_allowed(self) -> bool:
+        return self._is_reordering_allowed
+
+    @property
+    def was_reordered(self) -> bool:
+        """Is reordering was applied for that structure and fields differs from natural order."""
+        return self._was_reordered

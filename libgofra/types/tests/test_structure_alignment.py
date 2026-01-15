@@ -10,6 +10,7 @@ def test_packed_structure_alignment() -> None:
             fields={"i": I64Type()},
             order=["i"],
             is_packed=True,
+            reorder=False,
         ).size_in_bytes
         == I64Type.size_in_bytes  # 8
     )
@@ -19,6 +20,7 @@ def test_packed_structure_alignment() -> None:
             fields={"x": CharType(), "i": I64Type()},
             order=["x", "i"],
             is_packed=True,
+            reorder=False,
         ).size_in_bytes
         == CharType().size_in_bytes + I64Type.size_in_bytes  # 9, packed
     )
@@ -31,6 +33,7 @@ def test_aligned_structure_alignment() -> None:
             fields={"i": I64Type()},
             order=["i"],
             is_packed=False,
+            reorder=False,
         ).size_in_bytes
         == I64Type.size_in_bytes  # 8
     )
@@ -40,6 +43,7 @@ def test_aligned_structure_alignment() -> None:
             fields={"x": CharType(), "i": I64Type()},
             order=["x", "i"],
             is_packed=False,
+            reorder=False,
         ).size_in_bytes
         == CharType().size_in_bytes
         + I64Type.size_in_bytes

@@ -210,7 +210,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         Keyword.ATTR_FUNC_INLINE,
         Keyword.ATTR_FUNC_EXTERN,
         Keyword.ATTR_FUNC_NO_RETURN,
-        Keyword.ATTR_STRUCT_ALIGNED,
+        Keyword.ATTR_STRUCT_REORDER,
         Keyword.ATTR_STRUCT_PACKED,
         Keyword.FUNCTION,
         Keyword.ATTR_FUNC_PUBLIC,
@@ -292,7 +292,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         case Keyword.AS:
             msg = f"As keyword may used only in import statements for now at {token.location}"
             raise ValueError(msg)
-        case Keyword.ATTR_STRUCT_PACKED | Keyword.ATTR_STRUCT_ALIGNED:
+        case Keyword.ATTR_STRUCT_PACKED | Keyword.ATTR_STRUCT_REORDER:
             raise ValueError
         case _:
             assert_never(token.value)

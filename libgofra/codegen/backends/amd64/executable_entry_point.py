@@ -66,7 +66,7 @@ def _linux_sys_exit_epilogue(
     # Call syscall to exit without accessing protected system memory.
     # `ret` into return-address will fail with segfault
     if not entry_point.has_return_value():
-        # TODO!(@kirillzhosul): review exit code on Windows  # noqa: TD002, TD004
+        # TODO!(@kirillzhosul): review exit code on Windows  # noqa: TD004
         # Call syscall to exit without accessing protected system memory.
         # `ret` into return-address will fail with segfault
         ipc_syscall_linux(

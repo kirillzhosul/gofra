@@ -23,7 +23,7 @@ from libgofra.types.primitive.character import CharType
 from libgofra.types.primitive.integers import I64Type
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import MutableMapping
 
 
 def consume_variable_initializer(
@@ -177,7 +177,7 @@ def _consume_structure_initializer(
     context.advance_token()
 
     # TODO(@kirillzhosul): Same as other similar blocks - requires whitespace by lexer ERROR
-    int_fields: Mapping[str, int] = {}
+    int_fields: MutableMapping[str, int] = {}
     while token := context.peek_token():
         if token.type == TokenType.RCURLY:
             context.advance_token()

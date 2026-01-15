@@ -122,10 +122,11 @@ def _write_static_segment_const_variable_initializer(
             # TODO(@kirillzhosul): Validate fields types before plain initialization
             context.fd.write(f"{symbol_name}: \n")
             for t_field_name, (init_field_name, init_field_value) in zip(
-                variable.type.natural_order,
+                variable.type.order,
                 variable.initial_value.values.items(),
                 strict=True,
             ):
+                # TODO(@kirillzhosul): Misaligned?
                 # Must initialize in same order!
                 assert t_field_name == init_field_name
                 field_t = variable.type.get_field_type(t_field_name)

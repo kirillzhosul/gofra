@@ -31,7 +31,7 @@ from libgofra.typecheck import validate_type_safety
 from libgofra.typecheck.typechecker import on_lint_warning_suppressed
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, MutableSequence
+    from collections.abc import Callable, Generator, MutableSequence, Sequence
     from pathlib import Path
     from subprocess import CompletedProcess
 
@@ -301,7 +301,7 @@ def _perform_linker_bundle(
         linker_process.check_returncode()
 
 
-def _cleanup_cache_gc(cache_gc: list[Path], args: CLIArguments) -> None:
+def _cleanup_cache_gc(cache_gc: Sequence[Path], args: CLIArguments) -> None:
     if not args.delete_build_cache:
         return
     cli_message(

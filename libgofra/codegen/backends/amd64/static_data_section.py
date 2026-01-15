@@ -149,7 +149,7 @@ def _write_static_segment_const_variable_initializer(
             # TODO(@kirillzhosul): Validate fields types before plain initialization
             context.fd.write(f"{symbol_name}: \n")
             for t_field_name, (init_field_name, init_field_value) in zip(
-                variable.type.natural_order,
+                variable.type.order,
                 variable.initial_value.values.items(),
                 strict=True,
             ):

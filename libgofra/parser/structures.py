@@ -18,18 +18,7 @@ if TYPE_CHECKING:
 
 
 def unpack_structure_definition_from_token(context: ParserContext) -> None:
-    attr_is_packed = True
-
-    if context.peek_token().type == TokenType.KEYWORD:
-        attr_token = context.next_token()
-        assert attr_token.type == TokenType.KEYWORD
-        match attr_token.value:
-            case Keyword.ATTR_STRUCT_ALIGNED:
-                attr_is_packed = False
-            case Keyword.ATTR_STRUCT_PACKED:
-                attr_is_packed = True
-            case _:
-                raise ValueError(attr_token)
+    attr_is_packed, attr_reorder = _consume_structure_attributes(context)
 
     name_token = context.next_token()
     if name_token.type != TokenType.IDENTIFIER:
@@ -57,7 +46,27 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
         context,
         name,
         attr_is_packed=attr_is_packed,
+        attr_reorder=attr_reorder,
     )
+
+
+def _consume_structure_attributes(context: ParserContext) -> tuple[bool, bool]:
+    attr_is_packed, attr_reorder = False, False
+
+    while context.peek_token().type == TokenType.KEYWORD:
+        attr_token = context.next_token()
+        assert attr_token.type == TokenType.KEYWORD
+        match attr_token.value:
+            case Keyword.ATTR_STRUCT_PACKED:
+                assert not attr_is_packed, attr_token.location
+                attr_is_packed = True
+            case Keyword.ATTR_STRUCT_REORDER:
+                assert not attr_reorder, attr_token.location
+                attr_reorder = True
+            case _:
+                raise ValueError(attr_token)
+
+    return attr_is_packed, attr_reorder
 
 
 def _consume_generic_structure_type_definition(
@@ -102,6 +111,7 @@ def _consume_concrete_structure_type_definition(
     name: str,
     *,
     attr_is_packed: bool,
+    attr_reorder: bool,
 ) -> None:
     # Forward declare this struct so users may use that type in structure definition
     # this must to be back-patched after parsing types
@@ -110,6 +120,7 @@ def _consume_concrete_structure_type_definition(
         fields={},
         order=[],
         is_packed=attr_is_packed,
+        reorder=attr_reorder,
     )
     context.structs[name] = ref
 
@@ -138,5 +149,5 @@ def _consume_concrete_structure_type_definition(
         raise GofraError(msg)
 
     if ref.size_in_bytes <= 0:
-        msg = f"Structure {ref.name} has zero size which is prohibited, if you define self-reference type, this leaded to infinite size (0 == inf in type)."
+        msg = f"Structure {ref} (defined around {context.peek_token().location} has zero size which is prohibited, if you define self-reference type, this leaded to infinite size (0 == inf in type)."
         raise GofraError(msg)
