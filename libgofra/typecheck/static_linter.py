@@ -7,10 +7,12 @@ from collections.abc import Callable, Mapping, MutableMapping
 from copy import deepcopy
 
 from libgofra.hir.function import Function
+from libgofra.hir.initializer import VariableIntArrayInitializerValue
 from libgofra.hir.variable import Variable
 from libgofra.lexer.tokens import TokenLocation
 from libgofra.types._base import Type
 from libgofra.types.comparison import is_types_same
+from libgofra.types.composite.array import ArrayType
 from libgofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from libgofra.types.composite.structure import StructureType
 from libgofra.types.reordering import reorder_type_fields
@@ -39,6 +41,26 @@ def lint_structure_types(
             continue
         on_lint_warning(
             f"Struct {struct.name} has possible reordering! Padding on current order consumes additional {diff} bytes! ({struct.size_in_bytes}b unordered, {copy.size_in_bytes}b reordered), add `reorder` attribute",
+        )
+
+
+def lint_variables_initializer(
+    on_lint_warning: Callable[[str], None],
+    variables: MutableMapping[str, Variable[Type]],
+) -> None:
+    for v in variables.values():
+        if not isinstance(v.type, ArrayType) or not isinstance(
+            v.initial_value,
+            VariableIntArrayInitializerValue,
+        ):
+            continue
+        if v.initial_value.default == 0:
+            continue
+        if (v.type.elements_count - len(v.initial_value.values)) != 0:
+            continue
+
+        on_lint_warning(
+            f"Redundant array initializer filler for {v.name} defined at {v.defined_at}, array is already fulfilled, either remove it or expand array",
         )
 
 

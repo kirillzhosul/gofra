@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 
 from libgofra.codegen.sections._factory import SectionType
 
-from ._alignment import get_type_data_alignment
-
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -27,15 +25,16 @@ def write_uninitialized_data_section(
         return
 
     context.section(SectionType.BSS)
-    aligned_by = 0
+    aligned_by: int | None = None
     for name, variable in uninitialized_variables.items():
         type_size = variable.size_in_bytes
-        assert type_size, f"Variables must have size (from {variable.name})"
+        assert type_size, (
+            f"Variable has type with zero size ({name} defined at {variable.defined_at})"
+        )
 
-        # TODO(@kirillzhosul): Align by specifications of type not general byte size
-        alignment = get_type_data_alignment(variable.type)
-        if alignment and alignment != aligned_by:
+        alignment = variable.type.alignment
+        if alignment != aligned_by:
+            context.fd.write(f".align {alignment}\n")
             aligned_by = alignment
-            context.fd.write(f".p2align {alignment}\n")
 
         context.fd.write(f"{name}: .space {type_size}\n")

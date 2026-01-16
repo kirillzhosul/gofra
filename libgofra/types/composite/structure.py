@@ -87,6 +87,7 @@ class StructureType(CompositeType):
             padding = alignment - (offset % alignment)
             offset += padding
 
+        self.alignment = alignment
         self.size_in_bytes = offset
 
     def _rebuild_packed(self) -> None:
@@ -100,6 +101,7 @@ class StructureType(CompositeType):
             field_size = self.get_field_type(field).size_in_bytes
             offset += field_size
 
+        self.alignment = 1
         self.size_in_bytes = offset
 
     def get_field_offset(self, field_name: str) -> int:

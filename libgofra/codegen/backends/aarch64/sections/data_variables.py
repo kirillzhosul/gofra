@@ -41,42 +41,41 @@ def write_initialized_data_section(
         return
 
     context.section(SectionType.DATA)
+    alignment = None
     for name, variable in variables.items():
-        _write_static_segment_const_variable_initializer(
+        if variable.type.alignment != alignment:
+            context.fd.write(f".align {variable.type.alignment}\n")
+            alignment = variable.type.alignment
+        _write_static_segment_variable_initializer(
             context,
             variable,
             symbol_name=name,
         )
 
+    if strings:
+        # 8 byte alignment for string descriptors
+        context.fd.write(".align 8\n")
+
     for name, data in strings.items():
-        context.fd.write(".p2align 3\n")
         decoded_string = data.encode().decode("unicode_escape")
         length = len(decoded_string)
         context.fd.write(f"{name}: \n\t.quad {name}d\n\t.quad {length}\n")
 
 
-def _write_static_segment_const_variable_initializer(
+def _write_static_segment_variable_initializer(
     context: AARCH64CodegenContext,
     variable: Variable[Type],
     symbol_name: str,
 ) -> None:
     type_size = variable.size_in_bytes
+    assert type_size, (
+        f"Variable {variable.name} defined at {variable.defined_at} has zero byte size (type {variable.type}) this variable will be not defined as symbol!"
+    )
 
     assert variable.initial_value is not None
     match variable.type:
         case CharType() | I64Type():
             assert isinstance(variable.initial_value, int)
-            if type_size == 0:
-                context.on_warning(
-                    f"Variable {variable.name} has zero byte size (type {variable.type}) this variable will be not defined as symbol!",
-                )
-                return
-            # TODO(@kirillzhosul): review realignment of static variables
-            if type_size >= 32:
-                context.fd.write(".p2align 4\n")
-            else:
-                context.fd.write(".p2align 3\n")
-
             ddd = _get_ddd_for_type(variable.type)
             context.fd.write(f"{symbol_name}: {ddd} {variable.initial_value}\n")
         case ArrayType(element_type=I64Type()):
@@ -87,16 +86,23 @@ def _write_static_segment_const_variable_initializer(
             f_values = ", ".join(map(str, values))
 
             context.fd.write(f"{symbol_name}: \n\t{ddd} {f_values}\n")
-            assert variable.initial_value.default == 0, "Not implemented"
+
+            # Zero initialized symbol
+            element_size = variable.type.element_type.size_in_bytes
+            empty_cells = variable.type.elements_count - len(values)
+            if not empty_cells:
+                return
             if variable.initial_value.default == 0:
-                # Zero initialized symbol
-                # TODO(@kirillzhosul): Alignment
-                assert variable.type.elements_count, "Got incomplete array type"
-                element_size = variable.type.element_type.size_in_bytes
                 bytes_total = variable.type.size_in_bytes
                 bytes_taken = len(values) * element_size
                 bytes_free = bytes_total - bytes_taken
                 context.fd.write(f"\t.zero {bytes_free}\n")
+            else:
+                fill_with = variable.initial_value.default
+                cell_size = I64Type().size_in_bytes
+                context.fd.write(f"\t.fill {empty_cells}, {cell_size}, {fill_with}")
+                context.comment_eol(f"Filler ({fill_with})")
+
         case ArrayType(element_type=PointerType(points_to=StringType())):
             assert isinstance(
                 variable.initial_value,
@@ -107,7 +113,6 @@ def _write_static_segment_const_variable_initializer(
             f_values = ", ".join(map(context.load_string, values))
 
             context.fd.write(f"{symbol_name}: \n\t.quad {f_values}\n")
-
         case PointerType(points_to=StringType()):
             assert isinstance(variable.initial_value, VariableStringPtrInitializerValue)
             string_raw = variable.initial_value.string
@@ -119,25 +124,43 @@ def _write_static_segment_const_variable_initializer(
                 variable.initial_value,
                 VariableIntFieldedStructureInitializerValue,
             )
-            # TODO(@kirillzhosul): Validate fields types before plain initialization
-            context.fd.write(f"{symbol_name}: \n")
-            for t_field_name, (init_field_name, init_field_value) in zip(
-                variable.type.order,
-                variable.initial_value.values.items(),
-                strict=True,
-            ):
-                # TODO(@kirillzhosul): Misaligned?
-                # Must initialize in same order!
-                assert t_field_name == init_field_name
-                field_t = variable.type.get_field_type(t_field_name)
-                assert isinstance(field_t, PrimitiveType)
-                ddd = _get_ddd_for_type(field_t)
-                context.fd.write(
-                    f"\t{ddd} {init_field_value}\n",
-                )
+            _write_static_segment_structure_initializer(
+                context,
+                struct=variable.type,
+                initial_value=variable.initial_value,
+                symbol_name=symbol_name,
+            )
         case _:
-            msg = f"Has no known initializer codegen logic for type {variable.type}"
+            msg = f"Has no known static initializer codegen logic for type {variable.type}"
             raise ValueError(msg)
+
+
+def _write_static_segment_structure_initializer(
+    context: AARCH64CodegenContext,
+    symbol_name: str,
+    struct: StructureType,
+    initial_value: VariableIntFieldedStructureInitializerValue,
+) -> None:
+    context.fd.write(f"{symbol_name}:")
+    context.comment_eol(repr(struct))
+    prev_taken_bytes = 0
+    for field in struct.order:
+        value = initial_value.values[field]
+
+        field_t = struct.get_field_type(field)
+        assert isinstance(field_t, PrimitiveType), field_t
+
+        padding = struct.get_field_offset(field) - prev_taken_bytes
+
+        ddd = _get_ddd_for_type(field_t)
+        if padding:
+            context.fd.write(f"\t.zero {padding}")
+            context.comment_eol("[[padding]]")
+
+        context.fd.write(f"\t{ddd} {value}")
+        context.comment_eol(f"{struct.name}.{field}")
+
+        prev_taken_bytes += field_t.size_in_bytes + padding
 
 
 def _get_ddd_for_type(t: PrimitiveType) -> str:

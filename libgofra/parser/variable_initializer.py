@@ -65,6 +65,7 @@ def consume_variable_initializer(
             context.expect_token(TokenType.LBRACKET)
             context.next_token()
 
+            default_filler = 0
             int_values: list[int] = []
             while True:
                 if context.peek_token().type == TokenType.RBRACKET:
@@ -84,6 +85,19 @@ def consume_variable_initializer(
                 if context.peek_token().type == TokenType.RBRACKET:
                     _ = context.next_token()
                     break
+
+                if context.peek_token().type == TokenType.SEMICOLON:
+                    context.advance_token()
+                    context.expect_token(TokenType.INTEGER)
+                    default_filler_tok = context.next_token()
+                    default_filler = default_filler_tok.value
+                    assert isinstance(default_filler, int)
+                    if context.peek_token().type == TokenType.RBRACKET:
+                        _ = context.next_token()
+                        # TODO: proper error
+                        break
+                    break
+
                 context.expect_token(TokenType.COMMA)
                 _ = context.next_token()
 
@@ -94,9 +108,10 @@ def consume_variable_initializer(
             if len(int_values) > var_t.elements_count:
                 msg = f"Array initializer got {len(int_values)} elements at {varname_token.location}, but array size is {var_t.elements_count} which overflows array!"
                 raise ValueError(msg)
+
             # This allows not all array to be initialized and its ok
             return VariableIntArrayInitializerValue(
-                default=0,
+                default=default_filler,
                 values=int_values,
             ), var_t
         case ArrayType(element_type=PointerType(points_to=StringType())):
@@ -189,7 +204,7 @@ def _consume_structure_initializer(
         context.expect_token(TokenType.ASSIGNMENT)
         context.advance_token()
 
-        if context.peek_token().type == TokenType.INTEGER:
+        if context.peek_token().type in (TokenType.INTEGER, TokenType.CHARACTER):
             tok = context.next_token()
             assert isinstance(tok.value, int)
             int_fields[field_name] = tok.value

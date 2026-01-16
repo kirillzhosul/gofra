@@ -22,6 +22,7 @@ from libgofra.typecheck.static_linter import (
     lint_structure_types,
     lint_typecast_same_type,
     lint_unused_function_local_variables,
+    lint_variables_initializer,
 )
 from libgofra.types import Type
 from libgofra.types.comparison import is_types_same, is_typestack_same
@@ -97,7 +98,7 @@ def validate_type_safety(
         validate_entry_point_signature(entry_point)
 
     lint_structure_types(on_lint_warning, module.structures)
-
+    lint_variables_initializer(on_lint_warning, module.variables)
     global_var_references: MutableMapping[str, Variable[Type]] = {}
     functions = list(module.functions.values())
     for function in functions:
