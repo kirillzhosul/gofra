@@ -174,3 +174,9 @@ def _tokenize_word_into_token(state: LexerState) -> Token | None:
         return token
 
     return _tokenize_word_or_keyword_into_tokens(state, word, location)
+
+
+def debug_lexer_wrapper(lexer: Generator[Token]) -> Generator[Token]:
+    for token in lexer:
+        print(token.type.name, token.value, token.location)
+        yield token

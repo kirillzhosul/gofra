@@ -60,6 +60,7 @@ from .exceptions import (
     ParserExhaustiveContextStackError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
+    ParserUnknownFunctionError,
     ParserUnknownIdentifierError,
 )
 from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
@@ -95,7 +96,7 @@ def parse_module_from_tokenizer(
         raise TopLevelExpectedNoOperatorsError(context.operators[0])
 
     _inject_context_module_runtime_definitions(context)
-    return Module(
+    root = Module(
         path=path,
         functions=context.functions,
         variables=context.variables,
@@ -103,6 +104,40 @@ def parse_module_from_tokenizer(
         dependencies=context.module_dependencies,
         entry_point_ref=(context.functions.get(context.entry_point_name, None)),
     )
+
+    _validate_function_existence_and_visibility(root=root, module=root)
+    return root
+
+
+def _validate_function_existence_and_visibility(root: Module, module: Module) -> None:
+    # TODO(@kirillzhosul): This must be refactored - as implemented new dependency system
+    for func in module.executable_functions:
+        for op in func.operators:
+            if op.type == OperatorType.FUNCTION_CALL:
+                assert isinstance(op.operand, FunctionCallOperand), op.operand
+                resolved_symbol = module.resolve_function_dependency(
+                    op.operand.module,
+                    op.operand.func_name,
+                )
+                if resolved_symbol is None:
+                    print(f"[help] Tried to resolve import from {op.operand.module}")
+                    raise ParserUnknownFunctionError(
+                        at=op.token.location,
+                        name=op.operand.func_name,
+                        functions_available=[],
+                        best_match=None,
+                    )
+                if op.operand.module is not None:
+                    func_owner_mod = module.dependencies[op.operand.module]
+                    if (
+                        not resolved_symbol.is_public
+                        and func_owner_mod.path != root.path
+                    ):
+                        msg = f"Tried to call private/internal function symbol {resolved_symbol.name} (defined at {resolved_symbol.defined_at}) from module named as `{op.operand.module}` (import from {func_owner_mod.path}):\nEither make it public or not use prohibited symbols!"
+                        raise ValueError(msg)
+
+    for children_module in module.dependencies.values():
+        _validate_function_existence_and_visibility(root=root, module=children_module)
 
 
 def _inject_context_module_runtime_definitions(context: ParserContext) -> None:

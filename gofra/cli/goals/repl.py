@@ -74,7 +74,7 @@ def cli_perform_repl_goal(args: CLIArguments) -> NoReturn:
 def _prepare_repl(args: CLIArguments) -> None:
     try_setup_readline(HIST_FILE)
     prepare_build_cache_directory(args.build_cache_dir)
-    CACHE_SUBDIR.mkdir(parents=False, exist_ok=True)
+    (args.build_cache_dir / CACHE_SUBDIR).mkdir(parents=False, exist_ok=True)
 
     _assemble_loader_file(args, session_loader_source)  # Reset SRT before REPL
 
