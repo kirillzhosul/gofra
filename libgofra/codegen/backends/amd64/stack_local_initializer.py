@@ -77,10 +77,9 @@ def _write_initializer_for_stack_variable(
         static_blob_sym = context.load_string(initial_value.string)
         assert isinstance(var_type, PointerType)
         context.write(
-            f"adrp X0, {static_blob_sym}@PAGE",
-            f"add X0, X0, {static_blob_sym}@PAGEOFF",
+            f"leaq {static_blob_sym}(%rip), %rax",
+            f"movq %rax, -{offset}(%rbp)",
         )
-        context.write(f"str X0, [X29, -{offset}]")
         return None
 
     if isinstance(
