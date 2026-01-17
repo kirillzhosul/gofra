@@ -13,13 +13,17 @@ def validate_entry_point_signature(entry_point: Function) -> None:
     # TODO(@kirillzhosul): these parser errors comes from legacy entry point validation, must be reworked later - https://github.com/kirillzhosul/gofra/issues/28
 
     if entry_point.is_external or entry_point.is_inline:
-        raise ParserEntryPointFunctionModifiersError
+        raise ParserEntryPointFunctionModifiersError(entry_point_name=entry_point.name)
 
     retval_t = entry_point.return_type
     if entry_point.has_return_value() and not isinstance(retval_t, I64Type):
-        raise EntryPointReturnTypeMismatchTypecheckError(return_type=retval_t)
+        raise EntryPointReturnTypeMismatchTypecheckError(
+            return_type=retval_t,
+            entry_point_name=entry_point.name,
+        )
 
     if entry_point.parameters:
         raise EntryPointParametersMismatchTypecheckError(
             parameters=entry_point.parameters,
+            entry_point_name=entry_point.name,
         )

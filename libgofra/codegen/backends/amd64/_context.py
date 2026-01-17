@@ -31,6 +31,9 @@ class AMD64CodegenContext:
             f".section {get_os_assembler_section(section, self.target)}\n",
         )
 
+    def comment_eol(self, line: str) -> int:
+        return self.fd.write(f" // {line}\n")
+
     def load_string(self, string: str) -> str:
         string_key = "str%d" % len(self.strings)
         self.strings[string_key] = string

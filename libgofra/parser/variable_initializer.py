@@ -23,7 +23,7 @@ from libgofra.types.primitive.character import CharType
 from libgofra.types.primitive.integers import I64Type
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import MutableMapping
 
 
 def consume_variable_initializer(
@@ -65,6 +65,7 @@ def consume_variable_initializer(
             context.expect_token(TokenType.LBRACKET)
             context.next_token()
 
+            default_filler = 0
             int_values: list[int] = []
             while True:
                 if context.peek_token().type == TokenType.RBRACKET:
@@ -84,6 +85,19 @@ def consume_variable_initializer(
                 if context.peek_token().type == TokenType.RBRACKET:
                     _ = context.next_token()
                     break
+
+                if context.peek_token().type == TokenType.SEMICOLON:
+                    context.advance_token()
+                    context.expect_token(TokenType.INTEGER)
+                    default_filler_tok = context.next_token()
+                    default_filler = default_filler_tok.value
+                    assert isinstance(default_filler, int)
+                    if context.peek_token().type == TokenType.RBRACKET:
+                        _ = context.next_token()
+                        # TODO: proper error
+                        break
+                    break
+
                 context.expect_token(TokenType.COMMA)
                 _ = context.next_token()
 
@@ -94,9 +108,10 @@ def consume_variable_initializer(
             if len(int_values) > var_t.elements_count:
                 msg = f"Array initializer got {len(int_values)} elements at {varname_token.location}, but array size is {var_t.elements_count} which overflows array!"
                 raise ValueError(msg)
+
             # This allows not all array to be initialized and its ok
             return VariableIntArrayInitializerValue(
-                default=0,
+                default=default_filler,
                 values=int_values,
             ), var_t
         case ArrayType(element_type=PointerType(points_to=StringType())):
@@ -177,7 +192,7 @@ def _consume_structure_initializer(
     context.advance_token()
 
     # TODO(@kirillzhosul): Same as other similar blocks - requires whitespace by lexer ERROR
-    int_fields: Mapping[str, int] = {}
+    int_fields: MutableMapping[str, int] = {}
     while token := context.peek_token():
         if token.type == TokenType.RCURLY:
             context.advance_token()
@@ -189,7 +204,7 @@ def _consume_structure_initializer(
         context.expect_token(TokenType.ASSIGNMENT)
         context.advance_token()
 
-        if context.peek_token().type == TokenType.INTEGER:
+        if context.peek_token().type in (TokenType.INTEGER, TokenType.CHARACTER):
             tok = context.next_token()
             assert isinstance(tok.value, int)
             int_fields[field_name] = tok.value
@@ -204,12 +219,12 @@ def _consume_structure_initializer(
         context.expect_token(TokenType.COMMA)
         _ = context.next_token()
 
-    abnormals_fields = set(int_fields.keys()).difference(var_t.fields)
+    abnormals_fields = set(int_fields.keys()).difference(var_t.natural_fields)
     if abnormals_fields:
         msg = f"Abnormal field(s) for structure initializer: {abnormals_fields} at {varname_token.location}"
         raise ValueError(msg)
 
-    missing_fields = set(var_t.fields).difference(int_fields.keys())
+    missing_fields = set(var_t.natural_fields).difference(int_fields.keys())
     if missing_fields:
         msg = f"Missing field(s) for structure initializer: {missing_fields} at {varname_token.location}"
         raise ValueError(msg)

@@ -98,6 +98,8 @@ class ParserContext(PeekableTokenizer):
         default_factory=lambda: DEFAULT_PRIMITIVE_TYPE_REGISTRY.copy(),
     )
 
+    entry_point_name: str = "main"
+
     # Runtime arrays Out-Of-Bounds check
     rt_array_oob_check: bool = field(default=False)
 

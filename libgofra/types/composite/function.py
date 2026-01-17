@@ -11,6 +11,7 @@ class FunctionType(CompositeType):
     return_type: Type
 
     size_in_bytes: int = PointerType.size_in_bytes
+    alignment: int = PointerType.size_in_bytes
 
     def __init__(self, parameter_types: Sequence[Type], return_type: Type) -> None:
         self.parameter_types = parameter_types

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from libgofra.hir.module import Module
 
 FULL_DEPENDENCY_GRAPH_HIR = True
-DISPLAY_FUNCTION_BODY = False
+DISPLAY_FUNCTION_BODY = True
 
 
 def cli_perform_hir_goal(args: CLIArguments) -> NoReturn:

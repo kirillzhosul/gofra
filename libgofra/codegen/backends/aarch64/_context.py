@@ -34,6 +34,9 @@ class AARCH64CodegenContext:
     def comment(self, line: str) -> int:
         return self.write(f"// {line}")
 
+    def comment_eol(self, line: str) -> int:
+        return self.fd.write(f" // {line}\n")
+
     def load_string(self, string: str) -> str:
         string_key = ".str%d" % len(self.strings)
         self.strings[string_key] = string

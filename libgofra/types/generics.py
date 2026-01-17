@@ -94,7 +94,7 @@ def apply_generic_type_into_concrete(
                 "Got unfolded generic non type-param!"
             )
             t = type_parameters[generic.name]
-            assert not isinstance(t, int)
+            assert isinstance(t, Type)
             return t
         case GenericArrayType():
             concrete_element_type = (
@@ -113,7 +113,7 @@ def apply_generic_type_into_concrete(
                 # Generic VALUE param from application
                 concrete_elements_count = type_parameters[generic.element_count.name]
                 if not isinstance(concrete_elements_count, int):
-                    msg = f"Parameter of generic with typename '{generic.element_count.name} [Kind={generic.element_count.kind.name}] is 'value param' (not 'type value') but got non a type (probably), cannot apply generic into concrete type \n[error-location-cannot-be-propagated]"
+                    msg = f"Parameter of generic with typename '{generic.element_count.name}' has '{generic.element_count.kind.name}' kind but got an 'VALUE PARAM', cannot apply generic into concrete type \n[error-location-cannot-be-propagated]"
                     raise TypeError(msg)
 
             return ArrayType(
@@ -129,9 +129,9 @@ def apply_generic_type_into_concrete(
             }
             return StructureType(
                 name=f"=mangled_concrete_generic_{generic.name}",
-                cpu_alignment_in_bytes=8,  # TODO(@kirillzhosul): assume we always on 64 bit machine
                 fields=concrete_fields,
-                fields_ordering=generic.fields_ordering,
+                order=generic.fields_ordering,
+                is_packed=True,  # TODO(@kirillzhosul): Generics does not supports attribute
             )
         case _:
             msg = f"Cannot {apply_generic_type_into_concrete.__name__} for {generic}!"

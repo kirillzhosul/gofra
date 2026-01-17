@@ -26,17 +26,73 @@ var stepan Person // initialize variable of type Person
 stepan.age // will push an pointer to an `age` field so you can write / read from it
 ```
 
-## Alignment on CPUs
+## Forward reference and self-reference
 
-All structures are alignment by default to machine alignment
+Forward reference of structures as children field is allowed:
+
+```gofra
+struct X
+    id int
+    child X
+end // 16 bytes
+// This will define X as (8 byte int + 8 byte X (int))
+```
+
+## Alignment on CPUs and packed layout
+
+By default, all structures being aligned in memory according to max alignment of its own fields, e.g if biggest field type is `int` (8 bytes) then alignment for whole structure must be same amount of bytes
+
+This can be overridden by specifying `packed` attribute for structure, which means *do not apply any alignment, place all fields as-is linearly in memory*
+
+```gofra
+struct bad_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Unpacked, 24 bytes
+
+struct packed packed_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Packed, 10 bytes
+```
 
 
-## Big Caveats
+```
+Packed (tight memory layout)
+|-------------|
+|a|    b   |c||     => 10 bytes
+|-------------|
 
-- Structs are not passed according to C-FFI ABI
-- Structs have no constructors
-- ... and much more as this feature is being in development an mainly used as drop-in replacement to defining an structs with `char[32]` or `int[2]`...
 
+Aligned (thin memory layout)
+|-------------------------------------------|
+|a|...padding...|     b     |...padding...|c|     => 24 bytes
+|-------------------------------------------|
+
+Padding is from both sides to properly align *int* (8 bytes) field access on CPU
+```
+
+## Reordering
+Reordering is a process when for performance reasons fields of structure being re-ordered to solve alignment issues (redundant padding on structure memory layout) 
+
+By default, structures does not apply reordering, this behavior can be overridden by specifying `reorder` attribute for structure.
+
+```gofra
+struct bad_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Unpacked, 24 bytes
+
+struct reorder reordered_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Unpacked, reordered 16 bytes
+// Order was transformed into [b, a, c] (int, char, char) re-using padding from int to char
+```
 
 ## HIR perspective
 

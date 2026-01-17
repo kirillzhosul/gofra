@@ -242,7 +242,6 @@ def add_linker_group(parser: ArgumentParser) -> None:
         required=False,
         help="Additional flags passed to specified linker",
         action="append",
-        nargs="?",
         default=[],
     )
 

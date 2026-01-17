@@ -36,3 +36,4 @@ class ArrayType(CompositeType):
     def elements_count(self, value: int) -> None:
         self._elements_count = value
         self.size_in_bytes = self.element_type.size_in_bytes * self.elements_count
+        self.alignment = self.element_type.size_in_bytes

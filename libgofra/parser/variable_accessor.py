@@ -150,7 +150,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
         assert isinstance(struct, StructureType)
 
         field = struct_field_accessor.text
-        if field not in struct.fields:
+        if not struct.has_field(field):
             raise UnknownFieldAccessorStructFieldError(field, token.location, struct)
 
         context.push_new_operator(

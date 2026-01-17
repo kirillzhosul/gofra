@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.exceptions import GofraError
 
 if TYPE_CHECKING:
@@ -164,11 +163,12 @@ If condition should always have body as otherwise this has no effect!"""
 
 
 class ParserEntryPointFunctionModifiersError(GofraError):
-    def __init__(self, *args: object) -> None:
+    def __init__(self, *args: object, entry_point_name: str) -> None:
         super().__init__(*args)
+        self.entry_point_name = entry_point_name
 
     def __repr__(self) -> str:
-        return f"""Entry point function '{GOFRA_ENTRY_POINT}' violates modifiers signature!
+        return f"""Entry point function '{self.entry_point_name}' violates modifiers signature!
 
 Entry point function cannot be external or inlined!
 """

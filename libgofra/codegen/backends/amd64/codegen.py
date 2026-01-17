@@ -10,7 +10,6 @@ from libgofra.codegen.backends.amd64.executable_entry_point import (
 )
 from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.sections._factory import SectionType
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import VariableStorageClass
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
@@ -70,12 +69,11 @@ class AMD64CodegenBackend:
         """AMD64 code generation backend."""
         self.context.section(SectionType.INSTRUCTIONS)
         amd64_executable_functions(self.context, self.module)
-        if GOFRA_ENTRY_POINT in self.module.functions:
-            entry_point = self.module.functions[GOFRA_ENTRY_POINT]
+        if self.module.entry_point_ref:
             amd64_program_entry_point(
                 self.context,
                 LINKER_EXPECTED_ENTRY_POINT,
-                entry_point,
+                self.module.entry_point_ref,
                 self.target,
             )
         amd64_data_section(self.context, self.module)

@@ -39,7 +39,6 @@ from libgofra.codegen.backends.aarch64.subroutines import (
 from libgofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
 from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.sections import SectionType
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import VariableStorageClass
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
@@ -79,13 +78,11 @@ class AARCH64CodegenBackend:
         self.context.section(SectionType.INSTRUCTIONS)
 
         aarch64_executable_functions(self.context, self.module)
-        if GOFRA_ENTRY_POINT in self.module.functions:
-            # TODO(@kirillzhosul): Treat entry point as separate concept, and probably treat as an warning for executables
-            entry_point = self.module.functions[GOFRA_ENTRY_POINT]
+        if self.module.entry_point_ref:
             aarch64_program_entry_point(
                 self.context,
                 system_entry_point_name=LINKER_EXPECTED_ENTRY_POINT,
-                entry_point=entry_point,
+                entry_point=self.module.entry_point_ref,
                 target=self.target,
             )
         aarch64_data_section(self.context, self.module)

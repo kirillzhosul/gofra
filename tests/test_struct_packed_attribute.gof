@@ -1,0 +1,13 @@
+/// Tests that *packed* attribute for structure works
+
+
+#define TESTKIT_EXPECTED_EXIT_CODE 9
+
+struct packed packed_unaligned_struct
+    b int // 8
+    c char // 1
+end // 9 bytes
+
+func int main[]
+    sizeof packed_unaligned_struct
+end

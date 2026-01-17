@@ -18,6 +18,9 @@ class Keyword(Enum):
     ATTR_FUNC_PUBLIC = auto()
     ATTR_FUNC_NO_RETURN = auto()
 
+    ATTR_STRUCT_PACKED = auto()
+    ATTR_STRUCT_REORDER = auto()
+
     AS = auto()
 
     MODULE_IMPORT = auto()
@@ -96,6 +99,8 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "sizeof": Keyword.SIZEOF,
     "typecast": Keyword.TYPE_CAST,
     "breakpoint": Keyword.DEBUGGER_BREAKPOINT,
+    "packed": Keyword.ATTR_STRUCT_PACKED,
+    "reorder": Keyword.ATTR_STRUCT_REORDER,
     "copy": Keyword.COPY,
     "syscall0": Keyword.SYSCALL,
     "syscall1": Keyword.SYSCALL,

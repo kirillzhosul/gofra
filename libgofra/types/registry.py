@@ -2,6 +2,7 @@ from libgofra.types.composite.string import StringType
 from libgofra.types.generics import GenericParametrizedType
 from libgofra.types.primitive.boolean import BoolType
 from libgofra.types.primitive.character import CharType
+from libgofra.types.primitive.floats import F64Type
 from libgofra.types.primitive.integers import I64Type
 from libgofra.types.primitive.void import VoidType
 
@@ -15,11 +16,16 @@ class TypeRegistry(dict[str, Type | GenericParametrizedType]):
 
 DEFAULT_PRIMITIVE_TYPE_REGISTRY = TypeRegistry(
     {
+        # Int
         "int": I64Type(),
         "i64": I64Type(),
+        # Etc
         "char": CharType(),
         "void": VoidType(),
         "bool": BoolType(),
+        # Float
+        "float": F64Type(),
+        "f64": F64Type(),
         # It is only half primitive
         "string": StringType(),
     },

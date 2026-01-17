@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 from gofra.cli.output import cli_message
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.feature_flags import FEATURE_ALLOW_FPU, FEATURE_ALLOW_MODULES
 from libgofra.hir.function import Function, Visibility
 from libgofra.hir.module import Module
@@ -61,6 +60,7 @@ from .exceptions import (
     ParserExhaustiveContextStackError,
     ParserUnfinishedIfBlockError,
     ParserUnfinishedWhileDoBlockError,
+    ParserUnknownFunctionError,
     ParserUnknownIdentifierError,
 )
 from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
@@ -96,13 +96,48 @@ def parse_module_from_tokenizer(
         raise TopLevelExpectedNoOperatorsError(context.operators[0])
 
     _inject_context_module_runtime_definitions(context)
-    return Module(
+    root = Module(
         path=path,
         functions=context.functions,
         variables=context.variables,
         structures=context.structs,
         dependencies=context.module_dependencies,
+        entry_point_ref=(context.functions.get(context.entry_point_name, None)),
     )
+
+    _validate_function_existence_and_visibility(root=root, module=root)
+    return root
+
+
+def _validate_function_existence_and_visibility(root: Module, module: Module) -> None:
+    # TODO(@kirillzhosul): This must be refactored - as implemented new dependency system
+    for func in module.executable_functions:
+        for op in func.operators:
+            if op.type == OperatorType.FUNCTION_CALL:
+                assert isinstance(op.operand, FunctionCallOperand), op.operand
+                resolved_symbol = module.resolve_function_dependency(
+                    op.operand.module,
+                    op.operand.func_name,
+                )
+                if resolved_symbol is None:
+                    print(f"[help] Tried to resolve import from {op.operand.module}")
+                    raise ParserUnknownFunctionError(
+                        at=op.token.location,
+                        name=op.operand.func_name,
+                        functions_available=[],
+                        best_match=None,
+                    )
+                if op.operand.module is not None:
+                    func_owner_mod = module.dependencies[op.operand.module]
+                    if (
+                        not resolved_symbol.is_public
+                        and func_owner_mod.path != root.path
+                    ):
+                        msg = f"Tried to call private/internal function symbol {resolved_symbol.name} (defined at {resolved_symbol.defined_at}) from module named as `{op.operand.module}` (import from {func_owner_mod.path}):\nEither make it public or not use prohibited symbols!"
+                        raise ValueError(msg)
+
+    for children_module in module.dependencies.values():
+        _validate_function_existence_and_visibility(root=root, module=children_module)
 
 
 def _inject_context_module_runtime_definitions(context: ParserContext) -> None:
@@ -210,6 +245,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         Keyword.ATTR_FUNC_INLINE,
         Keyword.ATTR_FUNC_EXTERN,
         Keyword.ATTR_FUNC_NO_RETURN,
+        Keyword.ATTR_STRUCT_REORDER,
+        Keyword.ATTR_STRUCT_PACKED,
         Keyword.FUNCTION,
         Keyword.ATTR_FUNC_PUBLIC,
         Keyword.STRUCT,
@@ -290,6 +327,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         case Keyword.AS:
             msg = f"As keyword may used only in import statements for now at {token.location}"
             raise ValueError(msg)
+        case Keyword.ATTR_STRUCT_PACKED | Keyword.ATTR_STRUCT_REORDER:
+            raise ValueError
         case _:
             assert_never(token.value)
 
@@ -516,6 +555,7 @@ def _unpack_function_definition_from_token(
         functions=context.functions,
         parent=context,
         path=context.path,
+        entry_point_name=context.entry_point_name,  # TODO: Refactor
     )
 
     param_names = [p[0] for p in f_header_def.parameters]
@@ -558,7 +598,7 @@ def _unpack_function_definition_from_token(
         function.module_path = context.path
         context.add_function(function)
         return
-    if f_header_def.name == GOFRA_ENTRY_POINT:
+    if f_header_def.name == context.entry_point_name:  # TODO: Refactor
         f_header_def.qualifiers.is_public = True
 
     function = Function.create_internal(

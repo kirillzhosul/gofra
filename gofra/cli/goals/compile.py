@@ -31,7 +31,7 @@ from libgofra.typecheck import validate_type_safety
 from libgofra.typecheck.typechecker import on_lint_warning_suppressed
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, MutableSequence
+    from collections.abc import Callable, Generator, MutableSequence, Sequence
     from pathlib import Path
     from subprocess import CompletedProcess
 
@@ -283,6 +283,7 @@ def _perform_linker_bundle(
                 paths = pkgconfig_get_library_search_paths(library)
                 if paths:
                     libraries_search_paths += paths
+        assert all(isinstance(x, str) for x in args.linker_additional_flags)
         linker_process = link_object_files(
             objects=[root_object, *modules_objects],
             target=args.target,
@@ -300,7 +301,7 @@ def _perform_linker_bundle(
         linker_process.check_returncode()
 
 
-def _cleanup_cache_gc(cache_gc: list[Path], args: CLIArguments) -> None:
+def _cleanup_cache_gc(cache_gc: Sequence[Path], args: CLIArguments) -> None:
     if not args.delete_build_cache:
         return
     cli_message(

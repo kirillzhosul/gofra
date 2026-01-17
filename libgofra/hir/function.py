@@ -10,7 +10,7 @@ from libgofra.hir.operator import OperatorType
 from libgofra.types.primitive.void import VoidType
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping, MutableSequence, Sequence
     from pathlib import Path
 
     from libgofra.hir.operator import Operator
@@ -45,7 +45,7 @@ class Function:
     """
 
     # Path to an module which defined that function
-    module_path: Path
+    module_path: Path = field(repr=False)
 
     # Function will is callable by this name in Gofra source
     name: str
@@ -57,12 +57,12 @@ class Function:
 
     # Local variables defined inside that function
     # only that function can reference them and location of that variable is different as codegen may solve that
-    variables: Mapping[str, Variable[Type]]
+    variables: Mapping[str, Variable[Type]] = field(repr=False)
 
     # Actual executable block that this function contains
     # If this is extern function will always be empty
     # If this is inline function will expand without actual function call
-    operators: Sequence[Operator]
+    operators: MutableSequence[Operator] = field(repr=False)
 
     # Parameter types of the function that it accepts
     # e.g type contract-in
@@ -156,7 +156,7 @@ class Function:
         name: str,
         defined_at: TokenLocation,
         parameters: PARAMS_T,
-        operators: Sequence[Operator],
+        operators: MutableSequence[Operator],
         return_type: Type,
     ) -> Function:
         """Create function that is internal and inline, with propagated flags set."""
@@ -180,7 +180,7 @@ class Function:
         defined_at: TokenLocation,
         parameters: PARAMS_T,
         variables: Mapping[str, Variable[Type]],
-        operators: Sequence[Operator],
+        operators: MutableSequence[Operator],
         return_type: Type,
         is_leaf: bool,
     ) -> Function:
@@ -205,7 +205,7 @@ class Function:
         defined_at: TokenLocation,
         parameters: PARAMS_T,
         variables: Mapping[str, Variable[Type]] | None,
-        operators: Sequence[Operator] | None,
+        operators: MutableSequence[Operator] | None,
         return_type: Type,
         is_leaf: bool,
         is_inline: bool,

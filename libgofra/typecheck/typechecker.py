@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, assert_never
 
-from libgofra.consts import GOFRA_ENTRY_POINT
 from libgofra.hir.operator import FunctionCallOperand, OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
 from libgofra.typecheck.entry_point import validate_entry_point_signature
@@ -20,8 +19,10 @@ from libgofra.typecheck.static_linter import (
     emit_unreachable_code_after_no_return_call_warning,
     emit_unused_global_variable_warning,
     lint_stack_memory_retval,
+    lint_structure_types,
     lint_typecast_same_type,
     lint_unused_function_local_variables,
+    lint_variables_initializer,
 )
 from libgofra.types import Type
 from libgofra.types.comparison import is_types_same, is_typestack_same
@@ -83,17 +84,21 @@ def validate_type_safety(
     *,
     strict_expect_entry_point: bool = True,
     on_lint_warning: Callable[[str], None] | None,
+    entry_point_name: str = "main",
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
     if on_lint_warning is None:
         on_lint_warning = on_lint_warning_suppressed
 
-    entry_point = module.functions.get(GOFRA_ENTRY_POINT)
-    if entry_point:
-        validate_entry_point_signature(entry_point)
-    elif strict_expect_entry_point:
-        raise NoMainEntryFunctionError(expected_entry_name=GOFRA_ENTRY_POINT)
+    if strict_expect_entry_point:
+        entry_point = module.functions.get(entry_point_name)
 
+        if not entry_point:
+            raise NoMainEntryFunctionError(expected_entry_name=entry_point_name)
+        validate_entry_point_signature(entry_point)
+
+    lint_structure_types(on_lint_warning, module.structures)
+    lint_variables_initializer(on_lint_warning, module.variables)
     global_var_references: MutableMapping[str, Variable[Type]] = {}
     functions = list(module.functions.values())
     for function in functions:
@@ -587,14 +592,14 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 msg = f"Expected PUSH_STRUCT_FIELD_OFFSET to have structure type on type stack but got {struct_type}"
                 raise TypeError(msg)
 
-            if struct_field not in struct_type.fields:
+            if struct_field not in struct_type.natural_fields:
                 msg = (
                     f"Unknown field '{struct_field}' for known-structure {struct_type}"
                 )
                 raise ValueError(msg)
 
             scope.push_types(
-                PointerType(points_to=struct_type.fields[struct_field]),
+                PointerType(points_to=struct_type.get_field_type(struct_field)),
             )
 
         case _:
