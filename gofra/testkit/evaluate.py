@@ -4,7 +4,7 @@ from subprocess import PIPE, CalledProcessError, TimeoutExpired
 
 from gofra.cli.is_segmentation_fault import is_segmentation_fault
 from gofra.cli.output import cli_linter_warning, cli_message
-from gofra.execution.execution import execute_binary_executable
+from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import (
     assemble_object_file,
@@ -138,7 +138,7 @@ def evaluate_test_case(
     apply_file_executable_permissions(filepath=artifact_path)
 
     try:
-        exit_code = execute_binary_executable(
+        exit_code = execute_native_binary_executable(
             artifact_path,
             args=[],
             timeout=15,

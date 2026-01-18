@@ -16,7 +16,7 @@ from gofra.cli.readline import (
     read_multiline_input,
     try_setup_readline,
 )
-from gofra.execution.execution import execute_binary_executable
+from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import assemble_object_file
 from libgofra.codegen.generator import generate_code_for_assembler
@@ -157,7 +157,7 @@ def _perform_compiled_binary(executable: Path) -> None:
     """After we got any REPL binary - we just execute it as already have preview code injected into it."""
     apply_file_executable_permissions(executable)
     with contextlib.suppress(KeyboardInterrupt):
-        execute_binary_executable(executable, args=[])
+        execute_native_binary_executable(executable, args=[])
     print()  # It already may have newline but it always adds it
 
 

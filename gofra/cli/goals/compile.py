@@ -13,7 +13,7 @@ from gofra.cli.mod_hashing import (
     is_module_needs_rebuild,
 )
 from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
-from gofra.execution.execution import execute_binary_executable
+from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import assemble_object_file
 from libgofra.codegen.generator import generate_code_for_assembler
@@ -330,12 +330,14 @@ def _execute_after_compilation(args: CLIArguments) -> None:
 
     host_target = infer_host_target()
     assert host_target
-    if (
-        args.target.architecture != host_target.architecture
-        or args.target.operating_system != host_target.operating_system
-    ):
+    host_compliance = (
+        args.target.architecture == host_target.architecture
+        and args.target.operating_system == host_target.operating_system
+    )
+
+    if not host_compliance:
         cli_fatal_abort(
-            "Target differs from host target, cannot execute on current host, please execute on your own!\nFile was compiled, please remove execute flag!",
+            "Target differs from host target, cannot execute on current host without emulation layer, please execute on your own!\nFile was compiled, please remove execute flag!",
         )
 
     cli_message(
@@ -346,7 +348,7 @@ def _execute_after_compilation(args: CLIArguments) -> None:
 
     with wrap_with_perf_time_taken("Execution", verbose=args.verbose):
         try:
-            process = execute_binary_executable(args.output_filepath, args=[])
+            process = execute_native_binary_executable(args.output_filepath, args=[])
             log_command(args, process)
             exit_code = process.returncode
         except KeyboardInterrupt:
