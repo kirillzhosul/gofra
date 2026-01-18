@@ -3,8 +3,9 @@ from typing import Literal
 
 type Triplet = Literal[
     "amd64-unknown-linux",
-    "arm64-apple-darwin",
     "amd64-unknown-windows",
+    "arm64-apple-darwin",
+    "wasm32-unknown-none",
 ]
 
 
@@ -16,20 +17,20 @@ class Target:
     triplet: Triplet
 
     # Based on triplet
-    architecture: Literal["AMD64", "ARM64"]
+    architecture: Literal["AMD64", "ARM64", "WASM32"]
     vendor: Literal["unknown", "apple"]
-    operating_system: Literal["Darwin", "Linux", "Windows"]
+    operating_system: Literal["Darwin", "Linux", "Windows", "None"]
 
     cpu_word_size: Literal[8]
     cpu_pointer_width: Literal[8]
 
     endianness: Literal["little", "big"]
 
-    file_executable_suffix: Literal["", ".exe"]
-    file_library_static_suffix: Literal[".a", ".lib"]
-    file_library_dynamic_suffix: Literal[".dylib", ".so", ".dll"]
-    file_assembly_suffix: Literal[".s", ".asm"]
-    file_object_suffix: Literal[".o", ".obj"]
+    file_executable_suffix: Literal["", ".exe", ".wasm"]
+    file_library_static_suffix: Literal[".a", ".lib", ".wasm"]
+    file_library_dynamic_suffix: Literal[".dylib", ".so", ".dll", ".wasm"]
+    file_assembly_suffix: Literal[".s", ".asm", ".wat"]
+    file_object_suffix: Literal[".o", ".obj", ".wasm"]
 
     @staticmethod
     def from_triplet(triplet: Triplet) -> "Target":
@@ -78,4 +79,19 @@ class Target:
                     file_object_suffix=".o",
                     endianness="little",
                     file_assembly_suffix=".s",
+                )
+            case "wasm32-unknown-none":
+                return Target(
+                    triplet=triplet,
+                    vendor="unknown",
+                    architecture="WASM32",
+                    operating_system="None",
+                    cpu_pointer_width=8,
+                    cpu_word_size=8,
+                    file_executable_suffix=".wasm",
+                    file_library_static_suffix=".wasm",
+                    file_library_dynamic_suffix=".wasm",
+                    file_object_suffix=".wasm",
+                    endianness="little",
+                    file_assembly_suffix=".wat",
                 )
