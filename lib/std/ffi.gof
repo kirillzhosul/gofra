@@ -5,6 +5,8 @@
 // TODO: Probably this may be inlined into compiler and language itself: https://github.com/kirillzhosul/gofra/issues/27
 
 // Convert an Gofra string to `C-String` via dropping size, suitable for FFI calls.
-pub func CStr to_cstr_ptr[*string sv]
-    sv.data return
-end
+#ifndef __WASM
+    pub func CStr to_cstr_ptr[*string sv]
+        sv.data return
+    end
+#endif

@@ -17,3 +17,10 @@
     #define STD_OUT STD_OUT_FD
     #define STD_ERR STD_ERR_FD
 #endif // OS_LINUX
+#ifdef ARCH_WASM32
+    #ifdef OS_NONE
+        #define STD_IN  0
+        #define STD_OUT 1
+        #define STD_ERR 2
+    #endif // OS_NONE
+#endif //ARCH_WASM32

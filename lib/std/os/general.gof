@@ -3,9 +3,10 @@
 // ==============================================
 
 // OS-dependant native abstraction layer
-#ifdef OS_WINDOWS #include "std/os/native/windows.gof" #endif
-#ifdef OS_DARWIN  #include "std/os/native/darwin.gof"  #endif
-#ifdef OS_LINUX   #include "std/os/native/linux.gof"   #endif
+#ifdef OS_WINDOWS  #include "std/os/native/windows.gof" #endif
+#ifdef OS_DARWIN   #include "std/os/native/darwin.gof"  #endif
+#ifdef OS_LINUX    #include "std/os/native/linux.gof"   #endif
+#ifdef __WASM      #include "std/os/native/wasm32.gof"  #endif
 
 // Exit an program with given exit code
 #ifdef OS_LINUX   no_return func void exit[int] call sc_exit  end #endif // TODO: must infer no return ?
@@ -13,4 +14,4 @@
 #ifdef OS_WINDOWS no_return func void exit[int] call win_exit end #endif // TODO: must infer no return ?
 
 // Exit an program with error (1) exit code
-no_return inline func void abort[] 1 call exit end
+#ifndef __WASM no_return inline func void abort[] 1 call exit end #endif

@@ -6,6 +6,7 @@ from .backends import (
     AARCH64CodegenBackend,
     AMD64CodegenBackend,
     CodeGeneratorBackend,
+    WASM32CodegenBackend,
 )
 
 
@@ -18,5 +19,7 @@ def get_backend_for_target(
             return AARCH64CodegenBackend
         case "AMD64":
             return AMD64CodegenBackend
+        case "WASM32":
+            return WASM32CodegenBackend
         case _:
             assert_never(target.architecture)

@@ -11,6 +11,7 @@
 // TODO: Test and implement missing features for Windows
 // TODO: Allow forward referencing functions
 
+
 // Input a string from given file descriptor and returns number of bytes read
 #ifdef OS_LINUX   inline func int input_fd[int, CStr, int] call sc_read end #endif
 #ifdef OS_DARWIN  inline func int input_fd[int, CStr, int] call sc_read end #endif
@@ -20,53 +21,59 @@
 
 
 // Open file in read-only mode
-pub func int open_file_fd_ro[*string sv] sv 0 0 call open_file_fd_raw end
+#ifndef __WASM pub func int open_file_fd_ro[*string sv] sv 0 0 call open_file_fd_raw end #endif
 
 // Read file into SV (string), and return same pointer
 // reads same amount as string view len, returns null ptr (0) on error
-pub func bool read_file_sv[int fd, *string sv]
-    fd
-    sv.data
-    sv.len
-    call input_fd
+#ifndef __WASM
+    pub func bool read_file_sv[int fd, *string sv]
+        fd
+        sv.data
+        sv.len
+        call input_fd
 
-    0 < if
-        false
-        return
+        0 < if
+            false
+            return
+        end
+
+        true return
     end
-
-    true return
-end
+#endif
 
 // Consume all character bytes from input buffer (e.g `input_fd`)
 // Use as safety method as reading and letting some character leak through 
-pub func void input_exhaust_buffer[]
-    var buffer char = 1;
+#ifndef __WASM
+    pub func void input_exhaust_buffer[]
+        var buffer char = 1;
 
-    // TODO: Allow to compare non-integer types (e.g char)
-    while 
-        buffer typecast int 
-        '\n'
-        !=
-    do
-            STD_IN
-            &buffer
-            1
-        call input_fd drop
-        // TODO: Probably we may break from this loop if read zero bytes, but there is no break construction rn
+        // TODO: Allow to compare non-integer types (e.g char)
+        while 
+            buffer typecast int 
+            '\n'
+            !=
+        do
+                STD_IN
+                &buffer
+                1
+            call input_fd drop
+            // TODO: Probably we may break from this loop if read zero bytes, but there is no break construction rn
+        end
     end
-end
+#endif
 
 // Input a string from standard console input stream
 // Safe to buffer overflows, as exhaust all remaining IO buffer
 // TODO: Unsafe to big buffers, requires introducing testkit test cases for that
-pub func void input[CStr ptr, int len]
-    STD_IN
-    ptr
-    len
-    call input_fd drop
+#ifndef __WASM
+    pub func void input[CStr ptr, int len]
+        STD_IN
+        ptr
+        len
+        call input_fd drop
 
-    // Safety mechanism:
-    // exhaust leftover buffer after system IO read
-    call input_exhaust_buffer
-end
+        // Safety mechanism:
+        // exhaust leftover buffer after system IO read
+        call input_exhaust_buffer
+    end
+#endif

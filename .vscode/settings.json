@@ -186,6 +186,8 @@
         "verilog",
         "visionos",
         "vreg",
+        "wabt",
+        "Wabt",
         "watchos",
         "winapi",
         "WINAPI",

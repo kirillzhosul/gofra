@@ -3,9 +3,11 @@
 // ==============================================
 
 // OS-dependant native abstraction layer
-#ifdef OS_WINDOWS #include "std/os/native/windows.gof" #endif
-#ifdef OS_DARWIN  #include "std/os/native/darwin.gof"  #endif
-#ifdef OS_LINUX   #include "std/os/native/linux.gof"   #endif
+#ifdef OS_WINDOWS  #include "std/os/native/windows.gof" #endif
+#ifdef OS_DARWIN   #include "std/os/native/darwin.gof"  #endif
+#ifdef OS_LINUX    #include "std/os/native/linux.gof"   #endif
+#ifdef ARCH_WASM32 #include "std/os/native/wasm32.gof"  #endif
+
 
 #include "general.gof"
 

@@ -15,208 +15,250 @@
 #ifdef OS_DARWIN  pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
 #ifdef OS_LINUX   pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
 #ifdef OS_WINDOWS pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call win_write end #endif
+#ifdef __WASM
+    extern func int wasm32_print_fd[int, *string]
+    func int print_fd[int, *string] call wasm32_print_fd end
+#endif #endif
 
 // Print an string into standard console output stream
-pub func void print[*string sv]
-    STD_OUT
-    sv
-    call print_fd drop
-end
+#ifndef __WASM
+    pub func void print[*string sv]
+        STD_OUT
+        sv
+        call print_fd drop
+    end
+#endif
+#ifdef __WASM
+    pub func void print[*string]
+        STD_OUT
+        swap
+        call print_fd drop
+    end
+#endif
+
+
 
 // Print an string into standard console with trailing newline
-pub func void println[*string sv]
-    sv call print
-    "\n" call print
-end
+#ifndef __WASM
+    pub func void println[*string sv]
+        sv call print
+        "\n" call print
+    end
+#endif
+#ifdef __WASM
+    pub func void println[*string]
+        call print
+        "\n" call print
+    end
+#endif
 
 // Print an string into standard console error stream
-pub func void eprint[*string sv]
-    STD_ERR
-    sv
-    print_fd drop
-end
+#ifndef __WASM
+    pub func void eprint[*string sv]
+        STD_ERR
+        sv
+        print_fd drop
+    end
+#endif
 
 // Print an string into standard error console stream and abort execution
 // TODO: Probably must refactored into panic system or something like that as this is not I/O responsibility
-pub no_return func void eprint_fatal[*string sv]
-    "FATAL: " call eprint
-    sv call eprint
-    call abort
-end
+#ifndef __WASM
+    pub no_return func void eprint_fatal[*string sv]
+        "FATAL: " call eprint
+        sv call eprint
+        call abort
+    end
+#endif
+
 
 // Print given number into given file descriptor / handle
 // does not emit '\n' at the end
-var print_int64_buf char[20] // Max 64 bit cap
-pub func void print_int64_fd[int fd, int num]
-    var idx int = 0;
-    var is_negative bool = 0;
-    var str_view string;
+#ifndef __WASM
+    var print_int64_buf char[20] // Max 64 bit cap
+    pub func void print_int64_fd[int fd, int num]
+        var idx int = 0;
+        var is_negative bool = 0;
+        var str_view string;
 
 
-    // TODO: This is probably must be merged with `int2str` but must be reviewed, also introduces cross-reference
-    num 0 < if
-        &num num -1 * !< 
-        &is_negative true !<
+        // TODO: This is probably must be merged with `int2str` but must be reviewed, also introduces cross-reference
+        num 0 < if
+            &num num -1 * !< 
+            &is_negative true !<
+        end
+
+        num 0 == if
+            // Straight zero
+            &print_int64_buf[0] '0'  !<
+
+            &str_view.data &print_int64_buf !<
+            &str_view.len 1 !<
+            fd &str_view
+            call print_fd drop
+
+            return
+        end
+
+        // Iterates number by single digits via:
+        // 1234
+        // 1234 % 10 => 4
+        // 1234 / 10 = > 123
+
+        while num 0 > do
+            &print_int64_buf[idx]
+                num 10 % // Get last digit of an number 
+                '0' + // real `cast` to char (e.g digit + 48 => char code) 
+            !<
+
+            // Shift number from right to left (drop last digit)
+            &num num 10 / !< 
+
+            &idx idx 1 + !< // Increment IDX
+        end
+
+        is_negative if
+            &print_int64_buf[idx] '-' !<
+            &idx idx 1 + !< // Increment IDX
+        end
+        // Number: 1234
+        // After block above buffer will become: [4321]
+        // we iterate from right to left so emitting an '1234' string
+
+        while idx 0 >= do
+            // Print current symbol one-by-one from right to left
+            &str_view.data &print_int64_buf[idx] !<
+            &str_view.len 1 !<
+            fd &str_view call print_fd drop
+
+            // Decrement IDX
+            &idx idx 1 - !<
+        end
+        
+        // TODO: Possibly would be good to introduce more capable `for` loop e.g:
+        // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
     end
-
-    num 0 == if
-        // Straight zero
-        &print_int64_buf[0] '0'  !<
-
-        &str_view.data &print_int64_buf !<
-        &str_view.len 1 !<
-        fd &str_view
-        call print_fd drop
-
-        return
-    end
-
-    // Iterates number by single digits via:
-    // 1234
-    // 1234 % 10 => 4
-    // 1234 / 10 = > 123
-
-    while num 0 > do
-        &print_int64_buf[idx]
-            num 10 % // Get last digit of an number 
-            '0' + // real `cast` to char (e.g digit + 48 => char code) 
-        !<
-
-        // Shift number from right to left (drop last digit)
-        &num num 10 / !< 
-
-        &idx idx 1 + !< // Increment IDX
-    end
-
-    is_negative if
-        &print_int64_buf[idx] '-' !<
-        &idx idx 1 + !< // Increment IDX
-    end
-    // Number: 1234
-    // After block above buffer will become: [4321]
-    // we iterate from right to left so emitting an '1234' string
-
-    while idx 0 >= do
-        // Print current symbol one-by-one from right to left
-        &str_view.data &print_int64_buf[idx] !<
-        &str_view.len 1 !<
-        fd &str_view call print_fd drop
-
-        // Decrement IDX
-        &idx idx 1 - !<
-    end
-    
-    // TODO: Possibly would be good to introduce more capable `for` loop e.g:
-    // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
-end
+#endif
 
 // Print given number into given file descriptor / handle as hexadecimal 0x
 // does not emit '\n' at the end
-var print_int64_hex_buf char[16] // Max 64 bit cap
-pub func void print_int64_hex_fd[
-    int fd, 
-    int num, 
-    bool show_hex_prefix, 
-    bool as_uppercase
-]
-    var idx int = 0;
-    var is_negative bool;
-    var str_view string;
+#ifndef __WASM
+    var print_int64_hex_buf char[16] // Max 64 bit cap
+    pub func void print_int64_hex_fd[
+        int fd, 
+        int num, 
+        bool show_hex_prefix, 
+        bool as_uppercase
+    ]
+        var idx int = 0;
+        var is_negative bool;
+        var str_view string;
 
-    &is_negative false typecast int !<
-    num 0 < if
-        &num num -1 * !< 
-        &is_negative true typecast int !<
-    end
+        &is_negative false typecast int !<
+        num 0 < if
+            &num num -1 * !< 
+            &is_negative true typecast int !<
+        end
 
-    num 0 == if
-        // Straight zero
-        show_hex_prefix true == if
-            fd "0x0"
+        num 0 == if
+            // Straight zero
+            show_hex_prefix true == if
+                fd "0x0"
+                call print_fd drop
+                return
+            end
+
+            &print_int64_hex_buf[0] '0'  !<
+
+            &str_view.data &print_int64_hex_buf !<
+            &str_view.len 1 !<
+
+            fd &str_view
             call print_fd drop
             return
         end
 
-        &print_int64_hex_buf[0] '0'  !<
+        // For description look in `print_int64_fd`
+        while num 0 > do
+            var digit int;
+            &digit num 16 % !<
 
-        &str_view.data &print_int64_hex_buf !<
-        &str_view.len 1 !<
-
-        fd &str_view
-        call print_fd drop
-        return
-    end
-
-    // For description look in `print_int64_fd`
-    while num 0 > do
-        var digit int;
-        &digit num 16 % !<
-
-        digit 10 < if
-            &print_int64_hex_buf[idx] digit '0' + !<
-        end
-        digit 10 >= if
-            as_uppercase true == if
-                &print_int64_hex_buf[idx] digit 10 - 'A' + !<
+            digit 10 < if
+                &print_int64_hex_buf[idx] digit '0' + !<
             end
-            as_uppercase false == if
-                &print_int64_hex_buf[idx] digit 10 - 'a' + !<
+            digit 10 >= if
+                as_uppercase true == if
+                    &print_int64_hex_buf[idx] digit 10 - 'A' + !<
+                end
+                as_uppercase false == if
+                    &print_int64_hex_buf[idx] digit 10 - 'a' + !<
+                end
             end
+
+            // Shift number from right to left (drop last digit)
+            &num num 16 / !< 
+
+            &idx idx 1 + !< // Increment IDX
         end
 
-        // Shift number from right to left (drop last digit)
-        &num num 16 / !< 
+        is_negative if
+            &print_int64_hex_buf[idx] '-' !<
+            &idx idx 1 + !< // Increment IDX
+        end
 
-        &idx idx 1 + !< // Increment IDX
+        show_hex_prefix if
+            &print_int64_hex_buf[idx] 'x' !<
+            &idx idx 1 + !<
+            &print_int64_hex_buf[idx] '0' !<
+            &idx idx 1 + !<
+        end
+
+        // Number: 1234
+        // After block above buffer will become: [4321]
+        // we iterate from right to left so emitting an '1234' string
+
+        while idx 0 >= do
+            // Print current symbol one-by-one from right to left
+            &str_view.data &print_int64_hex_buf[idx] !<
+            &str_view.len 1 !<
+
+            fd &str_view
+            call print_fd drop
+
+            // Decrement IDX
+            &idx idx 1 - !<
+        end
+        
+        // TODO: Possibly would be good to introduce more capable `for` loop e.g:
+        // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
     end
+#endif
 
-    is_negative if
-        &print_int64_hex_buf[idx] '-' !<
-        &idx idx 1 + !< // Increment IDX
-    end
-
-    show_hex_prefix if
-        &print_int64_hex_buf[idx] 'x' !<
-        &idx idx 1 + !<
-        &print_int64_hex_buf[idx] '0' !<
-        &idx idx 1 + !<
-    end
-
-    // Number: 1234
-    // After block above buffer will become: [4321]
-    // we iterate from right to left so emitting an '1234' string
-
-    while idx 0 >= do
-        // Print current symbol one-by-one from right to left
-        &str_view.data &print_int64_hex_buf[idx] !<
-        &str_view.len 1 !<
-
-        fd &str_view
-        call print_fd drop
-
-        // Decrement IDX
-        &idx idx 1 - !<
-    end
-    
-    // TODO: Possibly would be good to introduce more capable `for` loop e.g:
-    // `for i in idx..0`, but this is requires using `idx` as lhs range value which is currently disallowed in for loop range qualifier
-end
 
 
 // Print given number into standard console output
-pub func void print_int64[int]
-    STD_OUT swap call print_int64_fd
-end
-// Print given number as hexadecimal into standard console output
-pub func void print_int64_hex[int]
-    STD_OUT swap true true call print_int64_hex_fd
-end
+#ifndef __WASM
+    pub func void print_int64[int]
+        STD_OUT swap call print_int64_fd
+    end
+#endif
 
+#ifndef __WASM
+    // Print given number as hexadecimal into standard console output
+    pub func void print_int64_hex[int]
+        STD_OUT swap true true call print_int64_hex_fd
+    end
+#endif
 
 // Print given pointer (TODO: Requires static cast) as hex-addr
-pub func void print_ptr[*void]
-    typecast int 
-    call print_int64_hex
-end
+#ifndef __WASM
+    pub func void print_ptr[*void]
+        typecast int 
+        call print_int64_hex
+    end
+#endif
 
-pub func void print_int[int number] number print_int64 end // Alias as default int is 64 bits
+
+#ifndef __WASM
+    pub func void print_int[int number] number print_int64 end // Alias as default int is 64 bits
+#endif
