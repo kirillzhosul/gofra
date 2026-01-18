@@ -37,7 +37,7 @@ def assemble_object_file(  # noqa: PLR0913
     """
     driver = driver or get_assembler_driver(target)
     if driver is None:
-        raise NoAssemblerDriverError
+        raise NoAssemblerDriverError(target)
 
     return driver.assemble(
         target=target,
