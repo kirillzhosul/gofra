@@ -245,6 +245,12 @@ def _perform_assembler(  # noqa: PLR0913
             )
             modules_objects[mod.path] = mod_object_path
 
+    if args.target.architecture == "WASM32":
+        cli_message(
+            level="WARNING",
+            text="WASM target requires loader with env respectfully!",
+        )
+
     return modules_objects
 
 
@@ -277,6 +283,10 @@ def _perform_linker_bundle(
     )
 
     with wrap_with_perf_time_taken("Linker", verbose=args.verbose):
+        if args.target.architecture == "WASM32":
+            cli_fatal_abort(
+                text="Cannot link executable for WASM32, use object output format (`-of object`)",
+            )
         libraries_search_paths = args.linker_libraries_search_paths
         if args.linker_resolve_libraries_with_pkgconfig:
             for library in args.linker_libraries:
