@@ -37,7 +37,7 @@ end
 Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target.
 
 - Full: **AArch64** macOS (Darwin)
-- Partial, buggy: **x86_64** (Linux)
+- Partial, buggy: **x86_64** (Linux), **WASM**
 
 (Windows **x86_64** is must be supported soon, requires contributors)
 

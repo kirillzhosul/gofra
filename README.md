@@ -58,17 +58,19 @@ end
 | ARCH    | OS      | Support                    | Tested hardware      |
 |---------|---------|----------------------------|----------------------|
 | Aarch64 | Darwin  | :white_check_mark:*        | M1, MacOS Tahoe 26.1 |
+| WASM    | **-**   | :heavy_exclamation_mark:** |
+| x86_64  | Linux   | :heavy_exclamation_mark:** |
+
+| ARCH    | OS      | Support                    | Tested hardware      |
+|---------|---------|----------------------------|----------------------|
 | Aarch64 | Windows | :x:                        |
 | Aarch64 | Linux   | :x:                        |
-| x86_64  | Linux   | :heavy_exclamation_mark:** |
 | x86_64  | Darwin  | :x:                        |
 | x86_64  | Windows | :bangbang:***              |
-| WASM    | **-**   | :x:****                    |
 
 \* Main workflow of development, has *all* features \
-** Linux x86_64 is not completely finished and has bugs and incomplete features \
-*** Windows x86_64 is not implemented, but has general wrappers for system calls and possibly can compiled with headache \
-**** WASM is coming soon, after finished top-three platforms
+** Incomplete, has bugs and not all features \
+*** Windows x86_64 is not implemented, but has general wrappers for system calls and possibly can compiled with headache 
 
 ## Pre requirements
 
