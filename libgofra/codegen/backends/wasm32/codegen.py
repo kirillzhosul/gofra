@@ -1,13 +1,19 @@
 from collections.abc import Callable, MutableMapping, Sequence
 from typing import IO, assert_never
 
+from libgofra.codegen.backends.wasm32.memory import (
+    wasm_define_data,
+    wasm_pack_integer_to_memory,
+    wasm_pack_string_view_to_memory,
+)
+from libgofra.codegen.backends.wasm32.sexpr import SExpr
+from libgofra.codegen.backends.wasm32.types import wasm_type_from_primitive
 from libgofra.hir.function import Function
 from libgofra.hir.module import Module
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import Variable
 from libgofra.targets.target import Target
-from libgofra.types._base import PrimitiveType, Type
-from libgofra.types.composite.pointer import PointerType
+from libgofra.types._base import Type
 from libgofra.types.composite.string import StringType
 from libgofra.types.primitive.character import CharType
 
@@ -22,6 +28,8 @@ class WASM32CodegenBackend:
     _symtable_next_offset: int = 0
 
     _strings_to_load: MutableMapping[int, tuple[str, str]]
+
+    shared_import_memory: bool = True
 
     def __init__(
         self,
@@ -42,11 +50,26 @@ class WASM32CodegenBackend:
         self._symtable_next_offset = 0
         self._strings_to_load = {}
 
-    def emit_build_global_symtable(self, *, _imported_memory: bool = True) -> None:
-        if _imported_memory:
-            self.fd.write('\t(import "env" "memory" (memory 1))\n')
-        else:
-            self.fd.write("\t(memory 1)\n")
+    def write_sexpr(
+        self,
+        expr: SExpr,
+        indent: int = 0,
+        comment: str | None = None,
+    ) -> None:
+        s = f"{'\t' * indent}{expr.build()}"
+        if comment:
+            s += f" ;; {comment}"
+
+        self.fd.write(f"{s}\n")
+
+    def write_instr(self, instr: str | SExpr) -> None:
+        self.fd.write(f"\t\t{instr}\n")
+
+    def emit_build_global_symtable(self) -> None:
+        memory = SExpr("memory", 1)
+        if self.shared_import_memory:
+            memory = SExpr("import", '"env"', '"memory"', memory)
+        self.write_sexpr(memory, indent=1)
 
         if not self.module.variables:
             return
@@ -57,18 +80,19 @@ class WASM32CodegenBackend:
             init_mem = ""
             match var.initial_value:
                 case int():
-                    init_mem = _int_to_wat_bytes(
+                    init_mem = wasm_pack_integer_to_memory(
                         var.initial_value,
                         size=var.size_in_bytes,
                     )
                 case None:
-                    init_mem = _int_to_wat_bytes(0, size=var.size_in_bytes)
+                    init_mem = wasm_pack_integer_to_memory(0, size=var.size_in_bytes)
                 case _:
                     raise NotImplementedError(var.initial_value, var)
-            page_mem_spec = "(memory 0)"
-            addr_offset_spec = f"(i64.const {self._symtable_next_offset})"
-            self.fd.write(f'\t(data {page_mem_spec} {addr_offset_spec} "{init_mem}")')
-            self.fd.write(f" ;; {var.name}\n")
+            self.write_sexpr(
+                wasm_define_data(self._symtable_next_offset, init_mem),
+                indent=1,
+                comment=var.name,
+            )
 
             self.symtable[var.name] = self._symtable_next_offset
             self._symtable_next_offset += var.size_in_bytes
@@ -77,7 +101,10 @@ class WASM32CodegenBackend:
         for var in self.module.variables.values():
             if not var.is_constant:
                 continue
-            self.fd.write(_get_wat_global_symbol_decl_spec(var))
+            self.write_sexpr(
+                _get_wat_global_symbol_decl_spec(var),
+                indent=1,
+            )
 
     def emit(self) -> None:
         self.fd.write("(module\n")
@@ -97,27 +124,24 @@ class WASM32CodegenBackend:
     def wasm32_static_data_string_section(
         self,
     ) -> None:
-        page_mem_spec = "(memory 0)"
-
         for symtable_idx, str_val in self._strings_to_load.items():
             view_size = StringType().size_in_bytes
             data_ptr = symtable_idx + view_size
 
             string_raw, string_op = str_val
-            addr_offset_spec = f"(i32.const {symtable_idx})"
-            view_struct_data = _int_to_wat_bytes(data_ptr, size=8) + _int_to_wat_bytes(
-                len(string_op),
-                size=8,
-            )
-            self.fd.write(
-                f'\t(data {page_mem_spec} {addr_offset_spec} "{view_struct_data}")',
-            )
-            self.fd.write(" ;; String-View\n")
+            data = wasm_pack_string_view_to_memory(data_ptr, len(string_op))
 
-            addr_offset_spec = f"(i32.const {symtable_idx + view_size})"
-            self.fd.write(f'\t(data {page_mem_spec} {addr_offset_spec} "{string_raw}")')
-            self.fd.write(" ;; String\n")
+            self.write_sexpr(
+                wasm_define_data(symtable_idx, data),
+                indent=1,
+                comment="String View",
+            )
 
+            self.write_sexpr(
+                wasm_define_data(symtable_idx + view_size, string_raw),
+                indent=1,
+                comment="String",
+            )
         self._strings_to_load.clear()
 
     def wasm32_module_scope_decls(self) -> None:
@@ -133,12 +157,14 @@ class WASM32CodegenBackend:
                 f"Locals not implemented {function.defined_at}"
             )
 
+            self.fd.write("\t")
             self.fd.write(_get_wat_function_decl_spec(function))
+            self.fd.write("\n")
 
             for param_i, param in enumerate(function.parameters):
                 assert param.size_in_bytes <= 8
                 assert not param.is_fp
-                self.fd.write(f"\t\tlocal.get {param_i}\n")
+                self.write_sexpr(SExpr("local.get", param_i), indent=2)
 
             self.wasm32_instruction_set(function.operators, function)
             self.fd.write("\t)\n")
@@ -148,7 +174,10 @@ class WASM32CodegenBackend:
             if not function.is_external:
                 continue
 
+            self.fd.write("\t")
             self.fd.write(_get_wat_function_decl_spec(function))
+            self.fd.write("\n")
+
             assert not function.has_executable_operators
 
     def wasm32_operator_instructions(
@@ -161,39 +190,38 @@ class WASM32CodegenBackend:
         match op.type:
             case OperatorType.PUSH_INTEGER:
                 assert isinstance(op.operand, int)
-                self.fd.write(f"\t\ti64.const {op.operand}\n")
+                self.write_instr(f"i64.const {op.operand}")
             case OperatorType.ARITHMETIC_PLUS:
-                self.fd.write("\t\ti64.add\n")
+                self.write_instr("i64.add")
             case OperatorType.PUSH_FLOAT:
                 assert isinstance(op.operand, float)
-                self.fd.write(f"\t\tf64.const {op.operand}\n")
+                self.write_instr(f"f64.const {op.operand}")
             case OperatorType.STACK_DROP:
-                self.fd.write("\t\tdrop\n")
+                self.write_instr("drop")
             case OperatorType.INLINE_RAW_ASM:
                 assert isinstance(op.operand, str)
-                self.fd.write(op.operand)
+                self.write_instr(op.operand)
             case OperatorType.ARITHMETIC_MULTIPLY:
-                self.fd.write("\t\ti64.mul\n")
+                self.write_instr("i64.mul")
             case OperatorType.ARITHMETIC_MINUS:
-                self.fd.write("\t\ti64.sub\n")
+                self.write_instr("i64.sub")
             case OperatorType.BITWISE_AND:
-                self.fd.write("\t\ti64.and\n")
+                self.write_instr("i64.and")
             case OperatorType.BITWISE_OR:
-                self.fd.write("\t\ti64.or\n")
+                self.write_instr("i64.or")
             case OperatorType.BITWISE_XOR:
-                self.fd.write("\t\ti64.xor\n")
+                self.write_instr("i64.xor")
             case OperatorType.FUNCTION_CALL:
                 assert isinstance(op.operand, FunctionCallOperand)
                 assert op.operand.module is None
-                self.fd.write(f"\t\tcall ${op.operand.func_name}\n")
+                self.write_instr(f"call ${op.operand.func_name}")
             case OperatorType.FUNCTION_RETURN:
-                self.fd.write("\t\treturn\n")
+                self.write_instr("return")
             case OperatorType.SYSCALL:
                 msg = f"Syscall at {op.location} is not supported by WASM target, please use system function calls!"
                 raise ValueError(msg)
             case OperatorType.DEBUGGER_BREAKPOINT:
-                msg = "Debugger breakpoint is not implemented in WASM"
-                raise NotImplementedError(msg)
+                self.write_instr("unreachable")
             case OperatorType.COMPILE_TIME_ERROR | OperatorType.STATIC_TYPE_CAST:
                 ...
             case OperatorType.STRUCT_FIELD_OFFSET:
@@ -202,30 +230,30 @@ class WASM32CodegenBackend:
                 field_offset = struct.get_field_offset(field)
                 if field_offset:
                     # only relatable as operation is pointer is not already at first structure field
-                    self.fd.write(f"\t\ti64.const {field_offset}\n")
-                    self.fd.write("\t\ti64.add\n")
+                    self.write_instr(f"i64.const {field_offset}")
+                    self.write_instr("i64.add\n")
 
             case OperatorType.PUSH_VARIABLE_VALUE:
                 assert isinstance(op.operand, str)
                 if op.operand not in owner_function.variables:
                     sym_var = self.module.variables[op.operand]
                     if sym_var.is_constant:
-                        self.fd.write(f"\t\tglobal.get ${op.operand}\n")
+                        self.write_instr(f"global.get ${op.operand}")
                     else:
                         offset = self.symtable[op.operand]
-                        self.fd.write(
-                            f"\t\ti32.const {offset} ;; symtable offset sym={op.operand}\n",
+                        self.write_instr(
+                            f"i32.const {offset} ;; symtable offset sym={op.operand}",
                         )
-                        sym_t = _get_wat_primitive_type(sym_var.type)
-                        self.fd.write(f"\t\t{sym_t}.load\n")
+                        sym_t = wasm_type_from_primitive(sym_var.type)
+                        self.write_instr(f"{sym_t}.load")
                 else:
                     raise NotImplementedError
 
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(op.operand, str)
                 offset = self.symtable[op.operand]
-                self.fd.write(
-                    f"\t\ti64.const {offset} ;; symtable offset sym={op.operand}\n",
+                self.write_instr(
+                    f"i64.const {offset} ;; symtable offset sym={op.operand}",
                 )
             case OperatorType.PUSH_STRING:
                 assert isinstance(op.operand, str)
@@ -240,10 +268,9 @@ class WASM32CodegenBackend:
                 offset = self._symtable_next_offset
                 self._symtable_next_offset += slice_size
                 self._symtable_next_offset += str_size
-                self.fd.write(f"\t\ti64.const {offset} ;; symtable offset string\n")
+                self.write_instr(f"i64.const {offset} ;; symtable offset string")
             case OperatorType.STACK_SWAP:
-                self.fd.write("\t\tcall $swap\n")
-
+                self.write_instr("call $swap")
             case (
                 OperatorType.PUSH_VARIABLE_ADDRESS
                 | OperatorType.LOAD_PARAM_ARGUMENT
@@ -284,56 +311,49 @@ class WASM32CodegenBackend:
             self.wasm32_operator_instructions(operator, idx, owner_function)
 
 
-def _get_wat_global_symbol_decl_spec(var: Variable[Type]) -> str:
-    wat_t = _get_wat_primitive_type(var.type)
-    sym_type_spec = f"{wat_t}" if var.is_constant else f"(mut {wat_t})"
+def _get_wat_global_symbol_decl_spec(var: Variable[Type]) -> SExpr:
+    wat_t = wasm_type_from_primitive(var.type)
+    sym_type_spec = wat_t if var.is_constant else SExpr("mut", wat_t)
 
     assert var.is_global_scope
     assert var.initial_value is not None, f"uninitialized symbol {var.name} for WASM"
 
     match var.initial_value:
         case int():
-            return f"\t(global ${var.name} {sym_type_spec} (i64.const {var.initial_value}))\n"
+            value = SExpr("i64.const", var.initial_value)
+            return SExpr("global", f"${var.name}", sym_type_spec, value)
         case _:
-            raise NotImplementedError(var.initial_value)
+            msg = f"Cannot define global symbol in wasm with default value {var.initial_value}, not implemented unwinding constant Initializers."
+            raise NotImplementedError(msg)
 
 
 def _get_wat_function_decl_spec(function: Function) -> str:
-    decl = f"func ${function.name}"
-    extern_from_module = "env"
+    decl = _get_wasm_internal_function_decl_spec(function)
 
     if function.is_external:
-        decl = f'import "{extern_from_module}" "{function.name}" ({decl}'
+        extern_from_module = "env"
+        decl = SExpr("import", f'"{extern_from_module}"', f'"{function.name}"', decl)
+
+    e = decl.build()
+    if not function.is_external:
+        e = e[:-1]
+    return e
+
+
+def _get_wasm_internal_function_decl_spec(function: Function) -> SExpr:
+    decl = SExpr("func", f"${function.name}")
+
     if function.is_public:
-        decl += f' (export "{function.name}")'
+        decl.add_node(SExpr("export", f'"{function.name}"'))
 
     if function.parameters:
         # TODO: WAT/WASM allows named function params
-        param_spec = [_get_wat_primitive_type(param) for param in function.parameters]
-        decl += f" (param {' '.join(param_spec)})"
+        param_spec = [wasm_type_from_primitive(param) for param in function.parameters]
+        decl.add_node(SExpr("param", " ".join(param_spec)))
 
     if function.has_return_value():
         assert function.return_type.size_in_bytes <= 8
-        return_type = _get_wat_primitive_type(function.return_type)
-        decl += f" (result {return_type})"
-    if function.is_external:
-        decl += "))"
-    return f"\t({decl}\n"
+        return_type = wasm_type_from_primitive(function.return_type)
+        decl.add_node(SExpr("result", return_type))
 
-
-def _get_wat_primitive_type(t: Type) -> str:
-    """Get primitive type from Gofra to WAT."""
-    if isinstance(t, PointerType):
-        return "i64"
-
-    assert isinstance(t, PrimitiveType), t
-    if t.size_in_bytes <= 4:
-        return "f32" if t.is_fp else "i32"
-    assert t.size_in_bytes <= 8
-    return "f64" if t.is_fp else "i64"
-
-
-def _int_to_wat_bytes(value: int, size: int = 8) -> str:
-    """Transform integer to bytes data for WAT memory data."""
-    data = value.to_bytes(size, "little")
-    return "".join(f"\\{byte:02X}" for byte in data)
+    return decl
