@@ -1,4 +1,4 @@
-from collections.abc import Callable, MutableMapping, Sequence
+from collections.abc import Callable, MutableMapping, MutableSequence, Sequence
 from typing import IO, assert_never
 
 from libgofra.codegen.backends.wasm32.memory import (
@@ -11,11 +11,12 @@ from libgofra.codegen.backends.wasm32.types import wasm_type_from_primitive
 from libgofra.hir.function import Function
 from libgofra.hir.module import Module
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
-from libgofra.hir.variable import Variable
+from libgofra.hir.variable import Variable, VariableStorageClass
 from libgofra.targets.target import Target
 from libgofra.types._base import Type
 from libgofra.types.composite.string import StringType
 from libgofra.types.primitive.character import CharType
+from libgofra.types.primitive.integers import I64Type
 
 
 class WASM32CodegenBackend:
@@ -29,6 +30,7 @@ class WASM32CodegenBackend:
 
     _strings_to_load: MutableMapping[int, tuple[str, str]]
 
+    spilled_stack_vars_slots: MutableSequence[tuple[int, Variable[Type]]]
     shared_import_memory: bool = True
 
     def __init__(
@@ -49,6 +51,7 @@ class WASM32CodegenBackend:
         self.symtable = {}
         self._symtable_next_offset = 0
         self._strings_to_load = {}
+        self.spilled_stack_vars_slots = []
 
     def write_sexpr(
         self,
@@ -65,6 +68,20 @@ class WASM32CodegenBackend:
     def write_instr(self, instr: str | SExpr) -> None:
         self.fd.write(f"\t\t{instr}\n")
 
+    def _init_mem_from_var_initial_value(self, var: Variable[Type]) -> str:
+        match var.initial_value:
+            case int():
+                init_mem = wasm_pack_integer_to_memory(
+                    var.initial_value,
+                    size=var.size_in_bytes,
+                )
+            case None:
+                init_mem = wasm_pack_integer_to_memory(0, size=var.size_in_bytes)
+            case _:
+                raise NotImplementedError(var.initial_value, var)
+
+        return init_mem
+
     def emit_build_global_symtable(self) -> None:
         memory = SExpr("memory", 1)
         if self.shared_import_memory:
@@ -77,17 +94,7 @@ class WASM32CodegenBackend:
             if var.is_constant:
                 continue  # Global symbol, not linear memory
 
-            init_mem = ""
-            match var.initial_value:
-                case int():
-                    init_mem = wasm_pack_integer_to_memory(
-                        var.initial_value,
-                        size=var.size_in_bytes,
-                    )
-                case None:
-                    init_mem = wasm_pack_integer_to_memory(0, size=var.size_in_bytes)
-                case _:
-                    raise NotImplementedError(var.initial_value, var)
+            init_mem = self._init_mem_from_var_initial_value(var)
             self.write_sexpr(
                 wasm_define_data(self._symtable_next_offset, init_mem),
                 indent=1,
@@ -112,13 +119,32 @@ class WASM32CodegenBackend:
         self.wasm32_module_scope_decls()
         self.wasm32_executable_functions()
         self.wasm32_static_data_string_section()
+        self.wasm32_spilled_static_section()
+
         self.wasm32_emit_intrinsic_op_defs()
         self.fd.write(")")
+        assert not self.spilled_stack_vars_slots, "Unloaded stack variable"
         assert not self._strings_to_load, "Unloaded strings"
+
+    def wasm32_spilled_static_section(self) -> None:
+        for slot in self.spilled_stack_vars_slots:
+            slot_offset, slot_var = slot
+            # TODO: Although, stack variables are un-initialized this behavior now is undocumented
+            # TODO: Spilling always is a bad practice - may use locals from WASM specs
+            self.write_sexpr(
+                wasm_define_data(
+                    slot_offset,
+                    self._init_mem_from_var_initial_value(slot_var),
+                ),
+            )
+        self.spilled_stack_vars_slots.clear()
 
     def wasm32_emit_intrinsic_op_defs(self) -> None:
         self.fd.write(
             "\t(func $swap (param i64 i64) (result i64 i64) (local.get 1) (local.get 0))",
+        )
+        self.fd.write(
+            "\t(func $@swap_i64i32 (param i64 i32) (result i32 i64) (local.get 1) (local.get 0))",
         )
 
     def wasm32_static_data_string_section(
@@ -153,9 +179,6 @@ class WASM32CodegenBackend:
             if function.is_external:
                 continue
             assert not function.is_no_return
-            assert not function.variables, (
-                f"Locals not implemented {function.defined_at}"
-            )
 
             self.fd.write("\t")
             self.fd.write(_get_wat_function_decl_spec(function))
@@ -166,7 +189,17 @@ class WASM32CodegenBackend:
                 assert not param.is_fp
                 self.write_sexpr(SExpr("local.get", param_i), indent=2)
 
-            self.wasm32_instruction_set(function.operators, function)
+            spilled_mem_vars: MutableMapping[str, int] = {}
+            for local_var in function.variables.values():
+                assert not local_var.is_constant
+                assert local_var.is_function_scope
+                assert local_var.storage_class == VariableStorageClass.STACK
+                spilled_mem_vars[local_var.name] = self._symtable_next_offset
+                slot = (self._symtable_next_offset, local_var)
+                self.spilled_stack_vars_slots.append(slot)
+                self._symtable_next_offset += local_var.size_in_bytes
+
+            self.wasm32_instruction_set(function.operators, function, spilled_mem_vars)
             self.fd.write("\t)\n")
 
     def wasm32_extern_functions(self) -> None:
@@ -185,6 +218,7 @@ class WASM32CodegenBackend:
         op: Operator,
         idx: int,
         owner_function: Function,
+        _mem_spilled_stack_vars: MutableMapping[str, int],
     ) -> None:
         _ = idx
         match op.type:
@@ -247,14 +281,24 @@ class WASM32CodegenBackend:
                         sym_t = wasm_type_from_primitive(sym_var.type)
                         self.write_instr(f"{sym_t}.load")
                 else:
-                    raise NotImplementedError
+                    spilled_sym_offset = _mem_spilled_stack_vars[op.operand]
+                    sym_var = owner_function.variables[op.operand]
+                    self.write_instr(
+                        f"i32.const {spilled_sym_offset} ;; symtable offset sym={op.operand} (spilled local)",
+                    )
+                    sym_t = wasm_type_from_primitive(sym_var.type)
+                    self.write_instr(f"{sym_t}.load")
 
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(op.operand, str)
-                offset = self.symtable[op.operand]
+                if op.operand in _mem_spilled_stack_vars:
+                    offset = _mem_spilled_stack_vars[op.operand]
+                else:
+                    offset = self.symtable[op.operand]
                 self.write_instr(
-                    f"i64.const {offset} ;; symtable offset sym={op.operand}",
+                    f"i32.const {offset} ;; symtable offset sym={op.operand}",
                 )
+
             case OperatorType.PUSH_STRING:
                 assert isinstance(op.operand, str)
                 string_raw = str(op.token.text[1:-1])
@@ -269,12 +313,28 @@ class WASM32CodegenBackend:
                 self._symtable_next_offset += slice_size
                 self._symtable_next_offset += str_size
                 self.write_instr(f"i64.const {offset} ;; symtable offset string")
+            case OperatorType.MEMORY_VARIABLE_READ:
+                load_type = I64Type()
+                load_wasm_type = wasm_type_from_primitive(load_type)
+
+                self.write_instr(f"{load_wasm_type}.load")
+            case OperatorType.MEMORY_VARIABLE_WRITE:
+                self.write_instr("i64.store")
             case OperatorType.STACK_SWAP:
                 self.write_instr("call $swap")
+            case OperatorType.LOAD_PARAM_ARGUMENT:
+                # TODO: This instruction is not that bad but using this approach is not supportable well
+                # Migrate to named arguments
+                assert isinstance(op.operand, str)
+                assert op.operand in _mem_spilled_stack_vars
+                offset = _mem_spilled_stack_vars[op.operand]
+                self.write_instr(
+                    f"i32.const {offset} ;; symtable offset sym={op.operand}",
+                )
+                self.write_instr("call $@swap_i64i32")
+                self.write_instr("i64.store")
             case (
-                OperatorType.PUSH_VARIABLE_ADDRESS
-                | OperatorType.LOAD_PARAM_ARGUMENT
-                | OperatorType.CONDITIONAL_IF
+                OperatorType.CONDITIONAL_IF
                 | OperatorType.CONDITIONAL_DO
                 | OperatorType.CONDITIONAL_WHILE
                 | OperatorType.CONDITIONAL_FOR
@@ -294,8 +354,6 @@ class WASM32CodegenBackend:
                 | OperatorType.LOGICAL_NOT
                 | OperatorType.SHIFT_RIGHT
                 | OperatorType.SHIFT_LEFT
-                | OperatorType.MEMORY_VARIABLE_READ
-                | OperatorType.MEMORY_VARIABLE_WRITE
             ):
                 raise NotImplementedError(op)
             case _:
@@ -305,10 +363,16 @@ class WASM32CodegenBackend:
         self,
         operators: Sequence[Operator],
         owner_function: Function,
+        _mem_spilled_stack_vars: MutableMapping[str, int],
     ) -> None:
         """Write executable instructions from given operators."""
         for idx, operator in enumerate(operators):
-            self.wasm32_operator_instructions(operator, idx, owner_function)
+            self.wasm32_operator_instructions(
+                operator,
+                idx,
+                owner_function,
+                _mem_spilled_stack_vars=_mem_spilled_stack_vars,
+            )
 
 
 def _get_wat_global_symbol_decl_spec(var: Variable[Type]) -> SExpr:
