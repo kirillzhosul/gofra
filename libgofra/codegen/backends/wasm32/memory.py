@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 
-from libgofra.codegen.backends.wasm32.sexpr import SExpr
+from libgofra.hir.variable import Variable
+from libgofra.types._base import Type
 from libgofra.types.composite.string import StringType
 from libgofra.types.composite.structure import StructureType
 
@@ -36,10 +37,16 @@ def wasm_pack_string_view_to_memory(data_ptr: int, length: int) -> str:
     )
 
 
-def wasm_define_data(offset: int, byte_value: str, *, memory: int = 0) -> SExpr:
-    return SExpr(
-        "data",
-        SExpr("memory", memory),
-        SExpr("i32.const", offset),
-        f'"{byte_value}"',
-    )
+def wasm_init_mem_from_var_initial_value(var: Variable[Type]) -> str:
+    match var.initial_value:
+        case int():
+            init_mem = wasm_pack_integer_to_memory(
+                var.initial_value,
+                size=var.size_in_bytes,
+            )
+        case None:
+            init_mem = wasm_pack_integer_to_memory(0, size=var.size_in_bytes)
+        case _:
+            raise NotImplementedError(var.initial_value, var)
+
+    return init_mem
