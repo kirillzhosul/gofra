@@ -12,11 +12,13 @@ from libgofra.codegen.backends.wasm32.memory import (
     wasm_pack_string_view_to_memory,
 )
 from libgofra.codegen.backends.wasm32.sexpr import (
+    CommentNode,
     DataNode,
     ExportNode,
     FunctionNode,
     GlobalSymbolNode,
     I64ConstNode,
+    IfThenBlockNode,
     ImportNode,
     InstructionCallNode,
     InstructionNode,
@@ -26,6 +28,7 @@ from libgofra.codegen.backends.wasm32.sexpr import (
     ParamNode,
     ResultNode,
     SExpr,
+    ThenBlockNode,
 )
 from libgofra.codegen.backends.wasm32.types import wasm_type_from_primitive
 from libgofra.hir.function import Function
@@ -53,6 +56,8 @@ class WASM32CodegenBackend:
     spilled_stack_vars_slots: MutableSequence[tuple[int, Variable[Type]]]
     shared_import_memory: bool = True
 
+    wasm_module_start_as_entry_ref: bool = True
+
     def __init__(
         self,
         target: Target,
@@ -73,6 +78,10 @@ class WASM32CodegenBackend:
         self._strings_to_load = {}
         self.spilled_stack_vars_slots = []
 
+        self.on_warning(
+            "WASM target is WIP, it has possible interference with how base (x64, ARM) codegen work!",
+        )
+
     def emit_build_global_symtable(self) -> Generator[SExpr]:
         memory = MemoryNode(min_pages=1)
         if self.shared_import_memory:
@@ -87,7 +96,7 @@ class WASM32CodegenBackend:
 
             init_mem = wasm_init_mem_from_var_initial_value(var)
             yield DataNode(self._symtable_next_offset, init_mem)
-            # comment=var.name,
+            # comment var.name,
 
             self.symtable[var.name] = self._symtable_next_offset
             self._symtable_next_offset += var.size_in_bytes
@@ -112,6 +121,10 @@ class WASM32CodegenBackend:
         mod_node.add_nodes(self.wasm32_executable_functions())
         mod_node.add_nodes(self.wasm32_static_data_string_section())
         mod_node.add_nodes(self.wasm32_spilled_static_section())
+
+        if self.wasm_module_start_as_entry_ref and self.module.entry_point_ref:
+            mod_node.add_node(SExpr("start", f"${self.module.entry_point_ref.name}"))
+
         return mod_node
 
     def wasm32_spilled_static_section(self) -> Generator[SExpr]:
@@ -168,8 +181,7 @@ class WASM32CodegenBackend:
                 continue
             assert not function.is_no_return
 
-            node = _get_wat_function_decl_spec(function)
-
+            node = _get_wasm_internal_function_decl_spec(function)
             for param_i, param in enumerate(function.parameters):
                 assert param.size_in_bytes <= 8
                 assert not param.is_fp
@@ -184,7 +196,10 @@ class WASM32CodegenBackend:
                 slot = (self._symtable_next_offset, local_var)
                 self.spilled_stack_vars_slots.append(slot)
                 self._symtable_next_offset += local_var.size_in_bytes
-
+                if local_var.initial_value:
+                    self.on_warning(
+                        f"Local variable {local_var.name} at {local_var.defined_at} is spilled for WASM codegen, but has initial value! This may lead to read after polluting with other function call, consider manual initializer logic",
+                    )
             for instr_node in self.wasm32_instruction_set(
                 function.operators,
                 function,
@@ -195,13 +210,15 @@ class WASM32CodegenBackend:
             node.finite_stmt = True
             yield node
 
-    def wasm32_extern_functions(self) -> Generator[FunctionNode | ImportNode]:
+    def wasm32_extern_functions(self) -> Generator[ImportNode]:
+        extern_from_module = "env"
         for function in self.module.functions.values():
             if not function.is_external:
                 continue
 
-            yield _get_wat_function_decl_spec(function)
             assert not function.has_executable_operators
+            internal_decl = _get_wasm_internal_function_decl_spec(function)
+            yield ImportNode(extern_from_module, function.name, internal_decl)
 
     def wasm32_operator_instructions(
         self,
@@ -268,17 +285,19 @@ class WASM32CodegenBackend:
                     else:
                         offset = self.symtable[op.operand]
                         sym_t = wasm_type_from_primitive(sym_var.type)
-                        # ;; symtable offset sym={op.operand}
                         yield InstructionNode(f"i32.const {offset}")
                         yield InstructionNode(f"{sym_t}.load")
+                        yield CommentNode(f"symtable offset sym={op.operand}")
                         return
                 else:
                     spilled_sym_offset = _mem_spilled_stack_vars[op.operand]
                     sym_var = owner_function.variables[op.operand]
                     sym_t = wasm_type_from_primitive(sym_var.type)
-                    # ;; symtable offset sym={op.operand} (spilled local)
                     yield InstructionNode(f"i32.const {spilled_sym_offset}")
                     yield InstructionNode(f"{sym_t}.load")
+                    yield CommentNode(
+                        f"symtable offset sym={op.operand} (spilled local)",
+                    )
                     return
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(op.operand, str)
@@ -287,7 +306,7 @@ class WASM32CodegenBackend:
                 else:
                     offset = self.symtable[op.operand]
                 yield InstructionNode(f"i32.const {offset}")
-                # ;; symtable offset sym={op.operand}
+                yield CommentNode(f"symtable offset sym={op.operand}")
 
             case OperatorType.PUSH_STRING:
                 assert isinstance(op.operand, str)
@@ -302,7 +321,8 @@ class WASM32CodegenBackend:
                 offset = self._symtable_next_offset
                 self._symtable_next_offset += slice_size
                 self._symtable_next_offset += str_size
-                yield I64ConstNode(offset)  # ;; symtable offset string
+                yield I64ConstNode(offset)
+                yield CommentNode("symtable offset string")
             case OperatorType.MEMORY_VARIABLE_READ:
                 load_type = I64Type()
                 load_wasm_type = wasm_type_from_primitive(load_type)
@@ -319,15 +339,23 @@ class WASM32CodegenBackend:
                 assert op.operand in _mem_spilled_stack_vars
                 offset = _mem_spilled_stack_vars[op.operand]
 
-                # ;; symtable offset sym={op.operand}
                 yield InstructionNode(f"i32.const {offset} ")
                 yield InstructionCallNode("@swap_i64i32")
                 yield InstructionNode("i64.store")
+                yield CommentNode(f"symtable offset sym={op.operand}")
                 return
             case (
-                OperatorType.CONDITIONAL_IF
-                | OperatorType.CONDITIONAL_DO
+                OperatorType.CONDITIONAL_DO
+                | OperatorType.CONDITIONAL_IF
+                | OperatorType.CONDITIONAL_END
                 | OperatorType.CONDITIONAL_WHILE
+                | OperatorType.CONDITIONAL_FOR
+            ):
+                # Must be resolved by high-level instruction set
+                msg = f"{op} must be handled as block-ref"
+                raise ValueError(msg)
+            case (
+                OperatorType.CONDITIONAL_WHILE
                 | OperatorType.CONDITIONAL_FOR
                 | OperatorType.CONDITIONAL_END
                 | OperatorType.STACK_SWAP
@@ -358,17 +386,50 @@ class WASM32CodegenBackend:
     ) -> InstructionsNode:
         """Write executable instructions from given operators."""
         instructions_node = InstructionsNode()
+        instructions_node.add_node("\n")
+
+        block_refs: list[SExpr] = [instructions_node]
         for idx, operator in enumerate(operators):
-            instructions_node.add_nodes(
-                list(
-                    self.wasm32_operator_instructions(
-                        operator,
-                        idx,
-                        owner_function,
-                        _mem_spilled_stack_vars=_mem_spilled_stack_vars,
-                    ),
+            match operator.type:
+                case OperatorType.CONDITIONAL_IF:
+                    block_node = IfThenBlockNode()
+                    instructions_node.add_node("\t")
+                    instructions_node.add_node(InstructionNode("i32.wrap_i64"))
+                    instructions_node.add_node(block_node)
+                    instructions_node.add_node(CommentNode(operator.location))
+                    instructions_node.add_node("\n")
+                    block_refs.append(block_node.then_branch_ref)
+                    continue
+                case OperatorType.CONDITIONAL_END:
+                    block = block_refs.pop()
+                    assert isinstance(block, ThenBlockNode), repr(block)
+                    continue
+                case (
+                    OperatorType.CONDITIONAL_DO
+                    | OperatorType.CONDITIONAL_WHILE
+                    | OperatorType.CONDITIONAL_FOR
+                ):
+                    raise NotImplementedError
+                case _:
+                    ...
+            instructions = list(
+                self.wasm32_operator_instructions(
+                    operator,
+                    idx,
+                    owner_function,
+                    _mem_spilled_stack_vars=_mem_spilled_stack_vars,
                 ),
             )
+
+            target = block_refs[-1]
+            assert block_refs
+            target.add_node("\t")
+
+            target.add_nodes(instructions)
+            target.add_node(CommentNode(operator.location))
+            target.add_node("\n")
+
+        instructions_node.add_node(" ")
         return instructions_node
 
 
@@ -387,16 +448,6 @@ def _get_wat_global_symbol_decl_spec(var: Variable[Type]) -> GlobalSymbolNode:
         case _:
             msg = f"Cannot define global symbol in wasm with default value {var.initial_value}, not implemented unwinding constant Initializers."
             raise NotImplementedError(msg)
-
-
-def _get_wat_function_decl_spec(function: Function) -> FunctionNode | ImportNode:
-    decl = _get_wasm_internal_function_decl_spec(function)
-
-    if function.is_external:
-        extern_from_module = "env"
-        return ImportNode(extern_from_module, function.name, decl)
-
-    return decl
 
 
 def _get_wasm_internal_function_decl_spec(function: Function) -> FunctionNode:

@@ -124,3 +124,45 @@ class DataNode(SExpr):
 class InstructionCallNode(InstructionNode):
     def __init__(self, func: str) -> None:
         super().__init__("call", f"${func}")
+
+
+class CommentNode(InstructionNode):
+    comment: object
+
+    def __init__(self, comment: object) -> None:
+        self.comment = comment
+        self.items = []
+
+    def build(self) -> str:
+        return f";; {self.comment}"
+
+
+class BlockNode(InstructionNode):
+    def __init__(
+        self,
+        *items: object | SExpr,
+        name: str,
+        finite_stmt: bool = False,
+    ) -> None:
+        super().__init__("block", f"${name}", *items, finite_stmt=finite_stmt)
+
+
+class BlockLoopNode(InstructionNode):
+    def __init__(
+        self,
+        name: str,
+    ) -> None:
+        super().__init__("loop", f"${name}", finite_stmt=False)
+
+
+class ThenBlockNode(InstructionNode):
+    def __init__(self) -> None:
+        super().__init__("then")
+
+
+class IfThenBlockNode(InstructionNode):
+    then_branch_ref: ThenBlockNode
+
+    def __init__(self) -> None:
+        self.then_branch_ref = ThenBlockNode()
+        super().__init__("if", self.then_branch_ref)
