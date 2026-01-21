@@ -8,6 +8,7 @@ from typing import Literal
 # Bare AMD64 related
 ####
 
+
 # Registers specification for AMD64
 # Skips some of registers due to currently being unused
 type AMD64_GP_REGISTERS = Literal[

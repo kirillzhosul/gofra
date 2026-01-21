@@ -18,9 +18,7 @@ from ._context import AMD64CodegenContext
 from .assembly import (
     drop_cells_from_stack,
     evaluate_conditional_block_on_stack_with_jump,
-    function_begin_with_prologue,
     function_call,
-    function_end_with_epilogue,
     ipc_syscall_linux,
     load_memory_from_stack_arguments,
     perform_operation_onto_stack,
@@ -30,6 +28,10 @@ from .assembly import (
     push_register_onto_stack,
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
+)
+from .subroutines import (
+    function_begin_with_prologue,
+    function_end_with_epilogue,
 )
 from .static_data_section import initialize_static_data_section
 

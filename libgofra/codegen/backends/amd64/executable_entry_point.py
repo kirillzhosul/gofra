@@ -9,11 +9,13 @@ from libgofra.types.primitive.void import VoidType
 
 from ._context import AMD64CodegenContext
 from .assembly import (
-    function_begin_with_prologue,
     function_call,
-    function_end_with_epilogue,
     ipc_syscall_linux,
     push_integer_onto_stack,
+)
+from .subroutines import (
+    function_begin_with_prologue,
+    function_end_with_epilogue,
 )
 
 
