@@ -37,7 +37,7 @@ end
 Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target.
 
 - Full: **AArch64** macOS (Darwin)
-- Partial, buggy: **x86_64** (Linux)
+- Partial, buggy: **x86_64** (Linux), **WASM**
 
 (Windows **x86_64** is must be supported soon, requires contributors)
 
@@ -46,9 +46,13 @@ Gofra currently supports native compilation (no cross-compilation yet). You must
 Before installing Gofra, ensure you have the following tools available system-wide:
 
 - [Python >3.12.x](https://www.python.org)
+
+For `x86_64` / `ARM` targets:
 - GNU/Mach-O Linker (ld) - For linking compiled objects
 - Assembler (as) - Typically included with Clang LLVM compiler
 
+For `WASM` target:
+- - `WABT` toolkit (`wat2wasm`)
 ## Installation
 
 **For full installation steps, please visit [Installation](./installation.md) page.**

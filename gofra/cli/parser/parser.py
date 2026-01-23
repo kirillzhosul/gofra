@@ -135,6 +135,9 @@ def _process_target(args: Namespace) -> Target:
     """Process target arguments as only allowed triplets and auto inference if not specified."""
     if args.target:
         # Expect only type literal triplets.
+        args.target = {
+            "wasm": "wasm32-unknown-none",
+        }.get(args.target, args.target)
         assert args.target in get_args(Triplet.__value__)
         args.target = cast("Triplet", args.target)
 

@@ -13,6 +13,6 @@ class ConstantVariableRequiresInitializerError(GofraError):
 Variable '{self.varname}' defined at {self.at} has no initial value / initializer
 Consider using direct variable (non-constant).
 
-Constants without initial value hame almost zero semantic sense.
+Constants without initial value have almost zero semantic sense.
 
 {self.generic_error_name}"""

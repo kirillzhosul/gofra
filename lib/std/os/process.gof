@@ -1,5 +1,9 @@
-
 #include "std/os/io/output.gof"
+
+
+#ifdef __WASM
+    compile_error "Process is not suitable for WASM"
+#endif
 
 // Fork current process and return PID executed at two processes: Parent and Child
 // Aborts execution if fork failed (use underlying `sc_fork` as syscall to fork

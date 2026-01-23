@@ -28,7 +28,7 @@ def compose_gnu_linker_command(  # noqa: PLR0913
     """General driver for GNU linker."""
     _ = cache_directory
     if target.operating_system not in ("Linux", "Windows"):
-        msg = f"Cannot compose GNU linker driver command for non {target.operating_system} operating system! GNU linker may link only Linux / Windows objects (ELF/PE only)"
+        msg = f"Cannot compose GNU linker driver command for {target.operating_system} operating system! GNU linker may link only Linux / Windows objects (ELF/PE only)"
         raise ValueError(msg)
 
     if output_format != LinkerOutputFormat.EXECUTABLE:

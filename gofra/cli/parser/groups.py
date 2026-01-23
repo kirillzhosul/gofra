@@ -107,7 +107,15 @@ def add_target_group(parser: ArgumentParser) -> None:
         type=str,
         required=False,
         help="Target compilation triplet. By default target is inferred from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used.",
-        choices=["amd64-unknown-linux", "arm64-apple-darwin", "amd64-unknown-windows"],
+        choices=[
+            # Triplets
+            "amd64-unknown-linux",
+            "arm64-apple-darwin",
+            "amd64-unknown-windows",
+            "wasm32-unknown-none",
+            # Shortcuts
+            "wasm",
+        ],
     )
 
 

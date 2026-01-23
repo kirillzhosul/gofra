@@ -35,11 +35,19 @@ def resolve_conditional_block_from_token(
 
 
 def _consume_until_endif(from_token: Token, state: PreprocessorState) -> None:
+    blocks = 1
     while token := next(state.tokenizer, None):
         if token.type != TokenType.KEYWORD:
             continue
+        if token.value in (
+            PreprocessorKeyword.IF_DEFINED,
+            PreprocessorKeyword.IF_NOT_DEFINED,
+        ):
+            blocks += 1
         if token.value == PreprocessorKeyword.END_IF:
-            return
+            blocks -= 1
+            if blocks == 0:
+                return
         if token.location.filepath != from_token.location.filepath:
             raise PreprocessorConditionalConsumeUntilEndifContextSwitchError(
                 conditional_token=from_token,

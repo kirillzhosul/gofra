@@ -38,4 +38,4 @@ def apple_linker_architecture_from_target(target: Target) -> APPLE_LINKER_ARCHIT
     assert target.architecture in APPLE_LINKER_TARGET_ARCHITECTURE_MAPPING, (
         "Unknown target architecture for Apple linker. This is an bug in Gofra toolchain!"
     )
-    return APPLE_LINKER_TARGET_ARCHITECTURE_MAPPING[target.architecture]
+    return APPLE_LINKER_TARGET_ARCHITECTURE_MAPPING[target.architecture]  # type: ignore  # noqa: PGH003

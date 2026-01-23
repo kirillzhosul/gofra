@@ -44,5 +44,9 @@ def get_os_assembler_section(section: SectionType, target: Target) -> Section:
                 SectionType.INSTRUCTIONS: MACHO_SECTION_INSTRUCTIONS,
                 SectionType.STRINGS: MACHO_SECTION_STRINGS,
             }[section]
+        case "None":
+            msg = "None operating system means there is no os assembler sections, cannot perform!"
+            raise ValueError(msg)
         case "Windows":
-            raise NotImplementedError
+            msg = "Windows COFF/PE is not implemented"
+            raise NotImplementedError(msg)

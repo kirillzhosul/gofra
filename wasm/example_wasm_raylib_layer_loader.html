@@ -1,0 +1,262 @@
+<!doctype html>
+<html>
+  <head>
+    <title></title>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <script src="./node_example_loader.js" type="module"></script>
+    <script>
+      // Change this
+      const WASM_ARTIFACT_PATH = "test.wasm";
+
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const memory = new WebAssembly.Memory({ initial: 1 });
+
+      const getStringFromStringViewPtr = (ptr) => {
+        const view = new DataView(memory.buffer);
+        const offset = Number(ptr);
+
+        const stringRawPtr = view.getBigUint64(offset, true);
+        const length = view.getBigUint64(offset + 8, true);
+
+        const stringBytes = new Uint8Array(
+          memory.buffer,
+          Number(stringRawPtr),
+          Number(length),
+        );
+        return new TextDecoder().decode(stringBytes);
+      };
+
+      const wasm32_print_fd = (fd, ptr) => {
+        const text = getStringFromStringViewPtr(ptr);
+
+        if (fd === 1n) {
+          console.log(text);
+        } else if (fd === 2n) {
+          console.error(text);
+        }
+
+        return BigInt(text.length);
+      };
+
+      const textFromCstring = (textPtr) => {
+        const offset = Number(textPtr);
+        const buffer = memory.buffer;
+
+        // Find null terminator
+        let length = 0;
+        while (true) {
+          const byte = new Uint8Array(buffer, offset + length, 1)[0];
+          if (byte === 0) break; // Found null terminator
+          length++;
+
+          // Safety check
+          if (length > 10000) {
+            console.error("String too long or missing null terminator");
+            break;
+          }
+        }
+
+        // Read the string
+        const stringBytes = new Uint8Array(buffer, offset, length);
+        const text = new TextDecoder().decode(stringBytes);
+        return text;
+      };
+      const importObject = {
+        env: {
+          memory: memory,
+          wasm32_print_fd: wasm32_print_fd,
+          _ClearBackground: (color) => {
+            const hex =
+              "#" + (Number(color) & 0xffffff).toString(16).padStart(6, "0");
+            ctx.fillStyle = hex;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          },
+
+          _DrawText: (textPtr, x, y, fontSize, color) => {
+            const text = textFromCstring(textPtr);
+            const hex =
+              "#" + (Number(color) & 0xffffff).toString(16).padStart(6, "0");
+            ctx.fillStyle = hex;
+            ctx.font = `${fontSize}px Arial`;
+            const metrics = ctx.measureText("test");
+            const textY = Number(y) + metrics.actualBoundingBoxAscent;
+            ctx.fillText(text, Number(x), textY);
+          },
+
+          _DrawLine: (startX, startY, endX, endY, color) => {
+            const hex =
+              "#" + (Number(color) & 0xffffff).toString(16).padStart(6, "0");
+
+            ctx.beginPath();
+            ctx.strokeStyle = hex;
+            ctx.lineWidth = 2; // Default line width
+            ctx.moveTo(Number(startX), Number(startY));
+            ctx.lineTo(Number(endX), Number(endY));
+            ctx.stroke();
+          },
+          _DrawRectangle: (x, y, width, height, color) => {
+            const hex =
+              "#" + (Number(color) & 0xffffff).toString(16).padStart(6, "0");
+
+            ctx.fillStyle = hex;
+            ctx.fillRect(Number(x), Number(y), Number(width), Number(height));
+          },
+
+          _InitWindow: (width, height, titlePtr) => {
+            const title = textFromCstring(titlePtr);
+            document.title = title;
+
+            canvas.width = Number(width);
+            canvas.height = Number(height);
+            console.log(`Window initialized: ${width}x${height}, "${title}"`);
+          },
+          _IsKeyPressed: (keycode) => {
+            const code = Number(keycode);
+            const isPressed = keysPressed.has(code);
+            return isPressed ? 1n : 0n;
+          },
+
+          // Returns true if key is being held down
+          _IsKeyDown: (keycode) => {
+            const code = Number(keycode);
+            const isDown = keysDown.has(code);
+            return isDown ? 1n : 0n;
+          },
+        },
+      };
+
+      // Keyboard state tracking
+      const keysPressed = new Set(); // Keys pressed this frame (cleared each frame)
+      const keysDown = new Set(); // Keys currently held down
+      const keysReleased = new Set(); // Keys released this frame
+
+      // Key code mappings (Raylib key codes)
+      const KEY_CODES = {
+        // Letters
+        65: "A",
+        66: "B",
+        67: "C",
+        68: "D",
+        69: "E",
+        70: "F",
+        71: "G",
+        72: "H",
+        73: "I",
+        74: "J",
+        75: "K",
+        76: "L",
+        77: "M",
+        78: "N",
+        79: "O",
+        80: "P",
+        81: "Q",
+        82: "R",
+        83: "S",
+        84: "T",
+        85: "U",
+        86: "V",
+        87: "W",
+        88: "X",
+        89: "Y",
+        90: "Z",
+        48: "ZERO",
+        49: "ONE",
+        50: "TWO",
+        51: "THREE",
+        52: "FOUR",
+        53: "FIVE",
+        54: "SIX",
+        55: "SEVEN",
+        56: "EIGHT",
+        57: "NINE",
+
+        32: "SPACE",
+        256: "ESCAPE",
+        257: "ENTER",
+        258: "TAB",
+        259: "BACKSPACE",
+        260: "INSERT",
+        261: "DELETE",
+        262: "RIGHT",
+        263: "LEFT",
+        264: "DOWN",
+        265: "UP",
+        280: "LEFT_SHIFT",
+        281: "LEFT_CONTROL",
+        282: "LEFT_ALT",
+        283: "LEFT_SUPER",
+        284: "RIGHT_SHIFT",
+        285: "RIGHT_CONTROL",
+        286: "RIGHT_ALT",
+        287: "RIGHT_SUPER",
+        290: "KB_MENU",
+      };
+
+      // Event listeners
+      window.addEventListener("keydown", (e) => {
+        const keyCode = e.keyCode || e.which;
+
+        // Only add to pressed if not already down (Raylib behavior)
+        if (!keysDown.has(keyCode)) {
+          keysPressed.add(keyCode);
+        }
+        keysDown.add(keyCode);
+
+        // Prevent default for game keys
+        if ([32, 37, 38, 39, 40].includes(keyCode)) {
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener("keyup", (e) => {
+        const keyCode = e.keyCode || e.which;
+
+        keysDown.delete(keyCode);
+        keysReleased.add(keyCode);
+
+        if ([32, 37, 38, 39, 40].includes(keyCode)) {
+          e.preventDefault();
+        }
+      });
+
+      // Clear pressed keys at the end of each frame (call this from your game loop)
+      function clearKeyStates() {
+        keysPressed.clear();
+      }
+      // Animation frame loop
+      let lastTime = 0;
+      function frame(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        window.lastDeltaTime = timestamp - lastTime;
+        lastTime = timestamp;
+
+        window.wasmInstance.exports.game_loop();
+        requestAnimationFrame(frame);
+        clearKeyStates();
+      }
+
+      async function loadWasm() {
+        try {
+          const response = await fetch("test.wasm");
+          const bytes = await response.arrayBuffer();
+
+          const { instance } = await WebAssembly.instantiate(
+            bytes,
+            importObject,
+          );
+          window.wasmInstance = instance;
+          instance.exports.main();
+          requestAnimationFrame(frame);
+        } catch (err) {
+          console.error("Failed to load/run WASM:", err);
+        }
+      }
+
+      loadWasm();
+    </script>
+  </body>
+</html>

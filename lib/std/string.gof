@@ -15,6 +15,8 @@ var int64_to_cstr_buf      char[20] // Max 64 bit cap
 pub func CStr int64_to_cstr[int num]
     var idx int = 0;
 
+    &idx 0 !<
+    
     num 0 < if
         // TODO: negative numbers is not supported
         "int64_to_cstr got negative number!\n" eprint_fatal

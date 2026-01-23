@@ -13,7 +13,7 @@ from gofra.cli.mod_hashing import (
     is_module_needs_rebuild,
 )
 from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
-from gofra.execution.execution import execute_binary_executable
+from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import assemble_object_file
 from libgofra.codegen.generator import generate_code_for_assembler
@@ -245,6 +245,12 @@ def _perform_assembler(  # noqa: PLR0913
             )
             modules_objects[mod.path] = mod_object_path
 
+    if args.target.architecture == "WASM32":
+        cli_message(
+            level="WARNING",
+            text="WASM target requires loader with env respectfully!",
+        )
+
     return modules_objects
 
 
@@ -277,6 +283,10 @@ def _perform_linker_bundle(
     )
 
     with wrap_with_perf_time_taken("Linker", verbose=args.verbose):
+        if args.target.architecture == "WASM32":
+            cli_fatal_abort(
+                text="Cannot link executable for WASM32, use object output format (`-of object`)",
+            )
         libraries_search_paths = args.linker_libraries_search_paths
         if args.linker_resolve_libraries_with_pkgconfig:
             for library in args.linker_libraries:
@@ -319,6 +329,15 @@ def log_command(args: CLIArguments, process: CompletedProcess[bytes]) -> None:
     cli_message("CMD", " ".join(map(str, process.args)))
 
 
+def get_host_compliance(args: CLIArguments) -> bool:
+    host_target = infer_host_target()
+    assert host_target
+    return (
+        args.target.architecture == host_target.architecture
+        and args.target.operating_system == host_target.operating_system
+    )
+
+
 def _execute_after_compilation(args: CLIArguments) -> None:
     """Run executable after compilation if user requested."""
     if not args.execute_after_compilation:
@@ -330,12 +349,14 @@ def _execute_after_compilation(args: CLIArguments) -> None:
 
     host_target = infer_host_target()
     assert host_target
-    if (
-        args.target.architecture != host_target.architecture
-        or args.target.operating_system != host_target.operating_system
-    ):
+    host_compliance = (
+        args.target.architecture == host_target.architecture
+        and args.target.operating_system == host_target.operating_system
+    )
+
+    if not host_compliance:
         cli_fatal_abort(
-            "Target differs from host target, cannot execute on current host, please execute on your own!\nFile was compiled, please remove execute flag!",
+            "Target differs from host target, cannot execute on current host without emulation layer, please execute on your own!\nFile was compiled, please remove execute flag!",
         )
 
     cli_message(
@@ -346,7 +367,7 @@ def _execute_after_compilation(args: CLIArguments) -> None:
 
     with wrap_with_perf_time_taken("Execution", verbose=args.verbose):
         try:
-            process = execute_binary_executable(args.output_filepath, args=[])
+            process = execute_native_binary_executable(args.output_filepath, args=[])
             log_command(args, process)
             exit_code = process.returncode
         except KeyboardInterrupt:
