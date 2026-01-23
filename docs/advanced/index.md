@@ -9,3 +9,4 @@
 ### [Function Attributes](./function-attributes.md)
 ### [Type definition](./type-definition.md)
 ### [Generic Types](./generic-types.md)
+### [WebAssembly](./wasm.md)
