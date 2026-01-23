@@ -111,9 +111,12 @@
 <p>Gofra is a Python-based toolchain, so you only require a Python installation. However, as a toolchain-compiled code, it depends on the target-specific linker and assembler.</p>
 <ul>
 <li><a href="https://www.python.org">Python &gt;3.12.x</a> available as <code>python</code> or <code>python3</code> command</li>
-<li>GNU/Mach-O Linker (ld) - For linking compiled objects</li>
-<li>Assembler (as) - Typically included with Clang LLVM compiler</li>
 </ul>
+<p>For <code>x86_64</code> / <code>ARM</code> targets:
+- - GNU/Mach-O Linker (ld) - For linking compiled objects
+- - Assembler (as) - Typically included with Clang LLVM compiler</p>
+<p>For <code>WASM</code> target:
+- - <code>WABT</code> toolkit (<code>wat2wasm</code>)</p>
 <p><a href="https://github.com/kirillzhosul/gofra">Gofra</a> is distributed as single Python-based toolchain. To install:</p>
 <h2 id="install">Install</h2>
 <p>(Step 1): Install toolchain</p>

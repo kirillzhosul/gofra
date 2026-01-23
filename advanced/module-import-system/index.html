@@ -211,7 +211,7 @@ This prohibits to have non-linear/real graph dependencies, yet allows simple FFI
 - Try CLI toolchain directory
 - Try include paths (obscured with CLI flag for preprocessor)</p>
 <h1 id="incremental-compilation">Incremental compilation</h1>
-<p>By default, modules always compiled incrementally and does not being rebuilt when no changes found, this behavior can be overridden with <code>--no-incremental</code>/<code>--always-rebuild</code>/<code>--clean-build</code>, internally compiler decide to not rebuild based on modified time difference from artifact (object/assembly file) and original module file (*.gof)</p>
+<p>By default, modules never compiled incrementally and always being being rebuilt, this behavior can be overridden with <code>--incremental</code> flag, internally compiler decide to not rebuild based on modified time difference from artifact (object/assembly file) and original module file (*.gof)</p>
 <h1 id="order-of-dependencies">Order of dependencies</h1>
 <p>Dependencies compiled and resolved based on order from source e.g if <em>a</em> import <em>b</em> and then <em>c</em> with <em>e</em> compiled will build linear graph like this:</p>
 <pre><code>a -&gt; b -+-&gt; c

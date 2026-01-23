@@ -159,16 +159,19 @@ end
 <p>Gofra currently supports native compilation (no cross-compilation yet). You must compile on the same platform as your target.</p>
 <ul>
 <li>Full: <strong>AArch64</strong> macOS (Darwin)</li>
-<li>Partial, buggy: <strong>x86_64</strong> (Linux)</li>
+<li>Partial, buggy: <strong>x86_64</strong> (Linux), <strong>WASM</strong></li>
 </ul>
 <p>(Windows <strong>x86_64</strong> is must be supported soon, requires contributors)</p>
 <h2 id="pre-requirements">Pre requirements</h2>
 <p>Before installing Gofra, ensure you have the following tools available system-wide:</p>
 <ul>
 <li><a href="https://www.python.org">Python &gt;3.12.x</a></li>
-<li>GNU/Mach-O Linker (ld) - For linking compiled objects</li>
-<li>Assembler (as) - Typically included with Clang LLVM compiler</li>
 </ul>
+<p>For <code>x86_64</code> / <code>ARM</code> targets:
+- GNU/Mach-O Linker (ld) - For linking compiled objects
+- Assembler (as) - Typically included with Clang LLVM compiler</p>
+<p>For <code>WASM</code> target:
+- - <code>WABT</code> toolkit (<code>wat2wasm</code>)</p>
 <h2 id="installation">Installation</h2>
 <p><strong>For full installation steps, please visit <a href="installation/">Installation</a> page.</strong></p>
 <p><a href="https://github.com/kirillzhosul/gofra">Gofra</a> is distributed as single Python-based toolchain. To install:</p>
@@ -259,5 +262,5 @@ end
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2025-12-22 15:54:53.853337+00:00
+Build Date UTC : 2026-01-23 20:00:42.756427+00:00
 -->

@@ -85,11 +85,15 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#alignment-on-cpus" class="nav-link">Alignment on CPUs</a>
+            <li class="nav-item" data-bs-level="2"><a href="#forward-reference-and-self-reference" class="nav-link">Forward reference and self-reference</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#big-caveats" class="nav-link">Big Caveats</a>
+            <li class="nav-item" data-bs-level="2"><a href="#alignment-on-cpus-and-packed-layout" class="nav-link">Alignment on CPUs and packed layout</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#reordering" class="nav-link">Reordering</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -127,14 +131,58 @@ end
 
 stepan.age // will push an pointer to an `age` field so you can write / read from it
 </code></pre>
-<h2 id="alignment-on-cpus">Alignment on CPUs</h2>
-<p>All structures are alignment by default to machine alignment</p>
-<h2 id="big-caveats">Big Caveats</h2>
-<ul>
-<li>Structs are not passed according to C-FFI ABI</li>
-<li>Structs have no constructors</li>
-<li>... and much more as this feature is being in development an mainly used as drop-in replacement to defining an structs with <code>char[32]</code> or <code>int[2]</code>...</li>
-</ul>
+<h2 id="forward-reference-and-self-reference">Forward reference and self-reference</h2>
+<p>Forward reference of structures as children field is allowed:</p>
+<pre><code class="language-gofra">struct X
+    id int
+    child X
+end // 16 bytes
+// This will define X as (8 byte int + 8 byte X (int))
+</code></pre>
+<h2 id="alignment-on-cpus-and-packed-layout">Alignment on CPUs and packed layout</h2>
+<p>By default, all structures being aligned in memory according to max alignment of its own fields, e.g if biggest field type is <code>int</code> (8 bytes) then alignment for whole structure must be same amount of bytes</p>
+<p>This can be overridden by specifying <code>packed</code> attribute for structure, which means <em>do not apply any alignment, place all fields as-is linearly in memory</em></p>
+<pre><code class="language-gofra">struct bad_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Unpacked, 24 bytes
+
+struct packed packed_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Packed, 10 bytes
+</code></pre>
+<pre><code>Packed (tight memory layout)
+|-------------|
+|a|    b   |c||     =&gt; 10 bytes
+|-------------|
+
+
+Aligned (thin memory layout)
+|-------------------------------------------|
+|a|...padding...|     b     |...padding...|c|     =&gt; 24 bytes
+|-------------------------------------------|
+
+Padding is from both sides to properly align *int* (8 bytes) field access on CPU
+</code></pre>
+<h2 id="reordering">Reordering</h2>
+<p>Reordering is a process when for performance reasons fields of structure being re-ordered to solve alignment issues (redundant padding on structure memory layout) </p>
+<p>By default, structures does not apply reordering, this behavior can be overridden by specifying <code>reorder</code> attribute for structure.</p>
+<pre><code class="language-gofra">struct bad_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Unpacked, 24 bytes
+
+struct reorder reordered_layout
+    a char // 1 byte
+    b int  // 8 byte
+    c char // 1 byte
+end // Unpacked, reordered 16 bytes
+// Order was transformed into [b, a, c] (int, char, char) re-using padding from int to char
+</code></pre>
 <h2 id="hir-perspective">HIR perspective</h2>
 <p>Accessing an structure field will as by default emit <code>PUSH_VARIABLE_ADDRESS</code> HIR operator which is followed by <code>STRUCT_FIELD_OFFSET</code> which is resolved to <code>ADDR(VAR) + FIELD_OFFSET(field)</code> so <code>*struct</code> resolve into <code>*struct.field</code> as auto type inference from structure type</p>
 <h2 id="lir-perspective">LIR perspective</h2>
