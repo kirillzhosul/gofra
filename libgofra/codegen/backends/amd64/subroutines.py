@@ -11,10 +11,7 @@ from libgofra.codegen.backends.amd64.frame import (
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
 from libgofra.types.primitive.void import VoidType
 
-from .assembly import (
-    push_register_onto_stack,
-    pop_cells_from_stack_into_registers
-)
+from .assembly import pop_cells_from_stack_into_registers, push_register_onto_stack
 from .stack_local_initializer import (
     write_function_local_stack_variables_initializer,
 )
@@ -58,6 +55,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
         context,
         local_variables=local_variables,
     )
+
 
 def function_end_with_epilogue(
     context: AMD64CodegenContext,

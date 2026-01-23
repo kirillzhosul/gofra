@@ -4,10 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from libgofra.codegen.backends.amd64.frame import (
-    preserve_calee_frame,
-    restore_calee_frame,
-)
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
 from libgofra.exceptions import GofraError
 from libgofra.hir.operator import OperatorType

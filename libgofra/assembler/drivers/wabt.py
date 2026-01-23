@@ -81,6 +81,7 @@ class WabtAssemblerDriver(AssemblerDriverProtocol):
         :param debug_information: If specified, will pass debug info flag to assembler and specify its version
         :param flags: Any additional flags
         """
+        _ = target
         executable = cls.find_wat2wasm_tool_path()
         assert executable
         # fmt: off

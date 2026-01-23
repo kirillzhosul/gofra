@@ -29,11 +29,11 @@ from .assembly import (
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
 )
+from .static_data_section import initialize_static_data_section
 from .subroutines import (
     function_begin_with_prologue,
     function_end_with_epilogue,
 )
-from .static_data_section import initialize_static_data_section
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
