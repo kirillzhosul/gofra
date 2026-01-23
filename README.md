@@ -70,7 +70,7 @@ end
 
 \* Main workflow of development, has *all* features \
 ** Incomplete, has bugs and not all features \
-*** Windows x86_64 is not implemented, but has general wrappers for system calls and possibly can compiled with headache 
+*** Windows x86_64 is not implemented, but has general wrappers for system calls and possibly can be compiled with some headache 
 
 ## Pre requirements
 
