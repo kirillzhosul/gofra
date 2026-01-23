@@ -329,6 +329,15 @@ def log_command(args: CLIArguments, process: CompletedProcess[bytes]) -> None:
     cli_message("CMD", " ".join(map(str, process.args)))
 
 
+def get_host_compliance(args: CLIArguments) -> bool:
+    host_target = infer_host_target()
+    assert host_target
+    return (
+        args.target.architecture == host_target.architecture
+        and args.target.operating_system == host_target.operating_system
+    )
+
+
 def _execute_after_compilation(args: CLIArguments) -> None:
     """Run executable after compilation if user requested."""
     if not args.execute_after_compilation:

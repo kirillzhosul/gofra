@@ -10,50 +10,49 @@
 
 // Convert int64 to string
 // TODO: negative numbers is not supported
-#ifndef __WASM
-    var int64_to_cstr_swap_buf char[20] // Max 64 bit cap
-    var int64_to_cstr_buf      char[20] // Max 64 bit cap
-    pub func CStr int64_to_cstr[int num]
-        var idx int = 0;
+var int64_to_cstr_swap_buf char[20] // Max 64 bit cap
+var int64_to_cstr_buf      char[20] // Max 64 bit cap
+pub func CStr int64_to_cstr[int num]
+    var idx int = 0;
 
-        num 0 < if
-            // TODO: negative numbers is not supported
-            "int64_to_cstr got negative number!\n" eprint_fatal
-        end
+    &idx 0 !<
+    
+    num 0 < if
+        // TODO: negative numbers is not supported
+        "int64_to_cstr got negative number!\n" eprint_fatal
+    end
 
-        num 0 == if
-            // Direct zero
-            &int64_to_cstr_buf[0] '0'  !<
-            &int64_to_cstr_buf[1] '\0' !<
-            &int64_to_cstr_buf return
-        end
-
-        while num 0 > do
-            &int64_to_cstr_swap_buf[idx]
-                num 10 % // Get last digit of an number 
-                '0' + // real `cast` to char (e.g digit + 48 => char code) 
-            !<
-
-            // Shift number from right to left (drop last digit)
-            &num num 10 / !< 
-
-            &idx idx 1 + !< // Increment IDX
-        end
-
-        // Swap buffers as in reverse order
-        var a int;
-        for b in 0..idx do
-            // Push LTR, load RTL
-            &a idx b - 1 - !< // Minus one so we trim last increment from previous loop: a = idx - b - 1;
-            &int64_to_cstr_buf[b] int64_to_cstr_swap_buf[a] typecast int !<
-        end
-
-        // Null terminate before return
-        &int64_to_cstr_buf[idx] '\0' !<
-
+    num 0 == if
+        // Direct zero
+        &int64_to_cstr_buf[0] '0'  !<
+        &int64_to_cstr_buf[1] '\0' !<
         &int64_to_cstr_buf return
     end
 
-    inline func CStr int_to_cstr[int] call int64_to_cstr end // Alias as default int is 64 bits
+    while num 0 > do
+        &int64_to_cstr_swap_buf[idx]
+            num 10 % // Get last digit of an number 
+            '0' + // real `cast` to char (e.g digit + 48 => char code) 
+        !<
 
-#endif
+        // Shift number from right to left (drop last digit)
+        &num num 10 / !< 
+
+        &idx idx 1 + !< // Increment IDX
+    end
+
+    // Swap buffers as in reverse order
+    var a int;
+    for b in 0..idx do
+        // Push LTR, load RTL
+        &a idx b - 1 - !< // Minus one so we trim last increment from previous loop: a = idx - b - 1;
+        &int64_to_cstr_buf[b] int64_to_cstr_swap_buf[a] typecast int !<
+    end
+
+    // Null terminate before return
+    &int64_to_cstr_buf[idx] '\0' !<
+
+    &int64_to_cstr_buf return
+end
+
+inline func CStr int_to_cstr[int] call int64_to_cstr end // Alias as default int is 64 bits
