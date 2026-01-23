@@ -1,17 +1,21 @@
 from collections.abc import (
     Callable,
     Generator,
+    Mapping,
     MutableMapping,
     MutableSequence,
     Sequence,
 )
-from typing import IO, assert_never
+from typing import IO, Literal, assert_never
 
+from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.backends.wasm32.memory import (
     wasm_init_mem_from_var_initial_value,
     wasm_pack_string_view_to_memory,
 )
 from libgofra.codegen.backends.wasm32.sexpr import (
+    BlockLoopNode,
+    BlockNode,
     CommentNode,
     DataNode,
     ExportNode,
@@ -25,13 +29,14 @@ from libgofra.codegen.backends.wasm32.sexpr import (
     InstructionsNode,
     MemoryNode,
     ModuleNode,
+    ModuleStartSymbolNode,
     ParamNode,
     ResultNode,
     SExpr,
     ThenBlockNode,
 )
 from libgofra.codegen.backends.wasm32.types import wasm_type_from_primitive
-from libgofra.hir.function import Function
+from libgofra.hir.function import PARAMS_T, Function
 from libgofra.hir.module import Module
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
@@ -58,6 +63,9 @@ class WASM32CodegenBackend:
 
     wasm_module_start_as_entry_ref: bool = True
 
+    wasm_import_module: str = "env"
+    requested_inlined_intrinsics: set[Literal["swap", "swap_i64i32"]]
+
     def __init__(
         self,
         target: Target,
@@ -77,91 +85,105 @@ class WASM32CodegenBackend:
         self._symtable_next_offset = 0
         self._strings_to_load = {}
         self.spilled_stack_vars_slots = []
+        self.requested_inlined_intrinsics = set()
 
         self.on_warning(
             "WASM target is WIP, it has possible interference with how base (x64, ARM) codegen work!",
         )
 
-    def emit_build_global_symtable(self) -> Generator[SExpr]:
+    def build_memory_pages_node(self) -> ImportNode | MemoryNode:
         memory = MemoryNode(min_pages=1)
         if self.shared_import_memory:
-            memory = ImportNode("env", "memory", memory)
-        yield memory
+            return ImportNode(self.wasm_import_module, "memory", memory)
+        return memory
 
-        if not self.module.variables:
-            return
+    def build_and_allocate_data_node_from_variable(
+        self,
+        variable: Variable[Type],
+    ) -> DataNode:
+        init_mem = wasm_init_mem_from_var_initial_value(variable)
+        node = DataNode(self._symtable_next_offset, init_mem)
+
+        # Allocate and shift symtable
+        self.symtable[variable.name] = self._symtable_next_offset
+        self._symtable_next_offset += variable.size_in_bytes
+        return node
+
+    def build_global_mutable_data(self) -> Generator[DataNode]:
         for var in self.module.variables.values():
             if var.is_constant:
                 continue  # Global symbol, not linear memory
 
-            init_mem = wasm_init_mem_from_var_initial_value(var)
-            yield DataNode(self._symtable_next_offset, init_mem)
-            # comment var.name,
+            yield self.build_and_allocate_data_node_from_variable(var)
 
-            self.symtable[var.name] = self._symtable_next_offset
-            self._symtable_next_offset += var.size_in_bytes
-
-    def emit_global_symbol_decls(self) -> Generator[SExpr]:
+    def build_global_immutable_data(self) -> Generator[GlobalSymbolNode]:
         for var in self.module.variables.values():
             if not var.is_constant:
                 continue
-            yield (_get_wat_global_symbol_decl_spec(var))
+            yield self.build_global_variable_symbol_node(var)
 
-    def emit(self) -> None:
-        module = self.build_node_tree()
-        self._fd.write(module.build())
-        assert not self.spilled_stack_vars_slots, "Unloaded stack variable"
-        assert not self._strings_to_load, "Unloaded strings"
-
-    def build_node_tree(self) -> ModuleNode:
-        mod_node = ModuleNode()
-        mod_node.add_nodes(self.wasm32_extern_functions())
-        mod_node.add_nodes(self.wasm32_module_scope_decls())
-        mod_node.add_nodes(self.wasm32_emit_intrinsic_op_defs())
-        mod_node.add_nodes(self.wasm32_executable_functions())
-        mod_node.add_nodes(self.wasm32_static_data_string_section())
-        mod_node.add_nodes(self.wasm32_spilled_static_section())
-
-        if self.wasm_module_start_as_entry_ref and self.module.entry_point_ref:
-            mod_node.add_node(SExpr("start", f"${self.module.entry_point_ref.name}"))
-
-        return mod_node
-
-    def wasm32_spilled_static_section(self) -> Generator[SExpr]:
-        for slot in self.spilled_stack_vars_slots:
-            slot_offset, slot_var = slot
-            # TODO: Although, stack variables are un-initialized this behavior now is undocumented
-            # TODO: Spilling always is a bad practice - may use locals from WASM specs
-            yield (
-                DataNode(slot_offset, wasm_init_mem_from_var_initial_value(slot_var))
-            )
-            # comment=f"Spilled from local {slot_var.name} at {slot_var.defined_at}",
-        self.spilled_stack_vars_slots.clear()
-
-    def wasm32_emit_intrinsic_op_defs(self) -> Generator[SExpr]:
-        yield SExpr(
-            "func",
-            "$swap",
-            ParamNode(["i64", "i64"]),
-            SExpr("result", "i64", "i64"),
-            InstructionNode("local.get", 1),
-            InstructionNode("local.get", 0),
-        )
-
-        yield SExpr(
-            "func",
-            "$@swap_i64i32",
-            ParamNode(["i64", "i32"]),
-            SExpr("result", "i32", "i64"),
-            InstructionNode("local.get", 1),
-            InstructionNode("local.get", 0),
-        )
-
-    def wasm32_static_data_string_section(
+    def build_global_variable_symbol_node(
         self,
-    ) -> Generator[SExpr]:
+        var: Variable[Type],
+    ) -> GlobalSymbolNode:
+        assert var.is_global_scope
+        assert var.initial_value is not None, (
+            f"uninitialized symbol {var.name} for WASM"
+        )
+
+        match var.initial_value:
+            case int():
+                return GlobalSymbolNode(
+                    var.name,
+                    store_type=wasm_type_from_primitive(var.type),
+                    initializer=I64ConstNode(var.initial_value),
+                    is_mutable=var.is_constant,
+                )
+            case _:
+                msg = f"Cannot define global symbol in wasm with default value {var.initial_value}, not implemented unwinding constant Initializers."
+                raise NotImplementedError(msg)
+
+    def build_module_scope_data(self) -> Generator[DataNode | GlobalSymbolNode]:
+        yield from self.build_global_mutable_data()
+        yield from self.build_global_immutable_data()
+
+    def build_extern_function_imports(self) -> Generator[ImportNode]:
+        for function in self.module.functions.values():
+            if not function.is_external:
+                continue
+
+            function_specification = _get_wasm_internal_function_decl_spec(function)
+            yield ImportNode(
+                self.wasm_import_module,
+                function.name,
+                function_specification,
+            )
+
+    def build_requested_inlined_intrinsics_decls(self) -> Generator[FunctionNode]:
+        if "swap" in self.requested_inlined_intrinsics:
+            node = FunctionNode("swap")
+            node.add_node(ParamNode(["i64", "i64"]))
+            node.add_node(ResultNode("i64"))
+            node.add_node(ResultNode("i64"))
+            node.add_node(InstructionNode("local.get", 1))
+            node.add_node(InstructionNode("local.get", 0))
+            yield node
+
+        if "swap_i64i32" in self.requested_inlined_intrinsics:
+            node = FunctionNode("swap_i64i32")
+            node.add_node(ParamNode(["i64", "i32"]))
+            node.add_node(ResultNode("i32"))
+            node.add_node(ResultNode("i64"))
+            node.add_node(InstructionNode("local.get", 1))
+            node.add_node(InstructionNode("local.get", 0))
+            yield node
+
+    def build_static_strings_data(
+        self,
+    ) -> Generator[DataNode]:
+        # TODO: As global symbol node? or left mutable data node
+        view_size = StringType().size_in_bytes
         for symtable_idx, str_val in self._strings_to_load.items():
-            view_size = StringType().size_in_bytes
             data_ptr = symtable_idx + view_size
 
             string_raw, string_op = str_val
@@ -171,36 +193,51 @@ class WASM32CodegenBackend:
             yield DataNode(symtable_idx + view_size, string_raw)
         self._strings_to_load.clear()
 
-    def wasm32_module_scope_decls(self) -> Generator[SExpr]:
-        yield from self.emit_build_global_symtable()
-        yield from self.emit_global_symbol_decls()
+    def build_module_node_tree(self) -> ModuleNode:
+        mod_node = ModuleNode()
+        mod_node.add_nodes(self.build_extern_function_imports())
+        mod_node.add_node(self.build_memory_pages_node())
+        mod_node.add_nodes(self.build_module_scope_data())
+        mod_node.add_nodes(self.build_executable_functions())
+        mod_node.add_nodes(self.build_static_strings_data())
+        mod_node.add_nodes(self.build_spilled_stack_vars_slots())
+        mod_node.add_nodes(self.build_requested_inlined_intrinsics_decls())
 
-    def wasm32_executable_functions(self) -> Generator[SExpr]:
+        if self.wasm_module_start_as_entry_ref and self.module.entry_point_ref:
+            mod_node.add_node(ModuleStartSymbolNode(self.module.entry_point_ref.name))
+
+        return mod_node
+
+    def emit(self) -> None:
+        module = self.build_module_node_tree()
+        assert not self.spilled_stack_vars_slots, "Unloaded stack variable"
+        assert not self._strings_to_load, "Unloaded strings"
+        self._fd.write(module.build())
+
+    def build_spilled_stack_vars_slots(self) -> Generator[DataNode]:
+        # TODO: Although, stack variables are un-initialized this behavior now is undocumented
+        # TODO: Spilling always is a bad practice - may use locals from WASM specs
+        for slot in self.spilled_stack_vars_slots:
+            slot_offset, slot_var = slot
+            init_mem = wasm_init_mem_from_var_initial_value(slot_var)
+            yield DataNode(slot_offset, init_mem)
+        self.spilled_stack_vars_slots.clear()
+
+    def build_executable_functions(self) -> Generator[SExpr]:
         for function in self.module.functions.values():
             if function.is_external:
                 continue
-            assert not function.is_no_return
 
             node = _get_wasm_internal_function_decl_spec(function)
-            for param_i, param in enumerate(function.parameters):
-                assert param.size_in_bytes <= 8
-                assert not param.is_fp
-                node.add_node(InstructionNode("local.get", param_i))
 
-            spilled_mem_vars: MutableMapping[str, int] = {}
-            for local_var in function.variables.values():
-                assert not local_var.is_constant
-                assert local_var.is_function_scope
-                assert local_var.storage_class == VariableStorageClass.STACK
-                spilled_mem_vars[local_var.name] = self._symtable_next_offset
-                slot = (self._symtable_next_offset, local_var)
-                self.spilled_stack_vars_slots.append(slot)
-                self._symtable_next_offset += local_var.size_in_bytes
-                if local_var.initial_value:
-                    self.on_warning(
-                        f"Local variable {local_var.name} at {local_var.defined_at} is spilled for WASM codegen, but has initial value! This may lead to read after polluting with other function call, consider manual initializer logic",
-                    )
-            for instr_node in self.wasm32_instruction_set(
+            node.add_nodes(self._function_prologue_load_params(function.parameters))
+
+            spilled_mem_vars = self._function_allocate_spilled_stack_var_slots(
+                function.variables,
+            )
+
+            node.add_node("\n")
+            for instr_node in self.build_instruction_set_blocked(
                 function.operators,
                 function,
                 spilled_mem_vars,
@@ -210,38 +247,141 @@ class WASM32CodegenBackend:
             node.finite_stmt = True
             yield node
 
-    def wasm32_extern_functions(self) -> Generator[ImportNode]:
-        extern_from_module = "env"
-        for function in self.module.functions.values():
-            if not function.is_external:
-                continue
+    def _function_allocate_spilled_stack_var_slots(
+        self,
+        variables: Mapping[str, Variable[Type]],
+    ) -> MutableMapping[str, int]:
+        spilled_mem_vars: MutableMapping[str, int] = {}
+        for var in variables.values():
+            assert not var.is_constant
+            assert var.is_function_scope
+            assert var.storage_class == VariableStorageClass.STACK
 
-            assert not function.has_executable_operators
-            internal_decl = _get_wasm_internal_function_decl_spec(function)
-            yield ImportNode(extern_from_module, function.name, internal_decl)
+            spilled_mem_vars[var.name] = self._symtable_next_offset
+            slot = (self._symtable_next_offset, var)
+            self.spilled_stack_vars_slots.append(slot)
+            self._symtable_next_offset += var.size_in_bytes
 
-    def wasm32_operator_instructions(
+            if var.initial_value:
+                self.on_warning(
+                    f"Local variable {var.name} at {var.defined_at} is spilled for WASM codegen, but has initial value! This may lead to read after polluting with other function call, consider manual initializer logic",
+                )
+        return spilled_mem_vars
+
+    def _function_prologue_load_params(
+        self,
+        params: PARAMS_T,
+    ) -> Generator[InstructionNode]:
+        for param_i, param in enumerate(params):
+            assert param.size_in_bytes <= 8
+            assert not param.is_fp
+            yield InstructionNode("local.get", param_i)
+
+    def build_instruction_set_blocked(
+        self,
+        operators: Sequence[Operator],
+        owner_function: Function,
+        _mem_spilled_stack_vars: MutableMapping[str, int],
+    ) -> InstructionsNode:
+        """Write executable instructions from given operators."""
+        instructions_node = InstructionsNode()
+
+        block_refs: list[InstructionsNode | ThenBlockNode | BlockLoopNode] = [
+            instructions_node,
+        ]
+
+        for idx, operator in enumerate(operators):
+            match operator.type:
+                case OperatorType.CONDITIONAL_IF:
+                    block_node = IfThenBlockNode()
+                    instructions_node.add_node("\t")
+                    instructions_node.add_node(InstructionNode("i32.wrap_i64"))
+                    instructions_node.add_node(block_node)
+                    instructions_node.add_node(CommentNode(operator.location))
+                    instructions_node.add_node("\n")
+                    block_refs.append(block_node.then_branch_ref)
+                    continue
+                case OperatorType.CONDITIONAL_END:
+                    block = block_refs.pop()
+                    assert isinstance(block, ThenBlockNode | BlockLoopNode), repr(block)
+                    if not isinstance(block, BlockLoopNode):
+                        continue
+                    label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
+                    if isinstance(operator.jumps_to_operator_idx, int):
+                        label_to = CODEGEN_GOFRA_CONTEXT_LABEL % (
+                            owner_function.name,
+                            operator.jumps_to_operator_idx,
+                        )
+                        block.add_node(InstructionNode("br", f"${label_to + '_start'}"))
+                    continue
+                case OperatorType.CONDITIONAL_WHILE | OperatorType.CONDITIONAL_FOR:
+                    label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
+
+                    block_node = BlockNode(name=label + "_end")
+                    loop_node = BlockLoopNode(name=label + "_start")
+                    block_node.add_node(loop_node)
+                    instructions_node.add_node("\t")
+                    instructions_node.add_node(block_node)
+                    instructions_node.add_node(CommentNode(operator.location))
+                    instructions_node.add_node("\n")
+                    block_refs.append(loop_node)
+                    continue
+                case OperatorType.CONDITIONAL_DO:
+                    assert block_refs
+                    target = block_refs[-1]
+                    assert isinstance(operator.jumps_to_operator_idx, int)
+                    end_op = operators[operator.jumps_to_operator_idx]
+                    assert end_op.type == OperatorType.CONDITIONAL_END
+                    assert end_op.jumps_to_operator_idx
+                    label_to = CODEGEN_GOFRA_CONTEXT_LABEL % (
+                        owner_function.name,
+                        end_op.jumps_to_operator_idx,
+                    )
+                    target.add_node(InstructionNode("i64.eqz"))
+                    target.add_node(
+                        InstructionNode("br_if ", f"${label_to + '_end'}"),
+                    )
+                    continue
+                case _:
+                    pass
+
+            assert block_refs
+            target = block_refs[-1]
+            instr_generator = self.build_operator_wasm_instructions(
+                operator,
+                owner_function,
+                _mem_spilled_stack_vars=_mem_spilled_stack_vars,
+            )
+
+            target.add_node("\t")
+            target.add_nodes(instr_generator)
+            target.add_node(
+                CommentNode(repr(operator.type.name) + " " + str(operator.location)),
+            )
+            target.add_node("\n")
+
+        instructions_node.add_node(" ")
+        return instructions_node
+
+    def build_operator_wasm_instructions(
         self,
         op: Operator,
-        idx: int,
         owner_function: Function,
         _mem_spilled_stack_vars: MutableMapping[str, int],
     ) -> Generator[InstructionNode | I64ConstNode]:
-        _ = idx
         match op.type:
+            # Simple operators
+            # E.g math
             case OperatorType.PUSH_INTEGER:
                 assert isinstance(op.operand, int)
-                yield InstructionNode(f"i64.const {op.operand}")
+                yield InstructionNode("i64.const", op.operand)  # I64ConstNode
             case OperatorType.ARITHMETIC_PLUS:
                 yield InstructionNode("i64.add")
             case OperatorType.PUSH_FLOAT:
                 assert isinstance(op.operand, float)
-                yield InstructionNode(f"f64.const {op.operand}")
+                yield InstructionNode("f64.const", op.operand)
             case OperatorType.STACK_DROP:
                 yield InstructionNode("drop")
-            case OperatorType.INLINE_RAW_ASM:
-                assert isinstance(op.operand, str)
-                yield InstructionNode(op.operand)
             case OperatorType.ARITHMETIC_MULTIPLY:
                 yield InstructionNode("i64.mul")
             case OperatorType.ARITHMETIC_MINUS:
@@ -252,19 +392,55 @@ class WASM32CodegenBackend:
                 yield InstructionNode("i64.or")
             case OperatorType.BITWISE_XOR:
                 yield InstructionNode("i64.xor")
-            case OperatorType.FUNCTION_CALL:
-                assert isinstance(op.operand, FunctionCallOperand)
-                assert op.operand.module is None
-                yield InstructionCallNode(op.operand.func_name)
-            case OperatorType.FUNCTION_RETURN:
-                yield InstructionNode("return")
+            case OperatorType.COMPARE_LESS:
+                yield InstructionNode("i64.lt_s")
+                yield InstructionNode("i64.extend_i32_u")
+            case OperatorType.COMPARE_EQUALS:
+                yield InstructionNode("i64.eq")
+                yield InstructionNode("i64.extend_i32_u")
+            case OperatorType.COMPARE_NOT_EQUALS:
+                yield InstructionNode("i64.ne")
+                yield InstructionNode("i64.extend_i32_u")
+            case OperatorType.COMPARE_GREATER:
+                yield InstructionNode("i64.gt_s")
+                yield InstructionNode("i64.extend_i32_u")
+            case OperatorType.COMPARE_GREATER_EQUALS:
+                yield InstructionNode("i64.lt_s")
+                yield InstructionNode("i32.eqz")
+                yield InstructionNode("i64.extend_i32_u")
+            case OperatorType.COMPARE_LESS_EQUALS:
+                yield InstructionNode("i64.gt_s")
+                yield InstructionNode("i32.eqz")
+                yield InstructionNode("i64.extend_i32_u")
+            case OperatorType.ARITHMETIC_MODULUS:
+                yield InstructionNode("i64.rem_s")
+            case OperatorType.ARITHMETIC_DIVIDE:
+                yield InstructionNode("i64.div_s")
+            case OperatorType.STACK_SWAP:
+                self.requested_inlined_intrinsics.add("swap")
+                yield InstructionCallNode("swap")
+            # Other instructions
+            case OperatorType.INLINE_RAW_ASM:
+                assert isinstance(op.operand, str)
+                yield InstructionNode(op.operand)
             case OperatorType.SYSCALL:
                 msg = f"Syscall at {op.location} is not supported by WASM target, please use system function calls!"
                 raise ValueError(msg)
             case OperatorType.DEBUGGER_BREAKPOINT:
                 yield InstructionNode("unreachable")
             case OperatorType.COMPILE_TIME_ERROR | OperatorType.STATIC_TYPE_CAST:
-                raise ValueError
+                ...
+            # Function instructions
+            case OperatorType.FUNCTION_CALL:
+                assert isinstance(op.operand, FunctionCallOperand)
+                assert op.operand.module is None
+                assert op.operand.func_name not in self.requested_inlined_intrinsics, (
+                    f"Call to function requested as inlined intrinsic by WASM codegen ({op.operand.func_name})"
+                )
+                yield InstructionCallNode(op.operand.func_name)
+            case OperatorType.FUNCTION_RETURN:
+                yield InstructionNode("return")
+            # Memory I/O operations
             case OperatorType.STRUCT_FIELD_OFFSET:
                 assert isinstance(op.operand, tuple)
                 struct, field = op.operand
@@ -287,7 +463,7 @@ class WASM32CodegenBackend:
                         sym_t = wasm_type_from_primitive(sym_var.type)
                         yield InstructionNode(f"i32.const {offset}")
                         yield InstructionNode(f"{sym_t}.load")
-                        yield CommentNode(f"symtable offset sym={op.operand}")
+                        yield CommentNode(f"Symbol={op.operand}")
                         return
                 else:
                     spilled_sym_offset = _mem_spilled_stack_vars[op.operand]
@@ -295,9 +471,7 @@ class WASM32CodegenBackend:
                     sym_t = wasm_type_from_primitive(sym_var.type)
                     yield InstructionNode(f"i32.const {spilled_sym_offset}")
                     yield InstructionNode(f"{sym_t}.load")
-                    yield CommentNode(
-                        f"symtable offset sym={op.operand} (spilled local)",
-                    )
+                    yield CommentNode(f"Symbol={op.operand} (spilled local)")
                     return
             case OperatorType.PUSH_VARIABLE_ADDRESS:
                 assert isinstance(op.operand, str)
@@ -305,9 +479,8 @@ class WASM32CodegenBackend:
                     offset = _mem_spilled_stack_vars[op.operand]
                 else:
                     offset = self.symtable[op.operand]
-                yield InstructionNode(f"i32.const {offset}")
-                yield CommentNode(f"symtable offset sym={op.operand}")
-
+                yield InstructionNode("i64.const", f"{offset}")
+                yield CommentNode(f"Symbol=&{op.operand}")
             case OperatorType.PUSH_STRING:
                 assert isinstance(op.operand, str)
                 string_raw = str(op.token.text[1:-1])
@@ -327,11 +500,16 @@ class WASM32CodegenBackend:
                 load_type = I64Type()
                 load_wasm_type = wasm_type_from_primitive(load_type)
 
+                yield InstructionNode("i32.wrap_i64")
                 yield InstructionNode(f"{load_wasm_type}.load")
             case OperatorType.MEMORY_VARIABLE_WRITE:
-                yield InstructionNode("i64.store")
-            case OperatorType.STACK_SWAP:
+                self.requested_inlined_intrinsics.add("swap")
+
+                self.requested_inlined_intrinsics.add("swap_i64i32")
                 yield InstructionCallNode("swap")
+                yield InstructionNode("i32.wrap_i64")
+                yield InstructionCallNode("swap_i64i32")
+                yield InstructionNode("i64.store")
             case OperatorType.LOAD_PARAM_ARGUMENT:
                 # TODO: This instruction is not that bad but using this approach is not supportable well
                 # Migrate to named arguments
@@ -340,7 +518,9 @@ class WASM32CodegenBackend:
                 offset = _mem_spilled_stack_vars[op.operand]
 
                 yield InstructionNode(f"i32.const {offset} ")
-                yield InstructionCallNode("@swap_i64i32")
+                self.requested_inlined_intrinsics.add("swap_i64i32")
+                yield InstructionCallNode("swap_i64i32")
+
                 yield InstructionNode("i64.store")
                 yield CommentNode(f"symtable offset sym={op.operand}")
                 return
@@ -355,20 +535,8 @@ class WASM32CodegenBackend:
                 msg = f"{op} must be handled as block-ref"
                 raise ValueError(msg)
             case (
-                OperatorType.CONDITIONAL_WHILE
-                | OperatorType.CONDITIONAL_FOR
-                | OperatorType.CONDITIONAL_END
-                | OperatorType.STACK_SWAP
-                | OperatorType.STACK_COPY
-                | OperatorType.ARITHMETIC_DIVIDE
-                | OperatorType.ARITHMETIC_MODULUS
-                | OperatorType.COMPARE_EQUALS
-                | OperatorType.COMPARE_NOT_EQUALS
-                | OperatorType.COMPARE_LESS
-                | OperatorType.COMPARE_GREATER
-                | OperatorType.COMPARE_LESS_EQUALS
+                OperatorType.STACK_COPY
                 | OperatorType.LOGICAL_OR
-                | OperatorType.COMPARE_GREATER_EQUALS
                 | OperatorType.LOGICAL_AND
                 | OperatorType.LOGICAL_NOT
                 | OperatorType.SHIFT_RIGHT
@@ -377,77 +545,6 @@ class WASM32CodegenBackend:
                 raise NotImplementedError(op)
             case _:
                 assert_never(op.type)
-
-    def wasm32_instruction_set(
-        self,
-        operators: Sequence[Operator],
-        owner_function: Function,
-        _mem_spilled_stack_vars: MutableMapping[str, int],
-    ) -> InstructionsNode:
-        """Write executable instructions from given operators."""
-        instructions_node = InstructionsNode()
-        instructions_node.add_node("\n")
-
-        block_refs: list[SExpr] = [instructions_node]
-        for idx, operator in enumerate(operators):
-            match operator.type:
-                case OperatorType.CONDITIONAL_IF:
-                    block_node = IfThenBlockNode()
-                    instructions_node.add_node("\t")
-                    instructions_node.add_node(InstructionNode("i32.wrap_i64"))
-                    instructions_node.add_node(block_node)
-                    instructions_node.add_node(CommentNode(operator.location))
-                    instructions_node.add_node("\n")
-                    block_refs.append(block_node.then_branch_ref)
-                    continue
-                case OperatorType.CONDITIONAL_END:
-                    block = block_refs.pop()
-                    assert isinstance(block, ThenBlockNode), repr(block)
-                    continue
-                case (
-                    OperatorType.CONDITIONAL_DO
-                    | OperatorType.CONDITIONAL_WHILE
-                    | OperatorType.CONDITIONAL_FOR
-                ):
-                    raise NotImplementedError
-                case _:
-                    ...
-            instructions = list(
-                self.wasm32_operator_instructions(
-                    operator,
-                    idx,
-                    owner_function,
-                    _mem_spilled_stack_vars=_mem_spilled_stack_vars,
-                ),
-            )
-
-            target = block_refs[-1]
-            assert block_refs
-            target.add_node("\t")
-
-            target.add_nodes(instructions)
-            target.add_node(CommentNode(operator.location))
-            target.add_node("\n")
-
-        instructions_node.add_node(" ")
-        return instructions_node
-
-
-def _get_wat_global_symbol_decl_spec(var: Variable[Type]) -> GlobalSymbolNode:
-    assert var.is_global_scope
-    assert var.initial_value is not None, f"uninitialized symbol {var.name} for WASM"
-
-    match var.initial_value:
-        case int():
-            return GlobalSymbolNode(
-                var.name,
-                store_type=wasm_type_from_primitive(var.type),
-                initializer=I64ConstNode(var.initial_value),
-                is_mutable=var.is_constant,
-            )
-        case _:
-            msg = f"Cannot define global symbol in wasm with default value {var.initial_value}, not implemented unwinding constant Initializers."
-            raise NotImplementedError(msg)
 
 
 def _get_wasm_internal_function_decl_spec(function: Function) -> FunctionNode:

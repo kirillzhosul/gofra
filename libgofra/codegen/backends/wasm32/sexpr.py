@@ -166,3 +166,8 @@ class IfThenBlockNode(InstructionNode):
     def __init__(self) -> None:
         self.then_branch_ref = ThenBlockNode()
         super().__init__("if", self.then_branch_ref)
+
+
+class ModuleStartSymbolNode(SExpr):
+    def __init__(self, symbol: str) -> None:
+        super().__init__("start", f"${symbol}")
