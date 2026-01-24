@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from typing import Literal, assert_never
 
 from libgofra.types.composite.array import ArrayType
+from libgofra.types.composite.function import FunctionType
 from libgofra.types.composite.pointer import PointerType
 from libgofra.types.composite.structure import StructureType
 
@@ -60,6 +61,9 @@ def _compare_types_strict_same_type(a: Type, b: Type) -> bool:  # noqa: PLR0911
             _try_unwrap_array_element_type(a.points_to),
             _try_unwrap_array_element_type(b.points_to),
         )
+
+    if isinstance(a, FunctionType) and isinstance(b, FunctionType):
+        return a.parameters == b.parameters and a.return_type == b.return_type
 
     if isinstance(a, ArrayType) and isinstance(b, ArrayType):
         return (
