@@ -319,6 +319,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return _unpack_compile_time_error(context, token)
         case Keyword.MODULE_IMPORT:
             return _unpack_import(context, token)
+        case Keyword.ALIGN_OF:
+            return _unpack_align_of(context, token)
         case Keyword.TYPE_DEFINE:
             if (
                 (peeked := context.peek_token())
@@ -337,6 +339,19 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             raise ValueError
         case _:
             assert_never(token.value)
+
+
+def _unpack_align_of(context: ParserContext, token: Token) -> None:
+    alignment_of_type = parse_concrete_type_from_tokenizer(
+        context,
+        allow_inferring_variable_types=False,  # ? must be
+    )
+
+    context.push_new_operator(
+        OperatorType.PUSH_INTEGER,
+        token=token,
+        operand=alignment_of_type.alignment,
+    )
 
 
 def _unpack_pointer_of_proc(context: ParserContext, token: Token) -> None:

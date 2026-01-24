@@ -42,6 +42,7 @@ class Keyword(Enum):
 
     POINTER_OF_PROC = auto()
 
+    ALIGN_OF = auto()
     OFFSET_OF = auto()
     SIZEOF = auto()
 
@@ -100,6 +101,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "inline_raw_asm": Keyword.INLINE_RAW_ASM,
     "return": Keyword.FUNCTION_RETURN,
     "sizeof": Keyword.SIZEOF,
+    "align_of": Keyword.ALIGN_OF,
     "offset_of": Keyword.OFFSET_OF,
     "pointer_of_proc": Keyword.POINTER_OF_PROC,
     "typecast": Keyword.TYPE_CAST,

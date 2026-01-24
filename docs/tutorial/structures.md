@@ -117,6 +117,28 @@ offset_of Foo a // 0
 offset_of Foo b // 8
 ```
 
+## `align_of`
+
+`align_of` pushes alignment for specified type
+```
+align_of {TYPE}
+```
+
+It takes into account any alignment / reordering that is possible, and offset will be always same, as those whose will be used inside low-level machine code / ABI calls
+```
+struct Foo
+    // No special alignment, simple struct
+    a int
+    b int
+end
+
+
+align_of Foo // 8 (max is int, 8 bytes)
+align_of int // 8
+align_of char // 1
+align_of int[32] // 8, alignment of int
+```
+
 ## Generic structure types
 
 ```
