@@ -1,7 +1,7 @@
 """AAPCS64 call convention must work for Apple AAPCS64/System-V AAPCS64."""
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
 from libgofra.codegen.backends.aarch64.primitive_instructions import (
@@ -9,12 +9,8 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
     push_register_onto_stack,
     truncate_register_to_32bit_version,
 )
+from libgofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
 from libgofra.types._base import Type
-
-if TYPE_CHECKING:
-    from libgofra.codegen.backends.aarch64.registers import (
-        AARCH64_GP_REGISTERS,
-    )
 
 
 def function_abi_call_by_symbol(
@@ -41,6 +37,23 @@ def function_abi_call_by_symbol(
     assert call_convention == "apple_aapcs64"
     _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
     context.write(f"bl {name}")
+    _load_return_value_from_abi_registers_into_stack(context, t=return_type)
+
+
+def function_abi_call_from_register(
+    context: AARCH64CodegenContext,
+    *,
+    register: AARCH64_GP_REGISTERS,
+    parameters: Sequence[Type],
+    return_type: Type,
+    call_convention: Literal["apple_aapcs64"],
+) -> None:
+    assert call_convention == "apple_aapcs64"
+    assert not context.abi.is_register_clobbered_with_function_abi(register), (
+        "ABI changed / clobbered register"
+    )
+    _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
+    context.write(f"blr {register}")
     _load_return_value_from_abi_registers_into_stack(context, t=return_type)
 
 

@@ -4,6 +4,7 @@ from libgofra.exceptions import GofraError
 from libgofra.hir.function import Function
 from libgofra.lexer.tokens import TokenLocation
 from libgofra.types import Type
+from libgofra.types.composite.function import FunctionType
 
 
 class MissingFunctionArgumentsTypecheckError(GofraError):
@@ -12,7 +13,7 @@ class MissingFunctionArgumentsTypecheckError(GofraError):
         *args: object,
         typestack: Sequence[Type],
         caller: Function,
-        callee: Function,
+        callee: Function | FunctionType,
         at: TokenLocation,
     ) -> None:
         super().__init__(*args)
@@ -25,7 +26,7 @@ class MissingFunctionArgumentsTypecheckError(GofraError):
         missing_count = len(self.callee.parameters) - len(self.typestack)
         return f"""Not enough function arguments at {self.at}
 
-Function '{self.callee.name}{self.callee.parameters}' defined at {self.callee.defined_at} 
+Function '{self.callee.name if isinstance(self.callee, Function) else "(anonymous)"}{self.callee.parameters}' defined at {self.callee.defined_at if isinstance(self.callee, Function) else "(anonymous)"} 
 expects {missing_count} more arguments on stack
 
 Mismatch (stack): {self.typestack} != {self.callee.parameters}

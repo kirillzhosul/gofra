@@ -27,6 +27,7 @@ from libgofra.typecheck.static_linter import (
 from libgofra.types import Type
 from libgofra.types.comparison import is_types_same, is_typestack_same
 from libgofra.types.composite.array import ArrayType
+from libgofra.types.composite.function import FunctionType
 from libgofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from libgofra.types.composite.string import StringType
 from libgofra.types.composite.structure import StructureType
@@ -34,6 +35,7 @@ from libgofra.types.primitive.boolean import BoolType
 from libgofra.types.primitive.character import CharType
 from libgofra.types.primitive.floats import F64Type
 from libgofra.types.primitive.integers import I64Type
+from libgofra.types.primitive.void import VoidType
 
 from ._scope import TypecheckScope
 from .exceptions import (
@@ -452,7 +454,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             scope.raise_for_operator_arguments(
                 operator,
                 (PointerType,),
-                (I64Type, PointerType, BoolType, CharType),
+                (I64Type, PointerType, BoolType, CharType, FunctionType),
             )
         case OperatorType.LOAD_PARAM_ARGUMENT:
             scope.raise_for_enough_arguments(operator, required_args=1)
@@ -602,6 +604,34 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 PointerType(points_to=struct_type.get_field_type(struct_field)),
             )
 
+        case OperatorType.FUNCTION_CALL_FROM_STACK_POINTER:
+            scope.raise_for_enough_arguments(operator, required_args=1)
+            function_t = scope.pop_type_from_stack()
+            assert isinstance(function_t, FunctionType)
+            scope.raise_for_function_arguments(
+                callee=function_t,
+                caller=current_function,
+                at=operator,
+            )
+            if not isinstance(function_t.return_type, VoidType):
+                scope.push_types(function_t.return_type)
+        case OperatorType.PUSH_FUNCTION_POINTER:
+            assert isinstance(operator.operand, FunctionCallOperand)
+            operand = operator.operand
+            function = module.resolve_function_dependency(
+                operand.module,
+                operand.func_name,
+            )
+
+            assert function is not None, (
+                "Function existence must be resolved before typechecker stage!"
+            )
+            scope.push_types(
+                FunctionType(
+                    parameter_types=function.parameters,
+                    return_type=function.return_type,
+                ),
+            )
         case _:
             assert_never(operator.type)
 

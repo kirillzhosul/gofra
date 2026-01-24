@@ -8,6 +8,7 @@ from libgofra.typecheck.errors import (
     ParameterTypeMismatchTypecheckError,
 )
 from libgofra.types.comparison import is_types_same
+from libgofra.types.composite.function import FunctionType
 
 from .exceptions import (
     TypecheckInvalidOperatorArgumentTypeError,
@@ -58,7 +59,7 @@ class TypecheckScope:
 
     def raise_for_function_arguments(
         self,
-        callee: Function,
+        callee: Function | FunctionType,
         caller: Function,
         at: Operator,
     ) -> None:

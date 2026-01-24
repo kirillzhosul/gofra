@@ -271,6 +271,10 @@ def amd64_operator_instructions(
             context.write(*operator.operand.splitlines())
         case OperatorType.COMPILE_TIME_ERROR:
             ...  # Linter / typechecker
+        case OperatorType.PUSH_FUNCTION_POINTER:
+            raise NotImplementedError(operator)
+        case OperatorType.FUNCTION_CALL_FROM_STACK_POINTER:
+            raise NotImplementedError(operator)
         case _:
             assert_never(operator.type)
 

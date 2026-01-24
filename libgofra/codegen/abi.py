@@ -30,6 +30,21 @@ class ABI[T](Protocol):
     # if an structure is more than 16 bytes then callee allocates an space and pass an pointer where this structure is located
     arguments_64bit_registers: Sequence[T]
 
+    def is_register_clobbered_with_function_abi(self, r: T) -> bool:
+        return (
+            r in self.arguments_64bit_registers
+            or r in self.syscall_arguments_registers
+            or r
+            in (
+                self.syscall_number_register,
+                self.retval_indirect_pointer_register,
+                self.retval_primitive_64bit_register,
+                self.retval_primitive_32bit_register,
+                self.retval_composite_64bit_register,
+                self.retval_composite_32bit_register,
+            )
+        )
+
 
 class AMD64ABI(ABI[AMD64_GP_REGISTERS]): ...
 

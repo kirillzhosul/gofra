@@ -1,0 +1,18 @@
+/// Tests that calling and obtaining function proc type is valid
+
+
+#define TESTKIT_EXPECTED_EXIT_CODE 32
+
+func int f[]
+    32 return
+end
+
+
+type CallbackF func int _[]
+
+
+func int main[]
+    var x CallbackF;
+    &x pointer_of_proc f !< // TODO: not asserted with type-invalidation
+    call x
+end

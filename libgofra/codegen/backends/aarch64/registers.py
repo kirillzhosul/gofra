@@ -20,7 +20,19 @@ AARCH64_DOUBLE_WORD_BITS = 0xFFFF_FFFF_FFFF_FFFF  # 16 bytes (64 bits)
 
 # Registers specification for AARCH64
 # Skips some of registers (X8-X15, X18-X30) due to currently being unused
-type AARCH64_ABI_X_REGISTERS = Literal["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7"]
+type AARCH64_ABI_X_REGISTERS = Literal[
+    "X0",
+    "X1",
+    "X2",
+    "X3",
+    "X4",
+    "X5",
+    "X6",
+    "X7",
+    "X8",
+    "X9",
+    "X10",
+]
 type AARCH64_ABI_W_REGISTERS = Literal["W0", "W1", "W2", "W3", "W4", "W5", "W6", "W7"]
 type AARCH64_ABI_D_REGISTERS = Literal["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"]
 type AARCH64_ABI_ZERO_REGISTERS = Literal["WZR", "XZR"]

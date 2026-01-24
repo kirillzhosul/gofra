@@ -663,12 +663,14 @@ class WASM32CodegenBackend:
                 yield InstructionNode("i64.and")
             case OperatorType.LOGICAL_OR:
                 yield InstructionNode("i64.or")
-
             case OperatorType.LOGICAL_NOT:
                 yield InstructionNode("i64.const", 0)
                 yield InstructionNode("i64.eq")
                 yield InstructionNode("i64.extend_i32_u")
-
+            case OperatorType.PUSH_FUNCTION_POINTER:
+                raise NotImplementedError(op)
+            case OperatorType.FUNCTION_CALL_FROM_STACK_POINTER:
+                raise NotImplementedError(op)
             case _:
                 assert_never(op.type)
 

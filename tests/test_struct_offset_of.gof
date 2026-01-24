@@ -1,0 +1,14 @@
+/// Tests that simple offset-of works
+
+
+#define TESTKIT_EXPECTED_EXIT_CODE 9
+
+struct packed Foo
+    c char // 1
+    b int // 8
+    c char // 1
+end 
+
+func int main[]
+    offset_of Foo c
+end

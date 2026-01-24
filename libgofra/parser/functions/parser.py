@@ -20,9 +20,7 @@ from libgofra.lexer import Token
 from libgofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
 from libgofra.lexer.tokens import TokenType
 from libgofra.parser._context import ParserContext
-from libgofra.parser.type_parser import (
-    parse_concrete_type_from_tokenizer,
-)
+from libgofra.parser.type_parser import consume_function_signature
 from libgofra.types import Type
 
 from .exceptions import (
@@ -31,7 +29,6 @@ from .exceptions import (
     ParserFunctionInvalidTypeError,
     ParserFunctionIsBothInlineAndExternalError,
     ParserFunctionModifierReappliedError,
-    ParserFunctionNoNameError,
 )
 
 # TODO(@kirillzhosul): Refactor these ALL errors
@@ -139,54 +136,6 @@ def consume_function_qualifiers(
         raise ParserExpectedFunctionAfterFunctionModifiersError(modifier_token=token)
 
     return (next_token, qualifiers)
-
-
-def consume_function_signature(
-    context: ParserContext,
-    token: Token,
-) -> tuple[str, list[tuple[str, Type]], Type]:
-    """Consume parser context into function signature assuming given token is `function` keyword.
-
-    Returns function name and signature types (`in` and `out).
-    """
-    type_contract_out = parse_concrete_type_from_tokenizer(context)
-
-    name_token = context.next_token()
-
-    if not name_token:
-        raise ParserFunctionNoNameError(token=token)
-    if name_token.type != TokenType.IDENTIFIER:
-        msg = f"Expected function name in signature but got {name_token.type.name} at {name_token.location}"
-        raise ValueError(msg)
-    function_name = name_token.text
-    parameters = consume_function_parameters(context)
-
-    return function_name, parameters, type_contract_out
-
-
-def consume_function_parameters(context: ParserContext) -> list[tuple[str, Type]]:
-    parameters: list[tuple[str, Type]] = []
-
-    if (paren_token := context.next_token()) and paren_token.type != TokenType.LBRACKET:
-        msg = f"Expected LBRACKET `[` after function name for parameters but got {paren_token.type.name}"
-        raise ValueError(msg, paren_token.location)
-
-    while token := context.peek_token():
-        if token.type == TokenType.RBRACKET:
-            break
-        parameters.append(("", parse_concrete_type_from_tokenizer(context)))
-        t = context.peek_token()
-        if t.type == TokenType.RBRACKET:
-            break
-        if t.type == TokenType.IDENTIFIER:
-            parameters[-1] = (t.text, parameters[-1][1])
-            context.next_token()
-            if context.peek_token().type == TokenType.RBRACKET:
-                break
-        context.expect_token(TokenType.COMMA)
-        _ = context.next_token()
-    _ = context.next_token()
-    return parameters
 
 
 def consume_function_body_tokens(context: ParserContext) -> Generator[Token]:

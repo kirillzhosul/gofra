@@ -8,6 +8,7 @@ from libgofra.codegen.abi import DarwinAARCH64ABI
 from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
 from libgofra.codegen.backends.aarch64.abi_call_convention import (
     function_abi_call_by_symbol,
+    function_abi_call_from_register,
 )
 from libgofra.codegen.backends.aarch64.executable_entry_point import (
     aarch64_program_entry_point,
@@ -28,6 +29,7 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
 )
+from libgofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
 from libgofra.codegen.backends.aarch64.static_data_section import (
     aarch64_data_section,
 )
@@ -42,6 +44,7 @@ from libgofra.codegen.sections import SectionType
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import VariableStorageClass
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
+from libgofra.types.composite.function import FunctionType
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -284,6 +287,26 @@ def aarch64_operator_instructions(
                 push_register_onto_stack(context, "X0")
         case OperatorType.COMPILE_TIME_ERROR:
             ...  # Linter / typechecker
+        case OperatorType.FUNCTION_CALL_FROM_STACK_POINTER:
+            assert isinstance(operator.operand, FunctionType)
+            call_like = operator.operand
+            ptr_reg: AARCH64_GP_REGISTERS = "X10"
+            pop_cells_from_stack_into_registers(context, ptr_reg)
+            function_abi_call_from_register(
+                context,
+                register=ptr_reg,
+                parameters=call_like.parameters,
+                return_type=call_like.return_type,
+                call_convention="apple_aapcs64",
+            )
+        case OperatorType.PUSH_FUNCTION_POINTER:
+            assert isinstance(operator.operand, FunctionCallOperand)
+            calee = program.resolve_function_dependency(
+                operator.operand.module,
+                operator.operand.func_name,
+            )
+            assert calee
+            push_static_address_onto_stack(context, segment=calee.name)
         case _:
             assert_never(operator.type)
 

@@ -1,10 +1,13 @@
 from collections.abc import Mapping
 
+from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
 from libgofra.parser._context import ParserContext
 from libgofra.parser.errors.unknown_primitive_type import UnknownPrimitiveTypeError
+from libgofra.parser.functions.exceptions import ParserFunctionNoNameError
 from libgofra.types import Type
 from libgofra.types.composite.array import ArrayType
+from libgofra.types.composite.function import FunctionType
 from libgofra.types.composite.pointer import PointerType
 from libgofra.types.generics import (
     GenericArrayType,
@@ -38,6 +41,21 @@ def parse_concrete_type_from_tokenizer(
             ),
         )
 
+    if (
+        context.peek_token().type == TokenType.KEYWORD
+        and context.peek_token().value == Keyword.FUNCTION
+    ):
+        _token = context.next_token()
+        _, function_params, function_return_type = consume_function_signature(
+            context,
+            token=_token,
+        )
+
+        anonymous_function_params = [t for _, t in function_params]
+        return FunctionType(
+            return_type=function_return_type,
+            parameter_types=anonymous_function_params,
+        )
     context.expect_token(TokenType.IDENTIFIER)
     t = context.next_token()
 
@@ -89,6 +107,54 @@ def parse_concrete_type_from_tokenizer(
     return aggregated_type
 
 
+def consume_function_signature(
+    context: ParserContext,
+    token: Token,
+) -> tuple[str, list[tuple[str, Type]], Type]:
+    """Consume parser context into function signature assuming given token is `function` keyword.
+
+    Returns function name and signature types (`in` and `out).
+    """
+    type_contract_out = parse_concrete_type_from_tokenizer(context)
+
+    name_token = context.next_token()
+
+    if not name_token:
+        raise ParserFunctionNoNameError(token=token)
+    if name_token.type != TokenType.IDENTIFIER:
+        msg = f"Expected function name in signature but got {name_token.type.name} at {name_token.location}"
+        raise ValueError(msg)
+    function_name = name_token.text
+    parameters = parse_function_type_parameters(context)
+
+    return function_name, parameters, type_contract_out
+
+
+def parse_function_type_parameters(context: ParserContext) -> list[tuple[str, Type]]:
+    parameters: list[tuple[str, Type]] = []
+
+    if (paren_token := context.next_token()) and paren_token.type != TokenType.LBRACKET:
+        msg = f"Expected LBRACKET `[` after function name for parameters but got {paren_token.type.name}"
+        raise ValueError(msg, paren_token.location)
+
+    while token := context.peek_token():
+        if token.type == TokenType.RBRACKET:
+            break
+        parameters.append(("", parse_concrete_type_from_tokenizer(context)))
+        t = context.peek_token()
+        if t.type == TokenType.RBRACKET:
+            break
+        if t.type == TokenType.IDENTIFIER:
+            parameters[-1] = (t.text, parameters[-1][1])
+            context.next_token()
+            if context.peek_token().type == TokenType.RBRACKET:
+                break
+        context.expect_token(TokenType.COMMA)
+        _ = context.next_token()
+    _ = context.next_token()
+    return parameters
+
+
 def parse_generic_type_alias_from_tokenizer(
     context: ParserContext,
     *,
@@ -112,6 +178,21 @@ def parse_generic_type_alias_from_tokenizer(
 
         return PointerType(points_to=points_to)
 
+    if (
+        context.peek_token().type == TokenType.KEYWORD
+        and context.peek_token().value == Keyword.FUNCTION
+    ):
+        _token = context.next_token()
+        _, function_params, function_return_type = consume_function_signature(
+            context,
+            token=_token,
+        )
+
+        anonymous_function_params = [t for _, t in function_params]
+        return FunctionType(
+            return_type=function_return_type,
+            parameter_types=anonymous_function_params,
+        )
     context.expect_token(TokenType.IDENTIFIER)
     token = context.next_token()
     typename = token.text

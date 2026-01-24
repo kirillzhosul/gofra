@@ -18,6 +18,7 @@ class OperatorType(Enum):
     # TODO(@kirillzhosul): Proper inference of integer size
     PUSH_INTEGER = auto()
     PUSH_FLOAT = auto()
+    PUSH_FUNCTION_POINTER = auto()
 
     # Push address of static string onto stack (structure type definition)
     # TODO(@kirillzhosul): Review C-Strings - https://github.com/kirillzhosul/gofra/issues/27
@@ -52,6 +53,7 @@ class OperatorType(Enum):
 
     # Call specified function
     FUNCTION_CALL = auto()
+    FUNCTION_CALL_FROM_STACK_POINTER = auto()
 
     # Typechecker mark to treat current (type) stack value as specified type
     STATIC_TYPE_CAST = auto()

@@ -52,6 +52,7 @@ from libgofra.preprocessor.preprocessor import preprocess_file
 from libgofra.typecheck.errors.user_defined_compile_time_error import (
     UserDefinedCompileTimeError,
 )
+from libgofra.types.composite.function import FunctionType
 from libgofra.types.composite.string import StringType
 from libgofra.types.composite.structure import StructureType
 
@@ -308,6 +309,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return _unpack_sizeof_from_token(context, token)
         case Keyword.OFFSET_OF:
             return _unpack_offset_of_from_token(context, token)
+        case Keyword.POINTER_OF_PROC:
+            return _unpack_pointer_of_proc(context, token)
         case Keyword.IN:
             raise KeywordInWithoutLoopBlockError(token)
         case Keyword.INLINE_RAW_ASM:
@@ -334,6 +337,23 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             raise ValueError
         case _:
             assert_never(token.value)
+
+
+def _unpack_pointer_of_proc(context: ParserContext, token: Token) -> None:
+    function_name_token = context.next_token()
+    if function_name_token.type != TokenType.IDENTIFIER:
+        msg = f"Expected identifier as function name for pointer-of-proc at {token.location} but got {function_name_token.type}"
+        raise ValueError(msg)
+
+    function_name = function_name_token.text
+    assert function_name in context.functions
+    function = context.functions[function_name]
+
+    context.push_new_operator(
+        OperatorType.PUSH_FUNCTION_POINTER,
+        token=token,
+        operand=FunctionCallOperand(None, function.name),
+    )
 
 
 def _try_resolve_and_find_real_include_path(
@@ -532,10 +552,28 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
     function = context.functions.get(name)
     call_spec = FunctionCallOperand(module=owner_module, func_name=name)
 
-    if function and function.is_inline:
-        assert not function.is_external
-        context.expand_from_inline_block(function)
+    if name in context.variables:
+        variable = context.variables[name]
+        assert isinstance(variable.type, FunctionType)
+        context.push_new_operator(
+            OperatorType.PUSH_VARIABLE_VALUE,
+            token=token,
+            operand=name,
+        )
+        context.push_new_operator(
+            OperatorType.FUNCTION_CALL_FROM_STACK_POINTER,
+            token=token,
+            operand=variable.type,
+        )
         return
+
+    if function:
+        if function.is_inline:
+            assert not function.is_external
+            context.expand_from_inline_block(function)
+            return
+    else:
+        assert not context.name_is_already_taken(name)
 
     context.push_new_operator(
         OperatorType.FUNCTION_CALL,
