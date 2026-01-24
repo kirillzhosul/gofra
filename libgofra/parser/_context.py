@@ -17,7 +17,10 @@ from libgofra.lexer import Token
 from libgofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from libgofra.preprocessor.macros.registry import MacrosRegistry
 from libgofra.types.composite.structure import StructureType
-from libgofra.types.registry import DEFAULT_PRIMITIVE_TYPE_REGISTRY, TypeRegistry
+from libgofra.types.registry import (
+    TypeRegistry,
+    get_default_propagated_type_registry,
+)
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -94,9 +97,7 @@ class ParserContext(PeekableTokenizer):
     functions: MutableMapping[str, Function] = field(
         default_factory=dict[str, Function],
     )
-    types: TypeRegistry = field(
-        default_factory=lambda: DEFAULT_PRIMITIVE_TYPE_REGISTRY.copy(),
-    )
+    types: TypeRegistry = field(default_factory=get_default_propagated_type_registry)
 
     entry_point_name: str = "main"
 

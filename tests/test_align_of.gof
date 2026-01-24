@@ -1,0 +1,18 @@
+/// Tests that align-of works
+
+#include "std/assert.gof"
+
+struct Foo
+   a char
+   b int
+   c int
+end
+
+#define TESTKIT_EXPECTED_EXIT_CODE 0
+
+func void main[]
+    align_of Foo     8            "struct max-field alignment 8 byte (int)" assert 
+    align_of int     8            "int alignment 8 byte" assert 
+    align_of char    1            "char alignment 1 byte" assert 
+    align_of int[32] align_of int "array alignment == member alignment" assert 
+end

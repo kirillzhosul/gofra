@@ -8,5 +8,5 @@ var buffer char[TESTKIT_EXPECTED_EXIT_CODE]
 func int main[]
     &buffer drop // silence warnings
 
-    sizeof buffer return // todo
+    sizeof buffer 
 end

@@ -539,6 +539,7 @@ def _unpack_offset_of_from_token(context: ParserContext, token: Token) -> None:
         msg = (
             f"Field {field_name} does not belongs to {struct_type} at {token.location}"
         )
+        # TODO: in this place, and other like this, for generic structures it is possible to pinpoint at original generic type (non concrete one)
         raise ValueError(msg)
     context.push_new_operator(
         OperatorType.PUSH_INTEGER,

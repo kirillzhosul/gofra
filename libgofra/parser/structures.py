@@ -76,7 +76,15 @@ def _consume_generic_structure_type_definition(
 ) -> None:
     # Forward declare this struct so users may use that type in structure definition
     # this must to be back-patched after parsing types
-    ref = GenericStructureType(name=name, fields={}, fields_ordering=[])
+    attr_is_packed, attr_reorder = _consume_structure_attributes(context)
+
+    ref = GenericStructureType(
+        name=name,
+        fields={},
+        fields_ordering=[],
+        is_packed=attr_is_packed,
+        reorder=attr_reorder,
+    )
     context.types[name] = (
         ref  # TODO(@kirillzhosul): Codebase is a mess with these type/structure containers - can be single one ?
     )

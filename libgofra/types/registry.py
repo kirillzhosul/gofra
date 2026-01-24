@@ -14,19 +14,20 @@ class TypeRegistry(dict[str, Type | GenericParametrizedType]):
         return TypeRegistry(super().copy())
 
 
-DEFAULT_PRIMITIVE_TYPE_REGISTRY = TypeRegistry(
-    {
-        # Int
-        "int": I64Type(),
-        "i64": I64Type(),
-        # Etc
-        "char": CharType(),
-        "void": VoidType(),
-        "bool": BoolType(),
-        # Float
-        "float": F64Type(),
-        "f64": F64Type(),
-        # It is only half primitive
-        "string": StringType(),
-    },
-)
+def get_default_propagated_type_registry() -> TypeRegistry:
+    return TypeRegistry(
+        {
+            # Int
+            "int": I64Type(),
+            "i64": I64Type(),
+            # Etc
+            "char": CharType(),
+            "void": VoidType(),
+            "bool": BoolType(),
+            # Float
+            "float": F64Type(),
+            "f64": F64Type(),
+            # It is only half primitive
+            "string": StringType(),
+        },
+    )

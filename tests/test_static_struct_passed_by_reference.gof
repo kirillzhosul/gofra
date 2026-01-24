@@ -1,6 +1,4 @@
 /// Tests that passing structure as pointer to another function works and allows to work with that
-#include "std"
-
 #define TESTKIT_EXPECTED_EXIT_CODE 69
 
 struct struct_
@@ -13,8 +11,8 @@ func void f[*struct_ n]
     &n.field TESTKIT_EXPECTED_EXIT_CODE !<
 end
 
-no_return func void main[]
+func int main[]
     &x call f
 
-    x.field exit // TODO: Remove exit after fix
+    x.field
 end

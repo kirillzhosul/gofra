@@ -5,7 +5,7 @@
 
 #define TESTKIT_EXPECTED_EXIT_CODE 0 
 
-func int main[]
+func void main[]
     true  typecast int 
     true  typecast int  
     "True must equals true" assert 
@@ -29,6 +29,4 @@ func int main[]
     false false && typecast int 
     false typecast int 
     "(false and false) must equal false" assert
-
-    TESTKIT_EXPECTED_EXIT_CODE return // TODO: Fix weird bug that requires this test to be an int-return
 end

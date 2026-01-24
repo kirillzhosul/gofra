@@ -47,15 +47,24 @@ class GenericStructureType(GenericParametrizedType):
 
     name: str
 
+    # Propagated attributes to concrete structure
+    is_packed: bool
+    reorder: bool
+
     def __init__(
         self,
         name: str,
         fields: Mapping[str, Type],
         fields_ordering: Sequence[str],
+        *,
+        is_packed: bool,
+        reorder: bool = False,
     ) -> None:
         self.name = name
         self.fields = fields
         self.fields_ordering = fields_ordering
+        self.is_packed = is_packed
+        self.reorder = reorder
 
     def __repr__(self) -> str:
         return f"Generic Struct {self.name}"
@@ -66,7 +75,7 @@ class GenericPointerType(GenericParametrizedType):
     points_to: GenericParametrizedType | Type
 
     def __repr__(self) -> str:
-        return f"*Generic {self.points_to.__repr__()}"
+        return f"*Generic {self.points_to!r}"
 
 
 def apply_generic_type_into_concrete(
@@ -128,10 +137,11 @@ def apply_generic_type_into_concrete(
                 for name, field_t in generic.fields.items()
             }
             return StructureType(
-                name=f"=mangled_concrete_generic_{generic.name}",
+                name=f"=mangled_concrete_generic_{generic.name}",  # TODO: Failure intolerant
                 fields=concrete_fields,
                 order=generic.fields_ordering,
-                is_packed=True,  # TODO(@kirillzhosul): Generics does not supports attribute
+                is_packed=generic.is_packed,
+                reorder=generic.reorder,
             )
         case _:
             msg = f"Cannot {apply_generic_type_into_concrete.__name__} for {generic}!"
