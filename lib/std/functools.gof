@@ -1,0 +1,41 @@
+// ==============================================
+// Functional tools
+// High-order functions like reduce, map for functional-like programming
+// ==============================================
+
+// Integer array reduce, reduce integer array to single element via reducer/callback
+type IReduce_FT func int _[int accumulator, int item]
+pub func int i_reduce[
+    *int[] array, 
+    int len,
+    IReduce_FT callback, 
+    int accumulator
+]
+    for i in 0..len do
+        &accumulator
+            accumulator 
+            array sizeof int i * + ?>
+            call callback
+        !<
+    end
+
+    accumulator return
+end
+
+// Integer array map, apply callback function to each element of integer array
+type IMap_FT func void _[int item]
+pub func void i_map[
+    *int[] array, 
+    int len,
+    IMap_FT callback, 
+]
+    for i in 0..len do
+        array sizeof int i * + ?>
+        call callback
+    end
+end
+
+// Integer sum reducer
+pub func int i_sum[int accumulator, int item]
+    accumulator item + 
+end

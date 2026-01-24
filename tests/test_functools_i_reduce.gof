@@ -1,0 +1,15 @@
+/// Tests that i_reduce from functools works
+
+
+#include "std/functools.gof"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 12
+
+var x = [3, 2, 3, 4] // TODO: error when on stack
+
+func int main[]
+    &x 4                   // array
+    pointer_of_proc i_sum  // reducer
+    0                      // initial accumulator
+    call i_reduce
+end

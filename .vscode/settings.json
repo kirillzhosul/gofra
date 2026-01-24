@@ -78,6 +78,7 @@
         "FSQRT",
         "FSUB",
         "funcs",
+        "functools",
         "gdwarf",
         "getpid",
         "getppid",
