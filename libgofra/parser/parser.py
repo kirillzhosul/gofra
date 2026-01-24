@@ -53,6 +53,7 @@ from libgofra.typecheck.errors.user_defined_compile_time_error import (
     UserDefinedCompileTimeError,
 )
 from libgofra.types.composite.string import StringType
+from libgofra.types.composite.structure import StructureType
 
 from ._context import ParserContext
 from .exceptions import (
@@ -305,6 +306,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             )
         case Keyword.SIZEOF:
             return _unpack_sizeof_from_token(context, token)
+        case Keyword.OFFSET_OF:
+            return _unpack_offset_of_from_token(context, token)
         case Keyword.IN:
             raise KeywordInWithoutLoopBlockError(token)
         case Keyword.INLINE_RAW_ASM:
@@ -479,6 +482,33 @@ def _unpack_sizeof_from_token(context: ParserContext, token: Token) -> None:
         OperatorType.PUSH_INTEGER,
         token=token,
         operand=sizeof_type.size_in_bytes,
+    )
+
+
+def _unpack_offset_of_from_token(context: ParserContext, token: Token) -> None:
+    struct_type = parse_concrete_type_from_tokenizer(
+        context,
+        allow_inferring_variable_types=True,
+    )
+    if not isinstance(struct_type, StructureType):
+        msg = f"Expected structure type at {token.location} but got {struct_type}"
+        raise TypeError(msg)
+
+    field_token = context.next_token()
+    if field_token.type != TokenType.IDENTIFIER:
+        msg = f"Expected identifier as field selector for offset-of at {token.location} but got {field_token.type}"
+        raise ValueError(msg)
+
+    field_name = field_token.text
+    if not struct_type.has_field(field_name):
+        msg = (
+            f"Field {field_name} does not belongs to {struct_type} at {token.location}"
+        )
+        raise ValueError(msg)
+    context.push_new_operator(
+        OperatorType.PUSH_INTEGER,
+        token=token,
+        operand=struct_type.get_field_offset(field_name),
     )
 
 

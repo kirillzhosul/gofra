@@ -19,6 +19,7 @@ struct Person
 end
 ```
 
+
 ## Accessing an structure field
 ```gofra
 var stepan Person // initialize variable of type Person
@@ -94,12 +95,37 @@ end // Unpacked, reordered 16 bytes
 // Order was transformed into [b, a, c] (int, char, char) re-using padding from int to char
 ```
 
-## HIR perspective
-
-Accessing an structure field will as by default emit `PUSH_VARIABLE_ADDRESS` HIR operator which is followed by `STRUCT_FIELD_OFFSET` which is resolved to `ADDR(VAR) + FIELD_OFFSET(field)` so `*struct` resolve into `*struct.field` as auto type inference from structure type
 
 
-## LIR perspective
+## `offset_of`
 
-Structure type by default is an complex type with collection of field types and their ordering respectfully
-`STRUCT_FIELD_OFFSET` is an almost inline-assembly code generation which performs addition right inside runtime
+`offset_of` pushes byte offset for specified field for given structure (concrete ones)
+```
+offset_of {STRUCTURE_TYPE} {FIELD_NAME}
+```
+
+It takes into account any alignment / reordering that is possible, and offset will be always same, as those whose will be used inside low-level machine code / ABI calls
+```
+struct Foo
+    // No special alignment, simple struct
+    a int
+    b int
+end
+
+
+offset_of Foo a // 0
+offset_of Foo b // 8
+```
+
+## Generic structure types
+
+```
+// Define generic struct with type param T
+struct Generic{T}
+    field_a T
+    field_b T
+    field_c int
+end
+
+var x Generic{T = int} // Variable with concrete type
+```

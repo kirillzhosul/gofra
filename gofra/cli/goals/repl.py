@@ -295,7 +295,6 @@ def _assemble_preview_expr_from_types(
         ptr_format_str = f'"Addr-of `{head_t}`: "'
         if isinstance(head_t.points_to, StringType):
             str_format_str = '"String-view: `"'
-            print("...str...")
             expr.extend(
                 [
                     "copy",

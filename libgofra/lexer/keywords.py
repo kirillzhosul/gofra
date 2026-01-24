@@ -40,6 +40,7 @@ class Keyword(Enum):
     TYPE_CAST = auto()
     TYPE_DEFINE = auto()
 
+    OFFSET_OF = auto()
     SIZEOF = auto()
 
     SYSCALL = auto()
@@ -97,6 +98,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "inline_raw_asm": Keyword.INLINE_RAW_ASM,
     "return": Keyword.FUNCTION_RETURN,
     "sizeof": Keyword.SIZEOF,
+    "offset_of": Keyword.OFFSET_OF,
     "typecast": Keyword.TYPE_CAST,
     "breakpoint": Keyword.DEBUGGER_BREAKPOINT,
     "packed": Keyword.ATTR_STRUCT_PACKED,
