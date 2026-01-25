@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Structures - Gofra</title>
+        <title>Function type and Function pointer - Gofra</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -41,10 +41,10 @@
                                 <a href="../../installation/" class="nav-link">Installation</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../" class="nav-link">Tutorial</a>
+                                <a href="../../tutorial/" class="nav-link">Tutorial</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../../advanced/" class="nav-link">Advanced</a>
+                                <a href="../" class="nav-link">Advanced</a>
                             </li>
                         </ul>
 
@@ -55,7 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/structures.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/function-type.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -75,37 +75,17 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#structures" class="nav-link">Structures</a>
+            <li class="nav-item" data-bs-level="1"><a href="#function-type-and-function-pointer" class="nav-link">Function type and Function pointer</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#defining-an-structure-type" class="nav-link">Defining an structure type</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#accessing-an-structure-field" class="nav-link">Accessing an structure field</a>
+            <li class="nav-item" data-bs-level="2"><a href="#pointer_of_proc" class="nav-link">pointer_of_proc</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#forward-reference-and-self-reference" class="nav-link">Forward reference and self-reference</a>
+            <li class="nav-item" data-bs-level="2"><a href="#defining-an-function-type" class="nav-link">Defining an function type</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#alignment-on-cpus-and-packed-layout" class="nav-link">Alignment on CPUs and packed layout</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#reordering" class="nav-link">Reordering</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#offset_of" class="nav-link">offset_of</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#align_of" class="nav-link">align_of</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#generic-structure-types" class="nav-link">Generic structure types</a>
+            <li class="nav-item" data-bs-level="2"><a href="#calling-from-function-type-holder" class="nav-link">Calling from function type holder</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -116,118 +96,40 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="structures">Structures</h1>
-<p>Structs currently is an something like type-definition with proper type checking and field accessors (auto-shift)</p>
-<h2 id="defining-an-structure-type">Defining an structure type</h2>
-<pre><code class="language-gofra">struct name
-    field type
+<h1 id="function-type-and-function-pointer">Function type and Function pointer</h1>
+<h2 id="pointer_of_proc"><code>pointer_of_proc</code></h2>
+<p>Pushes pointer of specified function onto the stack</p>
+<pre><code>func void f[]
     ...
 end
-</code></pre>
-<p>For example defining an person struct</p>
-<pre><code class="language-gofra">struct Person
-    age int
-    name *char[]
-end
-</code></pre>
-<h2 id="accessing-an-structure-field">Accessing an structure field</h2>
-<pre><code class="language-gofra">var stepan Person // initialize variable of type Person
-
-stepan.age // will push an pointer to an `age` field so you can write / read from it
-</code></pre>
-<h2 id="forward-reference-and-self-reference">Forward reference and self-reference</h2>
-<p>Forward reference of structures as children field is allowed:</p>
-<pre><code class="language-gofra">struct X
-    id int
-    child X
-end // 16 bytes
-// This will define X as (8 byte int + 8 byte X (int))
-</code></pre>
-<h2 id="alignment-on-cpus-and-packed-layout">Alignment on CPUs and packed layout</h2>
-<p>By default, all structures being aligned in memory according to max alignment of its own fields, e.g if biggest field type is <code>int</code> (8 bytes) then alignment for whole structure must be same amount of bytes</p>
-<p>This can be overridden by specifying <code>packed</code> attribute for structure, which means <em>do not apply any alignment, place all fields as-is linearly in memory</em></p>
-<pre><code class="language-gofra">struct bad_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Unpacked, 24 bytes
-
-struct packed packed_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Packed, 10 bytes
-</code></pre>
-<pre><code>Packed (tight memory layout)
-|-------------|
-|a|    b   |c||     =&gt; 10 bytes
-|-------------|
 
 
-Aligned (thin memory layout)
-|-------------------------------------------|
-|a|...padding...|     b     |...padding...|c|     =&gt; 24 bytes
-|-------------------------------------------|
-
-Padding is from both sides to properly align *int* (8 bytes) field access on CPU
+pointer_of_proc f // () -&gt; void
 </code></pre>
-<h2 id="reordering">Reordering</h2>
-<p>Reordering is a process when for performance reasons fields of structure being re-ordered to solve alignment issues (redundant padding on structure memory layout) </p>
-<p>By default, structures does not apply reordering, this behavior can be overridden by specifying <code>reorder</code> attribute for structure.</p>
-<pre><code class="language-gofra">struct bad_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Unpacked, 24 bytes
-
-struct reorder reordered_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Unpacked, reordered 16 bytes
-// Order was transformed into [b, a, c] (int, char, char) re-using padding from int to char
-</code></pre>
-<h2 id="offset_of"><code>offset_of</code></h2>
-<p><code>offset_of</code> pushes byte offset for specified field for given structure (concrete ones)</p>
-<pre><code>offset_of {STRUCTURE_TYPE} {FIELD_NAME}
-</code></pre>
-<p>It takes into account any alignment / reordering that is possible, and offset will be always same, as those whose will be used inside low-level machine code / ABI calls</p>
-<pre><code>struct Foo
-    // No special alignment, simple struct
-    a int
-    b int
+<h2 id="defining-an-function-type">Defining an function type</h2>
+<pre><code>func void f[]
+    ...
 end
 
 
-offset_of Foo a // 0
-offset_of Foo b // 8
+type FunctionType func void _[]
+
+var x FunctionType;
+var v func void _[];
 </code></pre>
-<h2 id="align_of"><code>align_of</code></h2>
-<p><code>align_of</code> pushes alignment for specified type</p>
-<pre><code>align_of {TYPE}
-</code></pre>
-<p>It takes into account any alignment / reordering that is possible, and offset will be always same, as those whose will be used inside low-level machine code / ABI calls</p>
-<pre><code>struct Foo
-    // No special alignment, simple struct
-    a int
-    b int
+<h2 id="calling-from-function-type-holder">Calling from function type holder</h2>
+<pre><code>func void f[]
+    ...
 end
 
 
-align_of Foo // 8 (max is int, 8 bytes)
-align_of int // 8
-align_of char // 1
-align_of int[32] // 8, alignment of int
-</code></pre>
-<h2 id="generic-structure-types">Generic structure types</h2>
-<pre><code>// Define generic struct with type param T
-struct Generic{T}
-    field_a T
-    field_b T
-    field_c int
-end
+func void main[]
+    var v func void _[];
 
-var x Generic{T = int} // Variable with concrete type
+    &amp;v pointer_of_proc f !&lt;
+
+    call v
+end
 </code></pre></div>
             </div>
         </div>

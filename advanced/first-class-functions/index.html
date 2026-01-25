@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Structures - Gofra</title>
+        <title>First-class functions (Lambdas) - Gofra</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -41,10 +41,10 @@
                                 <a href="../../installation/" class="nav-link">Installation</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../" class="nav-link">Tutorial</a>
+                                <a href="../../tutorial/" class="nav-link">Tutorial</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../../advanced/" class="nav-link">Advanced</a>
+                                <a href="../" class="nav-link">Advanced</a>
                             </li>
                         </ul>
 
@@ -55,7 +55,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/tutorial/structures.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
+                                <a href="https://github.com/kirillzhosul/gofra/edit/main/docs/advanced/first-class-functions.md" class="nav-link"><i class="fa-brands fa-github"></i> Edit on GitHub</a>
                             </li>
                     </ul>
                 </div>
@@ -75,37 +75,29 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#structures" class="nav-link">Structures</a>
+            <li class="nav-item" data-bs-level="1"><a href="#first-class-functions-lambdas" class="nav-link">First-class functions (Lambdas)</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#defining-an-structure-type" class="nav-link">Defining an structure type</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#accessing-an-structure-field" class="nav-link">Accessing an structure field</a>
+            <li class="nav-item" data-bs-level="2"><a href="#function-type" class="nav-link">Function type</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#forward-reference-and-self-reference" class="nav-link">Forward reference and self-reference</a>
+            <li class="nav-item" data-bs-level="2"><a href="#treating-functions-as-function-type" class="nav-link">Treating functions as Function Type</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#alignment-on-cpus-and-packed-layout" class="nav-link">Alignment on CPUs and packed layout</a>
+            <li class="nav-item" data-bs-level="2"><a href="#lambda-function-definition" class="nav-link">Lambda function definition</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#reordering" class="nav-link">Reordering</a>
+            <li class="nav-item" data-bs-level="2"><a href="#calling-an-function-type" class="nav-link">Calling an Function Type</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#offset_of" class="nav-link">offset_of</a>
+            <li class="nav-item" data-bs-level="2"><a href="#functools" class="nav-link">functools</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#align_of" class="nav-link">align_of</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#generic-structure-types" class="nav-link">Generic structure types</a>
+            <li class="nav-item" data-bs-level="2"><a href="#closure-proposal" class="nav-link">Closure Proposal</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -116,119 +108,64 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="structures">Structures</h1>
-<p>Structs currently is an something like type-definition with proper type checking and field accessors (auto-shift)</p>
-<h2 id="defining-an-structure-type">Defining an structure type</h2>
-<pre><code class="language-gofra">struct name
-    field type
+<h1 id="first-class-functions-lambdas">First-class functions (Lambdas)</h1>
+<p><em>Gofra</em> is an language with <a href="https://en.wikipedia.org/wiki/First-class_function"><strong>first-class functions</strong></a> it does support passing functions as arguments to other functions, returning them as return value from other functions and store into memory</p>
+<h2 id="function-type">Function type</h2>
+<p>To work with function as types/values you need to interact with <strong>Function Type</strong> it is defined same as default functions except, type expression goes into <em>type</em> block:</p>
+<pre><code class="language-gofra">// Define an type that describes function (Function Type)
+type F func void _[]
+type F func int _[int a, int b]
+type F func int _[int, int]
+
+func void f[F function] // Use that type
+func void f[func void _[int, int] function] // Inline function type
+
+var f F; // Holds function
+</code></pre>
+<p>While defining an function type, name and parameter names is dropped within type holder, which means you can define auxiliary name / parameter names, but general convention is to name function <code>_</code>.</p>
+<h2 id="treating-functions-as-function-type">Treating functions as Function Type</h2>
+<p><code>pointer_of_proc</code> allows to acquire Function Type from specified function e.g:</p>
+<pre><code>func void f[int a] ... end
+
+func void main[]
+    var f func void _[int];
+
+    &amp;f pointer_of_proc f !&lt;
+end
+</code></pre>
+<p>This keyword pushes Function Type (e.g function pointer) onto the stack, allowing storing and passing it to other functions</p>
+<h2 id="lambda-function-definition">Lambda function definition</h2>
+<p>You can define function within another one, by using <code>lambda</code> function definition like so:</p>
+<pre><code class="language-gofra">// Create function that return another function
+type F_T func int _[int, int]
+func F_T create_function[]
+    lambda func int _[int, int]
+        + // sum arguments
+    end
+    return
+end
+</code></pre>
+<p><code>lambda</code> definition always returns an <strong>Function Type</strong> as pointer of your fresh lambda function</p>
+<h2 id="calling-an-function-type">Calling an Function Type</h2>
+<p>You cannot directly <em>call</em> an pointer (Function Type), you, unfortunately must store it inside some holder, and use <code>call</code> keyword/operator</p>
+<pre><code>func void f[]
     ...
 end
-</code></pre>
-<p>For example defining an person struct</p>
-<pre><code class="language-gofra">struct Person
-    age int
-    name *char[]
+
+func void main[]
+    var v func void _[];
+    &amp;v pointer_of_proc f !&lt;
+
+    call v
 end
 </code></pre>
-<h2 id="accessing-an-structure-field">Accessing an structure field</h2>
-<pre><code class="language-gofra">var stepan Person // initialize variable of type Person
-
-stepan.age // will push an pointer to an `age` field so you can write / read from it
-</code></pre>
-<h2 id="forward-reference-and-self-reference">Forward reference and self-reference</h2>
-<p>Forward reference of structures as children field is allowed:</p>
-<pre><code class="language-gofra">struct X
-    id int
-    child X
-end // 16 bytes
-// This will define X as (8 byte int + 8 byte X (int))
-</code></pre>
-<h2 id="alignment-on-cpus-and-packed-layout">Alignment on CPUs and packed layout</h2>
-<p>By default, all structures being aligned in memory according to max alignment of its own fields, e.g if biggest field type is <code>int</code> (8 bytes) then alignment for whole structure must be same amount of bytes</p>
-<p>This can be overridden by specifying <code>packed</code> attribute for structure, which means <em>do not apply any alignment, place all fields as-is linearly in memory</em></p>
-<pre><code class="language-gofra">struct bad_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Unpacked, 24 bytes
-
-struct packed packed_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Packed, 10 bytes
-</code></pre>
-<pre><code>Packed (tight memory layout)
-|-------------|
-|a|    b   |c||     =&gt; 10 bytes
-|-------------|
-
-
-Aligned (thin memory layout)
-|-------------------------------------------|
-|a|...padding...|     b     |...padding...|c|     =&gt; 24 bytes
-|-------------------------------------------|
-
-Padding is from both sides to properly align *int* (8 bytes) field access on CPU
-</code></pre>
-<h2 id="reordering">Reordering</h2>
-<p>Reordering is a process when for performance reasons fields of structure being re-ordered to solve alignment issues (redundant padding on structure memory layout) </p>
-<p>By default, structures does not apply reordering, this behavior can be overridden by specifying <code>reorder</code> attribute for structure.</p>
-<pre><code class="language-gofra">struct bad_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Unpacked, 24 bytes
-
-struct reorder reordered_layout
-    a char // 1 byte
-    b int  // 8 byte
-    c char // 1 byte
-end // Unpacked, reordered 16 bytes
-// Order was transformed into [b, a, c] (int, char, char) re-using padding from int to char
-</code></pre>
-<h2 id="offset_of"><code>offset_of</code></h2>
-<p><code>offset_of</code> pushes byte offset for specified field for given structure (concrete ones)</p>
-<pre><code>offset_of {STRUCTURE_TYPE} {FIELD_NAME}
-</code></pre>
-<p>It takes into account any alignment / reordering that is possible, and offset will be always same, as those whose will be used inside low-level machine code / ABI calls</p>
-<pre><code>struct Foo
-    // No special alignment, simple struct
-    a int
-    b int
-end
-
-
-offset_of Foo a // 0
-offset_of Foo b // 8
-</code></pre>
-<h2 id="align_of"><code>align_of</code></h2>
-<p><code>align_of</code> pushes alignment for specified type</p>
-<pre><code>align_of {TYPE}
-</code></pre>
-<p>It takes into account any alignment / reordering that is possible, and offset will be always same, as those whose will be used inside low-level machine code / ABI calls</p>
-<pre><code>struct Foo
-    // No special alignment, simple struct
-    a int
-    b int
-end
-
-
-align_of Foo // 8 (max is int, 8 bytes)
-align_of int // 8
-align_of char // 1
-align_of int[32] // 8, alignment of int
-</code></pre>
-<h2 id="generic-structure-types">Generic structure types</h2>
-<pre><code>// Define generic struct with type param T
-struct Generic{T}
-    field_a T
-    field_b T
-    field_c int
-end
-
-var x Generic{T = int} // Variable with concrete type
-</code></pre></div>
+<h2 id="functools"><code>functools</code></h2>
+<p><em>Gofra</em> provides general high-order functions within that module (<code>std/functools.gof</code>)
+- <code>i_map</code>
+- <code>i_reduce</code></p>
+<p>This is simple primitives that is extensible for your actual usage</p>
+<h2 id="closure-proposal">Closure Proposal</h2>
+<p>Closures is yet not available in <em>Gofra</em>, lambda functions is not capturing-lambda-functions</p></div>
             </div>
         </div>
 
