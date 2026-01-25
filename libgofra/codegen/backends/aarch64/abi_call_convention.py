@@ -9,7 +9,10 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
     push_register_onto_stack,
     truncate_register_to_32bit_version,
 )
-from libgofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
+from libgofra.codegen.backends.aarch64.registers import (
+    AARCH64_GP_REGISTERS,
+    AARCH64_STACK_ALIGNMENT,
+)
 from libgofra.types._base import Type
 
 
@@ -177,6 +180,13 @@ def _load_return_value_from_abi_registers_into_stack(
         return None  # E.g void, has nothing in return
 
     abi = context.abi
+    if t.size_in_bytes == 1:
+        # TODO: Workaround for booleans, must be resolved?
+        # TODO: Must `and w0, w8, #0x1` on load
+        context.write("and X0, X0, #0xFF")  # extend LEA bits
+        context.write(f"str X0, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
+        return None
+
     if t.size_in_bytes <= 4:
         # Primitive return value as 32 bit (e.g char, bool)
         # directly load from return register (lower 32 bits)

@@ -8,7 +8,6 @@ from libgofra.typecheck.errors import (
     ParameterTypeMismatchTypecheckError,
 )
 from libgofra.types.comparison import is_types_same
-from libgofra.types.composite.function import FunctionType
 
 from .exceptions import (
     TypecheckInvalidOperatorArgumentTypeError,
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     from libgofra.hir.function import Function
     from libgofra.hir.operator import Operator
     from libgofra.types import Type
+    from libgofra.types.composite.function import FunctionType
 
 
 @dataclass(frozen=False)

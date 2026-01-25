@@ -7,6 +7,7 @@ from libgofra.types.composite.pointer import PointerType
 class FunctionType(CompositeType):
     """Type that holds [pointer] to an function (e.g function itself as an type)."""
 
+    # TODO: This may be reworked into FunctionType + FunctionPointer type
     parameters: Sequence[Type]
     return_type: Type
 

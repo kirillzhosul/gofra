@@ -29,7 +29,6 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
     push_static_address_onto_stack,
     store_into_memory_from_stack_arguments,
 )
-from libgofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
 from libgofra.codegen.backends.aarch64.static_data_section import (
     aarch64_data_section,
 )
@@ -49,6 +48,7 @@ from libgofra.types.composite.function import FunctionType
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from libgofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module
     from libgofra.targets.target import Target

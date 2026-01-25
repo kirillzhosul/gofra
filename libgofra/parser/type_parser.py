@@ -155,7 +155,7 @@ def parse_function_type_parameters(context: ParserContext) -> list[tuple[str, Ty
     return parameters
 
 
-def parse_generic_type_alias_from_tokenizer(
+def parse_generic_type_alias_from_tokenizer(  # noqa: PLR0911
     context: ParserContext,
     *,
     generic_type_params: Mapping[str, Token],

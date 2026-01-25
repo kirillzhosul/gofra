@@ -5,7 +5,7 @@ class F64Type(PrimitiveType):
     """Float of size 64 bits."""
 
     size_in_bytes = 8
-    alignment = 8
+    alignment = size_in_bytes
 
     is_fp = True
 
