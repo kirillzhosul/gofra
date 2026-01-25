@@ -3,7 +3,7 @@ from libgofra.types.generics import GenericParametrizedType
 from libgofra.types.primitive.boolean import BoolType
 from libgofra.types.primitive.character import CharType
 from libgofra.types.primitive.floats import F64Type
-from libgofra.types.primitive.integers import I64Type
+from libgofra.types.primitive.integers import I8Type, I16Type, I32Type, I64Type
 from libgofra.types.primitive.void import VoidType
 
 from ._base import Type
@@ -20,6 +20,9 @@ def get_default_propagated_type_registry() -> TypeRegistry:
             # Int
             "int": I64Type(),
             "i64": I64Type(),
+            "i32": I32Type(),
+            "i16": I16Type(),
+            "i8": I8Type(),
             # Etc
             "char": CharType(),
             "void": VoidType(),
