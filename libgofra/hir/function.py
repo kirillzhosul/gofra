@@ -74,12 +74,12 @@ class Function:
 
     # If true, calling that function instead of actual calling into that function
     # just expands body of the function inside call location
-    is_inline: bool
+    is_inline: bool = field(repr=False)
 
     # If true, means function cannot *return*
     # E.g is explicitly `exit` function as it must never returns
     # Allows to treat blocks after as unreachable and perform optional DCE onto it
-    is_no_return: bool
+    is_no_return: bool = field(repr=False)
 
     # If true, function must have empty body and it is located somewhere else and only available after linkage
     # Extern functions mostly are `C` functions (system/user defined) and call to them does jumps inside linked source binaries (dynamic libraries)
@@ -88,12 +88,15 @@ class Function:
 
     # If true, function has no calls to other functions
     # compiler may perform some optimizations for these
-    is_leaf: bool
+    is_leaf: bool = field(repr=False)
 
     # Type of return value (type of data which this functions returns after call)
     # When there is void / never type - function does not have return type
     # compiler in this case may omit return value and perform general optimizations based on return value
     return_type: Type
+
+    enclosed_functions: Sequence[Function] | None = field(repr=False)
+    enclosed_in_parent: Function | None = field(repr=False)
 
     def has_return_value(self) -> bool:
         """Check is given function returns an void type (e.g no return type)."""
@@ -224,7 +227,9 @@ class Function:
         function.is_leaf = is_leaf
         function.is_inline = is_inline
         function.is_external = is_external
-
+        function.is_no_return = False
+        function.enclosed_functions = None
+        function.enclosed_in_parent = None
         # Assertion-style validation
         # Must be validated in higher layer
 

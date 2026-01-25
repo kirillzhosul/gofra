@@ -166,10 +166,10 @@ def amd64_operator_instructions(
 
             function = program.resolve_function_dependency(
                 operator.operand.module,
-                operator.operand.func_name,
+                operator.operand.get_name(),
             )
             assert function is not None, (
-                f"Cannot find function symbol `{operator.operand.func_name}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
+                f"Cannot find function symbol `{operator.operand.get_name()}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
             )
 
             function_call(

@@ -187,10 +187,10 @@ def aarch64_operator_instructions(
 
             function = program.resolve_function_dependency(
                 operator.operand.module,
-                operator.operand.func_name,
+                operator.operand.get_name(),
             )
             assert function is not None, (
-                f"Cannot find function symbol `{operator.operand.func_name}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
+                f"Cannot find function symbol `{operator.operand.get_name()}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
             )
 
             function_abi_call_by_symbol(
@@ -303,7 +303,7 @@ def aarch64_operator_instructions(
             assert isinstance(operator.operand, FunctionCallOperand)
             calee = program.resolve_function_dependency(
                 operator.operand.module,
-                operator.operand.func_name,
+                operator.operand.get_name(),
             )
             assert calee
             push_static_address_onto_stack(context, segment=calee.name)

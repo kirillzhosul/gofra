@@ -63,7 +63,21 @@ def _compare_types_strict_same_type(a: Type, b: Type) -> bool:  # noqa: PLR0911
         )
 
     if isinstance(a, FunctionType) and isinstance(b, FunctionType):
-        return a.parameters == b.parameters and a.return_type == b.return_type
+        if len(a.parameters) != len(b.parameters):
+            return False
+        for a_t, b_t in zip(a.parameters, b.parameters, strict=True):
+            if is_types_same(
+                a_t,
+                b_t,
+                strategy="strict-same-type",
+            ):
+                continue
+            return False
+        return is_types_same(
+            a.return_type,
+            b.return_type,
+            strategy="strict-same-type",
+        )
 
     if isinstance(a, ArrayType) and isinstance(b, ArrayType):
         return (

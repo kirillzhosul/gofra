@@ -128,7 +128,7 @@ def _tuck_definition_stmts_for_loader(
 ) -> MutableSequence[str]:
     leftover: list[str] = []
     for line in from_:
-        if line.startswith(("var", "func", "type", "const", "#include")):
+        if line.startswith(("var", "func", "type", "const", "#include", "lambda")):
             to.append(line)
             continue
         leftover.append(line)

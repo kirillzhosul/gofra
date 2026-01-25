@@ -25,7 +25,7 @@ def _is_call_operator(operator: Operator, callee: str) -> bool:
     if operator.type != OperatorType.FUNCTION_CALL:
         return False
     assert isinstance(operator.operand, FunctionCallOperand)
-    return operator.operand.func_name == callee
+    return operator.operand.get_name() == callee
 
 
 def search_unused_functions(program: Module) -> Iterable[Function]:

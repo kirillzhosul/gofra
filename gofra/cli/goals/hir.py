@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, NoReturn
 from gofra.cli.goals._optimization_pipeline import cli_process_optimization_pipeline
 from gofra.cli.output import cli_fatal_abort
 from libgofra.gofra import process_input_file
+from libgofra.hir.function import Function
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.lexer.tokens import TokenLocation
 from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
 
 if TYPE_CHECKING:
     from gofra.cli.parser.arguments import CLIArguments
-    from libgofra.hir.function import Function
     from libgofra.hir.module import Module
 
 FULL_DEPENDENCY_GRAPH_HIR = True
@@ -90,7 +90,9 @@ def _emit_hir_into_stdout(module: Module) -> None:
                 OperatorType.CONDITIONAL_END,
             ):
                 context_block_shift -= 1
-            _emit_ir_operator(operator, context_block_shift=context_block_shift)
+            _emit_ir_operator(
+                operator, context_block_shift=context_block_shift, owner=function
+            )
             if operator.type in (
                 OperatorType.CONDITIONAL_DO,
                 OperatorType.CONDITIONAL_IF,
@@ -100,7 +102,9 @@ def _emit_hir_into_stdout(module: Module) -> None:
                 context_block_shift += 1
 
 
-def _emit_ir_operator(operator: Operator, context_block_shift: int) -> None:  # noqa: PLR0911
+def _emit_ir_operator(
+    operator: Operator, context_block_shift: int, owner: Function
+) -> None:  # noqa: PLR0911
     shift = " " * (context_block_shift + 3)
     match operator.type:
         case OperatorType.PUSH_INTEGER:
@@ -117,10 +121,21 @@ def _emit_ir_operator(operator: Operator, context_block_shift: int) -> None:  # 
             return print(f"{shift}" + "}")
         case OperatorType.FUNCTION_CALL:
             if isinstance(operator.operand, FunctionCallOperand):
-                mod = operator.operand.module
-                func = operator.operand.func_name
+                mod = operator.operand.module or ""
+                func = operator.operand.get_name()
                 return print(f"{shift}{mod}.{func}()")
             return print(f"{shift}{operator.operand}()")
+        case OperatorType.PUSH_FUNCTION_POINTER:
+            if isinstance(operator.operand, FunctionCallOperand):
+                mod = operator.operand.module or ""
+                func = operator.operand.get_name()
+                print(f"{shift}&proc-of {mod}.{func}()", end="")
+                if isinstance(operator.operand.func, Function):
+                    ptr_of = operator.operand.func
+                    if ptr_of.enclosed_in_parent == owner:
+                        print(" [own_enclosure]", end="")
+                return print()
+            return print(f"{shift}&proc-of {operator.operand}()")
         case _:
             if operator.operand:
                 return print(f"{shift}{operator.type.name}<{operator.operand}>")
@@ -138,4 +153,8 @@ def _emit_ir_function_signature(function: Function) -> None:
     print(f"({len(function.variables)} local variables)", end=" ")
     if function.is_leaf:
         print("[has_leaf_property]", end="")
-    print()
+    if function.enclosed_in_parent:
+        print("[is_enclosure]", end="")
+    if function.enclosed_functions:
+        print("[has_enclosures]", end="")
+    print("", function.defined_at)

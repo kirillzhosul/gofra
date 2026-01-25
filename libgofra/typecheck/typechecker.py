@@ -34,7 +34,7 @@ from libgofra.types.composite.structure import StructureType
 from libgofra.types.primitive.boolean import BoolType
 from libgofra.types.primitive.character import CharType
 from libgofra.types.primitive.floats import F64Type
-from libgofra.types.primitive.integers import I64Type
+from libgofra.types.primitive.integers import I64Type, IntegerType
 from libgofra.types.primitive.void import VoidType
 
 from ._scope import TypecheckScope
@@ -203,7 +203,7 @@ def emulate_type_stack_for_operators(  # noqa: PLR0913
                 pass
             case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
                 # Treat integer also as *comparable*
-                scope.raise_for_operator_arguments(operator, (BoolType, I64Type))
+                scope.raise_for_operator_arguments(operator, (BoolType, IntegerType))
 
                 # Acquire where this block jumps, shift due to emulation layers
                 assert operator.jumps_to_operator_idx
@@ -353,7 +353,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             operand = operator.operand
             function = module.resolve_function_dependency(
                 operand.module,
-                operand.func_name,
+                operand.get_name(),
             )
 
             assert function is not None, (
@@ -408,8 +408,8 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 scope.pop_type_from_stack(),
             )
 
-            a_coerces = isinstance(a, I64Type)
-            b_coerces = isinstance(b, I64Type)
+            a_coerces = isinstance(a, IntegerType)
+            b_coerces = isinstance(b, IntegerType)
 
             if not a_coerces or not b_coerces:
                 raise TypecheckInvalidBinaryMathArithmeticsError(
@@ -432,7 +432,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
 
             if isinstance(a, PointerType):
                 # Pointer arithmetics
-                if isinstance(b, I64Type):
+                if isinstance(b, IntegerType):
                     scope.push_types(PointerType(a.points_to))
                     return None
                 raise TypecheckInvalidPointerArithmeticsError(
@@ -620,7 +620,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             operand = operator.operand
             function = module.resolve_function_dependency(
                 operand.module,
-                operand.func_name,
+                operand.get_name(),
             )
 
             assert function is not None, (

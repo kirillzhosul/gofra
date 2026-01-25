@@ -119,13 +119,13 @@ def _validate_function_existence_and_visibility(root: Module, module: Module) ->
                 assert isinstance(op.operand, FunctionCallOperand), op.operand
                 resolved_symbol = module.resolve_function_dependency(
                     op.operand.module,
-                    op.operand.func_name,
+                    op.operand.get_name(),
                 )
                 if resolved_symbol is None:
                     print(f"[help] Tried to resolve import from {op.operand.module}")
                     raise ParserUnknownFunctionError(
                         at=op.token.location,
-                        name=op.operand.func_name,
+                        name=op.operand.get_name(),
                         functions_available=[],
                         best_match=None,
                     )
@@ -321,6 +321,8 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             return _unpack_import(context, token)
         case Keyword.ALIGN_OF:
             return _unpack_align_of(context, token)
+        case Keyword.LAMBDA_DEF:
+            return _unpack_anonymous_lambda_function_from_token(context, token)
         case Keyword.TYPE_DEFINE:
             if (
                 (peeked := context.peek_token())
@@ -339,6 +341,101 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             raise ValueError
         case _:
             assert_never(token.value)
+
+
+def _unpack_anonymous_lambda_function_from_token(
+    context: ParserContext,
+    token: Token,
+) -> None:
+    def _parse_and_spill_enclosures() -> Function:
+        assert token.type == TokenType.KEYWORD
+        assert token.value == Keyword.LAMBDA_DEF
+        assert not context.is_top_level
+
+        f_header_def = consume_function_definition(context, context.next_token())
+
+        params = [p[1] for p in f_header_def.parameters]
+
+        if f_header_def.qualifiers.is_extern:
+            msg = f"Tried to construct an extern lambda-func-def at {token.location}"
+            raise ValueError(msg)
+
+        if f_header_def.qualifiers.is_inline:
+            msg = f"Tried to construct an inline lambda-func-def at {token.location}"
+            raise ValueError(msg)
+
+        if context.name_is_already_taken(f_header_def.name):
+            msg = f"Function name {f_header_def.name} is already taken by other definition"
+            raise ValueError(msg)
+
+        def _fixed_tokenizer() -> Generator[Token]:
+            # TODO(@kirillzhosul): This must removed or refactored
+            # refactored so single peek can always find an place where to peek
+            # otherwise will release tokenizer from parse
+            yield from consume_function_body_tokens(context)
+            yield Token(
+                type=TokenType.EOL,
+                text="",
+                value="",
+                location=TokenLocation.toolchain(),
+            )
+
+        new_context = ParserContext(
+            _tokenizer=_fixed_tokenizer(),
+            functions=dict(context.functions),
+            parent=context,
+            path=context.path,
+            entry_point_name=context.entry_point_name,  # TODO: Refactor
+        )
+
+        param_names = [p[0] for p in f_header_def.parameters]
+        if any(param_names) and not all(param_names):
+            msg = f"Either all parameters must be named or none! {token.location}"
+            raise ValueError(msg)
+
+        for param_name, param_type in reversed(f_header_def.parameters):
+            if not param_name:
+                continue
+            new_context.variables[param_name] = Variable(
+                name=param_name,
+                defined_at=token.location,
+                is_constant=False,
+                storage_class=VariableStorageClass.STACK,
+                scope_class=VariableScopeClass.FUNCTION,
+                type=param_type,
+                initial_value=None,
+            )
+            new_context.push_new_operator(
+                OperatorType.LOAD_PARAM_ARGUMENT,
+                token,
+                operand=param_name,
+            )
+        _parse_from_context_into_operators(context=new_context)
+
+        function = Function.create_internal(
+            name=f_header_def.name,
+            defined_at=token.location,
+            operators=new_context.operators,
+            variables=new_context.variables,
+            parameters=params,
+            return_type=f_header_def.return_type,
+            is_leaf=new_context.is_leaf_context,
+        )
+        assert not f_header_def.qualifiers.is_public
+        assert not f_header_def.qualifiers.is_no_return
+        function.visibility = Visibility.PRIVATE
+
+        function.module_path = context.path
+        assert not context.is_top_level
+        context.add_function(function)
+        return function
+
+    function = _parse_and_spill_enclosures()
+    context.push_new_operator(
+        OperatorType.PUSH_FUNCTION_POINTER,
+        token=token,
+        operand=FunctionCallOperand(None, function),
+    )
 
 
 def _unpack_align_of(context: ParserContext, token: Token) -> None:
@@ -367,7 +464,7 @@ def _unpack_pointer_of_proc(context: ParserContext, token: Token) -> None:
     context.push_new_operator(
         OperatorType.PUSH_FUNCTION_POINTER,
         token=token,
-        operand=FunctionCallOperand(None, function.name),
+        operand=FunctionCallOperand(None, function),
     )
 
 
@@ -566,7 +663,7 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
 
     name = name_token.text
     function = context.functions.get(name)
-    call_spec = FunctionCallOperand(module=owner_module, func_name=name)
+    call_spec = FunctionCallOperand(module=owner_module, func=name)
 
     if name in context.variables:
         variable = context.variables[name]
@@ -636,7 +733,7 @@ def _unpack_function_definition_from_token(
 
     new_context = ParserContext(
         _tokenizer=_fixed_tokenizer(),
-        functions=context.functions,
+        functions=dict(context.functions),
         parent=context,
         path=context.path,
         entry_point_name=context.entry_point_name,  # TODO: Refactor
@@ -699,7 +796,28 @@ def _unpack_function_definition_from_token(
     function.is_no_return = f_header_def.qualifiers.is_no_return
     function.module_path = context.path
 
+    enclosed_new_functions = [
+        f for f in new_context.functions.values() if f.name not in context.functions
+    ]
+    if enclosed_new_functions:
+        function.enclosed_functions = enclosed_new_functions
+        for enclosure in function.enclosed_functions:
+            enclosure.enclosed_in_parent = function
+            _enclosure_generate_native_holder_name(
+                context,
+                owner=function,
+                enclosure=enclosure,
+            )
+            context.add_function(enclosure)
     context.add_function(function)
+
+
+def _enclosure_generate_native_holder_name(
+    context: ParserContext, owner: Function, enclosure: Function
+) -> None:
+    name = owner.name + "$enclosure"
+    enclosure.name = name
+    assert not context.name_is_already_taken(name)
 
 
 def _try_unpack_function_call_from_identifier_token(
@@ -714,7 +832,7 @@ def _try_unpack_function_call_from_identifier_token(
         if function.is_inline:
             context.expand_from_inline_block(function)
             return True
-        call_spec = FunctionCallOperand(module=None, func_name=name)
+        call_spec = FunctionCallOperand(module=None, func=function)
         context.push_new_operator(
             type=OperatorType.FUNCTION_CALL,
             token=token,

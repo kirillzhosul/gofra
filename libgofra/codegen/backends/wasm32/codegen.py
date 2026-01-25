@@ -553,10 +553,10 @@ class WASM32CodegenBackend:
             case OperatorType.FUNCTION_CALL:
                 assert isinstance(op.operand, FunctionCallOperand)
                 assert op.operand.module is None
-                assert op.operand.func_name not in self.requested_inlined_intrinsics, (
-                    f"Call to function requested as inlined intrinsic by WASM codegen ({op.operand.func_name})"
+                assert op.operand.get_name() not in self.requested_inlined_intrinsics, (
+                    f"Call to function requested as inlined intrinsic by WASM codegen ({op.operand.get_name()})"
                 )
-                yield InstructionCallNode(op.operand.func_name)
+                yield InstructionCallNode(op.operand.get_name())
             case OperatorType.FUNCTION_RETURN:
                 yield InstructionNode("return")
             # Memory I/O operations

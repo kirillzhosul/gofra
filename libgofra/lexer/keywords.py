@@ -28,6 +28,7 @@ class Keyword(Enum):
     FUNCTION = auto()
     FUNCTION_RETURN = auto()
     FUNCTION_CALL = auto()
+    LAMBDA_DEF = auto()
 
     INLINE_RAW_ASM = auto()
     COMPILE_TIME_ERROR = auto()
@@ -102,6 +103,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     "return": Keyword.FUNCTION_RETURN,
     "sizeof": Keyword.SIZEOF,
     "align_of": Keyword.ALIGN_OF,
+    "lambda": Keyword.LAMBDA_DEF,
     "offset_of": Keyword.OFFSET_OF,
     "pointer_of_proc": Keyword.POINTER_OF_PROC,
     "typecast": Keyword.TYPE_CAST,

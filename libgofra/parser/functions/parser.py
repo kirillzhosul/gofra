@@ -86,7 +86,7 @@ def consume_function_qualifiers(
         Keyword.ATTR_FUNC_EXTERN,
         Keyword.ATTR_FUNC_PUBLIC,
         Keyword.ATTR_FUNC_NO_RETURN,
-    )
+    ), token.value
 
     qualifiers = FunctionHeaderQualifiers(
         is_inline=False,
@@ -141,7 +141,7 @@ def consume_function_qualifiers(
 def consume_function_body_tokens(context: ParserContext) -> Generator[Token]:
     opened_context_blocks = 0
 
-    context_keywords = (Keyword.IF, Keyword.DO)
+    context_keywords = (Keyword.IF, Keyword.DO, Keyword.LAMBDA_DEF)
     end_keyword_text = KEYWORD_TO_NAME[Keyword.END]
 
     while token := context.next_token():

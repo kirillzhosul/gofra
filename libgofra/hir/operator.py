@@ -1,9 +1,13 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 from libgofra.lexer.tokens import Token, TokenLocation
 from libgofra.types._base import Type
 from libgofra.types.composite.structure import StructureType
+
+if TYPE_CHECKING:
+    from libgofra.hir.function import Function
 
 
 class OperatorType(Enum):
@@ -123,7 +127,12 @@ type StructAccessor = tuple[StructureType, str]  # TODO (@kirillzhosul): must re
 @dataclass
 class FunctionCallOperand:
     module: str | None
-    func_name: str
+    func: "Function | str"
+
+    def get_name(self) -> str:
+        if isinstance(self.func, str):
+            return self.func
+        return self.func.name
 
 
 @dataclass(frozen=False, slots=True)
