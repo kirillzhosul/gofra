@@ -26,6 +26,7 @@ end
 - *Low-level* - Write unsafe, low-level code with direct memory access
 - *Type System* - Validate types at compile time, has compile-time warnings (Partial generics supports, typechecker)
 - *Library* - By default has support for `math`, `random`, `network` and other libraries
+- *First class functions* - Has support, and lambda definitions (no closures/capturing yet)
 
 ## Showcase
 - Pong Game (`examples/03_pong.gof`)

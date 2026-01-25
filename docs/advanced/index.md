@@ -10,5 +10,5 @@
 ### [Type definition](./type-definition.md)
 ### [Generic Types](./generic-types.md)
 ### [WebAssembly](./wasm.md)
-### [Function Type](./function-type.md)
+### [First Class Functions / Lambdas / Function Type](./first-class-functions.md)
 
