@@ -813,7 +813,9 @@ def _unpack_function_definition_from_token(
 
 
 def _enclosure_generate_native_holder_name(
-    context: ParserContext, owner: Function, enclosure: Function
+    context: ParserContext,
+    owner: Function,
+    enclosure: Function,
 ) -> None:
     name = owner.name + "$enclosure"
     enclosure.name = name

@@ -4,6 +4,7 @@ from enum import Enum, auto
 
 from libgofra.types._base import Type
 from libgofra.types.composite.array import ArrayType
+from libgofra.types.composite.function import FunctionType
 from libgofra.types.composite.pointer import PointerType
 from libgofra.types.composite.structure import StructureType
 
@@ -34,6 +35,12 @@ class GenericParameter(GenericParametrizedType):
 class GenericArrayType(GenericParametrizedType):
     element_type: GenericParametrizedType | Type
     element_count: GenericParameter | int
+
+
+@dataclass
+class GenericFunctionType(GenericParametrizedType):
+    return_value: Type | GenericParametrizedType
+    parameters: Sequence[Type | GenericParametrizedType]
 
 
 class GenericStructureType(GenericParametrizedType):
@@ -102,6 +109,9 @@ def apply_generic_type_into_concrete(
             assert generic.kind == GenericParameter.Kind.TYPE_PARAM, (
                 "Got unfolded generic non type-param!"
             )
+            if generic.name not in type_parameters:
+                msg = f"Generic param {generic.name} does not exists in type parameters {type_parameters}"
+                raise ValueError(msg)
             t = type_parameters[generic.name]
             assert isinstance(t, Type)
             return t
@@ -142,6 +152,24 @@ def apply_generic_type_into_concrete(
                 order=generic.fields_ordering,
                 is_packed=generic.is_packed,
                 reorder=generic.reorder,
+            )
+        case GenericFunctionType():
+            concrete_return_type = (
+                apply_generic_type_into_concrete(generic.return_value, type_parameters)
+                if isinstance(generic.return_value, GenericParametrizedType)
+                else generic.return_value
+            )
+            concrete_params = [
+                (
+                    apply_generic_type_into_concrete(p, type_parameters)
+                    if isinstance(p, GenericParametrizedType)
+                    else p
+                )
+                for p in generic.parameters
+            ]
+            return FunctionType(
+                parameter_types=concrete_params,
+                return_type=concrete_return_type,
             )
         case _:
             msg = f"Cannot {apply_generic_type_into_concrete.__name__} for {generic}!"

@@ -1,4 +1,5 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from typing import cast
 
 from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
@@ -11,6 +12,7 @@ from libgofra.types.composite.function import FunctionType
 from libgofra.types.composite.pointer import PointerType
 from libgofra.types.generics import (
     GenericArrayType,
+    GenericFunctionType,
     GenericParameter,
     GenericParametrizedType,
     GenericPointerType,
@@ -46,7 +48,7 @@ def parse_concrete_type_from_tokenizer(
         and context.peek_token().value == Keyword.FUNCTION
     ):
         _token = context.next_token()
-        _, function_params, function_return_type = consume_function_signature(
+        _, function_params, function_return_type = consume_concrete_function_signature(
             context,
             token=_token,
         )
@@ -107,7 +109,7 @@ def parse_concrete_type_from_tokenizer(
     return aggregated_type
 
 
-def consume_function_signature(
+def consume_concrete_function_signature(
     context: ParserContext,
     token: Token,
 ) -> tuple[str, list[tuple[str, Type]], Type]:
@@ -115,7 +117,7 @@ def consume_function_signature(
 
     Returns function name and signature types (`in` and `out).
     """
-    type_contract_out = parse_concrete_type_from_tokenizer(context)
+    return_type = parse_concrete_type_from_tokenizer(context)
 
     name_token = context.next_token()
 
@@ -127,7 +129,80 @@ def consume_function_signature(
     function_name = name_token.text
     parameters = parse_function_type_parameters(context)
 
-    return function_name, parameters, type_contract_out
+    return function_name, parameters, return_type
+
+
+def consume_type_function_signature(
+    context: ParserContext,
+    token: Token,
+    generic_type_params: Mapping[str, Token],
+) -> tuple[
+    str,
+    list[tuple[str, Type | GenericParametrizedType]],
+    Type | GenericParametrizedType,
+]:
+    """Consume parser context into generic | concrete function signature assuming given token is `function` keyword.
+
+    Although, gofra does not have generic functions now - this parser consumes generic functions for type system(!)
+
+    Returns function name and signature types (`in` and `out`).
+    """
+    return_type = parse_generic_type_alias_from_tokenizer(
+        context,
+        generic_type_params=generic_type_params,
+    )
+
+    name_token = context.next_token()
+
+    if not name_token:
+        raise ParserFunctionNoNameError(token=token)
+    if name_token.type != TokenType.IDENTIFIER:
+        msg = f"Expected function name in signature but got {name_token.type.name} at {name_token.location}"
+        raise ValueError(msg)
+    function_name = name_token.text
+    parameters = parse_generic_function_type_parameters(
+        context,
+        generic_type_params=generic_type_params,
+    )
+
+    return function_name, parameters, return_type
+
+
+def parse_generic_function_type_parameters(
+    context: ParserContext,
+    generic_type_params: Mapping[str, Token],
+) -> list[tuple[str, Type | GenericParametrizedType]]:
+    # TODO: Refactor with `parse_function_parameters`, same functions except generic type
+    parameters: list[tuple[str, Type | GenericParametrizedType]] = []
+
+    if (paren_token := context.next_token()) and paren_token.type != TokenType.LBRACKET:
+        msg = f"Expected LBRACKET `[` after function name for parameters but got {paren_token.type.name}"
+        raise ValueError(msg, paren_token.location)
+
+    while token := context.peek_token():
+        if token.type == TokenType.RBRACKET:
+            break
+        parameters.append(
+            (
+                "",
+                parse_generic_type_alias_from_tokenizer(
+                    context,
+                    generic_type_params=generic_type_params,
+                ),
+            ),
+        )
+        t = context.peek_token()
+        if t.type == TokenType.RBRACKET:
+            break
+        if t.type == TokenType.IDENTIFIER:
+            parameters[-1] = (t.text, parameters[-1][1])
+            context.next_token()
+            if context.peek_token().type == TokenType.RBRACKET:
+                break
+        context.expect_token(TokenType.COMMA)
+        _ = context.next_token()
+    _ = context.next_token()
+    return parameters
 
 
 def parse_function_type_parameters(context: ParserContext) -> list[tuple[str, Type]]:
@@ -183,12 +258,28 @@ def parse_generic_type_alias_from_tokenizer(  # noqa: PLR0911
         and context.peek_token().value == Keyword.FUNCTION
     ):
         _token = context.next_token()
-        _, function_params, function_return_type = consume_function_signature(
+        _, function_params, function_return_type = consume_type_function_signature(
             context,
             token=_token,
+            generic_type_params=generic_type_params,
         )
 
         anonymous_function_params = [t for _, t in function_params]
+        has_generic_parametrized_param = any(
+            isinstance(p, GenericParametrizedType) for p in anonymous_function_params
+        )
+        if (
+            isinstance(function_return_type, GenericParametrizedType)
+            or has_generic_parametrized_param
+        ):
+            return GenericFunctionType(
+                return_value=function_return_type,
+                parameters=anonymous_function_params,
+            )
+        anonymous_function_params = cast(
+            "Sequence[Type]",
+            anonymous_function_params,
+        )  # Unsafe, but we check above
         return FunctionType(
             return_type=function_return_type,
             parameter_types=anonymous_function_params,

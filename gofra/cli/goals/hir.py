@@ -91,7 +91,9 @@ def _emit_hir_into_stdout(module: Module) -> None:
             ):
                 context_block_shift -= 1
             _emit_ir_operator(
-                operator, context_block_shift=context_block_shift, owner=function
+                operator,
+                context_block_shift=context_block_shift,
+                owner=function,
             )
             if operator.type in (
                 OperatorType.CONDITIONAL_DO,
@@ -102,9 +104,11 @@ def _emit_hir_into_stdout(module: Module) -> None:
                 context_block_shift += 1
 
 
-def _emit_ir_operator(
-    operator: Operator, context_block_shift: int, owner: Function
-) -> None:  # noqa: PLR0911
+def _emit_ir_operator(  # noqa: PLR0911
+    operator: Operator,
+    context_block_shift: int,
+    owner: Function,
+) -> None:
     shift = " " * (context_block_shift + 3)
     match operator.type:
         case OperatorType.PUSH_INTEGER:

@@ -20,7 +20,7 @@ from libgofra.lexer import Token
 from libgofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
 from libgofra.lexer.tokens import TokenType
 from libgofra.parser._context import ParserContext
-from libgofra.parser.type_parser import consume_function_signature
+from libgofra.parser.type_parser import consume_concrete_function_signature
 from libgofra.types import Type
 
 from .exceptions import (
@@ -58,7 +58,10 @@ def consume_function_definition(
     token: Token,
 ) -> FunctionHeaderDefinition:
     token, qualifiers = consume_function_qualifiers(context, token)
-    function_name, parameters, return_type = consume_function_signature(context, token)
+    function_name, parameters, return_type = consume_concrete_function_signature(
+        context,
+        token,
+    )
 
     return FunctionHeaderDefinition(
         token,
