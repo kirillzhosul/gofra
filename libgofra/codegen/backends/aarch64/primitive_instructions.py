@@ -32,6 +32,7 @@ def drop_stack_slots(
         raise ValueError(msg)
 
     shift_in_bits = slot_size * slots_count
+    assert shift_in_bits % 2 == 0
     context.write(f"add SP, SP, #{shift_in_bits}")
 
 

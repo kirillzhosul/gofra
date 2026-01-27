@@ -2,14 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from libgofra.codegen.backends.aarch64.sections.bss_variables import (
-    write_uninitialized_data_section,
-)
-from libgofra.codegen.backends.aarch64.sections.data_variables import (
+from libgofra.codegen.backends.aarch64.sections import (
     write_initialized_data_section,
-)
-from libgofra.codegen.backends.aarch64.sections.text_strings import (
     write_text_string_section,
+    write_uninitialized_data_section,
 )
 
 if TYPE_CHECKING:

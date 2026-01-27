@@ -15,9 +15,6 @@ if TYPE_CHECKING:
 
     from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
 
-AARCH64_MACOS_EPILOGUE_EXIT_CODE = 0
-AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER = 1
-
 
 def ipc_aarch64_syscall(
     context: AARCH64CodegenContext,

@@ -11,13 +11,11 @@ from libgofra.codegen.backends.aarch64.frame import (
     preserve_calee_frame,
     restore_calee_frame,
 )
+from libgofra.codegen.backends.aarch64.registers import AARCH64_STACK_ALIGNMENT_BIN
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
 
 from .primitive_instructions import (
     push_register_onto_stack,
-)
-from .registers import (
-    AARCH64_STACK_ALIGNMENT_BIN,
 )
 from .stack_local_initializer import (
     write_function_local_stack_variables_initializer,
@@ -29,6 +27,8 @@ if TYPE_CHECKING:
     from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
+
+DEFAULT_FUNCTIONS_ALIGNMENT = AARCH64_STACK_ALIGNMENT_BIN
 
 
 def function_begin_with_prologue(  # noqa: PLR0913
@@ -50,18 +50,27 @@ def function_begin_with_prologue(  # noqa: PLR0913
     if global_name:
         context.fd.write(f".globl {global_name}\n")
 
-    context.fd.write(f".p2align {AARCH64_STACK_ALIGNMENT_BIN // 2}\n")
+    alignment = (
+        DEFAULT_FUNCTIONS_ALIGNMENT
+        if context.config.align_functions_bytes is None
+        else context.config.align_functions_bytes
+    )
+    if alignment > 1:
+        if alignment % 2 == 0:
+            context.fd.write(f".p2align {alignment // 2}\n")
+        else:
+            context.fd.write(f".align {alignment}\n")
+
     context.fd.write(f"{name}:\n")
-    if context.emit_dwarf_cfi:
+    if context.config.dwarf_emit_cfi:
         context.fd.write(".cfi_startproc\n")
 
     if preserve_frame:
         local_offsets = build_local_variables_frame_offsets(local_variables)
         preserve_calee_frame(context, local_space_size=local_offsets.local_space_size)
 
-    abi = context.abi
     if parameters:
-        registers = abi.arguments_64bit_registers[: len(parameters)]
+        registers = context.abi.arguments_64bit_registers[: len(parameters)]
         for register in registers:
             push_register_onto_stack(context, register)
 
@@ -111,5 +120,5 @@ def function_end_with_epilogue(
         has_preserved_frame=has_preserved_frame,
         return_type=return_type,
     )
-    if not is_early_return and context.emit_dwarf_cfi:
+    if not is_early_return and context.config.dwarf_emit_cfi:
         context.fd.write(".cfi_endproc\n")

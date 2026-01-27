@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import IO
 
 from libgofra.codegen.abi import AMD64ABI
+from libgofra.codegen.config import CodegenConfig
 from libgofra.codegen.sections._factory import SectionType, get_os_assembler_section
 from libgofra.targets.target import Target
 
@@ -14,6 +15,8 @@ class AMD64CodegenContext:
     Probably this is weird and bad way but OK for now.
     @kirillzhosul: Refactor at some point
     """
+
+    config: CodegenConfig
 
     fd: IO[str]
     on_warning: Callable[[str], None]
@@ -32,6 +35,8 @@ class AMD64CodegenContext:
         )
 
     def comment_eol(self, line: str) -> int:
+        if self.config.no_compiler_comments:
+            return 0
         return self.fd.write(f" // {line}\n")
 
     def load_string(self, string: str) -> str:

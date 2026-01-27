@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from typing import IO, Protocol
 
+from libgofra.codegen.config import CodegenConfig
 from libgofra.hir.module import Module
 from libgofra.targets.target import Target
 
@@ -17,8 +18,7 @@ class CodeGeneratorBackend(Protocol):
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
-        *,
-        emit_dwarf_cfi: bool,
+        config: CodegenConfig,
     ) -> None: ...
 
     def emit(self) -> None: ...

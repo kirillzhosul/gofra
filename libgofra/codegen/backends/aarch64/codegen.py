@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from libgofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
+    from libgofra.codegen.config import CodegenConfig
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module
     from libgofra.targets.target import Target
@@ -65,8 +66,7 @@ class AARCH64CodegenBackend:
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
-        *,
-        emit_dwarf_cfi: bool,
+        config: CodegenConfig,
     ) -> None:
         self.target = target
         self.module = module
@@ -75,7 +75,7 @@ class AARCH64CodegenBackend:
             fd=fd,
             abi=DarwinAARCH64ABI(),
             target=self.target,
-            emit_dwarf_cfi=emit_dwarf_cfi,
+            config=config,
         )
 
     def emit(self) -> None:

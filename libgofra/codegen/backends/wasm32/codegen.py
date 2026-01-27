@@ -36,6 +36,7 @@ from libgofra.codegen.backends.wasm32.sexpr import (
     ThenBlockNode,
 )
 from libgofra.codegen.backends.wasm32.types import wasm_type_from_primitive
+from libgofra.codegen.config import CodegenConfig
 from libgofra.hir.function import PARAMS_T, Function
 from libgofra.hir.initializer import (
     VariableIntArrayInitializerValue,
@@ -81,14 +82,18 @@ class WASM32CodegenBackend:
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
-        *,
-        emit_dwarf_cfi: bool,
+        config: CodegenConfig,
     ) -> None:
         assert target.architecture == "WASM32"
         assert not module.dependencies, "Not implemented"
 
-        if emit_dwarf_cfi:
+        if config.dwarf_emit_cfi:
             on_warning("DWARF CFI is not applicable to WASM codegen, omitting!")
+
+        if config.align_functions_bytes is not None:
+            on_warning(
+                "Overriding functions alignment is not applicable to WASM codegen, omitting!",
+            )
 
         self.target = target
         self.module = module
@@ -100,6 +105,7 @@ class WASM32CodegenBackend:
         self._strings_to_load = {}
         self.spilled_stack_vars_slots = []
         self.requested_inlined_intrinsics = set()
+        self.config = config
 
         self.on_warning(
             "WASM target is WIP, it has possible interference with how base (x64, ARM) codegen work!",
@@ -333,7 +339,11 @@ class WASM32CodegenBackend:
         module = self.build_module_node_tree()
         assert not self.spilled_stack_vars_slots, "Unloaded stack variable"
         assert not self._strings_to_load, "Unloaded strings"
-        self._fd.write(module.build())
+        skipped_sexpr_types = (
+            (CommentNode,) if self.config.no_compiler_comments else None
+        )
+        s_node = module.build(skipped_sexpr_types=skipped_sexpr_types)
+        self._fd.write(s_node)
 
     def build_spilled_stack_vars_slots(self) -> Generator[DataNode]:
         # TODO: Although, stack variables are un-initialized this behavior now is undocumented

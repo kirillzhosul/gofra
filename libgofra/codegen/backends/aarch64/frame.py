@@ -35,21 +35,21 @@ def preserve_calee_frame(
     assert local_space_size < STORE_PAIR_MAX_RANGE, (
         f"Cannot locate current local frame without relocation, auto relocation is not implemented [lsp: {local_space_size}]"
     )
-    if context.emit_dwarf_cfi:
+    if context.config.dwarf_emit_cfi:
         context.write(".cfi_def_cfa sp, 0")
     context.write(f"sub SP, SP, #{frame_size}")
-    if context.emit_dwarf_cfi:
+    if context.config.dwarf_emit_cfi:
         context.write(f".cfi_def_cfa_offset {frame_size}")
     context.write(f"stp X29, X30, [SP, #{local_space_size}]")
 
     fp_offset = frame_size - local_space_size
     lr_offset = frame_size - local_space_size - 8
-    if context.emit_dwarf_cfi:
+    if context.config.dwarf_emit_cfi:
         context.write(f".cfi_offset x29, -{fp_offset}")
         context.write(f".cfi_offset x30, -{lr_offset}")
 
     context.write(f"add X29, SP, #{local_space_size}")
-    if context.emit_dwarf_cfi:
+    if context.config.dwarf_emit_cfi:
         context.write(".cfi_def_cfa_register x29")
 
 

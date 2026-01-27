@@ -38,6 +38,7 @@ from .subroutines import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from libgofra.codegen.config import CodegenConfig
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module
     from libgofra.targets.target import Target
@@ -53,11 +54,10 @@ class AMD64CodegenBackend:
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
-        *,
-        emit_dwarf_cfi: bool,
+        config: CodegenConfig,
     ) -> None:
         assert target.operating_system == "Linux"
-        _ = emit_dwarf_cfi  # TODO: DWARF CFI
+
         self.target = target
         self.module = module
         self.context = AMD64CodegenContext(
@@ -66,6 +66,7 @@ class AMD64CodegenBackend:
             strings={},
             target=self.target,
             abi=LinuxAMD64ABI(),
+            config=config,  # TODO: DWARF CFI / Alignment
         )
 
     def emit(self) -> None:

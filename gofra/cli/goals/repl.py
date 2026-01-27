@@ -241,7 +241,7 @@ def _compile_file_to_execute(
         module,
         args.target,
         on_warning=on_lint_warning_suppressed,
-        emit_dwarf_cfi=False,
+        config=None,
     )
 
     object_filepath = (cache_dir / file_to_execute.name).with_suffix(

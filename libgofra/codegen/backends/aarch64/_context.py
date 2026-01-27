@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import IO
 
 from libgofra.codegen.abi import AARCH64ABI
+from libgofra.codegen.config import CodegenConfig
 from libgofra.codegen.sections._factory import SectionType, get_os_assembler_section
 from libgofra.targets.target import Target
 
@@ -15,14 +16,13 @@ class AARCH64CodegenContext:
     @kirillzhosul: Refactor at some point
     """
 
-    # Enables emitting CFI (Call Frame Information)
-    # TODO: Possible refactor into some config / builder ?
-    emit_dwarf_cfi: bool = field()
-
     on_warning: Callable[[str], None]
+    config: CodegenConfig
+
     fd: IO[str]
     abi: AARCH64ABI
     target: Target
+
     strings: MutableMapping[str, str] = field(
         default_factory=dict[str, str],
     )
@@ -36,9 +36,13 @@ class AARCH64CodegenContext:
         )
 
     def comment(self, line: str) -> int:
+        if self.config.no_compiler_comments:
+            return 0
         return self.write(f"// {line}")
 
     def comment_eol(self, line: str) -> int:
+        if self.config.no_compiler_comments:
+            return 0
         return self.fd.write(f" // {line}\n")
 
     def load_string(self, string: str) -> str:

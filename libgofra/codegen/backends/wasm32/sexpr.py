@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING
 
 from libgofra.codegen.backends.wasm32.types import WASM_TYPE
@@ -18,13 +18,24 @@ class SExpr:
         self.items = list(items)
         self.finite_stmt = finite_stmt
 
-    def build(self) -> str:
+    def build(
+        self,
+        *,
+        skipped_sexpr_types: "Sequence[type[SExpr]] | None" = None,
+    ) -> str:
         if not self.items:
             return "()"
 
         expr: list[str] = []
         for item in self.items:
-            expr.extend([str(item)])
+            if skipped_sexpr_types and any(
+                isinstance(item, st) for st in skipped_sexpr_types
+            ):
+                continue
+            if isinstance(item, SExpr):
+                expr.extend([item.build(skipped_sexpr_types=skipped_sexpr_types)])
+            else:
+                expr.extend([str(item)])
 
         s = f"({' '.join(expr)})"
         if self.finite_stmt:
@@ -133,7 +144,12 @@ class CommentNode(InstructionNode):
         self.comment = comment
         self.items = []
 
-    def build(self) -> str:
+    def build(
+        self,
+        *,
+        skipped_sexpr_types: "Sequence[type[SExpr]] | None" = None,
+    ) -> str:
+        _ = skipped_sexpr_types
         return f";; {self.comment}"
 
 

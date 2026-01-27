@@ -16,6 +16,7 @@ from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
 from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import assemble_object_file
+from libgofra.codegen.config import CodegenConfig
 from libgofra.codegen.generator import generate_code_for_assembler
 from libgofra.gofra import process_input_file
 from libgofra.lexer.tokens import TokenLocation
@@ -121,6 +122,11 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         verbose=args.verbose,
     )
 
+    codegen_config = CodegenConfig(
+        no_compiler_comments=args.codegen_no_compiler_comments,
+        dwarf_emit_cfi=args.codegen_emit_dwarf_cfi,
+        align_functions_bytes=args.codegen_functions_alignment,
+    )
     with wrap_with_perf_time_taken("Codegen", verbose=args.verbose):
         if is_module_needs_rebuild(
             args,
@@ -131,8 +137,8 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 assembly_filepath,
                 root_module,
                 args.target,
+                config=codegen_config,
                 on_warning=on_warning_wrapper(verbose=args.verbose),
-                emit_dwarf_cfi=args.codegen_emit_dwarf_cfi,
             )
 
         for mod in root_module.visit_dependencies(include_self=False):
@@ -151,7 +157,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 mod,
                 args.target,
                 on_warning=on_warning_wrapper(verbose=args.verbose),
-                emit_dwarf_cfi=args.codegen_emit_dwarf_cfi,
+                config=codegen_config,
             )
             modules_assembly[mod.path] = mod_assembly_path
 

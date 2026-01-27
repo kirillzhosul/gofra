@@ -34,7 +34,34 @@ def add_debug_group(parser: ArgumentParser) -> None:
         dest="codegen_emit_dwarf_cfi",
         help="Always enable DWARF CFI generation",
     )
-    group.set_defaults(codegen_emit_dwarf_cfi=None)
+    cfi_group.set_defaults(codegen_emit_dwarf_cfi=None)
+
+    group.add_argument(
+        "--no-compiler-comments",
+        required=False,
+        action="store_true",
+        default=False,
+        dest="codegen_no_compiler_comments",
+        help=argparse.SUPPRESS,
+    )
+
+    alignment_group = group.add_mutually_exclusive_group()
+    alignment_group.add_argument(
+        "--no-align-functions",
+        required=False,
+        action="store_const",
+        const=0,
+        dest="codegen_functions_alignment",
+        help="Disable function alignment by codegen",
+    )
+    alignment_group.add_argument(
+        "--align-functions",
+        required=False,
+        type=int,
+        dest="codegen_functions_alignment",
+        help="Specify alignment of functions in native assembly in bytes (defaults to target specific)",
+    )
+    alignment_group.set_defaults(codegen_functions_alignment=None)
 
     group.add_argument(
         "--verbose",

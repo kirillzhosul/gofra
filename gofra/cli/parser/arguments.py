@@ -59,3 +59,5 @@ class CLIArguments:
     cli_debug_user_friendly_errors: bool
 
     codegen_emit_dwarf_cfi: bool
+    codegen_functions_alignment: int | None
+    codegen_no_compiler_comments: bool

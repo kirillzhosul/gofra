@@ -81,6 +81,8 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         display_lint_warnings=bool(args.display_lint_warnings),
         runtime_array_oob_checks=bool(args.runtime_array_oob_checks),
         codegen_emit_dwarf_cfi=codegen_emit_dwarf_cfi,
+        codegen_functions_alignment=args.codegen_functions_alignment,
+        codegen_no_compiler_comments=bool(args.codegen_no_compiler_comments),
     )
 
 
