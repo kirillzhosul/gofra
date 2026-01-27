@@ -52,7 +52,8 @@ def function_begin_with_prologue(  # noqa: PLR0913
 
     context.fd.write(f".p2align {AARCH64_STACK_ALIGNMENT_BIN // 2}\n")
     context.fd.write(f"{name}:\n")
-    context.fd.write(".cfi_startproc\n")
+    if context.emit_dwarf_cfi:
+        context.fd.write(".cfi_startproc\n")
 
     if preserve_frame:
         local_offsets = build_local_variables_frame_offsets(local_variables)
@@ -110,5 +111,5 @@ def function_end_with_epilogue(
         has_preserved_frame=has_preserved_frame,
         return_type=return_type,
     )
-    if not is_early_return:
+    if not is_early_return and context.emit_dwarf_cfi:
         context.fd.write(".cfi_endproc\n")

@@ -120,6 +120,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         text="Assembling object file(s)...",
         verbose=args.verbose,
     )
+
     with wrap_with_perf_time_taken("Codegen", verbose=args.verbose):
         if is_module_needs_rebuild(
             args,
@@ -131,6 +132,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 root_module,
                 args.target,
                 on_warning=on_warning_wrapper(verbose=args.verbose),
+                emit_dwarf_cfi=args.codegen_emit_dwarf_cfi,
             )
 
         for mod in root_module.visit_dependencies(include_self=False):
@@ -149,6 +151,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 mod,
                 args.target,
                 on_warning=on_warning_wrapper(verbose=args.verbose),
+                emit_dwarf_cfi=args.codegen_emit_dwarf_cfi,
             )
             modules_assembly[mod.path] = mod_assembly_path
 

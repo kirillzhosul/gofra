@@ -17,6 +17,8 @@ class CodeGeneratorBackend(Protocol):
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
+        *,
+        emit_dwarf_cfi: bool,
     ) -> None: ...
 
     def emit(self) -> None: ...

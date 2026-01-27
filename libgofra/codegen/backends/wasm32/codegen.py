@@ -81,9 +81,14 @@ class WASM32CodegenBackend:
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
+        *,
+        emit_dwarf_cfi: bool,
     ) -> None:
         assert target.architecture == "WASM32"
         assert not module.dependencies, "Not implemented"
+
+        if emit_dwarf_cfi:
+            on_warning("DWARF CFI is not applicable to WASM codegen, omitting!")
 
         self.target = target
         self.module = module

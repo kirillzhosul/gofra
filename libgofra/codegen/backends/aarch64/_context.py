@@ -15,6 +15,10 @@ class AARCH64CodegenContext:
     @kirillzhosul: Refactor at some point
     """
 
+    # Enables emitting CFI (Call Frame Information)
+    # TODO: Possible refactor into some config / builder ?
+    emit_dwarf_cfi: bool = field()
+
     on_warning: Callable[[str], None]
     fd: IO[str]
     abi: AARCH64ABI

@@ -53,8 +53,11 @@ class AMD64CodegenBackend:
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
+        *,
+        emit_dwarf_cfi: bool,
     ) -> None:
         assert target.operating_system == "Linux"
+        _ = emit_dwarf_cfi  # TODO: DWARF CFI
         self.target = target
         self.module = module
         self.context = AMD64CodegenContext(

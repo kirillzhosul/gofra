@@ -37,6 +37,12 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
     linker_backend = _process_linker_backend(args)
     output_format = _process_output_format(args)
 
+    codegen_emit_dwarf_cfi = (
+        bool(args.debug_symbols)
+        if args.codegen_emit_dwarf_cfi is None
+        else bool(args.codegen_emit_dwarf_cfi)
+    )
+
     return CLIArguments(
         # Goals.
         version=bool(args.version),
@@ -74,6 +80,7 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         incremental_compilation=bool(args.incremental_compilation),
         display_lint_warnings=bool(args.display_lint_warnings),
         runtime_array_oob_checks=bool(args.runtime_array_oob_checks),
+        codegen_emit_dwarf_cfi=codegen_emit_dwarf_cfi,
     )
 
 

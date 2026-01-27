@@ -12,6 +12,8 @@ def generate_code_for_assembler(
     module: Module,
     target: Target,
     on_warning: Callable[[str], None],
+    *,
+    emit_dwarf_cfi: bool,
 ) -> None:
     """Generate assembly from given program context and specified ARCHxOS pair into given file."""
     backend_cls = get_backend_for_target(target)
@@ -29,5 +31,6 @@ def generate_code_for_assembler(
             target=target,
             module=module,
             on_warning=on_warning,
+            emit_dwarf_cfi=emit_dwarf_cfi,
         )
         return backend.emit()

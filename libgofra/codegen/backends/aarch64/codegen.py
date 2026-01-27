@@ -65,6 +65,8 @@ class AARCH64CodegenBackend:
         module: Module,
         fd: IO[str],
         on_warning: Callable[[str], None],
+        *,
+        emit_dwarf_cfi: bool,
     ) -> None:
         self.target = target
         self.module = module
@@ -73,6 +75,7 @@ class AARCH64CodegenBackend:
             fd=fd,
             abi=DarwinAARCH64ABI(),
             target=self.target,
+            emit_dwarf_cfi=emit_dwarf_cfi,
         )
 
     def emit(self) -> None:

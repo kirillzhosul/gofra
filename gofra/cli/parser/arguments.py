@@ -57,3 +57,5 @@ class CLIArguments:
     optimizer: OptimizerConfig
     lexer_debug_emit_lexemes: bool
     cli_debug_user_friendly_errors: bool
+
+    codegen_emit_dwarf_cfi: bool

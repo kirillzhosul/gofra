@@ -54,6 +54,7 @@ def toolchain_assembly_executable(
         artifact_assembly_file,
         module,
         build_target,
+        emit_dwarf_cfi=False,
         on_warning=lambda text: cli_message(
             "WARNING",
             text=text,

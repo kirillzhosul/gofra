@@ -21,6 +21,21 @@ def add_debug_group(parser: ArgumentParser) -> None:
         help="If passed will provide debug symbols into final target output.",
     )
 
+    cfi_group = group.add_mutually_exclusive_group()
+    cfi_group.add_argument(
+        "--no-dwarf-cfi",
+        action="store_false",
+        dest="codegen_emit_dwarf_cfi",
+        help="Disable DWARF CFI generation",
+    )
+    cfi_group.add_argument(
+        "--always-dwarf-cfi",
+        action="store_true",
+        dest="codegen_emit_dwarf_cfi",
+        help="Always enable DWARF CFI generation",
+    )
+    group.set_defaults(codegen_emit_dwarf_cfi=None)
+
     group.add_argument(
         "--verbose",
         "-v",
