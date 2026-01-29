@@ -3,7 +3,7 @@
 #define TESTKIT_EXPECTED_EXIT_CODE 25
 
 func int f[int _r0, int _r1, int _r2, int _r3, int _r4, int _r5, int _r6, int _r7, int _r8, int _r9, int _r10, int _r11, int _r12, int _r13, int _r14, int _r15]
-    r10 r15 + return
+    _r10 _r15 + return
 end
 
 func int main[]

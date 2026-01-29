@@ -13,6 +13,11 @@ from gofra.cli.output import cli_fatal_abort, cli_message
 from gofra.testkit.cli.matrix import display_test_matrix
 from gofra.testkit.test import TestStatus
 from libgofra.exceptions import GofraError
+from libgofra.lexer.tokens import TokenLocation
+from libgofra.preprocessor.macros.defaults import (
+    construct_propagated_toolchain_definitions,
+)
+from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
 from libgofra.targets.infer_host import infer_host_target
 
 from .cli.arguments import CLIArguments, parse_cli_arguments
@@ -44,13 +49,12 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
     """Process full testkit toolchain."""
     cli_message(level="INFO", text="Searching test files...", verbose=args.verbose)
 
-    test_paths = tuple(
-        search_test_case_files(
-            args.directory,
-            args.test_files_pattern,
-            excluded_filenames=args.excluded_test_files,
-        ),
+    test_paths = search_test_case_files(
+        args.directory,
+        args.test_files_pattern,
+        excluded_filenames=args.excluded_test_files,
     )
+
     cli_message(
         level="INFO",
         text=f"Found {len(test_paths)} test case files.",
@@ -109,10 +113,18 @@ def evaluate_test_matrix_threaded(
     target: Target,
     cache_directory: Path,
 ) -> list[Test]:
+    definitions = construct_propagated_toolchain_definitions(target=target)
+
+    immutable_root_macros = registry_from_raw_definitions(
+        location=TokenLocation.toolchain(),
+        definitions=definitions,
+    )
+
     def evaluate_single_test(test_path: Path) -> Test:
         return evaluate_test_case(
             test_path,
             args,
+            immutable_macros=immutable_root_macros,
             build_target=target,
             cache_directory=cache_directory,
         )
@@ -131,13 +143,19 @@ def evaluate_test_matrix_threaded(
 
 
 def display_test_errors(matrix: list[Test]) -> None:
-    if any(test.error for test in matrix):
+    if any(test.status != TestStatus.SUCCESS and test.error for test in matrix):
         cli_message("ERROR", "While running tests, some errors were occurred:")
     for test in matrix:
-        if test.error is None:
+        if test.status == TestStatus.SUCCESS or test.error is None:
             continue
         cli_message("INFO", f"While testing `{test.path}`:")
+
         if isinstance(test.error, GofraError):
+            if test.expected_error:
+                cli_message(
+                    "INFO",
+                    f"-- Note: expected `{test.expected_error}` but was missing in error",
+                )
             cli_message("ERROR", repr(test.error))
             continue
         if isinstance(test.error, TimeoutExpired):

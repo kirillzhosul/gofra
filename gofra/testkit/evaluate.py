@@ -12,15 +12,12 @@ from libgofra.assembler.assembler import (
 from libgofra.codegen.generator import generate_code_for_assembler
 from libgofra.exceptions import GofraError
 from libgofra.gofra import process_input_file
-from libgofra.lexer.tokens import TokenLocation
+from libgofra.hir.module import Module
+from libgofra.lexer.tokens import TokenType
 from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.linker.linker import link_object_files
 from libgofra.linker.output_format import LinkerOutputFormat
 from libgofra.linker.profile import LinkerProfile
-from libgofra.preprocessor.macros import registry_from_raw_definitions
-from libgofra.preprocessor.macros.defaults import (
-    construct_propagated_toolchain_definitions,
-)
 from libgofra.preprocessor.macros.registry import MacrosRegistry
 from libgofra.targets import Target
 from libgofra.typecheck.typechecker import validate_type_safety
@@ -29,24 +26,13 @@ from .cli.arguments import CLIArguments
 from .test import Test, TestStatus
 
 
-def toolchain_assembly_executable(
+def toolchain_assemble_executable(
     path: Path,
+    module: Module,
     args: CLIArguments,
-    macros: MacrosRegistry,
     build_target: Target,
     cache_directory: Path,
 ) -> Path:
-    module = process_input_file(
-        path,
-        include_paths=args.include_paths,
-        macros=macros,
-    )
-    assert not module.dependencies, "not implemented"
-    validate_type_safety(
-        module,
-        strict_expect_entry_point=True,
-        on_lint_warning=cli_linter_warning,
-    )
     artifact_path = cache_directory / f"{path.with_suffix('').name}"
     artifact_object_file = artifact_path.with_suffix(".o")
     artifact_assembly_file = artifact_path.with_suffix(".s")
@@ -90,22 +76,50 @@ def evaluate_test_case(
     args: CLIArguments,
     build_target: Target,
     cache_directory: Path,
+    immutable_macros: MacrosRegistry,
 ) -> Test:
-    definitions = construct_propagated_toolchain_definitions(target=build_target)
-
-    macros = registry_from_raw_definitions(
-        location=TokenLocation.toolchain(),
-        definitions=definitions,
-    )
+    macros = immutable_macros.copy()
     try:
-        artifact_path = toolchain_assembly_executable(
+        module = process_input_file(
             path,
+            include_paths=args.include_paths,
+            macros=macros,
+        )
+        assert not module.dependencies, "not implemented"
+        validate_type_safety(
+            module,
+            strict_expect_entry_point=True,
+            on_lint_warning=cli_linter_warning,
+        )
+
+        artifact_path = toolchain_assemble_executable(
+            path,
+            module,
             args,
-            macros,
             build_target,
             cache_directory,
         )
     except GofraError as e:
+        expected_compile_error = _extract_expected_compile_error(macros)
+        if expected_compile_error:
+            if expected_compile_error in repr(e):
+                # Got expected error
+                return Test(
+                    target=build_target,
+                    status=TestStatus.SUCCESS,
+                    path=path,
+                    error=e,
+                    expected_error=expected_compile_error,
+                )
+            # Expected one error but got another
+            return Test(
+                target=build_target,
+                status=TestStatus.TOOLCHAIN_ERROR,
+                path=path,
+                error=e,
+                expected_error=expected_compile_error,
+            )
+        # Error while not expected
         return Test(
             target=build_target,
             status=TestStatus.TOOLCHAIN_ERROR,
@@ -119,6 +133,16 @@ def evaluate_test_case(
             status=TestStatus.SUCCESS,
             path=path,
             artifact_path=artifact_path,
+        )
+
+    expected_compile_error = _extract_expected_compile_error(macros)
+    if expected_compile_error:
+        # Error while not expected
+        return Test(
+            target=build_target,
+            status=TestStatus.EXPECTED_TOOLCHAIN_ERROR,
+            path=path,
+            expected_error=expected_compile_error,
         )
 
     expected_exit_code_macro = macros.get("TESTKIT_EXPECTED_EXIT_CODE")
@@ -178,3 +202,16 @@ def evaluate_test_case(
         artifact_path=artifact_path,
         expected_exit_code=expected_exit_code,
     )
+
+
+def _extract_expected_compile_error(macros: MacrosRegistry) -> str | None:
+    if "TESTKIT_EXPECT_COMPILE_ERROR" in macros:
+        _value_token = macros["TESTKIT_EXPECT_COMPILE_ERROR"]
+
+        assert _value_token.tokens
+        assert _value_token.tokens[0].type == TokenType.STRING
+        expected_compile_error = _value_token.tokens[0].value
+        assert isinstance(expected_compile_error, str)
+        assert expected_compile_error
+        return expected_compile_error
+    return None

@@ -16,6 +16,7 @@ class TestStatus(Enum):
     SKIPPED = auto()
 
     TOOLCHAIN_ERROR = auto()
+    EXPECTED_TOOLCHAIN_ERROR = auto()
 
     EXECUTION_STATUS_ERROR = auto()
     EXECUTION_TIMEOUT_ERROR = auto()
@@ -34,6 +35,7 @@ class Test:
     status: TestStatus
 
     expected_exit_code: int = 0
+    expected_error: str | None = None
 
     error: ERROR | None = None
 

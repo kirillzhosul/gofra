@@ -86,7 +86,7 @@ def parse_module_from_tokenizer(
         _tokenizer=tokenizer,
         path=path,
         import_search_paths=list(include_paths),
-        macros_registry=macros.copy(),  # mutable copy
+        macros_registry=macros,
         rt_array_oob_check=rt_array_oob_check,
     )
     _parse_from_context_into_operators(context=context)
@@ -554,7 +554,7 @@ def _unpack_import(context: ParserContext, token: Token) -> None:
     imported_module = parse_module_from_tokenizer(
         import_path,
         tokenizer=preprocessor,
-        macros=context.macros_registry,
+        macros=context.macros_registry.copy(),  # TODO: do not mutate root module
         include_paths=context.import_search_paths,
         rt_array_oob_check=context.rt_array_oob_check,
     )

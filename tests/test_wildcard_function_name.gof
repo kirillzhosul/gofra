@@ -1,0 +1,7 @@
+
+
+
+#define TESTKIT_EXPECT_COMPILE_ERROR "Wildcard `_` cannot be used as identifier here!"
+
+func void _[]
+end

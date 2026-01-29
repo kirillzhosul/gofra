@@ -1,0 +1,8 @@
+
+
+
+#define TESTKIT_EXPECT_COMPILE_ERROR "At compile time"
+
+func void main[]
+    compile_error "At compile time"
+end
