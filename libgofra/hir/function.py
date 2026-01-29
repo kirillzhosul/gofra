@@ -121,6 +121,13 @@ class Function:
         )
 
     @property
+    def is_requires_local_frame(self) -> bool:
+        assert not self.is_inline, (
+            "Do not call `is_requires_local_frame` on inlined functions"
+        )
+        return not self.is_leaf or self.has_local_variables
+
+    @property
     def has_executable_operators(self) -> bool:
         """If true, function has any operators to execute (compile)."""
         return bool(self.operators)

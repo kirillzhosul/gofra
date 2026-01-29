@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal, cast, get_args, get_type_hints
 
 from gofra.cli.output import cli_fatal_abort
 from gofra.cli.parser.arguments import CLIArguments
+from libgofra.codegen.config import CodegenConfig
 from libgofra.linker.profile import LinkerProfile
 from libgofra.optimizer.config import (
     OptimizerConfig,
@@ -37,11 +38,7 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
     linker_backend = _process_linker_backend(args)
     output_format = _process_output_format(args)
 
-    codegen_emit_dwarf_cfi = (
-        bool(args.debug_symbols)
-        if args.codegen_emit_dwarf_cfi is None
-        else bool(args.codegen_emit_dwarf_cfi)
-    )
+    codegen_config = _process_codegen_config(args, optimizer)
 
     return CLIArguments(
         # Goals.
@@ -79,10 +76,9 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         cli_debug_user_friendly_errors=bool(args.cli_debug_user_friendly_errors),
         incremental_compilation=bool(args.incremental_compilation),
         display_lint_warnings=bool(args.display_lint_warnings),
+        codegen_config=codegen_config,
         runtime_array_oob_checks=bool(args.runtime_array_oob_checks),
-        codegen_emit_dwarf_cfi=codegen_emit_dwarf_cfi,
-        codegen_functions_alignment=args.codegen_functions_alignment,
-        codegen_no_compiler_comments=bool(args.codegen_no_compiler_comments),
+        propagate_execute_child_exit_code=bool(args.propagate_execute_child_exit_code),
     )
 
 
@@ -211,6 +207,25 @@ def _process_optimizer_config(args: Namespace) -> OptimizerConfig:
     """Process whole configuration of optimizer from CLI into config."""
     config = build_default_optimizer_config_from_level(level=args.optimizer_level)
     return merge_into_optimizer_config(config, args, prefix="optimizer")
+
+
+def _process_codegen_config(
+    args: Namespace,
+    optimizer: OptimizerConfig,
+) -> CodegenConfig:
+    debug_symbols = bool(args.debug_symbols)
+    codegen_emit_dwarf_cfi = (
+        debug_symbols
+        if args.codegen_emit_dwarf_cfi is None
+        else bool(args.codegen_emit_dwarf_cfi)
+    )
+
+    return CodegenConfig(
+        no_compiler_comments=bool(args.codegen_no_compiler_comments),
+        dwarf_emit_cfi=codegen_emit_dwarf_cfi,
+        align_functions_bytes=args.codegen_functions_alignment,
+        omit_unused_frame_pointers=optimizer.codegen_omit_unused_frame_pointer,
+    )
 
 
 def _process_output_path(

@@ -4,7 +4,6 @@ from pathlib import Path
 from shutil import which
 
 from gofra.cli.output import cli_message
-from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.linker.gnu.target_formats import GNU_LINKER_TARGET_FORMAT
 from libgofra.linker.output_format import LinkerOutputFormat
 from libgofra.linker.profile import LinkerProfile
@@ -20,7 +19,7 @@ def compose_gnu_linker_command(  # noqa: PLR0913
     additional_flags: list[str],
     libraries_search_paths: list[Path],
     profile: LinkerProfile,
-    executable_entry_point_symbol: str = LINKER_EXPECTED_ENTRY_POINT,
+    executable_entry_point_symbol: str,
     *,
     linker_executable: Path | None = None,
     cache_directory: Path | None = None,
@@ -86,7 +85,7 @@ def _compose_raw_gnu_linker_command(  # noqa: PLR0913
     *,
     libraries: MutableSequence[str] | None = None,
     libraries_search_paths: Iterable[Path] | None = None,
-    executable_entry_point_symbol: str | None = LINKER_EXPECTED_ENTRY_POINT,
+    executable_entry_point_symbol: str | None,
     executable_dynamic_libraries: bool = False,
     strip_debug_symbols: bool = False,
     additional_flags: Iterable[str] | None = None,

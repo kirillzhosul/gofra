@@ -13,6 +13,7 @@ from libgofra.codegen.generator import generate_code_for_assembler
 from libgofra.exceptions import GofraError
 from libgofra.gofra import process_input_file
 from libgofra.lexer.tokens import TokenLocation
+from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.linker.linker import link_object_files
 from libgofra.linker.output_format import LinkerOutputFormat
 from libgofra.linker.profile import LinkerProfile
@@ -78,6 +79,7 @@ def toolchain_assembly_executable(
         libraries_search_paths=[],
         profile=LinkerProfile.DEBUG,
         cache_directory=cache_directory,
+        executable_entry_point_symbol=LINKER_EXPECTED_ENTRY_POINT,
     )
     linker_process.check_returncode()
     return artifact_path

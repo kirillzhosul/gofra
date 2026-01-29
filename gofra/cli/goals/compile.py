@@ -16,12 +16,12 @@ from gofra.cli.output import cli_fatal_abort, cli_linter_warning, cli_message
 from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import assemble_object_file
-from libgofra.codegen.config import CodegenConfig
 from libgofra.codegen.generator import generate_code_for_assembler
 from libgofra.gofra import process_input_file
 from libgofra.lexer.tokens import TokenLocation
 from libgofra.linker.apple.command_composer import compose_apple_linker_command
 from libgofra.linker.command_composer import get_linker_command_composer_backend
+from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.linker.gnu.command_composer import compose_gnu_linker_command
 from libgofra.linker.linker import link_object_files
 from libgofra.linker.output_format import LinkerOutputFormat
@@ -122,11 +122,6 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
         verbose=args.verbose,
     )
 
-    codegen_config = CodegenConfig(
-        no_compiler_comments=args.codegen_no_compiler_comments,
-        dwarf_emit_cfi=args.codegen_emit_dwarf_cfi,
-        align_functions_bytes=args.codegen_functions_alignment,
-    )
     with wrap_with_perf_time_taken("Codegen", verbose=args.verbose):
         if is_module_needs_rebuild(
             args,
@@ -137,7 +132,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 assembly_filepath,
                 root_module,
                 args.target,
-                config=codegen_config,
+                config=args.codegen_config,
                 on_warning=on_warning_wrapper(verbose=args.verbose),
             )
 
@@ -157,7 +152,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
                 mod,
                 args.target,
                 on_warning=on_warning_wrapper(verbose=args.verbose),
-                config=codegen_config,
+                config=args.codegen_config,
             )
             modules_assembly[mod.path] = mod_assembly_path
 
@@ -315,6 +310,7 @@ def _perform_linker_bundle(
             linker_backend=linker_backend,
             linker_executable=args.linker_executable,
             cache_directory=args.build_cache_dir,
+            executable_entry_point_symbol=LINKER_EXPECTED_ENTRY_POINT,
         )
         log_command(args, linker_process)
         linker_process.check_returncode()
@@ -380,9 +376,13 @@ def _execute_after_compilation(args: CLIArguments) -> None:
             log_command(args, process)
             exit_code = process.returncode
         except KeyboardInterrupt:
+            if not args.cli_debug_user_friendly_errors:
+                raise
             cli_message("WARNING", "Execution was interrupted by user!")
             sys.exit(0)
         _log_child_exit_code(args, exit_code)
+        if args.propagate_execute_child_exit_code:
+            sys.exit(exit_code)
     return None
 
 

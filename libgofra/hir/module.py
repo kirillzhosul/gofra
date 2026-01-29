@@ -97,6 +97,6 @@ class Module:
     @property
     def executable_functions(self) -> filter[Function]:
         return filter(
-            lambda f: not f.is_external,
+            lambda f: not f.is_external and not f.is_inline,
             self.functions.values(),
         )

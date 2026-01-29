@@ -2,66 +2,9 @@ import argparse
 from argparse import ArgumentParser
 
 
-def add_debug_group(parser: ArgumentParser) -> None:
+def add_logging_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with debug options into given parser."""
-    group = parser.add_argument_group("Debug", "Debugging and IR inspection")
-
-    group.add_argument(
-        "-hir",
-        required=False,
-        action="store_true",
-        help="If passed will just emit IR (high-level) of provided file(s) into stdin.",
-    )
-
-    group.add_argument(
-        "--debug-symbols",
-        "-g",
-        required=False,
-        action="store_true",
-        help="If passed will provide debug symbols into final target output.",
-    )
-
-    cfi_group = group.add_mutually_exclusive_group()
-    cfi_group.add_argument(
-        "--no-dwarf-cfi",
-        action="store_false",
-        dest="codegen_emit_dwarf_cfi",
-        help="Disable DWARF CFI generation",
-    )
-    cfi_group.add_argument(
-        "--always-dwarf-cfi",
-        action="store_true",
-        dest="codegen_emit_dwarf_cfi",
-        help="Always enable DWARF CFI generation",
-    )
-    cfi_group.set_defaults(codegen_emit_dwarf_cfi=None)
-
-    group.add_argument(
-        "--no-compiler-comments",
-        required=False,
-        action="store_true",
-        default=False,
-        dest="codegen_no_compiler_comments",
-        help=argparse.SUPPRESS,
-    )
-
-    alignment_group = group.add_mutually_exclusive_group()
-    alignment_group.add_argument(
-        "--no-align-functions",
-        required=False,
-        action="store_const",
-        const=0,
-        dest="codegen_functions_alignment",
-        help="Disable function alignment by codegen",
-    )
-    alignment_group.add_argument(
-        "--align-functions",
-        required=False,
-        type=int,
-        dest="codegen_functions_alignment",
-        help="Specify alignment of functions in native assembly in bytes (defaults to target specific)",
-    )
-    alignment_group.set_defaults(codegen_functions_alignment=None)
+    group = parser.add_argument_group("Logging", "Configure logging severity")
 
     group.add_argument(
         "--verbose",
@@ -88,6 +31,22 @@ def add_debug_group(parser: ArgumentParser) -> None:
         default=True,
         required=False,
         help="If passed, will hide linter warnings (e.g unused functions and etc)",
+    )
+
+
+def add_debug_group(parser: ArgumentParser) -> None:
+    """Construct and inject argument group with debug options into given parser."""
+    group = parser.add_argument_group(
+        "Debug",
+        "Debug information and DWARF, unfortunately some options located in *Codegen* section",
+    )
+
+    group.add_argument(
+        "--debug-symbols",
+        "-g",
+        required=False,
+        action="store_true",
+        help="If passed will provide debug symbols into final target output.",
     )
 
 
@@ -118,7 +77,7 @@ def add_additional_group(parser: ArgumentParser) -> None:
         "-nt",
         action="store_true",
         required=False,
-        help="If passed, will disable type safety checking",
+        help="If passed, will disable type safety checking. Strictly not recommended!",
     )
 
 
@@ -138,26 +97,91 @@ def add_toolchain_debug_group(parser: ArgumentParser) -> None:
         default=True,
         help=argparse.SUPPRESS,
     )
+    parser.add_argument(
+        "-hir",
+        required=False,
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+
+
+def add_codegen_group(parser: ArgumentParser) -> None:
+    """Construct and inject argument group with internal toolchain debug options into given parser."""
+    group = parser.add_argument_group(
+        "Codegen",
+        "Code generation fine-tuning and some optimizations/debugging",
+    )
+
+    cfi_group = group.add_mutually_exclusive_group()
+    cfi_group.add_argument(
+        "--no-dwarf-cfi",
+        action="store_false",
+        dest="codegen_emit_dwarf_cfi",
+        help="Disable DWARF CFI generation (default: while debug symbols)",
+    )
+    cfi_group.add_argument(
+        "--always-dwarf-cfi",
+        action="store_true",
+        dest="codegen_emit_dwarf_cfi",
+        help="Always enable DWARF CFI generation (default: while debug symbols)",
+    )
+    cfi_group.set_defaults(codegen_emit_dwarf_cfi=None)
+
+    group.add_argument(
+        "--no-compiler-comments",
+        required=False,
+        action="store_true",
+        default=False,
+        dest="codegen_no_compiler_comments",
+        help="Prohibit compiler to left any comment inside assembly code (default: false)",
+    )
+
+    alignment_group = group.add_mutually_exclusive_group()
+    alignment_group.add_argument(
+        "--no-align-functions",
+        required=False,
+        action="store_const",
+        const=0,
+        dest="codegen_functions_alignment",
+        help="Disable function alignment by codegen",
+    )
+    alignment_group.add_argument(
+        "--align-functions",
+        required=False,
+        type=int,
+        dest="codegen_functions_alignment",
+        help="Specify alignment of functions in native assembly in bytes (defaults to target specific)",
+    )
+    alignment_group.set_defaults(codegen_functions_alignment=None)
 
 
 def add_target_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with target options into given parser."""
     group = parser.add_argument_group("Target", "Compilation target configuration")
+    choices = [
+        # Triplets
+        "amd64-unknown-linux",
+        "arm64-apple-darwin",
+        "amd64-unknown-windows",
+        "wasm32-unknown-none",
+        # Shortcuts
+        "wasm",
+    ]  # TODO: Proper --help
     group.add_argument(
         "--target",
+        type=str,
+        required=False,
+        dest="target",
+        help="Target compilation triplet. By default target is inferred from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used. (-t is allowed)",
+        choices=choices,
+    )
+    group.add_argument(
         "-t",
         type=str,
         required=False,
-        help="Target compilation triplet. By default target is inferred from host system. Cross-compilation is not supported so that argument is a bit odd and cannot properly be used.",
-        choices=[
-            # Triplets
-            "amd64-unknown-linux",
-            "arm64-apple-darwin",
-            "amd64-unknown-windows",
-            "wasm32-unknown-none",
-            # Shortcuts
-            "wasm",
-        ],
+        dest="target",
+        help=argparse.SUPPRESS,
+        choices=choices,
     )
 
 
@@ -187,6 +211,14 @@ def add_output_group(parser: ArgumentParser) -> None:
         required=False,
         action="store_true",
         help="If provided, will execute output executable file after compilation. Expects output format to be executable",
+    )
+
+    group.add_argument(
+        "--propagate-execute-child-exit-code",
+        "--prop-child-ec",
+        required=False,
+        action="store_true",
+        help="If specified and execute flag is passed, will propagate exit status of child to parent compiler process",
     )
 
 
@@ -296,13 +328,6 @@ def add_linker_group(parser: ArgumentParser) -> None:
     )
 
     group.add_argument(
-        "--no-pkgconfig",
-        dest="linker_resolve_libraries_with_pkgconfig",
-        default=True,
-        action="store_false",
-        help="Disable usage of `pkg-config` to resolve linker search paths if possible",
-    )
-    group.add_argument(
         "--library",
         "--lib",
         "-l",
@@ -331,6 +356,13 @@ def add_linker_group(parser: ArgumentParser) -> None:
         default=None,
         dest="linker_executable",
         help="Linker backend executable path to use",
+    )
+    group.add_argument(
+        "--no-pkgconfig",
+        dest="linker_resolve_libraries_with_pkgconfig",
+        default=True,
+        action="store_false",
+        help="Disable usage of `pkg-config` to resolve linker search paths if possible",
     )
 
 
@@ -415,4 +447,20 @@ def add_optimizer_group(parser: ArgumentParser) -> None:
         metavar="<N>",
         dest="optimizer_function_inlining_max_iterations",
         help="Max iterations for function inlining to search for new inlined function usage in other functions. Low limit will result into unknown function call at assembler stage. This may slightly increase final binary size",
+    )
+
+    group_omit_frame_pointer = group.add_mutually_exclusive_group()
+    group_omit_frame_pointer.add_argument(
+        "-fomit-frame-pointer",
+        dest="optimizer_codegen_omit_unused_frame_pointer",
+        action="store_const",
+        const=True,
+        help="[Enabled at -O1 and above] If function does not requires local frame - omit it if possible.",
+    )
+    group_omit_frame_pointer.add_argument(
+        "-fno-omit-frame-pointer",
+        action="store_const",
+        const=False,
+        dest="optimizer_codegen_omit_unused_frame_pointer",
+        help="[Enabled at -O1 and above] Force omit setup of local frame if function does not uses it.",
     )

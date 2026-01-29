@@ -20,6 +20,9 @@ class OptimizerConfig:
     do_algebraic_simplification: bool
     do_strength_reduction: bool
 
+    # Codegen-specific
+    codegen_omit_unused_frame_pointer: bool
+
     # Fine tuning optimizations
     function_inlining_max_operators: int = 10
     function_inlining_max_iterations: int = 128
@@ -38,6 +41,7 @@ def build_default_optimizer_config_from_level(
             do_constant_folding=False,
             do_algebraic_simplification=False,
             do_strength_reduction=False,
+            codegen_omit_unused_frame_pointer=False,
         )
     if level == 1:
         return OptimizerConfig(
@@ -48,6 +52,7 @@ def build_default_optimizer_config_from_level(
             do_constant_folding=False,
             do_algebraic_simplification=False,
             do_strength_reduction=False,
+            codegen_omit_unused_frame_pointer=True,
         )
 
     assert_never(level)

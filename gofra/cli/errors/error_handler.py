@@ -29,8 +29,10 @@ def cli_gofra_error_handler(
         # Propagate exit code from called process
         return sys.exit(pe.returncode)
     except KeyboardInterrupt:
-        print()
-        cli_message("INFO", "Interrupted by user (Ctrl+C)!")
-        return sys.exit(0)
+        if debug_user_friendly_errors:
+            print()
+            cli_message("INFO", "Interrupted by user (Ctrl+C)!")
+            return sys.exit(0)
+        raise  # re-throw exception due to unfriendly flag set for debugging
     # This is unreachable but error wrapper must fail
     cli_fatal_abort("Bug in a CLI: error handler must has no-return")

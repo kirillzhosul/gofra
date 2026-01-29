@@ -20,7 +20,7 @@ class LinkerCommandComposer(Protocol):
         additional_flags: list[str],
         libraries_search_paths: list[Path],
         profile: LinkerProfile,
-        executable_entry_point_symbol: str = ...,
+        executable_entry_point_symbol: str,
         *,
         cache_directory: Path | None = None,
         linker_executable: Path | None = ...,

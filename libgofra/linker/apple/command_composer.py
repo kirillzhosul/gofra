@@ -16,7 +16,6 @@ from libgofra.linker.apple.output_format import (
     AppleLinkerOutputFormatKindFlag,
 )
 from libgofra.linker.apple.platforms import APPLE_LINKER_PLATFORMS
-from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.linker.output_format import LinkerOutputFormat
 from libgofra.linker.profile import LinkerProfile
 from libgofra.targets.target import Target
@@ -36,7 +35,7 @@ def compose_apple_linker_command(  # noqa: PLR0913
     additional_flags: list[str],
     libraries_search_paths: list[Path],
     profile: LinkerProfile,
-    executable_entry_point_symbol: str = LINKER_EXPECTED_ENTRY_POINT,
+    executable_entry_point_symbol: str,
     *,
     linker_executable: Path | None = None,
     cache_directory: Path | None = None,
@@ -109,7 +108,7 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
     additional_flags: Iterable[str] | None = None,
     macos_version_min: float | None = None,
     ios_version_min: float | None = None,
-    executable_entry_point_symbol: str | None = LINKER_EXPECTED_ENTRY_POINT,
+    executable_entry_point_symbol: str | None,
     cache_path_lto: Path | None = None,
     platform_version: tuple[APPLE_LINKER_PLATFORMS, float, float] | None = None,
     _linker_executable: Path = Path("ld"),

@@ -42,7 +42,6 @@ from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.sections import SectionType
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
 from libgofra.hir.variable import VariableStorageClass
-from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.types.composite.function import FunctionType
 
 if TYPE_CHECKING:
@@ -87,7 +86,7 @@ class AARCH64CodegenBackend:
         if self.module.entry_point_ref:
             aarch64_program_entry_point(
                 self.context,
-                system_entry_point_name=LINKER_EXPECTED_ENTRY_POINT,
+                system_entry_point_name=self.context.config.system_entry_point_name,
                 entry_point=self.module.entry_point_ref,
                 target=self.target,
             )
@@ -323,12 +322,18 @@ def aarch64_executable_functions(
     Provides an prolog and epilogue.
     """
     for function in program.executable_functions:
+        has_frame = (
+            function.is_requires_local_frame
+            if context.config.omit_unused_frame_pointers
+            else True
+        )
+
         function_begin_with_prologue(
             context,
             name=function.name,
             local_variables=function.variables,
             global_name=function.name if function.is_public else None,
-            preserve_frame=True,
+            preserve_frame=has_frame,
             parameters=function.parameters,
         )
 
@@ -337,7 +342,7 @@ def aarch64_executable_functions(
         # TODO(@kirillzhosul): This is included even after explicit return after end
         function_end_with_epilogue(
             context,
-            has_preserved_frame=True,
+            has_preserved_frame=has_frame,
             return_type=function.return_type,
             is_early_return=False,
         )
