@@ -34,7 +34,6 @@ def build_cli_parser(prog: str) -> ArgumentParser:
         help="Step into REPL",
     )
 
-    groups.add_debug_group(parser)
     groups.add_target_group(parser)
     groups.add_output_group(parser)
     groups.add_logging_group(parser)
