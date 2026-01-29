@@ -12,6 +12,9 @@ from libgofra.parser.errors.constant_variable_requires_initializer import (
 from libgofra.parser.errors.variable_with_void_type import (
     VariableCannotHasVoidTypeParserError,
 )
+from libgofra.parser.errors.wildcard_cannot_be_used_as_symbol_name import (
+    WildcardCannotBeUsedAsSymbolNameError,
+)
 from libgofra.parser.exceptions import ParserVariableNameAlreadyDefinedAsVariableError
 from libgofra.parser.type_parser import (
     parse_concrete_type_from_tokenizer,
@@ -74,6 +77,10 @@ def unpack_variable_definition_from_token(
     assert isinstance(varname_token.value, str)
 
     varname = varname_token.text
+
+    if varname == "_":
+        raise WildcardCannotBeUsedAsSymbolNameError(at=token.location)
+
     _validate_variable_redefinition(context, varname, varname_token)
 
     var_t = None  # Infer by default

@@ -20,6 +20,9 @@ from libgofra.lexer import Token
 from libgofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
 from libgofra.lexer.tokens import TokenType
 from libgofra.parser._context import ParserContext
+from libgofra.parser.errors.wildcard_cannot_be_used_as_symbol_name import (
+    WildcardCannotBeUsedAsSymbolNameError,
+)
 from libgofra.parser.type_parser import consume_concrete_function_signature
 from libgofra.types import Type
 
@@ -62,6 +65,9 @@ def consume_function_definition(
         context,
         token,
     )
+
+    if function_name == "_":
+        raise WildcardCannotBeUsedAsSymbolNameError(at=token.location)
 
     return FunctionHeaderDefinition(
         token,

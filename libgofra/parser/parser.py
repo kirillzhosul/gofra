@@ -396,6 +396,9 @@ def _unpack_anonymous_lambda_function_from_token(
         for param_name, param_type in reversed(f_header_def.parameters):
             if not param_name:
                 continue
+            if param_name == "_":
+                new_context.push_new_operator(OperatorType.STACK_DROP, token=token)
+                continue
             new_context.variables[param_name] = Variable(
                 name=param_name,
                 defined_at=token.location,
@@ -405,6 +408,7 @@ def _unpack_anonymous_lambda_function_from_token(
                 type=param_type,
                 initial_value=None,
             )
+
             new_context.push_new_operator(
                 OperatorType.LOAD_PARAM_ARGUMENT,
                 token,
@@ -746,6 +750,9 @@ def _unpack_function_definition_from_token(
 
     for param_name, param_type in reversed(f_header_def.parameters):
         if not param_name:
+            continue
+        if param_name == "_":
+            new_context.push_new_operator(OperatorType.STACK_DROP, token=token)
             continue
         new_context.variables[param_name] = Variable(
             name=param_name,

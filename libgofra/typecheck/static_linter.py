@@ -18,6 +18,10 @@ from libgofra.types.composite.structure import StructureType
 from libgofra.types.reordering import reorder_type_fields
 
 
+def _is_identifier_marked_as_redundant(identifier: str) -> bool:
+    return identifier.startswith("_")
+
+
 def lint_structure_types(
     on_lint_warning: Callable[[str], None],
     structures: MutableMapping[str, StructureType],
@@ -100,6 +104,8 @@ def lint_unused_function_local_variables(
     ref_vars = set(references_variables.keys())
     unused_variables = func_vars.difference(ref_vars)
     for varname in unused_variables:
+        if _is_identifier_marked_as_redundant(varname):
+            return
         var = function.variables[varname]
         on_lint_warning(
             f"Unused function variable '{varname}' declared at {var.defined_at}, either remove it or use it",
@@ -130,6 +136,8 @@ def emit_unused_global_variable_warning(
     on_lint_warning: Callable[[str], None],
     variable: Variable[Type],
 ) -> None:
+    if _is_identifier_marked_as_redundant(variable.name):
+        return
     on_lint_warning(
         f"Unused non-constant global variable '{variable.name}' defined at {variable.defined_at}",
     )

@@ -5,6 +5,9 @@ from libgofra.exceptions import GofraError
 from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
 from libgofra.parser._context import ParserContext
+from libgofra.parser.errors.wildcard_cannot_be_used_as_symbol_name import (
+    WildcardCannotBeUsedAsSymbolNameError,
+)
 from libgofra.parser.type_parser import (
     consume_generic_type_parameters,
     parse_concrete_type_from_tokenizer,
@@ -26,6 +29,8 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
         raise ValueError(msg)
 
     name = name_token.text
+    if name == "_":
+        raise WildcardCannotBeUsedAsSymbolNameError(at=name_token.location)
 
     if context.name_is_already_taken(name):
         msg = f"Structure name {name} is already taken by other definition"

@@ -2,22 +2,7 @@
 
 #define TESTKIT_EXPECTED_EXIT_CODE 25
 
-func int f[int r0, int r1, int r2, int r3, int r4, int r5, int r6, int r7, int r8, int r9, int r10, int r11, int r12, int r13, int r14, int r15]
-    r0  drop // no lint warning
-    r1  drop // no lint warning
-    r2  drop // no lint warning
-    r3  drop // no lint warning
-    r4  drop // no lint warning
-    r5  drop // no lint warning
-    r6  drop // no lint warning
-    r7  drop // no lint warning
-    r8  drop // no lint warning
-    r9  drop // no lint warning
-    r11 drop // no lint warning
-    r12 drop // no lint warning
-    r13 drop // no lint warning
-    r14 drop // no lint warning
-
+func int f[int _r0, int _r1, int _r2, int _r3, int _r4, int _r5, int _r6, int _r7, int _r8, int _r9, int _r10, int _r11, int _r12, int _r13, int _r14, int _r15]
     r10 r15 + return
 end
 
