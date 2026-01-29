@@ -34,6 +34,7 @@ end
 - *Low-level* - Write unsafe, low-level code with direct memory access
 - *Type System* - Validate types at compile time, has compile-time warnings (Generics supports, typechecker)
 - *Library* - By default has support for `math`, `random`, `network` and other libraries
+- *First class functions* - Has support, and lambda definitions (no closures/capturing yet)
 
 ## More complex examples
 ```gofra
@@ -58,8 +59,8 @@ end
 | ARCH    | OS      | Support                    | Tested hardware      |
 |---------|---------|----------------------------|----------------------|
 | Aarch64 | Darwin  | :white_check_mark:*        | M1, MacOS Tahoe 26.1 |
-| WASM    | **-**   | :heavy_exclamation_mark:** |
-| x86_64  | Linux   | :heavy_exclamation_mark:** |
+| WASM    | **-**   | :heavy_exclamation_mark:** | Node.js v22, Safari  |
+| x86_64  | Linux   | :heavy_exclamation_mark:** |                      |
 
 | ARCH    | OS      | Support                    | Tested hardware      |
 |---------|---------|----------------------------|----------------------|

@@ -451,11 +451,27 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             scope.push_types(I64Type())
 
         case OperatorType.MEMORY_VARIABLE_WRITE:
+            mut_scope = scope.types[:2:]
             scope.raise_for_operator_arguments(
                 operator,
                 (PointerType,),
                 (I64Type, PointerType, BoolType, CharType, FunctionType),
             )
+            value_holder_type = mut_scope[-2]
+            assert isinstance(value_holder_type, PointerType), (
+                operator.location,
+                value_holder_type,
+            )
+            value_type = value_holder_type.points_to
+            store_type = mut_scope[-1]
+            base_type_is_same = type(value_type) == type(store_type)  # noqa: E721
+            if base_type_is_same and not is_types_same(
+                value_type,
+                store_type,
+                strategy="strict-same-type",
+            ):
+                msg = f"\nStorage and value type mismatch at {operator.location}. Holder has type {value_holder_type}, which is {value_type} but tried to store {store_type}.\n\nMismatch: {store_type} != {value_type}\n[write-store-type-mismatch]"
+                raise ValueError(msg)
         case OperatorType.LOAD_PARAM_ARGUMENT:
             scope.raise_for_enough_arguments(operator, required_args=1)
             scope.consume_n_arguments(1)

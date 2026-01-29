@@ -43,13 +43,13 @@ extern pub func bool _IsKeyPressed[int keycode]                    pub func bool
 extern pub func bool _IsKeyDown[int keycode]                       pub func bool IsKeyDown[int keycode] keycode call _IsKeyDown end
 extern pub func void _DrawFPS[int x,int y]                         pub func void DrawFPS[int x,int y] x y call _DrawFPS end
 
-pub func int rgba_to_raylib_argb[int,int,int,int]
+pub func int rgba_to_raylib_argb[int r, int g, int b, int a]
     var color int = 0;
 
-    &color swap 24 << color | !<
-    &color swap 16 << color | !<
-    &color swap 8  << color | !<
-    &color swap       color | !<
+    &color a 24 << color | !<
+    &color r 16 << color | !<
+    &color g 8  << color | !<
+    &color b       color | !<
 
     color return
 end

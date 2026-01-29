@@ -42,6 +42,9 @@ class GenericFunctionType(GenericParametrizedType):
     return_value: Type | GenericParametrizedType
     parameters: Sequence[Type | GenericParametrizedType]
 
+    def __repr__(self) -> str:
+        return f"({', '.join(map(repr, self.parameters))}) -> {self.return_value}"
+
 
 class GenericStructureType(GenericParametrizedType):
     """Type that holds fields with their types as structure."""

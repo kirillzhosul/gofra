@@ -12,9 +12,9 @@
 // TODO: Allow forward referencing functions
 
 // Print an string into given file descriptor / handle and return bytes written
-#ifdef OS_DARWIN  pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
-#ifdef OS_LINUX   pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call sc_write  end #endif
-#ifdef OS_WINDOWS pub func int print_fd[int, *string] var str *string; &str swap !<; str.data; str.len call win_write end #endif
+#ifdef OS_DARWIN  pub func int print_fd[int fd, *string str] fd; str.data; str.len call sc_write  end #endif
+#ifdef OS_LINUX   pub func int print_fd[int fd, *string str] fd; str.data; str.len call sc_write  end #endif
+#ifdef OS_WINDOWS pub func int print_fd[int fd, *string str] fd; str.data; str.len call win_write end #endif
 #ifdef __WASM
     extern func int wasm32_print_fd[int, *string]
     func int print_fd[int, *string] call wasm32_print_fd end
