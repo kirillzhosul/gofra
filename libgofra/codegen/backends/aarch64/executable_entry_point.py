@@ -1,13 +1,17 @@
+from typing import TYPE_CHECKING
+
 from libgofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
 from libgofra.hir.function import Function
 from libgofra.targets.target import Target
 from libgofra.types.primitive.integers import I64Type
 from libgofra.types.primitive.void import VoidType
 
-from ._context import AARCH64CodegenContext
 from .abi_call_convention import function_abi_call_by_symbol
 from .primitive_instructions import push_integer_onto_stack
 from .subroutines import function_begin_with_prologue, function_end_with_epilogue
+
+if TYPE_CHECKING:
+    from .codegen import AARCH64CodegenBackend
 
 # TODO: Refactor and move away from here (gofra source / abstraction)?
 AARCH64_MACOS_EPILOGUE_EXIT_CODE = 0
@@ -15,7 +19,7 @@ AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER = 1
 
 
 def aarch64_program_entry_point(
-    context: AARCH64CodegenContext,
+    context: "AARCH64CodegenBackend",
     system_entry_point_name: str,
     entry_point: Function,
     target: Target,
@@ -56,7 +60,7 @@ def aarch64_program_entry_point(
 
 
 def _darwin_sys_exit_epilogue(
-    context: AARCH64CodegenContext,
+    context: "AARCH64CodegenBackend",
     entry_point: Function,
 ) -> None:
     # Call syscall to exit without accessing protected system memory.

@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
+from libgofra.codegen.backends.aarch64.primitive_instructions import (
+    AddressingMode,
+    get_address_of_label,
+)
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
 from libgofra.hir.initializer import (
     T_AnyVariableInitializer,
@@ -18,13 +22,13 @@ from libgofra.types.composite.pointer import PointerType
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def write_function_local_stack_variables_initializer(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     *,
     local_variables: Mapping[str, Variable[Type]],
 ) -> None:
@@ -44,7 +48,7 @@ def write_function_local_stack_variables_initializer(
 
 
 def _write_initializer_for_stack_variable(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     initial_value: T_AnyVariableInitializer,
     var_type: Type,
     offset: int,
@@ -76,11 +80,8 @@ def _write_initializer_for_stack_variable(
         # Load string as static string and dispatch pointer on entry
         static_blob_sym = context.load_string(initial_value.string)
         assert isinstance(var_type, PointerType)
-        context.write(
-            f"adrp X0, {static_blob_sym}@PAGE",
-            f"add X0, X0, {static_blob_sym}@PAGEOFF",
-        )
-        context.write(f"str X0, [X29, -{offset}]")
+        get_address_of_label(context, "X0", static_blob_sym, mode=AddressingMode.PAGE)
+        context.instruction(f"str X0, [X29, -{offset}]")
         return None
 
     if isinstance(
@@ -95,7 +96,7 @@ def _write_initializer_for_stack_variable(
 
 
 def _set_local_numeric_var_immediate(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     value: int,
     t: Type,
     offset: int,
@@ -110,7 +111,7 @@ def _set_local_numeric_var_immediate(
 
     if sr in ("X0", "W0"):
         assert value.bit_count() <= bit_count
-        context.write(f"mov {sr}, #{value}")
+        context.instruction(f"mov {sr}, #{value}")
 
     instr = "strb" if t.size_in_bytes == 1 else ("strh" if is_hword else "str")
-    context.write(f"{instr} {sr}, [X29, -{offset}]")
+    context.instruction(f"{instr} {sr}, [X29, -{offset}]")

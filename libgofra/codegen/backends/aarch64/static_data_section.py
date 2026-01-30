@@ -11,14 +11,14 @@ from libgofra.codegen.backends.aarch64.sections import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
     from libgofra.hir.module import Module
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def aarch64_data_section(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     program: Module,
 ) -> None:
     """Write program static data section filled with static strings and memory blobs."""
@@ -30,7 +30,7 @@ def aarch64_data_section(
 
 
 def initialize_static_data_section(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     static_strings: Mapping[str, str],
     static_variables: Mapping[str, Variable[Type]],
 ) -> None:

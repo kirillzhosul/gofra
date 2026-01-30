@@ -1,10 +1,11 @@
 """AAPCS64 call convention must work for Apple AAPCS64/System-V AAPCS64."""
 
 from collections.abc import Sequence
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
 from libgofra.codegen.backends.aarch64.primitive_instructions import (
+    jump_to_subroutine,
+    jump_to_subroutine_from_register,
     pop_cells_from_stack_into_registers,
     push_register_onto_stack,
     truncate_register_to_32bit_version,
@@ -15,9 +16,12 @@ from libgofra.codegen.backends.aarch64.registers import (
 )
 from libgofra.types._base import Type
 
+if TYPE_CHECKING:
+    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
+
 
 def function_abi_call_by_symbol(
-    context: AARCH64CodegenContext,
+    context: "AARCH64CodegenBackend",
     *,
     name: str,
     parameters: Sequence[Type],
@@ -39,12 +43,12 @@ def function_abi_call_by_symbol(
 
     assert call_convention == "apple_aapcs64"
     _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
-    context.write(f"bl {name}")
+    jump_to_subroutine(context, name)
     _load_return_value_from_abi_registers_into_stack(context, t=return_type)
 
 
 def function_abi_call_from_register(
-    context: AARCH64CodegenContext,
+    context: "AARCH64CodegenBackend",
     *,
     register: AARCH64_GP_REGISTERS,
     parameters: Sequence[Type],
@@ -56,12 +60,12 @@ def function_abi_call_from_register(
         "ABI changed / clobbered register"
     )
     _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
-    context.write(f"blr {register}")
+    jump_to_subroutine_from_register(context, register)
     _load_return_value_from_abi_registers_into_stack(context, t=return_type)
 
 
 def load_return_value_from_stack_into_abi_registers(
-    context: AARCH64CodegenContext,
+    context: "AARCH64CodegenBackend",
     t: Type,
 ) -> None:
     """Emit code that prepares return value by acquiring it from stack and storing into ABI return value register."""
@@ -106,7 +110,7 @@ def load_return_value_from_stack_into_abi_registers(
 
 
 def _load_arguments_for_abi_call_into_registers_from_stack(
-    context: AARCH64CodegenContext,
+    context: "AARCH64CodegenBackend",
     parameters: Sequence[Type],
 ) -> None:
     """Load arguments from stack into registers to perform an ABI call, if necessary leftover arguments are spilled on stack.
@@ -167,7 +171,7 @@ def _load_arguments_for_abi_call_into_registers_from_stack(
 
 
 def _load_return_value_from_abi_registers_into_stack(
-    context: AARCH64CodegenContext,
+    context: "AARCH64CodegenBackend",
     t: Type,
 ) -> None:
     """Emit code that loads return value by acquiring it from subroutine ABI call registers and spilling onto stack."""
@@ -183,8 +187,8 @@ def _load_return_value_from_abi_registers_into_stack(
     if t.size_in_bytes == 1:
         # TODO: Workaround for booleans, must be resolved?
         # TODO: Must `and w0, w8, #0x1` on load
-        context.write("and X0, X0, #0xFF")  # extend LEA bits
-        context.write(f"str X0, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
+        context.instruction("and X0, X0, #0xFF")  # extend LEA bits
+        context.instruction(f"str X0, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
         return None
 
     if t.size_in_bytes <= 4:

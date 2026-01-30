@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Literal, cast
 
 from libgofra.hir.operator import OperatorType
 
@@ -13,11 +14,11 @@ from .registers import (
 )
 
 if TYPE_CHECKING:
-    from ._context import AARCH64CodegenContext
+    from .codegen import AARCH64CodegenBackend
 
 
 def drop_stack_slots(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     *,
     slots_count: int,
     slot_size: int = AARCH64_STACK_ALIGNMENT,
@@ -33,11 +34,11 @@ def drop_stack_slots(
 
     shift_in_bits = slot_size * slots_count
     assert shift_in_bits % 2 == 0
-    context.write(f"add SP, SP, #{shift_in_bits}")
+    context.instruction(f"add SP, SP, #{shift_in_bits}")
 
 
 def pop_cells_from_stack_into_registers(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     *registers: AARCH64_GP_REGISTERS,
 ) -> None:
     """Pop cells from stack and store into given registers.
@@ -49,34 +50,34 @@ def pop_cells_from_stack_into_registers(
 
     # TODO(@kirillzhosul): LDP for pairs
     for register in registers:
-        context.write(
+        context.instruction(
             f"ldr {register}, [SP], #{AARCH64_STACK_ALIGNMENT}",
         )
 
 
 def push_register_onto_stack(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     register: AARCH64_GP_REGISTERS,
 ) -> None:
     """Store given register onto stack under current stack pointer."""
-    context.write(f"str {register}, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
+    context.instruction(f"str {register}, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
 
 
 def store_integer_into_register(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     register: AARCH64_GP_REGISTERS,
     value: int,
 ) -> None:
     """Store given value into given register."""
-    context.write(f"mov {register}, #{value}")
+    context.instruction(f"mov {register}, #{value}")
 
 
-def push_float_onto_stack(context: AARCH64CodegenContext, value: float) -> None:
+def push_float_onto_stack(context: AARCH64CodegenBackend, value: float) -> None:
     raise NotImplementedError
 
 
 def push_integer_onto_stack(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     value: int,
 ) -> None:
     """Push given integer onto stack with auto shifting less-significant bytes.
@@ -96,9 +97,9 @@ def push_integer_onto_stack(
 
     if value <= AARCH64_HALF_WORD_BITS:
         # We have small immediate value which we may just store without shifts
-        context.write(f"mov X0, #{value}")
+        context.instruction(f"mov X0, #{value}")
         if is_negative:
-            context.write("neg X0, X0")
+            context.instruction("neg X0, X0")
         push_register_onto_stack(context, register="X0")
         return
 
@@ -111,57 +112,34 @@ def push_integer_onto_stack(
 
         if not preserve_bits:
             # Store upper bits
-            context.write(f"movz X0, #{chunk}, lsl #{shift}")
+            context.instruction(f"movz X0, #{chunk}, lsl #{shift}")
             preserve_bits = True
             continue
 
         # Store lower bits
-        context.write(f"movk X0, #{chunk}, lsl #{shift}")
+        context.instruction(f"movk X0, #{chunk}, lsl #{shift}")
 
     if is_negative:
-        context.write("sub X0, XZR, X0")
+        context.instruction("sub X0, XZR, X0")
 
     push_register_onto_stack(context, register="X0")
 
 
-def push_static_address_onto_stack(
-    context: AARCH64CodegenContext,
-    segment: str,
-) -> None:
-    """Push executable static memory address onto stack with page dereference."""
-    context.write(
-        f"adrp X0, {segment}@PAGE",
-        f"add X0, X0, {segment}@PAGEOFF",
-    )
-    push_register_onto_stack(context, register="X0")
-
-
-def load_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
+def load_memory_from_stack_arguments(context: AARCH64CodegenBackend) -> None:
     """Load memory as value using arguments from stack."""
     pop_cells_from_stack_into_registers(context, "X0")
-    context.write("ldr X0, [X0]")
+    context.instruction("ldr X0, [X0]")
     push_register_onto_stack(context, "X0")
 
 
-def store_into_memory_from_stack_arguments(context: AARCH64CodegenContext) -> None:
+def store_into_memory_from_stack_arguments(context: AARCH64CodegenBackend) -> None:
     """Store value into memory pointer, pointer and value acquired from stack."""
     pop_cells_from_stack_into_registers(context, "X0", "X1")
-    context.write("str X0, [X1]")
-
-
-def debugger_breakpoint_trap(context: AARCH64CodegenContext, number: int) -> None:
-    """Place an debugger breakpoint (e.g trace trap).
-
-    Will halt execution to the debugger, useful for debugging purposes.
-    Also due to being an trap (e.g execution will be caught) allows to trap some execution places.
-    (e.g start entry exit failure)
-    """
-    assert 0 < number < AARCH64_HALF_WORD_BITS
-    context.write(f"brk #{number}")
+    context.instruction("str X0, [X1]")
 
 
 def perform_operation_onto_stack(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     operation: OperatorType,
 ) -> None:
     """Perform *math* operation onto stack (pop arguments and push back result)."""
@@ -173,34 +151,32 @@ def perform_operation_onto_stack(
     # TODO(@kirillzhosul): Optimize inc / dec (++, --) when incrementing / decrementing by known values
     match operation:
         case OperatorType.ARITHMETIC_PLUS:
-            context.write("add X0, X1, X0")
+            context.instruction("add X0, X1, X0")
         case OperatorType.ARITHMETIC_MINUS:
-            context.write("sub X0, X1, X0")
+            context.instruction("sub X0, X1, X0")
         case OperatorType.ARITHMETIC_MULTIPLY:
-            context.write("mul X0, X1, X0")
+            context.instruction("mul X0, X1, X0")
         case OperatorType.ARITHMETIC_DIVIDE:
-            context.write("sdiv X0, X1, X0")
+            context.instruction("sdiv X0, X1, X0")
         case OperatorType.ARITHMETIC_MODULUS:
-            context.write(
-                "udiv X2, X1, X0",
-                "mul X2, X2, X0",
-                "sub X0, X1, X2",
-            )
+            context.instruction("udiv X2, X1, X0")
+            context.instruction("mul X2, X2, X0")
+            context.instruction("sub X0, X1, X2")
         case OperatorType.LOGICAL_OR | OperatorType.BITWISE_OR:
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
-            context.write("orr X0, X0, X1")
+            context.instruction("orr X0, X0, X1")
         case OperatorType.SHIFT_RIGHT:
-            context.write("lsr X0, X1, X0")
+            context.instruction("lsr X0, X1, X0")
         case OperatorType.SHIFT_LEFT:
-            context.write("lsl X0, X1, X0")
+            context.instruction("lsl X0, X1, X0")
         case OperatorType.BITWISE_AND | OperatorType.LOGICAL_AND:
             # Use bitwise one here even for logical one as we have typechecker which expects boolean types.
-            context.write("and X0, X0, X1")
+            context.instruction("and X0, X0, X1")
         case OperatorType.LOGICAL_NOT:
             # TODO: Must work only for booleans (0, 1), must be fulfilled with codegen tricks
-            context.write("eor X0, X0, 1")
+            context.instruction("eor X0, X0, 1")
         case OperatorType.BITWISE_XOR:
-            context.write("eor X0, X0, X1")
+            context.instruction("eor X0, X0, X1")
         case (
             OperatorType.COMPARE_EQUALS
             | OperatorType.COMPARE_GREATER
@@ -209,7 +185,10 @@ def perform_operation_onto_stack(
             | OperatorType.COMPARE_NOT_EQUALS
             | OperatorType.COMPARE_LESS_EQUALS
         ):
-            logic_op = {
+            logic_op: dict[
+                OperatorType,
+                Literal["ne", "ge", "le", "lt", "gt", "eq"],
+            ] = {
                 OperatorType.COMPARE_NOT_EQUALS: "ne",
                 OperatorType.COMPARE_GREATER_EQUALS: "ge",
                 OperatorType.COMPARE_LESS_EQUALS: "le",
@@ -217,9 +196,12 @@ def perform_operation_onto_stack(
                 OperatorType.COMPARE_GREATER: "gt",
                 OperatorType.COMPARE_EQUALS: "eq",
             }
-            context.write(
-                "cmp X1, X0",
-                f"cset X0, {logic_op[operation]}",
+            compare_registers_boolean(
+                context,
+                register_a="X1",
+                register_b="X0",
+                register="X0",
+                condition=logic_op[operation],
             )
         case _:
             msg = f"{operation} cannot be performed by codegen `{perform_operation_onto_stack.__name__}`"
@@ -228,7 +210,7 @@ def perform_operation_onto_stack(
 
 
 def evaluate_conditional_block_on_stack_with_jump(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     jump_over_label: str,
 ) -> None:
     """Evaluate conditional block by popping current value under SP against zero.
@@ -236,7 +218,12 @@ def evaluate_conditional_block_on_stack_with_jump(
     If condition is false (value on stack) then jump out that conditional block to `jump_over_label`
     """
     pop_cells_from_stack_into_registers(context, "X0")
-    context.write(f"cbz X0, {jump_over_label}")
+    compare_and_jump_to_label(
+        context,
+        register="X0",
+        label=jump_over_label,
+        condition="zero",
+    )
 
 
 def truncate_register_to_32bit_version(
@@ -255,3 +242,134 @@ def truncate_register_to_32bit_version(
 
     msg = f"Cannot truncate register {register} to corresponding 32bit version!"
     raise NotImplementedError(msg)
+
+
+###
+# Branching related
+###
+
+
+# TODO: `csel` for branchless?
+
+
+def jump_to_subroutine_from_register(
+    context: AARCH64CodegenBackend,
+    register: AARCH64_GP_REGISTERS,
+) -> None:
+    """Jump (branch) to indirect subroutine located in given register. Does not do PAC."""
+    context.instruction(f"blr {register}")
+
+
+def jump_to_subroutine(
+    context: AARCH64CodegenBackend,
+    label: str,
+) -> None:
+    """Jump (branch) to subroutine with given label. Does not do PAC."""
+    assert label
+    context.instruction(f"bl {label}")
+
+
+def compare_and_jump_to_label(
+    context: AARCH64CodegenBackend,
+    register: AARCH64_GP_REGISTERS,
+    label: str,
+    condition: Literal["zero", "nonzero"],
+) -> None:
+    """Compare that given register is zero and jump to given label if it is."""
+    assert label
+    if condition == "zero":
+        context.instruction(f"cbz {register}, {label}")
+        return
+
+    assert condition == "nonzero"
+    context.instruction(f"cbnz {register}, {label}")
+    return
+
+
+def compare_registers_boolean(
+    context: AARCH64CodegenBackend,
+    register_a: AARCH64_GP_REGISTERS,
+    register_b: AARCH64_GP_REGISTERS,
+    register: AARCH64_GP_REGISTERS,
+    condition: Literal["ne", "ge", "le", "lt", "gt", "eq"],
+) -> None:
+    context.instruction(f"cmp {register_a}, {register_b}")
+    context.instruction(f"cset {register}, {condition}")
+
+
+###
+# Memory (instructions, data) related
+###
+
+
+class AddressingMode(Enum):
+    """Specifies addressing mode for load label instructions."""
+
+    NEAR = auto()  # `ADR`, low offsets
+    PAGE = auto()  # `ADRP` by pages
+    EXTERNAL = auto()  # `GOT` runtime
+
+
+def push_address_of_label_onto_stack(
+    context: AARCH64CodegenBackend,
+    label: str,
+    *,
+    mode: AddressingMode = AddressingMode.PAGE,
+    temp_register: AARCH64_GP_REGISTERS = "X16",
+) -> None:
+    """Load (form) address of label and store into register with possible page dereferences and push it onto stack.
+
+    :param label: Address of which to get (subroutine, BSS/DATA segment label)
+    :param mode: How far label is, specifies how to load label
+
+    """
+    get_address_of_label(
+        context,
+        destination=temp_register,
+        label=label,
+        mode=mode,
+    )
+    push_register_onto_stack(context, register=temp_register)
+
+
+def get_address_of_label(
+    context: AARCH64CodegenBackend,
+    destination: AARCH64_GP_REGISTERS,
+    label: str,
+    *,
+    mode: AddressingMode = AddressingMode.PAGE,
+) -> None:
+    """Load (form) address of label and store into register with possible page dereferences.
+
+    :param label: Address of which to get (subroutine, BSS/DATA segment label)
+    :param mode: How far label is, specifies how to load label
+    """
+    assert label
+
+    match mode:
+        case AddressingMode.NEAR:
+            # +- 1MB offset
+            context.instruction(f"adr {destination}, {label}")
+            return
+        case AddressingMode.EXTERNAL:
+            # GOT (runtime load)
+            context.instruction(f"adrp {destination}, {label}@GOTPAGE")
+            context.instruction(
+                f"ldr {destination}, [{destination}, {label}@GOTPAGEOFF]",
+            )
+            return
+        case AddressingMode.PAGE:
+            # +-4GB offset
+            context.instruction(f"adrp {destination}, {label}@PAGE")
+            context.instruction(f"add  {destination}, {destination}, {label}@PAGEOFF")
+
+
+###
+# Software specific
+###
+
+
+def place_software_trap(context: AARCH64CodegenBackend, code: int) -> None:
+    """Generate a software trap (BRK) instruction."""
+    assert 0 < code < 0xFFFF
+    context.instruction(f"brk #{hex(code)}")

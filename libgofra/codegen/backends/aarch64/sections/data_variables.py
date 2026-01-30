@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from libgofra.codegen.sections._factory import SectionType
 from libgofra.hir.initializer import (
@@ -20,13 +20,13 @@ from libgofra.types.primitive.integers import I64Type
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def write_initialized_data_section(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     strings: Mapping[str, str],
     variables: Mapping[str, Variable[Type]],
 ) -> None:
@@ -44,7 +44,7 @@ def write_initialized_data_section(
     alignment = None
     for name, variable in variables.items():
         if variable.type.alignment != alignment:
-            context.fd.write(f".align {variable.type.alignment}\n")
+            context.directive("align", variable.type.alignment)
             alignment = variable.type.alignment
         _write_static_segment_variable_initializer(
             context,
@@ -54,16 +54,18 @@ def write_initialized_data_section(
 
     if strings:
         # 8 byte alignment for string descriptors
-        context.fd.write(".align 8\n")
+        context.directive("align", 8)
 
     for name, data in strings.items():
         decoded_string = data.encode().decode("unicode_escape")
         length = len(decoded_string)
-        context.fd.write(f"{name}: \n\t.quad {name}d\n\t.quad {length}\n")
+        context.label(name)
+        context.sym_sect_directive("quad", f"{name}d")
+        context.sym_sect_directive("quad", length)
 
 
 def _write_static_segment_variable_initializer(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     variable: Variable[Type],
     symbol_name: str,
 ) -> None:
@@ -77,7 +79,8 @@ def _write_static_segment_variable_initializer(
         case CharType() | I64Type():
             assert isinstance(variable.initial_value, int)
             ddd = _get_ddd_for_type(variable.type)
-            context.fd.write(f"{symbol_name}: {ddd} {variable.initial_value}\n")
+            context.label(symbol_name)
+            context.sym_sect_directive(ddd, variable.initial_value)
         case ArrayType(element_type=I64Type()):
             assert isinstance(variable.initial_value, VariableIntArrayInitializerValue)
             ddd = _get_ddd_for_type(I64Type())
@@ -85,8 +88,8 @@ def _write_static_segment_variable_initializer(
             values = variable.initial_value.values
             f_values = ", ".join(map(str, values))
 
-            context.fd.write(f"{symbol_name}: \n\t{ddd} {f_values}\n")
-
+            context.label(symbol_name)
+            context.sym_sect_directive(ddd, f_values)
             # Zero initialized symbol
             element_size = variable.type.element_type.size_in_bytes
             empty_cells = variable.type.elements_count - len(values)
@@ -96,11 +99,13 @@ def _write_static_segment_variable_initializer(
                 bytes_total = variable.type.size_in_bytes
                 bytes_taken = len(values) * element_size
                 bytes_free = bytes_total - bytes_taken
-                context.fd.write(f"\t.zero {bytes_free}\n")
+                context.sym_sect_directive("zero", bytes_free)
+
             else:
                 fill_with = variable.initial_value.default
                 cell_size = I64Type().size_in_bytes
-                context.fd.write(f"\t.fill {empty_cells}, {cell_size}, {fill_with}")
+                context.sym_sect_directive("fill", empty_cells, cell_size, fill_with)
+
                 context.comment_eol(f"Filler ({fill_with})")
 
         case ArrayType(element_type=PointerType(points_to=StringType())):
@@ -112,13 +117,13 @@ def _write_static_segment_variable_initializer(
             values = variable.initial_value.values
             f_values = ", ".join(map(context.load_string, values))
 
-            context.fd.write(f"{symbol_name}: \n\t.quad {f_values}\n")
+            context.label(symbol_name)
+            context.sym_sect_directive("quad", f_values)
         case PointerType(points_to=StringType()):
             assert isinstance(variable.initial_value, VariableStringPtrInitializerValue)
             string_raw = variable.initial_value.string
-            context.fd.write(
-                f"{symbol_name}: \n\t.quad {context.load_string(string_raw)}\n",
-            )
+            context.label(symbol_name)
+            context.sym_sect_directive("quad", context.load_string(string_raw))
         case StructureType():
             assert isinstance(
                 variable.initial_value,
@@ -136,12 +141,12 @@ def _write_static_segment_variable_initializer(
 
 
 def _write_static_segment_structure_initializer(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     symbol_name: str,
     struct: StructureType,
     initial_value: VariableIntFieldedStructureInitializerValue,
 ) -> None:
-    context.fd.write(f"{symbol_name}:")
+    context.label(symbol_name)
     context.comment_eol(repr(struct))
     prev_taken_bytes = 0
     for field in struct.order:
@@ -154,25 +159,25 @@ def _write_static_segment_structure_initializer(
 
         ddd = _get_ddd_for_type(field_t)
         if padding:
-            context.fd.write(f"\t.zero {padding}")
+            context.sym_sect_directive("zero", padding)
             context.comment_eol("[[padding]]")
 
-        context.fd.write(f"\t{ddd} {value}")
+        context.sym_sect_directive(ddd, value)
         context.comment_eol(f"{struct.name}.{field}")
 
         prev_taken_bytes += field_t.size_in_bytes + padding
 
 
-def _get_ddd_for_type(t: PrimitiveType) -> str:
+def _get_ddd_for_type(t: PrimitiveType) -> Literal["byte", "half", "word", "quad"]:
     """Get Data Definition Directive for type based on byte size."""
     type_size = t.size_in_bytes
     if type_size <= 1:
-        return ".byte"
+        return "byte"
     if type_size <= 2:
-        return ".half"
+        return "half"
     if type_size <= 4:
-        return ".word"
+        return "word"
     if type_size <= 8:
-        return ".quad"
+        return "quad"
     msg = f"Cannot get DDD for symbol of type {t}, max byte size is capped"
     raise ValueError(msg)

@@ -7,13 +7,13 @@ from libgofra.codegen.sections._factory import SectionType
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def write_uninitialized_data_section(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Emit data section with uninitialized variables."""
@@ -34,7 +34,8 @@ def write_uninitialized_data_section(
 
         alignment = variable.type.alignment
         if alignment != aligned_by:
-            context.fd.write(f".align {alignment}\n")
+            context.directive("align", alignment)
             aligned_by = alignment
 
-        context.fd.write(f"{name}: .space {type_size}\n")
+        context.label(name)
+        context.sym_sect_directive("space", type_size)

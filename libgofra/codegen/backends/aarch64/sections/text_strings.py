@@ -7,11 +7,11 @@ from libgofra.codegen.sections._factory import SectionType
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
 
 
 def write_text_string_section(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     strings: Mapping[str, str],
     *,
     reference_suffix: str,
@@ -24,4 +24,5 @@ def write_text_string_section(
         return
     context.section(SectionType.STRINGS)
     for name, data in strings.items():
-        context.fd.write(f'{name}{reference_suffix}: .asciz "{data}"\n')
+        context.label(f"{name}{reference_suffix}")
+        context.sym_sect_directive("asciz", f'"{data}"')

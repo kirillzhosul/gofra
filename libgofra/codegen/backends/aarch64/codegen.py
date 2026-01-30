@@ -2,52 +2,27 @@
 
 from __future__ import annotations
 
-from typing import IO, TYPE_CHECKING, assert_never
+from typing import IO, TYPE_CHECKING, Literal
 
 from libgofra.codegen.abi import DarwinAARCH64ABI
-from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
-from libgofra.codegen.backends.aarch64.abi_call_convention import (
-    function_abi_call_by_symbol,
-    function_abi_call_from_register,
-)
 from libgofra.codegen.backends.aarch64.executable_entry_point import (
     aarch64_program_entry_point,
 )
-from libgofra.codegen.backends.aarch64.frame import (
-    push_local_variable_address_from_frame_offset,
-)
-from libgofra.codegen.backends.aarch64.primitive_instructions import (
-    debugger_breakpoint_trap,
-    drop_stack_slots,
-    evaluate_conditional_block_on_stack_with_jump,
-    load_memory_from_stack_arguments,
-    perform_operation_onto_stack,
-    pop_cells_from_stack_into_registers,
-    push_float_onto_stack,
-    push_integer_onto_stack,
-    push_register_onto_stack,
-    push_static_address_onto_stack,
-    store_into_memory_from_stack_arguments,
-)
+from libgofra.codegen.backends.aarch64.instruction_set import aarch64_instruction_set
 from libgofra.codegen.backends.aarch64.static_data_section import (
     aarch64_data_section,
 )
 from libgofra.codegen.backends.aarch64.subroutines import (
     function_begin_with_prologue,
     function_end_with_epilogue,
-    function_return,
 )
-from libgofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
-from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.sections import SectionType
-from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
-from libgofra.hir.variable import VariableStorageClass
-from libgofra.types.composite.function import FunctionType
+from libgofra.codegen.sections._factory import get_os_assembler_section
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, MutableMapping
 
-    from libgofra.codegen.backends.aarch64.registers import AARCH64_GP_REGISTERS
+    from libgofra.codegen.abi import AARCH64ABI
     from libgofra.codegen.config import CodegenConfig
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module
@@ -57,7 +32,15 @@ if TYPE_CHECKING:
 class AARCH64CodegenBackend:
     target: Target
     module: Module
-    context: AARCH64CodegenContext
+
+    on_warning: Callable[[str], None]
+    config: CodegenConfig
+
+    _fd: IO[str]
+    abi: AARCH64ABI
+    target: Target
+
+    strings: MutableMapping[str, str]
 
     def __init__(
         self,
@@ -69,280 +52,134 @@ class AARCH64CodegenBackend:
     ) -> None:
         self.target = target
         self.module = module
-        self.context = AARCH64CodegenContext(
-            on_warning=on_warning,
-            fd=fd,
-            abi=DarwinAARCH64ABI(),
-            target=self.target,
-            config=config,
-        )
+        self.on_warning = on_warning
+        self._fd = fd
+        self.config = config
+
+        self.abi = DarwinAARCH64ABI()
+        self.strings = {}
 
     def emit(self) -> None:
         """AARCH64 code generation backend."""
         # Executable section with instructions only (pure_instructions)
-        self.context.section(SectionType.INSTRUCTIONS)
+        self.section(SectionType.INSTRUCTIONS)
 
-        aarch64_executable_functions(self.context, self.module)
+        for function in self.module.executable_functions:
+            function_define_with_instruction_set(self, self.module, function)
+
         if self.module.entry_point_ref:
             aarch64_program_entry_point(
-                self.context,
-                system_entry_point_name=self.context.config.system_entry_point_name,
+                self,
+                system_entry_point_name=self.config.system_entry_point_name,
                 entry_point=self.module.entry_point_ref,
                 target=self.target,
             )
-        aarch64_data_section(self.context, self.module)
+        aarch64_data_section(self, self.module)
 
+    def _write(self, *lines: str) -> int:
+        return self._fd.write("\t" + "\n\t".join(lines) + "\n")
 
-def aarch64_instruction_set(
-    context: AARCH64CodegenContext,
-    operators: Sequence[Operator],
-    program: Module,
-    owner_function: Function,
-) -> None:
-    """Write executable instructions from given operators."""
-    for idx, operator in enumerate(operators):
-        aarch64_operator_instructions(
-            context,
-            operator,
-            program,
-            idx,
-            owner_function,
+    def section(self, section: SectionType) -> int:
+        return self._fd.write(
+            f".section {get_os_assembler_section(section, self.target)}\n",
         )
 
+    def comment(self, line: str) -> int:
+        if self.config.no_compiler_comments:
+            return 0
+        return self._write(f"// {line}")
 
-def _push_variable_address(
-    context: AARCH64CodegenContext,
-    owner_function: Function,
-    variable: str,
-) -> None:
-    if variable in owner_function.variables:
-        hir_local_variable = owner_function.variables[variable]
-        assert hir_local_variable.is_function_scope
-        if hir_local_variable.storage_class != VariableStorageClass.STACK:
-            msg = "Non stack local variables storage class is not implemented yet"
-            raise NotImplementedError(msg)
-        push_local_variable_address_from_frame_offset(
-            context,
-            owner_function.variables,
-            variable,
-        )
-        return
+    def comment_eol(self, line: str) -> int:
+        if self.config.no_compiler_comments:
+            return 0
+        return self._fd.write(f" // {line}\n")
 
-    # Global variable or memory
-    push_static_address_onto_stack(context, variable)
+    def load_string(self, string: str) -> str:
+        string_key = ".str%d" % len(self.strings)
+        self.strings[string_key] = string
+        return string_key
+
+    def label(self, label: str) -> None:
+        """Emit label to code."""
+        self._fd.write(f"{label}:\n")
+
+    def directive(
+        self,
+        directive: Literal[
+            "p2align",
+            "align",
+            "globl",
+            "zero",
+            "byte",
+            "quad",
+            "word",
+            "half",
+            "asciz",
+            "space",
+            "fill",
+            "cfi_startproc",
+            "cfi_endproc",
+            "cfi_def_cfa_offset",
+            "cfi_def_cfa",
+            "cfi_offset",
+            "cfi_def_cfa_register",
+        ],
+        *args: str | int,
+    ) -> None:
+        self._fd.write(" ".join([f".{directive}", ", ".join(map(str, args))]))
+        self._fd.write("\n")
+
+    def instruction(self, instruction: str) -> None:
+        self._write(instruction)
+
+    def sym_sect_directive(
+        self,
+        directive: Literal[
+            "zero",
+            "byte",
+            "quad",
+            "word",
+            "half",
+            "asciz",
+            "space",
+            "fill",
+        ],
+        *args: str | int,
+    ) -> None:
+        self._fd.write("\t")
+        self.directive(directive, *args)
 
 
-def aarch64_operator_instructions(
-    context: AARCH64CodegenContext,
-    operator: Operator,
+def function_define_with_instruction_set(
+    context: AARCH64CodegenBackend,
     program: Module,
-    idx: int,
-    owner_function: Function,
-) -> None:
-    # TODO(@kirillzhosul): Assumes Apple aapcs64
-    match operator.type:
-        case OperatorType.PUSH_VARIABLE_ADDRESS:
-            assert isinstance(operator.operand, str)
-            _push_variable_address(context, owner_function, variable=operator.operand)
-        case OperatorType.PUSH_INTEGER:
-            assert isinstance(operator.operand, int)
-            push_integer_onto_stack(context, operator.operand)
-        case OperatorType.PUSH_FLOAT:
-            assert isinstance(operator.operand, float)
-            push_float_onto_stack(context, operator.operand)
-        case OperatorType.CONDITIONAL_DO | OperatorType.CONDITIONAL_IF:
-            assert isinstance(operator.jumps_to_operator_idx, int)
-            label = CODEGEN_GOFRA_CONTEXT_LABEL % (
-                owner_function.name,
-                operator.jumps_to_operator_idx,
-            )
-            evaluate_conditional_block_on_stack_with_jump(context, label)
-        case (
-            OperatorType.CONDITIONAL_END
-            | OperatorType.CONDITIONAL_WHILE
-            | OperatorType.CONDITIONAL_FOR
-        ):
-            # This also should be refactored into `assembly` layer
-            label = CODEGEN_GOFRA_CONTEXT_LABEL % (owner_function.name, idx)
-            if isinstance(operator.jumps_to_operator_idx, int):
-                label_to = CODEGEN_GOFRA_CONTEXT_LABEL % (
-                    owner_function.name,
-                    operator.jumps_to_operator_idx,
-                )
-                context.write(f"b {label_to}")
-            context.fd.write(f"{label}:\n")
-        case OperatorType.PUSH_STRING:
-            assert isinstance(operator.operand, str)
-            string_raw = str(operator.token.text[1:-1])
-            push_static_address_onto_stack(
-                context,
-                segment=context.load_string(string_raw),
-            )
-        case OperatorType.FUNCTION_RETURN:
-            function_return(
-                context,
-                has_preserved_frame=True,
-                return_type=owner_function.return_type,
-            )
-        case OperatorType.FUNCTION_CALL:
-            assert isinstance(operator.operand, FunctionCallOperand)
-
-            function = program.resolve_function_dependency(
-                operator.operand.module,
-                operator.operand.get_name(),
-            )
-            assert function is not None, (
-                f"Cannot find function symbol `{operator.operand.get_name()}` in module '{operator.operand.module}' (current: {program.path}), will emit linkage error"
-            )
-
-            function_abi_call_by_symbol(
-                context,
-                name=function.name,
-                parameters=function.parameters,
-                return_type=function.return_type,
-                call_convention="apple_aapcs64",
-            )
-        case OperatorType.STATIC_TYPE_CAST:
-            # Skip that as it is typechecker only.
-            pass
-        case OperatorType.STACK_DROP:
-            drop_stack_slots(context, slots_count=1)
-        case OperatorType.STACK_COPY:
-            pop_cells_from_stack_into_registers(context, "X0")
-            push_register_onto_stack(context, "X0")
-            push_register_onto_stack(context, "X0")
-        case OperatorType.STACK_SWAP:
-            pop_cells_from_stack_into_registers(context, "X0", "X1")
-            push_register_onto_stack(context, "X0")
-            push_register_onto_stack(context, "X1")
-        case (
-            OperatorType.ARITHMETIC_MINUS
-            | OperatorType.ARITHMETIC_PLUS
-            | OperatorType.ARITHMETIC_MULTIPLY
-            | OperatorType.ARITHMETIC_DIVIDE
-            | OperatorType.ARITHMETIC_MODULUS
-            | OperatorType.COMPARE_NOT_EQUALS
-            | OperatorType.COMPARE_GREATER_EQUALS
-            | OperatorType.COMPARE_LESS_EQUALS
-            | OperatorType.COMPARE_LESS
-            | OperatorType.COMPARE_GREATER
-            | OperatorType.COMPARE_EQUALS
-            | OperatorType.LOGICAL_NOT
-            | OperatorType.LOGICAL_AND
-            | OperatorType.LOGICAL_OR
-            | OperatorType.BITWISE_AND
-            | OperatorType.BITWISE_OR
-            | OperatorType.SHIFT_LEFT
-            | OperatorType.SHIFT_RIGHT
-            | OperatorType.BITWISE_XOR
-        ):
-            perform_operation_onto_stack(
-                context,
-                operation=operator.type,
-            )
-        case OperatorType.SYSCALL:
-            assert isinstance(operator.operand, int)
-            ipc_aarch64_syscall(
-                context,
-                arguments_count=operator.operand,
-                store_retval_onto_stack=True,
-                injected_args=None,
-            )
-        case OperatorType.MEMORY_VARIABLE_READ:
-            load_memory_from_stack_arguments(context)
-        case OperatorType.MEMORY_VARIABLE_WRITE:
-            store_into_memory_from_stack_arguments(context)
-        case OperatorType.PUSH_VARIABLE_VALUE:
-            assert isinstance(operator.operand, str)
-
-            # TODO(@kirillzhosul): This was merged from two operations - must be refactored (and also optimized)
-            _push_variable_address(context, owner_function, operator.operand)
-            load_memory_from_stack_arguments(context)
-        case OperatorType.LOAD_PARAM_ARGUMENT:
-            assert isinstance(operator.operand, str)
-            # TODO(@kirillzhosul): This was merged from two operations - must be refactored (and also optimized)
-            _push_variable_address(context, owner_function, operator.operand)
-
-            # swap stack
-            pop_cells_from_stack_into_registers(context, "X0", "X1")
-            push_register_onto_stack(context, "X0")
-            push_register_onto_stack(context, "X1")
-
-            store_into_memory_from_stack_arguments(context)
-
-        case OperatorType.DEBUGGER_BREAKPOINT:
-            debugger_breakpoint_trap(context, number=1)
-        case OperatorType.INLINE_RAW_ASM:
-            assert isinstance(operator.operand, str)
-            context.write(*operator.operand.splitlines())
-        case OperatorType.STRUCT_FIELD_OFFSET:
-            assert isinstance(operator.operand, tuple)
-            struct, field = operator.operand
-            field_offset = struct.get_field_offset(field)
-            if field_offset:
-                # only relatable as operation is pointer is not already at first structure field
-                pop_cells_from_stack_into_registers(
-                    context,
-                    "X0",
-                )  # struct pointer (*struct)
-                context.write(f"add X0, X0, #{field_offset}")
-                push_register_onto_stack(context, "X0")
-        case OperatorType.COMPILE_TIME_ERROR:
-            ...  # Linter / typechecker
-        case OperatorType.FUNCTION_CALL_FROM_STACK_POINTER:
-            assert isinstance(operator.operand, FunctionType)
-            call_like = operator.operand
-            ptr_reg: AARCH64_GP_REGISTERS = "X10"
-            pop_cells_from_stack_into_registers(context, ptr_reg)
-            function_abi_call_from_register(
-                context,
-                register=ptr_reg,
-                parameters=call_like.parameters,
-                return_type=call_like.return_type,
-                call_convention="apple_aapcs64",
-            )
-        case OperatorType.PUSH_FUNCTION_POINTER:
-            assert isinstance(operator.operand, FunctionCallOperand)
-            calee = program.resolve_function_dependency(
-                operator.operand.module,
-                operator.operand.get_name(),
-            )
-            assert calee
-            push_static_address_onto_stack(context, segment=calee.name)
-        case _:
-            assert_never(operator.type)
-
-
-def aarch64_executable_functions(
-    context: AARCH64CodegenContext,
-    program: Module,
+    function: Function,
 ) -> None:
     """Define all executable functions inside final executable with their executable body respectfully.
 
     Provides an prolog and epilogue.
     """
-    for function in program.executable_functions:
-        has_frame = (
-            function.is_requires_local_frame
-            if context.config.omit_unused_frame_pointers
-            else True
-        )
+    has_frame = (
+        function.is_requires_local_frame
+        if context.config.omit_unused_frame_pointers
+        else True
+    )
 
-        function_begin_with_prologue(
-            context,
-            name=function.name,
-            local_variables=function.variables,
-            global_name=function.name if function.is_public else None,
-            preserve_frame=has_frame,
-            parameters=function.parameters,
-        )
+    function_begin_with_prologue(
+        context,
+        name=function.name,
+        local_variables=function.variables,
+        global_name=function.name if function.is_public else None,
+        preserve_frame=has_frame,
+        parameters=function.parameters,
+    )
 
-        aarch64_instruction_set(context, function.operators, program, function)
+    aarch64_instruction_set(context, function.operators, program, function)
 
-        # TODO(@kirillzhosul): This is included even after explicit return after end
-        function_end_with_epilogue(
-            context,
-            has_preserved_frame=has_frame,
-            return_type=function.return_type,
-            is_early_return=False,
-        )
+    # TODO(@kirillzhosul): This is included even after explicit return after end
+    function_end_with_epilogue(
+        context,
+        has_preserved_frame=has_frame,
+        return_type=function.return_type,
+        is_early_return=False,
+    )

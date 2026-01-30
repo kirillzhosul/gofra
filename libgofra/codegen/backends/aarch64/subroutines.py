@@ -24,7 +24,7 @@ from .stack_local_initializer import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from libgofra.codegen.backends.aarch64._context import AARCH64CodegenContext
+    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
@@ -32,7 +32,7 @@ DEFAULT_FUNCTIONS_ALIGNMENT = AARCH64_STACK_ALIGNMENT_BIN
 
 
 def function_begin_with_prologue(  # noqa: PLR0913
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     *,
     name: str,
     global_name: str | None = None,
@@ -47,8 +47,10 @@ def function_begin_with_prologue(  # noqa: PLR0913
     :is_global_symbol: Mark that function symbol as global for linker
     :preserve_frame: If true will preserve function state for proper stack management and return address
     """
+    # TODO: Checkout `BTI` when i have an proper hardware
+    # TODO: Checkout PAC because it is suddenly does not work rn
     if global_name:
-        context.fd.write(f".globl {global_name}\n")
+        context.directive("globl", global_name)
 
     alignment = (
         DEFAULT_FUNCTIONS_ALIGNMENT
@@ -57,13 +59,13 @@ def function_begin_with_prologue(  # noqa: PLR0913
     )
     if alignment > 1:
         if alignment % 2 == 0:
-            context.fd.write(f".p2align {alignment // 2}\n")
+            context.directive("p2align", alignment // 2)
         else:
-            context.fd.write(f".align {alignment}\n")
+            context.directive("align", alignment)
 
-    context.fd.write(f"{name}:\n")
+    context.label(name)
     if context.config.dwarf_emit_cfi:
-        context.fd.write(".cfi_startproc\n")
+        context.directive("cfi_startproc")
 
     if preserve_frame:
         local_offsets = build_local_variables_frame_offsets(local_variables)
@@ -81,7 +83,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
 
 
 def function_return(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     *,
     has_preserved_frame: bool = True,
     return_type: Type,
@@ -97,11 +99,11 @@ def function_return(
     if has_preserved_frame:
         restore_calee_frame(context)
 
-    context.write("ret")
+    context.instruction("ret")
 
 
 def function_end_with_epilogue(
-    context: AARCH64CodegenContext,
+    context: AARCH64CodegenBackend,
     *,
     has_preserved_frame: bool,
     return_type: Type,
@@ -121,4 +123,4 @@ def function_end_with_epilogue(
         return_type=return_type,
     )
     if not is_early_return and context.config.dwarf_emit_cfi:
-        context.fd.write(".cfi_endproc\n")
+        context.directive("cfi_endproc")
