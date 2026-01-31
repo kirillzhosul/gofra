@@ -106,7 +106,7 @@ class ParserContext(PeekableTokenizer):
 
     # No function calls in that context
     # Maybe should be refactored
-    is_leaf_context: bool = True
+    is_leaf_context: bool = field(default=True)
 
     def name_is_already_taken(self, name: str) -> bool:
         is_taken = any(

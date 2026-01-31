@@ -86,6 +86,10 @@ class Function:
     # Code generator takes care of that calls and specifies extern function requests if needed (aggregates them for that)
     is_external: bool
 
+    # If true, functions does not generate appropriate prolog and epilogue in codegen
+    # and must consist only from inline assembly instructions
+    is_naked: bool = field(repr=False)
+
     # If true, function has no calls to other functions
     # compiler may perform some optimizations for these
     is_leaf: bool = field(repr=False)
@@ -156,6 +160,7 @@ class Function:
             operators=None,
             is_leaf=False,
             is_inline=False,
+            is_naked=False,
             is_external=True,
         )
 
@@ -180,6 +185,7 @@ class Function:
             is_leaf=False,
             is_inline=True,
             is_external=False,
+            is_naked=False,
         )
 
     @classmethod
@@ -193,6 +199,7 @@ class Function:
         operators: MutableSequence[Operator],
         return_type: Type,
         is_leaf: bool,
+        is_naked: bool,
     ) -> Function:
         """Create function that is internal and not inline, with propagated flags set."""
         return cls._create(
@@ -203,6 +210,7 @@ class Function:
             variables=variables,
             operators=operators,
             is_leaf=is_leaf,
+            is_naked=is_naked,
             is_inline=False,
             is_external=False,
         )
@@ -220,6 +228,7 @@ class Function:
         is_leaf: bool,
         is_inline: bool,
         is_external: bool,
+        is_naked: bool,
     ) -> Self:
         """Alternative for __init__ that is wrapped by factory methods (`create_*`)."""
         function = cls()
@@ -237,6 +246,8 @@ class Function:
         function.is_no_return = False
         function.enclosed_functions = None
         function.enclosed_in_parent = None
+        function.is_naked = is_naked
+
         # Assertion-style validation
         # Must be validated in higher layer
 

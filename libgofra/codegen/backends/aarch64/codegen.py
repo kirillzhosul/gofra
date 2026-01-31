@@ -16,6 +16,7 @@ from libgofra.codegen.backends.aarch64.subroutines import (
     function_begin_with_prologue,
     function_end_with_epilogue,
 )
+from libgofra.codegen.backends.frame import is_native_function_has_frame
 from libgofra.codegen.sections import SectionType
 from libgofra.codegen.sections._factory import get_os_assembler_section
 
@@ -159,11 +160,7 @@ def function_define_with_instruction_set(
 
     Provides an prolog and epilogue.
     """
-    has_frame = (
-        function.is_requires_local_frame
-        if context.config.omit_unused_frame_pointers
-        else True
-    )
+    has_frame = is_native_function_has_frame(context.config, function)
 
     function_begin_with_prologue(
         context,
@@ -177,9 +174,10 @@ def function_define_with_instruction_set(
     aarch64_instruction_set(context, function.operators, program, function)
 
     # TODO(@kirillzhosul): This is included even after explicit return after end
-    function_end_with_epilogue(
-        context,
-        has_preserved_frame=has_frame,
-        return_type=function.return_type,
-        is_early_return=False,
-    )
+    if not function.is_naked:
+        function_end_with_epilogue(
+            context,
+            has_preserved_frame=has_frame,
+            return_type=function.return_type,
+            is_early_return=False,
+        )

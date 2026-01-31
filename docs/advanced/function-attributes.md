@@ -85,3 +85,16 @@ For more information what is FFI look into [FFI](./ffi.md) documentation
 ## `pub` attribute
 
 Function marked with `pub` attribute are opposite to `extern` ones - they expose this function symbol to object file and allow other object files to link with it
+
+
+## `naked` attribute
+
+Naked functions is functions which does not have prologue and epilogue in machine code, they can contain only inline assembly instructions (`inline_raw_asm`). They allows to write an function which is unsafe and native, mostly for example for context switching (e.g generators, async)
+
+```gofra
+naked func void f[]
+    // no prologue
+    inline_raw_asm "..."
+    inline_raw_asm "ret" // required as has no return instruction (naked)
+    // no epilogue
+end

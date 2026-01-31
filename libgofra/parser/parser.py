@@ -72,6 +72,27 @@ if TYPE_CHECKING:
 
     from libgofra.preprocessor.macros.registry import MacrosRegistry
 
+TOP_LEVEL_KEYWORD = (
+    Keyword.ATTR_FUNC_INLINE,
+    Keyword.ATTR_FUNC_EXTERN,
+    Keyword.ATTR_FUNC_NO_RETURN,
+    Keyword.ATTR_FUNC_PUBLIC,
+    Keyword.ATTR_FUNC_NAKED,
+    Keyword.ATTR_STRUCT_REORDER,
+    Keyword.ATTR_STRUCT_PACKED,
+    Keyword.FUNCTION,
+    Keyword.STRUCT,
+    Keyword.TYPE_DEFINE,
+    Keyword.MODULE_IMPORT,
+)
+
+BOTH_LEVEL_KEYWORD = (
+    Keyword.CONST_DEFINE,
+    Keyword.END,
+    Keyword.VARIABLE_DEFINE,
+    Keyword.COMPILE_TIME_ERROR,
+)
+
 
 def parse_module_from_tokenizer(
     path: Path,
@@ -243,25 +264,6 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         raise ParserDirtyNonPreprocessedTokenError(token=token)
     assert isinstance(token.value, Keyword)
 
-    TOP_LEVEL_KEYWORD = (  # noqa: N806
-        Keyword.ATTR_FUNC_INLINE,
-        Keyword.ATTR_FUNC_EXTERN,
-        Keyword.ATTR_FUNC_NO_RETURN,
-        Keyword.ATTR_STRUCT_REORDER,
-        Keyword.ATTR_STRUCT_PACKED,
-        Keyword.FUNCTION,
-        Keyword.ATTR_FUNC_PUBLIC,
-        Keyword.STRUCT,
-        Keyword.TYPE_DEFINE,
-        Keyword.MODULE_IMPORT,
-    )
-
-    BOTH_LEVEL_KEYWORD = (  # noqa: N806
-        Keyword.CONST_DEFINE,
-        Keyword.END,
-        Keyword.VARIABLE_DEFINE,
-        Keyword.COMPILE_TIME_ERROR,
-    )
     if context.is_top_level:
         if token.value not in (*TOP_LEVEL_KEYWORD, *BOTH_LEVEL_KEYWORD):
             raise LocalLevelKeywordInGlobalScopeError(token)
@@ -277,6 +279,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             | Keyword.ATTR_FUNC_EXTERN
             | Keyword.ATTR_FUNC_PUBLIC
             | Keyword.ATTR_FUNC_NO_RETURN
+            | Keyword.ATTR_FUNC_NAKED
         ):
             return _unpack_function_definition_from_token(context, token)
         case Keyword.FUNCTION_CALL:
@@ -424,9 +427,13 @@ def _unpack_anonymous_lambda_function_from_token(
             parameters=params,
             return_type=f_header_def.return_type,
             is_leaf=new_context.is_leaf_context,
+            is_naked=f_header_def.qualifiers.is_naked,
         )
         assert not f_header_def.qualifiers.is_public
         assert not f_header_def.qualifiers.is_no_return
+        assert not f_header_def.qualifiers.is_extern
+        assert not f_header_def.qualifiers.is_naked
+
         function.visibility = Visibility.PRIVATE
 
         function.module_path = context.path
@@ -797,7 +804,9 @@ def _unpack_function_definition_from_token(
         parameters=params,
         return_type=f_header_def.return_type,
         is_leaf=new_context.is_leaf_context,
+        is_naked=f_header_def.qualifiers.is_naked,
     )
+
     if f_header_def.qualifiers.is_public:
         function.visibility = Visibility.PUBLIC
     function.is_no_return = f_header_def.qualifiers.is_no_return
@@ -806,6 +815,18 @@ def _unpack_function_definition_from_token(
     enclosed_new_functions = [
         f for f in new_context.functions.values() if f.name not in context.functions
     ]
+    if f_header_def.qualifiers.is_naked:
+        if function.has_local_variables:
+            msg = f"Naked functions cannot have local variables {function.defined_at}"
+            raise ValueError(msg)
+        if not function.has_executable_operators:
+            msg = f"no instructions inside naked function {function.defined_at}"
+            raise ValueError(msg)
+        for op in function.operators:
+            if op.type != OperatorType.INLINE_RAW_ASM:
+                msg = f"Naked functions can only have assembly inlined {function.defined_at}"
+                raise ValueError(msg)
+
     if enclosed_new_functions:
         function.enclosed_functions = enclosed_new_functions
         for enclosure in function.enclosed_functions:

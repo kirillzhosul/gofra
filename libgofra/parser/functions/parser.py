@@ -44,6 +44,7 @@ class FunctionHeaderQualifiers:
     is_extern: bool
     is_public: bool
     is_no_return: bool
+    is_naked: bool
 
 
 @dataclass
@@ -95,6 +96,7 @@ def consume_function_qualifiers(
         Keyword.ATTR_FUNC_EXTERN,
         Keyword.ATTR_FUNC_PUBLIC,
         Keyword.ATTR_FUNC_NO_RETURN,
+        Keyword.ATTR_FUNC_NAKED,
     ), token.value
 
     qualifiers = FunctionHeaderQualifiers(
@@ -102,6 +104,7 @@ def consume_function_qualifiers(
         is_extern=False,
         is_public=False,
         is_no_return=False,
+        is_naked=False,
     )
 
     next_token = token
@@ -132,6 +135,12 @@ def consume_function_qualifiers(
                 qualifiers.is_public = True
             case Keyword.ATTR_FUNC_NO_RETURN:
                 qualifiers.is_no_return = True
+            case Keyword.ATTR_FUNC_NAKED:
+                if qualifiers.is_naked:
+                    raise ParserFunctionModifierReappliedError(
+                        modifier_token=next_token,
+                    )
+                qualifiers.is_naked = True
             case _:
                 raise ParserExpectedFunctionKeywordError(token=next_token)
 
@@ -139,6 +148,10 @@ def consume_function_qualifiers(
             raise ParserFunctionIsBothInlineAndExternalError(
                 modifier_token=next_token,
             )
+
+        if qualifiers.is_inline and qualifiers.is_no_return:
+            ...  # Warning/error?
+
         next_token = context.next_token()
 
     if next_token.type != TokenType.KEYWORD or next_token.value != Keyword.FUNCTION:

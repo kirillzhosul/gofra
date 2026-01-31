@@ -2,6 +2,8 @@ from collections.abc import Mapping
 from typing import NamedTuple
 
 from libgofra.codegen.backends.alignment import align_to_highest_size
+from libgofra.codegen.config import CodegenConfig
+from libgofra.hir.function import Function
 from libgofra.hir.variable import Variable
 from libgofra.types._base import Type
 
@@ -59,3 +61,14 @@ def build_local_variables_frame_offsets(
         offsets=offsets,
         local_space_size=local_space_size,
     )
+
+
+def is_native_function_has_frame(config: CodegenConfig, function: Function) -> bool:
+    """Return is this function must define frame pointer in codegen."""
+    if function.is_naked:
+        return False
+
+    if config.omit_unused_frame_pointers:
+        return function.is_requires_local_frame
+
+    return True

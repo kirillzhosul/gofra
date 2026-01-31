@@ -17,6 +17,7 @@ class Keyword(Enum):
     ATTR_FUNC_INLINE = auto()
     ATTR_FUNC_PUBLIC = auto()
     ATTR_FUNC_NO_RETURN = auto()
+    ATTR_FUNC_NAKED = auto()
 
     ATTR_STRUCT_PACKED = auto()
     ATTR_STRUCT_REORDER = auto()
@@ -79,6 +80,7 @@ WORD_TO_KEYWORD: dict[str, Keyword | PreprocessorKeyword] = {
     # Function definition
     "func": Keyword.FUNCTION,
     "inline": Keyword.ATTR_FUNC_INLINE,
+    "naked": Keyword.ATTR_FUNC_NAKED,
     "pub": Keyword.ATTR_FUNC_PUBLIC,
     "no_return": Keyword.ATTR_FUNC_NO_RETURN,
     "extern": Keyword.ATTR_FUNC_EXTERN,
