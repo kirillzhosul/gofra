@@ -7,6 +7,9 @@ from libgofra.hir.operator import FunctionCallOperand, OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
 from libgofra.typecheck.entry_point import validate_entry_point_signature
 from libgofra.typecheck.errors.no_main_entry_function import NoMainEntryFunctionError
+from libgofra.typecheck.errors.read_only_memory_assignment import (
+    ReadOnlyMemoryAssignmentError,
+)
 from libgofra.typecheck.errors.return_value_missing import (
     ReturnValueMissingTypecheckError,
 )
@@ -161,6 +164,9 @@ def validate_function_type_safety(
             function=function,
             type_stack=list(func_block.types),
         )
+
+    if function.is_naked:
+        return func_block
 
     _validate_retval_stack(function, func_block.types, return_hit_at=None)
     if function.has_return_value():  # and reason != "no-return-func-call":
@@ -433,7 +439,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             if isinstance(a, PointerType):
                 # Pointer arithmetics
                 if isinstance(b, IntegerType):
-                    scope.push_types(PointerType(a.points_to))
+                    scope.push_types(a)
                     return None
                 raise TypecheckInvalidPointerArithmeticsError(
                     actual_lhs_type=a,
@@ -462,6 +468,11 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 operator.location,
                 value_holder_type,
             )
+            if (
+                value_holder_type.memory_location
+                == PointerMemoryLocation.STATIC_READONLY
+            ):
+                raise ReadOnlyMemoryAssignmentError(at=operator.location)
             value_type = value_holder_type.points_to
             store_type = mut_scope[-1]
             base_type_is_same = type(value_type) == type(store_type)  # noqa: E721
@@ -617,7 +628,10 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 raise ValueError(msg)
 
             scope.push_types(
-                PointerType(points_to=struct_type.get_field_type(struct_field)),
+                PointerType(
+                    points_to=struct_type.get_field_type(struct_field),
+                    memory_location=struct_pointer_type.memory_location,
+                ),
             )
 
         case OperatorType.FUNCTION_CALL_FROM_STACK_POINTER:

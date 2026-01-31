@@ -5,8 +5,8 @@ from libgofra.types._base import CompositeType, Type
 
 class PointerMemoryLocation(Enum):
     STACK = auto()
-    HEAP = auto()
     STATIC = auto()
+    STATIC_READONLY = auto()
 
 
 class PointerType(CompositeType):

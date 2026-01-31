@@ -18,7 +18,11 @@ class ArrayType(CompositeType):
         """Calculate offset from start of an array to element with given index."""
         return self.element_type.size_in_bytes * index
 
-    def is_index_oob(self, index: int) -> int:
+    def _update_metrics(self) -> None:
+        self.size_in_bytes = self.element_type.size_in_bytes * self.elements_count
+        self.alignment = self.element_type.alignment
+
+    def is_index_oob(self, index: int) -> bool:
         return index >= self.elements_count or index < 0
 
     def __repr__(self) -> str:
@@ -35,5 +39,4 @@ class ArrayType(CompositeType):
     @elements_count.setter
     def elements_count(self, value: int) -> None:
         self._elements_count = value
-        self.size_in_bytes = self.element_type.size_in_bytes * self.elements_count
-        self.alignment = self.element_type.size_in_bytes
+        self._update_metrics()

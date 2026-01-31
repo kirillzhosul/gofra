@@ -1,5 +1,5 @@
 from libgofra.types.composite.array import ArrayType
-from libgofra.types.composite.pointer import PointerType
+from libgofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from libgofra.types.composite.structure import StructureType
 from libgofra.types.primitive.character import CharType
 from libgofra.types.primitive.integers import I64Type
@@ -17,6 +17,7 @@ class StringType(StructureType):
                         element_type=CharType(),
                         elements_count=0,
                     ),
+                    memory_location=PointerMemoryLocation.STATIC_READONLY,
                 ),
                 "len": I64Type(),
             },

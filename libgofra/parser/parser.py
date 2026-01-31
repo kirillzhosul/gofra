@@ -28,6 +28,7 @@ from libgofra.parser.errors.keyword_in_without_loop_block import (
 from libgofra.parser.errors.local_level_keyword_in_global_scope import (
     LocalLevelKeywordInGlobalScopeError,
 )
+from libgofra.parser.errors.private_symbol_access import PrivateSymbolAccessError
 from libgofra.parser.errors.top_level_expected_no_operators import (
     TopLevelExpectedNoOperatorsError,
 )
@@ -156,8 +157,12 @@ def _validate_function_existence_and_visibility(root: Module, module: Module) ->
                         not resolved_symbol.is_public
                         and func_owner_mod.path != root.path
                     ):
-                        msg = f"Tried to call private/internal function symbol {resolved_symbol.name} (defined at {resolved_symbol.defined_at}) from module named as `{op.operand.module}` (import from {func_owner_mod.path}):\nEither make it public or not use prohibited symbols!"
-                        raise ValueError(msg)
+                        raise PrivateSymbolAccessError(
+                            defined_at=resolved_symbol.defined_at,
+                            symbol_name=resolved_symbol.name,
+                            call_site=op.location,
+                            target_module=op.operand.module,
+                        )
 
     for children_module in module.dependencies.values():
         _validate_function_existence_and_visibility(root=root, module=children_module)
@@ -847,7 +852,11 @@ def _enclosure_generate_native_holder_name(
 ) -> None:
     name = owner.name + "$enclosure"
     enclosure.name = name
-    assert not context.name_is_already_taken(name)
+    uid = 1
+    while context.name_is_already_taken(enclosure.name):
+        name = enclosure.name + f"_{uid}"
+        enclosure.name = name
+        uid += 1
 
 
 def _try_unpack_function_call_from_identifier_token(

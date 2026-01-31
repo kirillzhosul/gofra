@@ -13,5 +13,5 @@ class UnknownFieldAccessorStructFieldError(GofraError):
         return f"""Unknown field accessor!
 
 Trying to access field with name '{self.field} at {self.at} but it is not known within structure with name {self.struct.name}
-
+Known fields: {", ".join(self.struct.natural_fields.keys())}
 {self.generic_error_name}"""

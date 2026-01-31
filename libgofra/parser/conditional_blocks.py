@@ -15,7 +15,7 @@ from libgofra.parser.exceptions import (
 )
 from libgofra.types._base import Type
 from libgofra.types.composite.array import ArrayType
-from libgofra.types.composite.pointer import PointerType
+from libgofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from libgofra.types.primitive.integers import I64Type
 
 
@@ -282,7 +282,13 @@ def parse_for_range_qualifier(
                 defined_at=iterator_identifier.location,
                 storage_class=VariableStorageClass.STACK,
                 scope_class=VariableScopeClass.FUNCTION,
-                type=PointerType(points_to=iterable.type.element_type),
+                type=PointerType(
+                    points_to=iterable.type.element_type,
+                    memory_location={
+                        VariableStorageClass.STACK: PointerMemoryLocation.STACK,
+                        VariableStorageClass.STATIC: PointerMemoryLocation.STATIC,
+                    }[iterable.storage_class],
+                ),
                 is_constant=False,
             )
 

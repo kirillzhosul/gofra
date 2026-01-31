@@ -8,7 +8,7 @@ from libgofra.parser.errors.cannot_infer_var_type_from_initializer import (
 )
 from libgofra.types._base import Type
 from libgofra.types.composite.array import ArrayType
-from libgofra.types.composite.pointer import PointerType
+from libgofra.types.composite.pointer import PointerMemoryLocation, PointerType
 from libgofra.types.composite.string import StringType
 from libgofra.types.primitive.character import CharType
 from libgofra.types.primitive.integers import I64Type
@@ -42,7 +42,10 @@ def infer_type_from_initializer(
         return CharType()
 
     if peeked.type == TokenType.STRING:
-        return PointerType(points_to=StringType())
+        return PointerType(
+            points_to=StringType(),
+            memory_location=PointerMemoryLocation.STATIC,
+        )
 
     if peeked.type == TokenType.LBRACKET:
         # peek at next token after `[` and restore it
