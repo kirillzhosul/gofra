@@ -44,7 +44,7 @@
         "binutils",
         "BITSHIFT",
         "bridgeos",
-        "calee",
+        "callees",
         "callq",
         "cbnz",
         "charcode",

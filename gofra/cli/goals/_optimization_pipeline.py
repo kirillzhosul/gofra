@@ -5,7 +5,7 @@ from libgofra.optimizer.pipeline import create_optimizer_pipeline
 
 
 def cli_process_optimization_pipeline(
-    program: Module,
+    module: Module,
     args: CLIArguments,
 ) -> None:
     """Apply optimization pipeline for program according to CLI arguments."""
@@ -16,4 +16,4 @@ def cli_process_optimization_pipeline(
             text=f"Applying optimizer '{optimizer_pass_name}' pass",
             verbose=args.verbose,
         )
-        optimizer_pass(program)
+        optimizer_pass(module)

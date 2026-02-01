@@ -38,14 +38,23 @@ def create_optimizer_pipeline(
         name = "DCE (dead-code-elimination)"
         pipe = _pipelined_dead_code_elimination(
             max_iterations=config.dead_code_elimination_max_iterations,
+            allow_aggressive_dce_from_entry_point=config.dead_code_aggressive_from_entry_point,
         )
         pipeline.append((pipe, name))
 
     return pipeline
 
 
-def _pipelined_dead_code_elimination(max_iterations: int) -> OPTIMIZER_PASS_T:
-    return partial(optimize_dead_code_elimination, max_iterations=max_iterations)
+def _pipelined_dead_code_elimination(
+    max_iterations: int,
+    *,
+    allow_aggressive_dce_from_entry_point: bool,
+) -> OPTIMIZER_PASS_T:
+    return partial(
+        optimize_dead_code_elimination,
+        max_iterations=max_iterations,
+        allow_aggressive_dce_from_entry_point=allow_aggressive_dce_from_entry_point,
+    )
 
 
 def _pipelined_function_inlining(

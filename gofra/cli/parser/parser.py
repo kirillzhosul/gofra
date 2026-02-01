@@ -30,7 +30,6 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
     source_filepaths = _process_source_filepaths(args)
     definitions = _process_definitions(args)
     include_paths = _process_include_paths(args)
-    optimizer = _process_optimizer_config(args)
     output = _process_output_path(source_filepaths, args, target)
     linker_profile = _process_linker_profile(args)
     linker_libraries_search_paths = _process_linker_libraries_search_paths(args)
@@ -38,6 +37,7 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
     linker_backend = _process_linker_backend(args)
     output_format = _process_output_format(args)
 
+    optimizer = _process_optimizer_config(args, output_format)
     codegen_config = _process_codegen_config(args, optimizer)
 
     return CLIArguments(
@@ -203,10 +203,15 @@ def _process_include_paths(args: Namespace) -> list[Path]:
     return include_paths
 
 
-def _process_optimizer_config(args: Namespace) -> OptimizerConfig:
+def _process_optimizer_config(
+    args: Namespace,
+    output_format: Literal["library", "object", "executable", "assembly"],
+) -> OptimizerConfig:
     """Process whole configuration of optimizer from CLI into config."""
     config = build_default_optimizer_config_from_level(level=args.optimizer_level)
-    return merge_into_optimizer_config(config, args, prefix="optimizer")
+    config = merge_into_optimizer_config(config, args, prefix="optimizer")
+    config.dead_code_aggressive_from_entry_point = output_format == "executable"
+    return config
 
 
 def _process_codegen_config(

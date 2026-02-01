@@ -260,3 +260,6 @@ class Function:
             raise ValueError(msg)
 
         return function
+
+    def __hash__(self) -> int:
+        return hash(str(self.module_path) + self.name)

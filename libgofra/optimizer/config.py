@@ -23,6 +23,9 @@ class OptimizerConfig:
     # Codegen-specific
     codegen_omit_unused_frame_pointer: bool
 
+    # Specific options
+    dead_code_aggressive_from_entry_point: bool = False
+
     # Fine tuning optimizations
     function_inlining_max_operators: int = 10
     function_inlining_max_iterations: int = 128
