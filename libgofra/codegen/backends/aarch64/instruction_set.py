@@ -22,6 +22,7 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
     push_register_onto_stack,
     store_into_memory_from_stack_arguments,
 )
+from libgofra.codegen.backends.aarch64.registers import AARCH64_STACK_ALIGNMENT
 from libgofra.codegen.backends.aarch64.subroutines import function_return
 from libgofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
 from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
@@ -65,6 +66,10 @@ def aarch64_instruction_set(
     owner_function: Function,
 ) -> None:
     """Write executable instructions from given operators."""
+    if not context.config.no_compiler_comments:
+        context.comment_eol(
+            f"{owner_function.name} = {owner_function.parameters} -> {owner_function.return_type}",
+        )
     for idx, operator in enumerate(operators):
         aarch64_operator_instructions(
             context,
@@ -83,6 +88,10 @@ def aarch64_operator_instructions(
     owner_function: Function,
 ) -> None:
     # TODO(@kirillzhosul): Assumes Apple aapcs64
+    if not context.config.no_compiler_comments:
+        context.comment_eol(
+            f"{operator.type} at {operator.location} ({operator.operand=})",
+        )
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:
             assert isinstance(operator.operand, str)
@@ -117,7 +126,7 @@ def aarch64_operator_instructions(
         case OperatorType.PUSH_STRING:
             assert isinstance(operator.operand, str)
             string_raw = str(operator.token.text[1:-1])
-            label = context.load_string(string_raw)
+            label = context.string_pool.add(string_raw)
             push_address_of_label_onto_stack(context, label)
         case OperatorType.FUNCTION_RETURN:
             function_return(
@@ -149,9 +158,9 @@ def aarch64_operator_instructions(
         case OperatorType.STACK_DROP:
             drop_stack_slots(context, slots_count=1)
         case OperatorType.STACK_COPY:
-            pop_cells_from_stack_into_registers(context, "X0")
-            push_register_onto_stack(context, "X0")
-            push_register_onto_stack(context, "X0")
+            context.instruction("ldr X0, [SP]")
+            context.instruction(f"str X0, [SP, #-{AARCH64_STACK_ALIGNMENT}]!")
+
         case OperatorType.STACK_SWAP:
             pop_cells_from_stack_into_registers(context, "X0", "X1")
             push_register_onto_stack(context, "X0")
@@ -248,22 +257,22 @@ def aarch64_operator_instructions(
             )
         case OperatorType.PUSH_FUNCTION_POINTER:
             assert isinstance(operator.operand, FunctionCallOperand)
-            calee = program.resolve_function_dependency(
+            callee = program.resolve_function_dependency(
                 operator.operand.module,
                 operator.operand.get_name(),
             )
-            assert calee
+            assert callee
 
-            if calee.is_external:
+            if callee.is_external:
                 addressing_mode = AddressingMode.EXTERNAL
-            elif calee.enclosed_in_parent == owner_function:
+            elif callee.enclosed_in_parent == owner_function:
                 addressing_mode = AddressingMode.NEAR
             else:
                 addressing_mode = AddressingMode.PAGE
 
             push_address_of_label_onto_stack(
                 context,
-                label=calee.name,
+                label=callee.name,
                 temp_register="X0",
                 mode=addressing_mode,
             )

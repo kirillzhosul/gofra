@@ -11,7 +11,10 @@ from libgofra.codegen.backends.aarch64.sections import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
+    from libgofra.codegen.backends.aarch64.codegen import (
+        AARCH64CodegenBackend,
+    )
+    from libgofra.codegen.backends.string_pool import StringPool
     from libgofra.hir.module import Module
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
@@ -24,14 +27,14 @@ def aarch64_data_section(
     """Write program static data section filled with static strings and memory blobs."""
     initialize_static_data_section(
         context,
-        static_strings=context.strings,
+        static_strings=context.string_pool,
         static_variables=program.variables,
     )
 
 
 def initialize_static_data_section(
     context: AARCH64CodegenBackend,
-    static_strings: Mapping[str, str],
+    static_strings: StringPool,
     static_variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Initialize data section fields with given values.

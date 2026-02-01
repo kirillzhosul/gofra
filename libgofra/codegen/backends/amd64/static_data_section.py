@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 
 from libgofra.codegen.backends.amd64._context import AMD64CodegenContext
+from libgofra.codegen.backends.string_pool import StringPool
 from libgofra.codegen.sections._factory import SectionType
 from libgofra.hir.initializer import (
     VariableIntArrayInitializerValue,
@@ -20,7 +21,7 @@ from libgofra.types.primitive.integers import I64Type
 
 def initialize_static_data_section(
     context: AMD64CodegenContext,
-    static_strings: Mapping[str, str],
+    static_strings: StringPool,
     static_variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Initialize data section fields with given values.
@@ -38,7 +39,7 @@ def initialize_static_data_section(
 
 def write_initialized_data_section(
     context: AMD64CodegenContext,
-    strings: Mapping[str, str],
+    strings: StringPool,
     variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Initialize data section fields with given values.
@@ -60,7 +61,7 @@ def write_initialized_data_section(
             symbol_name=name,
         )
 
-    for name, data in strings.items():
+    for data, name in strings.get_view():
         # TODO: Proper alignment
         decoded_string = data.encode().decode("unicode_escape")
         length = len(decoded_string)
@@ -111,7 +112,7 @@ def _write_static_segment_const_variable_initializer(
             assert isinstance(variable.initial_value, VariableStringPtrInitializerValue)
             string_raw = variable.initial_value.string
             context.fd.write(
-                f"{symbol_name}: \n\t{ptr_t_ddd} {context.load_string(string_raw)}\n",
+                f"{symbol_name}: \n\t{ptr_t_ddd} {context.string_pool.add(string_raw)}\n",
             )
         case ArrayType(element_type=I64Type()):
             assert isinstance(variable.initial_value, VariableIntArrayInitializerValue)
@@ -144,7 +145,7 @@ def _write_static_segment_const_variable_initializer(
             )
 
             values = variable.initial_value.values
-            f_values = ", ".join(map(context.load_string, values))
+            f_values = ", ".join(map(context.string_pool.add, values))
 
             context.fd.write(f"{symbol_name}: \n\t.quad {f_values}\n")
 
@@ -213,7 +214,7 @@ def write_uninitialized_data_section(
 
 def write_text_string_section(
     context: AMD64CodegenContext,
-    strings: Mapping[str, str],
+    strings: StringPool,
     *,
     reference_suffix: str,
 ) -> None:
@@ -221,8 +222,8 @@ def write_text_string_section(
 
     :param reference_suffix: Append to each string symbol as it may overlap with real structure of string.
     """
-    if not strings:
+    if strings.is_empty():
         return
     context.section(SectionType.STRINGS)
-    for name, data in strings.items():
+    for data, name in strings.get_view():
         context.fd.write(f'{name}{reference_suffix}: .asciz "{data}"\n')

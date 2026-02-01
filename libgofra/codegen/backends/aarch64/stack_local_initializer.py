@@ -78,7 +78,7 @@ def _write_initializer_for_stack_variable(
 
     if isinstance(initial_value, VariableStringPtrInitializerValue):
         # Load string as static string and dispatch pointer on entry
-        static_blob_sym = context.load_string(initial_value.string)
+        static_blob_sym = context.string_pool.add(initial_value.string)
         assert isinstance(var_type, PointerType)
         get_address_of_label(context, "X0", static_blob_sym, mode=AddressingMode.PAGE)
         context.instruction(f"str X0, [X29, -{offset}]")

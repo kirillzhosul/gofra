@@ -63,7 +63,6 @@ class AMD64CodegenBackend:
         self.context = AMD64CodegenContext(
             on_warning=on_warning,
             fd=fd,
-            strings={},
             target=self.target,
             abi=LinuxAMD64ABI(),
             config=config,  # TODO: DWARF CFI / Alignment
@@ -161,10 +160,8 @@ def amd64_operator_instructions(
         case OperatorType.PUSH_STRING:
             assert isinstance(operator.operand, str)
             string_raw = str(operator.token.text[1:-1])
-            push_static_address_onto_stack(
-                context,
-                segment=context.load_string(string_raw),
-            )
+            label = context.string_pool.add(string_raw)
+            push_static_address_onto_stack(context, segment=label)
         case OperatorType.FUNCTION_CALL:
             assert isinstance(operator.operand, FunctionCallOperand)
 
@@ -321,6 +318,6 @@ def amd64_data_section(
     """Write program static data section filled with static strings and memory blobs."""
     initialize_static_data_section(
         context,
-        static_strings=context.strings,
+        static_strings=context.string_pool,
         static_variables=program.variables,
     )

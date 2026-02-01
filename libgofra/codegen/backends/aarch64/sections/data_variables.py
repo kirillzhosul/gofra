@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+from libgofra.codegen.backends.string_pool import StringPool
 from libgofra.codegen.sections._factory import SectionType
 from libgofra.hir.initializer import (
     VariableIntArrayInitializerValue,
@@ -20,14 +21,16 @@ from libgofra.types.primitive.integers import I64Type
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
+    from libgofra.codegen.backends.aarch64.codegen import (
+        AARCH64CodegenBackend,
+    )
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def write_initialized_data_section(
     context: AARCH64CodegenBackend,
-    strings: Mapping[str, str],
+    strings: StringPool,
     variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Initialize data section fields with given values.
@@ -56,7 +59,7 @@ def write_initialized_data_section(
         # 8 byte alignment for string descriptors
         context.directive("align", 8)
 
-    for name, data in strings.items():
+    for data, name in strings.get_view():
         decoded_string = data.encode().decode("unicode_escape")
         length = len(decoded_string)
         context.label(name)
@@ -115,7 +118,7 @@ def _write_static_segment_variable_initializer(
             )
 
             values = variable.initial_value.values
-            f_values = ", ".join(map(context.load_string, values))
+            f_values = ", ".join(map(context.string_pool.add, values))
 
             context.label(symbol_name)
             context.sym_sect_directive("quad", f_values)
@@ -123,7 +126,7 @@ def _write_static_segment_variable_initializer(
             assert isinstance(variable.initial_value, VariableStringPtrInitializerValue)
             string_raw = variable.initial_value.string
             context.label(symbol_name)
-            context.sym_sect_directive("quad", context.load_string(string_raw))
+            context.sym_sect_directive("quad", context.string_pool.add(string_raw))
         case StructureType():
             assert isinstance(
                 variable.initial_value,

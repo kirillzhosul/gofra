@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from libgofra.codegen.backends.amd64.frame import (
-    preserve_calee_frame,
-    restore_calee_frame,
+    preserve_callee_frame,
+    restore_callee_frame,
 )
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
 from libgofra.types.primitive.void import VoidType
@@ -44,7 +44,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
     context.fd.write(f"{function_name}:\n")
 
     if preserve_frame:
-        preserve_calee_frame(context, offsets.local_space_size)
+        preserve_callee_frame(context, offsets.local_space_size)
 
     if arguments_count:
         registers = context.abi.arguments_64bit_registers[:arguments_count]
@@ -76,7 +76,7 @@ def function_end_with_epilogue(
         )
 
     if has_preserved_frame:
-        restore_calee_frame(context)
+        restore_callee_frame(context)
 
     if execution_trap_instead_return:
         context.write("int3")

@@ -17,7 +17,7 @@ FRAME_HEAD_SIZE = 8 * 2
 STORE_PAIR_MAX_RANGE = 8 * 64 - 8
 
 
-def preserve_calee_frame(
+def preserve_callee_frame(
     context: "AARCH64CodegenBackend",
     local_space_size: int,
 ) -> None:
@@ -56,7 +56,7 @@ def preserve_calee_frame(
         context.directive("cfi_def_cfa_register", "x29")
 
 
-def restore_calee_frame(context: "AARCH64CodegenBackend") -> None:
+def restore_callee_frame(context: "AARCH64CodegenBackend") -> None:
     """Restore preserved by callee frame.
 
     Read more in: `preserve_callee_frame`

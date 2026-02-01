@@ -36,7 +36,7 @@ def function_abi_call_by_symbol(
     Passes arguments before function call with C call convention (e.g via registers and stack depending on arguments byte size and type),
     Restores single return value if requested from retval register.
 
-    Most of the call logic is covered into function own prologue, which unpacks arguments and stores calee stack frame
+    Most of the call logic is covered into function own prologue, which unpacks arguments and stores callee stack frame
     """
     # Branch with link to call a subroutine with loading arguments and and acquire retval
     # TODO(@kirillzhosul): Research refactoring with using calling-convention system (e.g for system calls (syscall/cffi/fast-call convention))
@@ -166,7 +166,7 @@ def _load_arguments_for_abi_call_into_registers_from_stack(
         raise NotImplementedError(msg)
 
     # Leftover arguments already spilled on stack
-    # calee will treat these by itself
+    # callee will treat these by itself
     pop_cells_from_stack_into_registers(context, *registers_to_load)
 
 

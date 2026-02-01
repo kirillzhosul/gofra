@@ -104,16 +104,17 @@ class CallGraph:
         caller: Function,
     ) -> Generator[CallSite]:
         for idx, operator in enumerate(caller.operators):
-            if (calee := self._get_operator_callee_if_call(operator)) is None:
+            if (callee := self._get_operator_callee_if_call(operator)) is None:
                 continue
             yield CallSite(
                 caller=caller,
-                callee=calee,
+                callee=callee,
                 instruction=operator,
                 instruction_idx=idx,
             )
 
     def _get_operator_callee_if_call(self, operator: Operator) -> Function | None:
+        # Possible later we may introduce visitor
         if operator.type not in (
             OperatorType.FUNCTION_CALL,
             OperatorType.PUSH_FUNCTION_POINTER,

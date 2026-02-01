@@ -74,7 +74,7 @@ def _write_initializer_for_stack_variable(
 
     if isinstance(initial_value, VariableStringPtrInitializerValue):
         # Load string as static string and dispatch pointer on entry
-        static_blob_sym = context.load_string(initial_value.string)
+        static_blob_sym = context.string_pool.add(initial_value.string)
         assert isinstance(var_type, PointerType)
         context.write(
             f"leaq {static_blob_sym}(%rip), %rax",

@@ -5,7 +5,7 @@ from libgofra.codegen.backends.amd64._context import AMD64CodegenContext
 FRAME_HEAD_SIZE = 8
 
 
-def preserve_calee_frame(
+def preserve_callee_frame(
     context: AMD64CodegenContext,
     local_space_size: int,
 ) -> None:
@@ -17,7 +17,7 @@ def preserve_calee_frame(
         context.write(f"subq ${aligned_size}, %rsp")
 
 
-def restore_calee_frame(
+def restore_callee_frame(
     context: AMD64CodegenContext,
 ) -> None:
     """Restore preserved by callee frame.

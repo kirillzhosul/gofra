@@ -17,11 +17,12 @@ from libgofra.codegen.backends.aarch64.subroutines import (
     function_end_with_epilogue,
 )
 from libgofra.codegen.backends.frame import is_native_function_has_frame
+from libgofra.codegen.backends.string_pool import StringPool
 from libgofra.codegen.sections import SectionType
 from libgofra.codegen.sections._factory import get_os_assembler_section
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, MutableMapping
+    from collections.abc import Callable
 
     from libgofra.codegen.abi import AARCH64ABI
     from libgofra.codegen.config import CodegenConfig
@@ -41,7 +42,7 @@ class AARCH64CodegenBackend:
     abi: AARCH64ABI
     target: Target
 
-    strings: MutableMapping[str, str]
+    string_pool: StringPool
 
     def __init__(
         self,
@@ -58,6 +59,7 @@ class AARCH64CodegenBackend:
         self.config = config
 
         self.abi = DarwinAARCH64ABI()
+        self.string_pool = StringPool()
         self.strings = {}
 
     def emit(self) -> None:
@@ -94,11 +96,6 @@ class AARCH64CodegenBackend:
         if self.config.no_compiler_comments:
             return 0
         return self._fd.write(f" // {line}\n")
-
-    def load_string(self, string: str) -> str:
-        string_key = ".str%d" % len(self.strings)
-        self.strings[string_key] = string
-        return string_key
 
     def label(self, label: str) -> None:
         """Emit label to code."""

@@ -8,8 +8,8 @@ from libgofra.codegen.backends.aarch64.abi_call_convention import (
     load_return_value_from_stack_into_abi_registers,
 )
 from libgofra.codegen.backends.aarch64.frame import (
-    preserve_calee_frame,
-    restore_calee_frame,
+    preserve_callee_frame,
+    restore_callee_frame,
 )
 from libgofra.codegen.backends.aarch64.registers import AARCH64_STACK_ALIGNMENT_BIN
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
@@ -69,7 +69,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
 
     if preserve_frame:
         local_offsets = build_local_variables_frame_offsets(local_variables)
-        preserve_calee_frame(context, local_space_size=local_offsets.local_space_size)
+        preserve_callee_frame(context, local_space_size=local_offsets.local_space_size)
 
     if parameters:
         registers = context.abi.arguments_64bit_registers[: len(parameters)]
@@ -97,7 +97,7 @@ def function_return(
     load_return_value_from_stack_into_abi_registers(context, t=return_type)
 
     if has_preserved_frame:
-        restore_calee_frame(context)
+        restore_callee_frame(context)
 
     context.instruction("ret")
 

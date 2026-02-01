@@ -1,8 +1,9 @@
-from collections.abc import Callable, MutableMapping
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import IO
 
 from libgofra.codegen.abi import AMD64ABI
+from libgofra.codegen.backends.string_pool import StringPool
 from libgofra.codegen.config import CodegenConfig
 from libgofra.codegen.sections._factory import SectionType, get_os_assembler_section
 from libgofra.targets.target import Target
@@ -21,10 +22,11 @@ class AMD64CodegenContext:
     fd: IO[str]
     on_warning: Callable[[str], None]
 
-    strings: MutableMapping[str, str] = field()
     target: Target
 
     abi: AMD64ABI
+
+    string_pool: StringPool = field(default_factory=StringPool)
 
     def write(self, *lines: str) -> int:
         return self.fd.write("\t" + "\n\t".join(lines) + "\n")
@@ -38,8 +40,3 @@ class AMD64CodegenContext:
         if self.config.no_compiler_comments:
             return 0
         return self.fd.write(f" // {line}\n")
-
-    def load_string(self, string: str) -> str:
-        string_key = "str%d" % len(self.strings)
-        self.strings[string_key] = string
-        return string_key
