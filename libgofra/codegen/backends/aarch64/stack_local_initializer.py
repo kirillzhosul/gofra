@@ -8,7 +8,9 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
     AddressingMode,
     get_address_of_label,
 )
+from libgofra.codegen.backends.aarch64.writer import WriterProtocol
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
+from libgofra.codegen.backends.string_pool import StringPool
 from libgofra.hir.initializer import (
     T_AnyVariableInitializer,
     VariableIntArrayInitializerValue,
@@ -22,13 +24,13 @@ from libgofra.types.composite.pointer import PointerType
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def write_function_local_stack_variables_initializer(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
+    string_pool: StringPool,
     *,
     local_variables: Mapping[str, Variable[Type]],
 ) -> None:
@@ -40,16 +42,18 @@ def write_function_local_stack_variables_initializer(
 
         current_offset = local_offsets.offsets[variable.name]
         _write_initializer_for_stack_variable(
-            context,
+            writer,
             initial_value,
+            string_pool,
             variable.type,
             current_offset,
         )
 
 
 def _write_initializer_for_stack_variable(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
     initial_value: T_AnyVariableInitializer,
+    string_pool: StringPool,
     var_type: Type,
     offset: int,
 ) -> None:
@@ -57,7 +61,7 @@ def _write_initializer_for_stack_variable(
 
     if isinstance(initial_value, int):
         return _set_local_numeric_var_immediate(
-            context,
+            writer,
             initial_value,
             var_type,
             offset,
@@ -69,7 +73,7 @@ def _write_initializer_for_stack_variable(
         setters = ((var_type.get_index_offset(i), v) for i, v in enumerate(values))
         for relative_offset, value in setters:
             _set_local_numeric_var_immediate(
-                context,
+                writer,
                 value,
                 var_type.element_type,
                 offset=offset + relative_offset,
@@ -78,10 +82,10 @@ def _write_initializer_for_stack_variable(
 
     if isinstance(initial_value, VariableStringPtrInitializerValue):
         # Load string as static string and dispatch pointer on entry
-        static_blob_sym = context.string_pool.add(initial_value.string)
+        static_blob_sym = string_pool.add(initial_value.string)
         assert isinstance(var_type, PointerType)
-        get_address_of_label(context, "X0", static_blob_sym, mode=AddressingMode.PAGE)
-        context.instruction(f"str X0, [X29, -{offset}]")
+        get_address_of_label(writer, "X0", static_blob_sym, mode=AddressingMode.PAGE)
+        writer.instruction(f"str X0, [X29, -{offset}]")
         return None
 
     if isinstance(
@@ -96,7 +100,7 @@ def _write_initializer_for_stack_variable(
 
 
 def _set_local_numeric_var_immediate(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
     value: int,
     t: Type,
     offset: int,
@@ -111,7 +115,7 @@ def _set_local_numeric_var_immediate(
 
     if sr in ("X0", "W0"):
         assert value.bit_count() <= bit_count
-        context.instruction(f"mov {sr}, #{value}")
+        writer.instruction(f"mov {sr}, #{value}")
 
     instr = "strb" if t.size_in_bytes == 1 else ("strh" if is_hword else "str")
-    context.instruction(f"{instr} {sr}, [X29, -{offset}]")
+    writer.instruction(f"{instr} {sr}, [X29, -{offset}]")

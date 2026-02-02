@@ -22,6 +22,7 @@ class OptimizerConfig:
 
     # Codegen-specific
     codegen_omit_unused_frame_pointer: bool
+    codegen_peephole_isa_optimizer: bool
 
     # Specific options
     dead_code_aggressive_from_entry_point: bool = False
@@ -45,17 +46,19 @@ def build_default_optimizer_config_from_level(
             do_algebraic_simplification=False,
             do_strength_reduction=False,
             codegen_omit_unused_frame_pointer=False,
+            codegen_peephole_isa_optimizer=False,
         )
     if level == 1:
         return OptimizerConfig(
             level=level,
             do_dead_code_elimination=True,
             do_function_inlining=True,
+            codegen_omit_unused_frame_pointer=True,
+            codegen_peephole_isa_optimizer=True,
             # TODO(@kirillzhosul): Those optimizations are pending to be implemented.
             do_constant_folding=False,
             do_algebraic_simplification=False,
             do_strength_reduction=False,
-            codegen_omit_unused_frame_pointer=True,
         )
 
     assert_never(level)

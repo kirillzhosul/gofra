@@ -230,6 +230,7 @@ def _process_codegen_config(
         dwarf_emit_cfi=codegen_emit_dwarf_cfi,
         align_functions_bytes=args.codegen_functions_alignment,
         omit_unused_frame_pointers=optimizer.codegen_omit_unused_frame_pointer,
+        peephole_isa_optimizer=optimizer.codegen_peephole_isa_optimizer,
     )
 
 

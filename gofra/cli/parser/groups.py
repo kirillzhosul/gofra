@@ -449,6 +449,21 @@ def add_optimizer_group(parser: ArgumentParser) -> None:
         help="Max iterations for function inlining to search for new inlined function usage in other functions. Low limit will result into unknown function call at assembler stage. This may slightly increase final binary size",
     )
 
+    group_peephole_isa = group.add_mutually_exclusive_group()
+    group_peephole_isa.add_argument(
+        "-fpeephole-isa-optimizer",
+        dest="optimizer_codegen_peephole_isa_optimizer",
+        action="store_const",
+        const=True,
+        help="[Enabled at -O1 and above] Apply codegen peephole ISA optimizer pass (optimize machine instruction with known patterns)",
+    )
+    group_peephole_isa.add_argument(
+        "-fno-peephole-isa-optimizer",
+        action="store_const",
+        const=False,
+        dest="optimizer_codegen_peephole_isa_optimizer",
+    )
+
     group_omit_frame_pointer = group.add_mutually_exclusive_group()
     group_omit_frame_pointer.add_argument(
         "-fomit-frame-pointer",

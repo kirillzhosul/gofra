@@ -82,6 +82,7 @@
         "finline",
         "fmov",
         "fomit",
+        "fpeephole",
         "FSQRT",
         "FSUB",
         "funcs",

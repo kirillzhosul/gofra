@@ -13,11 +13,13 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
+    from libgofra.codegen.abi import AARCH64ABI
+    from libgofra.codegen.backends.aarch64.writer import WriterProtocol
 
 
 def ipc_aarch64_syscall(
-    backend: AARCH64CodegenBackend,
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
     *,
     arguments_count: int,
     store_retval_onto_stack: bool,
@@ -29,7 +31,6 @@ def ipc_aarch64_syscall(
     if not injected_args:
         injected_args = [None for _ in range(arguments_count + 1)]
 
-    abi = backend.abi
     registers_to_load = (
         abi.syscall_number_register,
         *abi.syscall_arguments_registers[:arguments_count][::-1],
@@ -43,22 +44,22 @@ def ipc_aarch64_syscall(
         if injected_argument is not None:
             # Register injected and inferred from stack
             store_integer_into_register(
-                backend,
+                writer,
                 register=register,
                 value=injected_argument,
             )
             continue
-        pop_cells_from_stack_into_registers(backend, register)
+        pop_cells_from_stack_into_registers(writer, register)
 
     # Supervisor call (syscall)
     # assume 0 - 65335 (16 bit)
-    backend.instruction("svc #0")
+    writer.instruction("svc #0")
 
     # System calls always returns `long` type (e.g integer 64 bits (default one for Gofra))
     if store_retval_onto_stack:
         # TODO(@kirillzhosul): Research refactoring with using calling-convention system (e.g for system calls (syscall/cffi/fast-call convention))
         # TODO(@kirillzhosul): Research weirdness of kernel `errno`, not setting carry flag
         push_register_onto_stack(
-            backend,
+            writer,
             abi.retval_primitive_64bit_register,
         )

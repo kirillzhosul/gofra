@@ -31,3 +31,7 @@ class CodegenConfig:
     # If specified, and function does not require proper frame (e.g is leaf) - omit setup
     # False means even if frame pointer is unused - do setup
     omit_unused_frame_pointers: bool = field(default=False)
+
+    # Perform WIP ISA optimizer on machine code
+    # currently only works on AARCH64
+    peephole_isa_optimizer: bool = field(default=False)

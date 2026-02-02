@@ -1,8 +1,9 @@
 """AAPCS64 call convention must work for Apple AAPCS64/System-V AAPCS64."""
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
+from libgofra.codegen.abi import AARCH64ABI
 from libgofra.codegen.backends.aarch64.primitive_instructions import (
     jump_to_subroutine,
     jump_to_subroutine_from_register,
@@ -14,14 +15,13 @@ from libgofra.codegen.backends.aarch64.registers import (
     AARCH64_GP_REGISTERS,
     AARCH64_STACK_ALIGNMENT,
 )
+from libgofra.codegen.backends.aarch64.writer import WriterProtocol
 from libgofra.types._base import Type
 
-if TYPE_CHECKING:
-    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
 
-
-def function_abi_call_by_symbol(
-    context: "AARCH64CodegenBackend",
+def function_abi_call_by_symbol(  # noqa: PLR0913
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
     *,
     name: str,
     parameters: Sequence[Type],
@@ -42,13 +42,14 @@ def function_abi_call_by_symbol(
     # TODO(@kirillzhosul): Research refactoring with using calling-convention system (e.g for system calls (syscall/cffi/fast-call convention))
 
     assert call_convention == "apple_aapcs64"
-    _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
-    jump_to_subroutine(context, name)
-    _load_return_value_from_abi_registers_into_stack(context, t=return_type)
+    _load_arguments_for_abi_call_into_registers_from_stack(writer, abi, parameters)
+    jump_to_subroutine(writer, name)
+    _load_return_value_from_abi_registers_into_stack(writer, abi, t=return_type)
 
 
-def function_abi_call_from_register(
-    context: "AARCH64CodegenBackend",
+def function_abi_call_from_register(  # noqa: PLR0913
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
     *,
     register: AARCH64_GP_REGISTERS,
     parameters: Sequence[Type],
@@ -56,16 +57,17 @@ def function_abi_call_from_register(
     call_convention: Literal["apple_aapcs64"],
 ) -> None:
     assert call_convention == "apple_aapcs64"
-    assert not context.abi.is_register_clobbered_with_function_abi(register), (
+    assert not abi.is_register_clobbered_with_function_abi(register), (
         "ABI changed / clobbered register"
     )
-    _load_arguments_for_abi_call_into_registers_from_stack(context, parameters)
-    jump_to_subroutine_from_register(context, register)
-    _load_return_value_from_abi_registers_into_stack(context, t=return_type)
+    _load_arguments_for_abi_call_into_registers_from_stack(writer, abi, parameters)
+    jump_to_subroutine_from_register(writer, register)
+    _load_return_value_from_abi_registers_into_stack(writer, abi, t=return_type)
 
 
 def load_return_value_from_stack_into_abi_registers(
-    context: "AARCH64CodegenBackend",
+    abi: AARCH64ABI,
+    writer: WriterProtocol,
     t: Type,
 ) -> None:
     """Emit code that prepares return value by acquiring it from stack and storing into ABI return value register."""
@@ -77,18 +79,17 @@ def load_return_value_from_stack_into_abi_registers(
     if t.size_in_bytes <= 0:
         return None  # E.g void, has nothing to return
 
-    abi = context.abi
     if t.size_in_bytes <= 4:
         # Primitive return value as 32 bit (e.g char, bool)
         # directly store into return register (lower 32 bits)
         register = abi.retval_primitive_32bit_register
-        return pop_cells_from_stack_into_registers(context, register)
+        return pop_cells_from_stack_into_registers(writer, register)
 
     if t.size_in_bytes <= 8:
         # Primitive return value as 64 bit (e.g default int)
         # directly store into return register (full 64 bits)
         register = abi.retval_primitive_64bit_register
-        return pop_cells_from_stack_into_registers(context, register)
+        return pop_cells_from_stack_into_registers(writer, register)
 
     if t.size_in_bytes <= 16:
         # Composite return value up to 128 bits
@@ -102,7 +103,7 @@ def load_return_value_from_stack_into_abi_registers(
             else abi.retval_composite_64bit_register
         )
         registers.add(leftover_reg)
-        return pop_cells_from_stack_into_registers(context, *registers)
+        return pop_cells_from_stack_into_registers(writer, *registers)
 
     # TODO(@kirillzhosul): Introduce indirect allocation for return types
     msg = f"Indirect allocation required for return type {t}! Not implemented in AARCH64 codegen!"
@@ -110,7 +111,8 @@ def load_return_value_from_stack_into_abi_registers(
 
 
 def _load_arguments_for_abi_call_into_registers_from_stack(
-    context: "AARCH64CodegenBackend",
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
     parameters: Sequence[Type],
 ) -> None:
     """Load arguments from stack into registers to perform an ABI call, if necessary leftover arguments are spilled on stack.
@@ -120,7 +122,6 @@ def _load_arguments_for_abi_call_into_registers_from_stack(
         R1=y (W1/X1)
         R2=x (W2/X2)
     """
-    abi = context.abi
     assert len(parameters) >= 0
     if not parameters:
         return  # Has nothing to pass (e.g empty parameter signature)
@@ -167,11 +168,12 @@ def _load_arguments_for_abi_call_into_registers_from_stack(
 
     # Leftover arguments already spilled on stack
     # callee will treat these by itself
-    pop_cells_from_stack_into_registers(context, *registers_to_load)
+    pop_cells_from_stack_into_registers(writer, *registers_to_load)
 
 
 def _load_return_value_from_abi_registers_into_stack(
-    context: "AARCH64CodegenBackend",
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
     t: Type,
 ) -> None:
     """Emit code that loads return value by acquiring it from subroutine ABI call registers and spilling onto stack."""
@@ -183,35 +185,34 @@ def _load_return_value_from_abi_registers_into_stack(
     if t.size_in_bytes <= 0:
         return None  # E.g void, has nothing in return
 
-    abi = context.abi
     if t.size_in_bytes == 1:
         # TODO: Workaround for booleans, must be resolved?
         # TODO: Must `and w0, w8, #0x1` on load
-        context.instruction("and X0, X0, #0xFF")  # extend LEA bits
-        context.instruction(f"str X0, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
+        writer.instruction("and X0, X0, #0xFF")  # extend LEA bits
+        writer.instruction(f"str X0, [SP, -{AARCH64_STACK_ALIGNMENT}]!")
         return None
 
     if t.size_in_bytes <= 4:
         # Primitive return value as 32 bit (e.g char, bool)
         # directly load from return register (lower 32 bits)
-        return push_register_onto_stack(context, abi.retval_primitive_32bit_register)
+        return push_register_onto_stack(writer, abi.retval_primitive_32bit_register)
 
     if t.size_in_bytes <= 8:
         # Primitive return value as 64 bit (e.g default int)
         # directly load from return register (full 64 bits)
-        return push_register_onto_stack(context, abi.retval_primitive_64bit_register)
+        return push_register_onto_stack(writer, abi.retval_primitive_64bit_register)
     if t.size_in_bytes <= 16:
         # Composite return value up to 128 bits
         # load two segments as registers where lower bytes are in first register (always 64 bit)
         # and remaining bytes in second register
-        push_register_onto_stack(context, abi.retval_primitive_64bit_register)
+        push_register_onto_stack(writer, abi.retval_primitive_64bit_register)
         remaining_bytes = t.size_in_bytes - 8
         leftover_reg = (
             abi.retval_composite_32bit_register
             if remaining_bytes <= 4
             else abi.retval_composite_64bit_register
         )
-        return push_register_onto_stack(context, leftover_reg)
+        return push_register_onto_stack(writer, leftover_reg)
 
     # TODO(@kirillzhosul): Introduce indirect allocation for return types
     msg = f"Indirect allocation required for return type {t}! Not implemented in AARCH64 codegen!"

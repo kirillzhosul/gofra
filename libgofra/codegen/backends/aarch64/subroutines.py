@@ -24,7 +24,9 @@ from .stack_local_initializer import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
+    from libgofra.codegen.abi import AARCH64ABI
+    from libgofra.codegen.backends.aarch64.writer import WriterProtocol
+    from libgofra.codegen.backends.string_pool import StringPool
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
@@ -32,7 +34,9 @@ DEFAULT_FUNCTIONS_ALIGNMENT = AARCH64_STACK_ALIGNMENT_BIN
 
 
 def function_begin_with_prologue(  # noqa: PLR0913
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
+    string_pool: StringPool | None,
     *,
     name: str,
     global_name: str | None = None,
@@ -50,40 +54,45 @@ def function_begin_with_prologue(  # noqa: PLR0913
     # TODO: Checkout `BTI` when i have an proper hardware
     # TODO: Checkout PAC because it is suddenly does not work rn
     if global_name:
-        context.directive("globl", global_name)
+        writer.directive("globl", global_name)
 
     alignment = (
         DEFAULT_FUNCTIONS_ALIGNMENT
-        if context.config.align_functions_bytes is None
-        else context.config.align_functions_bytes
+        if writer.config.align_functions_bytes is None
+        else writer.config.align_functions_bytes
     )
     if alignment > 1:
         if alignment % 2 == 0:
-            context.directive("p2align", alignment // 2)
+            writer.directive("p2align", alignment // 2)
         else:
-            context.directive("align", alignment)
+            writer.directive("align", alignment)
 
-    context.label(name)
-    if context.config.dwarf_emit_cfi:
-        context.directive("cfi_startproc")
+    writer.label(name)
+    if writer.config.dwarf_emit_cfi:
+        writer.directive("cfi_startproc")
 
     if preserve_frame:
         local_offsets = build_local_variables_frame_offsets(local_variables)
-        preserve_callee_frame(context, local_space_size=local_offsets.local_space_size)
+        preserve_callee_frame(writer, local_space_size=local_offsets.local_space_size)
 
     if parameters:
-        registers = context.abi.arguments_64bit_registers[: len(parameters)]
+        registers = abi.arguments_64bit_registers[: len(parameters)]
         for register in registers:
-            push_register_onto_stack(context, register)
+            push_register_onto_stack(writer, register)
 
+    if not local_variables:
+        return
+    assert string_pool
     write_function_local_stack_variables_initializer(
-        context,
+        writer,
+        string_pool,
         local_variables=local_variables,
     )
 
 
 def function_return(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
     *,
     has_preserved_frame: bool = True,
     return_type: Type,
@@ -94,16 +103,17 @@ def function_return(
 
     :has_preserved_frame: If true, will restore that to jump out and proper stack management
     """
-    load_return_value_from_stack_into_abi_registers(context, t=return_type)
+    load_return_value_from_stack_into_abi_registers(abi, writer, t=return_type)
 
     if has_preserved_frame:
-        restore_callee_frame(context)
+        restore_callee_frame(writer)
 
-    context.instruction("ret")
+    writer.instruction("ret")
 
 
 def function_end_with_epilogue(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
+    abi: AARCH64ABI,
     *,
     has_preserved_frame: bool,
     return_type: Type,
@@ -118,9 +128,10 @@ def function_end_with_epilogue(
     :is_early_return: If true, will not emit end end of procedure symbol (e.g directly early return, not finish)
     """
     function_return(
-        context,
+        writer,
+        abi,
         has_preserved_frame=has_preserved_frame,
         return_type=return_type,
     )
-    if not is_early_return and context.config.dwarf_emit_cfi:
-        context.directive("cfi_endproc")
+    if not is_early_return and writer.config.dwarf_emit_cfi:
+        writer.directive("cfi_endproc")

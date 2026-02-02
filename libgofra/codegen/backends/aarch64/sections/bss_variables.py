@@ -7,13 +7,13 @@ from libgofra.codegen.sections._factory import SectionType
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64.codegen import AARCH64CodegenBackend
+    from libgofra.codegen.backends.aarch64.writer import WriterProtocol
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def write_uninitialized_data_section(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
     variables: Mapping[str, Variable[Type]],
 ) -> None:
     """Emit data section with uninitialized variables."""
@@ -24,7 +24,7 @@ def write_uninitialized_data_section(
     if not uninitialized_variables:
         return
 
-    context.section(SectionType.BSS)
+    writer.section(SectionType.BSS)
     aligned_by: int | None = None
     for name, variable in uninitialized_variables.items():
         type_size = variable.size_in_bytes
@@ -34,8 +34,8 @@ def write_uninitialized_data_section(
 
         alignment = variable.type.alignment
         if alignment != aligned_by:
-            context.directive("align", alignment)
+            writer.directive("align", alignment)
             aligned_by = alignment
 
-        context.label(name)
-        context.sym_sect_directive("space", type_size)
+        writer.label(name)
+        writer.sym_sect_directive("space", type_size)

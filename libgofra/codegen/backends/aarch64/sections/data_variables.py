@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+from libgofra.codegen.backends.aarch64.writer import WriterProtocol
 from libgofra.codegen.backends.string_pool import StringPool
 from libgofra.codegen.sections._factory import SectionType
 from libgofra.hir.initializer import (
@@ -21,15 +22,12 @@ from libgofra.types.primitive.integers import I64Type
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from libgofra.codegen.backends.aarch64.codegen import (
-        AARCH64CodegenBackend,
-    )
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
 
 def write_initialized_data_section(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
     strings: StringPool,
     variables: Mapping[str, Variable[Type]],
 ) -> None:
@@ -40,37 +38,39 @@ def write_initialized_data_section(
     """
     variables = {k: v for k, v in variables.items() if v.initial_value is not None}
 
-    if not variables and not strings:
+    if not variables and strings.is_empty():
         return
 
-    context.section(SectionType.DATA)
+    writer.section(SectionType.DATA)
     alignment = None
     for name, variable in variables.items():
         if variable.type.alignment != alignment:
-            context.directive("align", variable.type.alignment)
+            writer.directive("align", variable.type.alignment)
             alignment = variable.type.alignment
         _write_static_segment_variable_initializer(
-            context,
+            writer,
             variable,
             symbol_name=name,
+            string_pool=strings,
         )
 
-    if strings:
+    if not strings.is_empty():
         # 8 byte alignment for string descriptors
-        context.directive("align", 8)
+        writer.directive("align", 8)
 
     for data, name in strings.get_view():
         decoded_string = data.encode().decode("unicode_escape")
         length = len(decoded_string)
-        context.label(name)
-        context.sym_sect_directive("quad", f"{name}d")
-        context.sym_sect_directive("quad", length)
+        writer.label(name)
+        writer.sym_sect_directive("quad", f"{name}d")
+        writer.sym_sect_directive("quad", length)
 
 
 def _write_static_segment_variable_initializer(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
     variable: Variable[Type],
     symbol_name: str,
+    string_pool: StringPool,
 ) -> None:
     type_size = variable.size_in_bytes
     assert type_size, (
@@ -82,8 +82,8 @@ def _write_static_segment_variable_initializer(
         case CharType() | I64Type():
             assert isinstance(variable.initial_value, int)
             ddd = _get_ddd_for_type(variable.type)
-            context.label(symbol_name)
-            context.sym_sect_directive(ddd, variable.initial_value)
+            writer.label(symbol_name)
+            writer.sym_sect_directive(ddd, variable.initial_value)
         case ArrayType(element_type=I64Type()):
             assert isinstance(variable.initial_value, VariableIntArrayInitializerValue)
             ddd = _get_ddd_for_type(I64Type())
@@ -91,8 +91,8 @@ def _write_static_segment_variable_initializer(
             values = variable.initial_value.values
             f_values = ", ".join(map(str, values))
 
-            context.label(symbol_name)
-            context.sym_sect_directive(ddd, f_values)
+            writer.label(symbol_name)
+            writer.sym_sect_directive(ddd, f_values)
             # Zero initialized symbol
             element_size = variable.type.element_type.size_in_bytes
             empty_cells = variable.type.elements_count - len(values)
@@ -102,14 +102,14 @@ def _write_static_segment_variable_initializer(
                 bytes_total = variable.type.size_in_bytes
                 bytes_taken = len(values) * element_size
                 bytes_free = bytes_total - bytes_taken
-                context.sym_sect_directive("zero", bytes_free)
+                writer.sym_sect_directive("zero", bytes_free)
 
             else:
                 fill_with = variable.initial_value.default
                 cell_size = I64Type().size_in_bytes
-                context.sym_sect_directive("fill", empty_cells, cell_size, fill_with)
+                writer.sym_sect_directive("fill", empty_cells, cell_size, fill_with)
 
-                context.comment_eol(f"Filler ({fill_with})")
+                writer.comment_eol(f"Filler ({fill_with})")
 
         case ArrayType(element_type=PointerType(points_to=StringType())):
             assert isinstance(
@@ -118,22 +118,22 @@ def _write_static_segment_variable_initializer(
             )
 
             values = variable.initial_value.values
-            f_values = ", ".join(map(context.string_pool.add, values))
+            f_values = ", ".join(map(string_pool.add, values))
 
-            context.label(symbol_name)
-            context.sym_sect_directive("quad", f_values)
+            writer.label(symbol_name)
+            writer.sym_sect_directive("quad", f_values)
         case PointerType(points_to=StringType()):
             assert isinstance(variable.initial_value, VariableStringPtrInitializerValue)
             string_raw = variable.initial_value.string
-            context.label(symbol_name)
-            context.sym_sect_directive("quad", context.string_pool.add(string_raw))
+            writer.label(symbol_name)
+            writer.sym_sect_directive("quad", string_pool.add(string_raw))
         case StructureType():
             assert isinstance(
                 variable.initial_value,
                 VariableIntFieldedStructureInitializerValue,
             )
             _write_static_segment_structure_initializer(
-                context,
+                writer,
                 struct=variable.type,
                 initial_value=variable.initial_value,
                 symbol_name=symbol_name,
@@ -144,13 +144,13 @@ def _write_static_segment_variable_initializer(
 
 
 def _write_static_segment_structure_initializer(
-    context: AARCH64CodegenBackend,
+    writer: WriterProtocol,
     symbol_name: str,
     struct: StructureType,
     initial_value: VariableIntFieldedStructureInitializerValue,
 ) -> None:
-    context.label(symbol_name)
-    context.comment_eol(repr(struct))
+    writer.label(symbol_name)
+    writer.comment_eol(repr(struct))
     prev_taken_bytes = 0
     for field in struct.order:
         value = initial_value.values[field]
@@ -162,11 +162,11 @@ def _write_static_segment_structure_initializer(
 
         ddd = _get_ddd_for_type(field_t)
         if padding:
-            context.sym_sect_directive("zero", padding)
-            context.comment_eol("[[padding]]")
+            writer.sym_sect_directive("zero", padding)
+            writer.comment_eol("[[padding]]")
 
-        context.sym_sect_directive(ddd, value)
-        context.comment_eol(f"{struct.name}.{field}")
+        writer.sym_sect_directive(ddd, value)
+        writer.comment_eol(f"{struct.name}.{field}")
 
         prev_taken_bytes += field_t.size_in_bytes + padding
 
