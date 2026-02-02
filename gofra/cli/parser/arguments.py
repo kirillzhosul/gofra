@@ -27,6 +27,7 @@ class CLIArguments:
     repl: bool
     hir: bool
     preprocess_only: bool
+    call_graph_only: bool
 
     verbose: bool
     show_commands: bool

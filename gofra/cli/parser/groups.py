@@ -103,6 +103,13 @@ def add_toolchain_debug_group(parser: ArgumentParser) -> None:
         action="store_true",
         help=argparse.SUPPRESS,
     )
+    parser.add_argument(
+        "--call-graph",
+        dest="call_graph_only",
+        required=False,
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
 
 
 def add_codegen_group(parser: ArgumentParser) -> None:

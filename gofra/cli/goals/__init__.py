@@ -4,6 +4,7 @@ import sys
 from time import perf_counter_ns
 from typing import NoReturn
 
+from gofra.cli.goals.call_graph_visualizer import cli_perform_call_graph_goal
 from gofra.cli.goals.compile import cli_perform_compile_goal
 from gofra.cli.goals.hir import cli_perform_hir_goal
 from gofra.cli.goals.preprocessor import cli_perform_preprocess_goal
@@ -30,6 +31,9 @@ def perform_desired_toolchain_goal(args: CLIArguments) -> NoReturn:
 
         if args.hir:
             return cli_perform_hir_goal(args)
+
+        if args.call_graph_only:
+            return cli_perform_call_graph_goal(args)
 
         return cli_perform_compile_goal(args)
     except SystemExit as e:

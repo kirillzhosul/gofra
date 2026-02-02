@@ -60,6 +60,10 @@ class CallGraphNode:
         """Get functions this function calls to from incoming edges."""
         return [edge.callee for edge in self.outgoing_edges]
 
+    @property
+    def is_root_node(self) -> bool:
+        return not self.incoming_edges
+
 
 class CallGraph:
     """Graph of every function in module and corresponding calls as edges."""
@@ -74,6 +78,9 @@ class CallGraph:
 
     def get_node(self, function: Function) -> CallGraphNode:
         return self._nodes[function]
+
+    def traverse_nodes(self) -> Iterable[CallGraphNode]:
+        return self._nodes.values()
 
     def get_root_functions(self) -> Iterable[Function]:
         """Get root node functions which has no callers."""
