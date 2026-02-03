@@ -266,7 +266,7 @@ def jump_to_subroutine(
 ) -> None:
     """Jump (branch) to subroutine with given label. Does not do PAC."""
     assert label
-    writer.instruction(f"bl {label}")
+    writer.instruction(f"bl _{label}")
 
 
 def compare_and_jump_to_label(

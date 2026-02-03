@@ -12,6 +12,14 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug",
+            "program": "${file}",
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
-    ]
+    ],
 }

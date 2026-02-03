@@ -92,7 +92,7 @@ class ClangAssemblerDriver(AssemblerDriverProtocol):
         if debug_information:
             # If version is specified - treat as debug -g flag also
             command.append("-g")
-            command.append("-gdwarf-2")
+            command.append("-gdwarf-4")
 
         # Output into that file
         command.extend(("-o", str(out_object_file)))

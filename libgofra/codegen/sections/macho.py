@@ -7,7 +7,7 @@ from typing import Literal
 class MachOSection:
     """Specification of *directive* of section/segment for Mach-O object format."""
 
-    segment: Literal["__TEXT", "__DATA"]
+    segment: Literal["__TEXT", "__DATA", "__DWARF"]
     section: str
     attributes: Sequence[
         Literal[
@@ -17,6 +17,8 @@ class MachOSection:
             "cstring_literals",
             # Attributes (only valid with 'regular' type):
             "pure_instructions",
+            # DWARF
+            "debug",
         ]
     ]
 
@@ -25,6 +27,9 @@ class MachOSection:
             assert len(self.attributes) == 1
             return
 
+        if self.segment == "__DWARF":
+            assert self.attributes == ["regular", "debug"]
+            return
         assert all(
             x in {"regular", "pure_instructions", "strip_static_syms"}
             for x in self.attributes
@@ -58,3 +63,25 @@ MACHO_SECTION_INSTRUCTIONS = MachOSection(
     section="__text",
     attributes=("regular", "pure_instructions"),
 )  # Only instructions here, code goes here
+
+
+MACHO_SECTION_DWARF_LINES = MachOSection(
+    segment="__DWARF",
+    section="__debug_line",
+    attributes=["regular", "debug"],
+)
+MACHO_SECTION_DWARF_STRINGS = MachOSection(
+    segment="__DWARF",
+    section="__debug_str",
+    attributes=["regular", "debug"],
+)
+MACHO_SECTION_DWARF_INFO = MachOSection(
+    segment="__DWARF",
+    section="__debug_info",
+    attributes=["regular", "debug"],
+)
+MACHO_SECTION_DWARF_ABBREV = MachOSection(
+    segment="__DWARF",
+    section="__debug_abbrev",
+    attributes=["regular", "debug"],
+)

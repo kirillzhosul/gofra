@@ -158,9 +158,6 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
     if libraries:
         command.extend(f"-l{library}" for library in libraries)
 
-    # Maybe removed later, as we may use some plugins
-    command.append("-no_exported_symbols")
-
     if system_library_root:
         path = (
             str(system_library_root.absolute())
@@ -221,7 +218,7 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
     # Do not perform some optimizations
     # must only be enabled for debug builds
     if debug_do_not_optimize:
-        command.append("-O0")
+        ...
 
     # Skips DWARF/STABS information
     if strip_debug_symbols:
@@ -242,7 +239,11 @@ def compose_raw_apple_linker_command(  # noqa: PLR0913
         command.extend(("-macos_version_min", str(round(ios_version_min, 2))))
 
     # Optimizations
-    if optim_dead_strip and output_format != AppleLinkerOutputFormat.OBJECT_FILE:
+    if (
+        optim_dead_strip
+        and output_format != AppleLinkerOutputFormat.OBJECT_FILE
+        and not debug_do_not_optimize
+    ):
         command.append("-dead_strip")  # DCE on Linker stage
 
     return command

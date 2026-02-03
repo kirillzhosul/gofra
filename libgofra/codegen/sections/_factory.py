@@ -12,6 +12,10 @@ from .elf import (
 from .macho import (
     MACHO_SECTION_BSS,
     MACHO_SECTION_DATA,
+    MACHO_SECTION_DWARF_ABBREV,
+    MACHO_SECTION_DWARF_INFO,
+    MACHO_SECTION_DWARF_LINES,
+    MACHO_SECTION_DWARF_STRINGS,
     MACHO_SECTION_INSTRUCTIONS,
     MACHO_SECTION_STRINGS,
 )
@@ -22,6 +26,11 @@ class SectionType(Enum):
     DATA = auto()
     STRINGS = auto()
     INSTRUCTIONS = auto()
+
+    DWARF_ABBREV = auto()
+    DWARF_LINES = auto()
+    DWARF_INFO = auto()
+    DWARF_STRINGS = auto()
 
 
 class Section(Protocol):
@@ -43,6 +52,10 @@ def get_os_assembler_section(section: SectionType, target: Target) -> Section:
                 SectionType.DATA: MACHO_SECTION_DATA,
                 SectionType.INSTRUCTIONS: MACHO_SECTION_INSTRUCTIONS,
                 SectionType.STRINGS: MACHO_SECTION_STRINGS,
+                SectionType.DWARF_ABBREV: MACHO_SECTION_DWARF_ABBREV,
+                SectionType.DWARF_STRINGS: MACHO_SECTION_DWARF_STRINGS,
+                SectionType.DWARF_LINES: MACHO_SECTION_DWARF_LINES,
+                SectionType.DWARF_INFO: MACHO_SECTION_DWARF_INFO,
             }[section]
         case "None":
             msg = "None operating system means there is no os assembler sections, cannot perform!"

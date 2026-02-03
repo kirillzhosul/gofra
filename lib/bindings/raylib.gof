@@ -28,20 +28,20 @@
 #endif 
 
 
-extern pub func void _ClearBackground[Color color]                 pub func void ClearBackground[Color color] color _ClearBackground  end
-extern pub func void _DrawText[CStr,int,int,int,Color]             pub func void DrawText[CStr,int,int,int,Color] _DrawText end
-extern pub func void _DrawLine[int,int,int,int,Color]              pub func void DrawLine[int,int,int,int,Color] _DrawLine end
-extern pub func void _DrawRectangle[int,int,int,int,Color]         pub func void DrawRectangle[int,int,int,int,Color] _DrawRectangle end
+extern pub func void ClearBackground[Color color]                 
+extern pub func void DrawText[CStr,int,int,int,Color]             
+extern pub func void DrawLine[int,int,int,int,Color]              
+extern pub func void DrawRectangle[int,int,int,int,Color]         
 
-extern pub func void _InitWindow[int width,int height,CStr name]   pub func void InitWindow[int width,int height,CStr name] width height name call _InitWindow end
-extern pub func bool _WindowShouldClose[]                          pub func bool WindowShouldClose[] call _WindowShouldClose end
-extern pub func void _CloseWindow[]                                pub func void CloseWindow[] call _CloseWindow end
-extern pub func void _SetTargetFPS[int fps]                        pub func void SetTargetFPS[int fps] fps call _SetTargetFPS end
-extern pub func void _BeginDrawing[]                               pub func void BeginDrawing[] call _BeginDrawing end
-extern pub func void _EndDrawing[]                                 pub func void EndDrawing[] call _EndDrawing end
-extern pub func bool _IsKeyPressed[int keycode]                    pub func bool IsKeyPressed[int keycode] keycode call _IsKeyPressed end
-extern pub func bool _IsKeyDown[int keycode]                       pub func bool IsKeyDown[int keycode] keycode call _IsKeyDown end
-extern pub func void _DrawFPS[int x,int y]                         pub func void DrawFPS[int x,int y] x y call _DrawFPS end
+extern pub func void InitWindow[int width,int height,CStr name]   
+extern pub func bool WindowShouldClose[]                          
+extern pub func void CloseWindow[]                                
+extern pub func void SetTargetFPS[int fps]                        
+extern pub func void BeginDrawing[]                               
+extern pub func void EndDrawing[]                                 
+extern pub func bool IsKeyPressed[int keycode]                    
+extern pub func bool IsKeyDown[int keycode]                       
+extern pub func void DrawFPS[int x,int y]                         
 
 pub func int rgba_to_raylib_argb[int r, int g, int b, int a]
     var color int = 0;

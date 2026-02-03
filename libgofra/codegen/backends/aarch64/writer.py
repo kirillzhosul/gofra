@@ -13,6 +13,39 @@ class CISLine:
     comment: str | None = None
 
 
+type SYM_SECT_DIRECTIVES = Literal[
+    "zero",
+    "byte",
+    "short",
+    "quad",
+    "word",
+    "half",
+    "ascii",
+    "asciz",
+    "long",
+    "space",
+    "fill",
+]
+type DIRECTIVES = (
+    SYM_SECT_DIRECTIVES
+    | Literal[
+        "p2align",
+        "align",
+        "globl",
+        "file",
+        "loc",
+        "cfi_startproc",
+        "cfi_endproc",
+        "cfi_def_cfa_offset",
+        "cfi_def_cfa",
+        "cfi_offset",
+        "set",
+        "cfi_def_cfa_register",
+        "subsections_via_symbols",
+    ]
+)
+
+
 class WriterProtocol(Protocol):
     config: CodegenConfig
 
@@ -23,25 +56,7 @@ class WriterProtocol(Protocol):
 
     def directive(
         self,
-        directive: Literal[
-            "p2align",
-            "align",
-            "globl",
-            "zero",
-            "byte",
-            "quad",
-            "word",
-            "half",
-            "asciz",
-            "space",
-            "fill",
-            "cfi_startproc",
-            "cfi_endproc",
-            "cfi_def_cfa_offset",
-            "cfi_def_cfa",
-            "cfi_offset",
-            "cfi_def_cfa_register",
-        ],
+        directive: DIRECTIVES,
         *args: str | int,
     ) -> None: ...
 
@@ -49,18 +64,13 @@ class WriterProtocol(Protocol):
 
     def sym_sect_directive(
         self,
-        directive: Literal[
-            "zero",
-            "byte",
-            "quad",
-            "word",
-            "half",
-            "asciz",
-            "space",
-            "fill",
-        ],
+        directive: SYM_SECT_DIRECTIVES,
         *args: str | int,
+        comment: str | None = None,
     ) -> None: ...
+
+    def dwarf_loc_directive(self, n: int, line: int, col: int) -> None:
+        return self.directive("loc", " ".join(map(str, [n, line, col])))
 
 
 class AARCH64BufferedWriterImplementation(WriterProtocol):
@@ -69,7 +79,12 @@ class AARCH64BufferedWriterImplementation(WriterProtocol):
 
     target: Target
 
-    def __init__(self, fd: IO[str], config: CodegenConfig, target: Target) -> None:
+    def __init__(
+        self,
+        fd: IO[str],
+        config: CodegenConfig,
+        target: Target,
+    ) -> None:
         self.fd = fd
         self.target = target
         self.buffer = []
@@ -100,54 +115,29 @@ class AARCH64BufferedWriterImplementation(WriterProtocol):
 
     def directive(
         self,
-        directive: Literal[
-            "p2align",
-            "align",
-            "globl",
-            "zero",
-            "byte",
-            "quad",
-            "word",
-            "half",
-            "asciz",
-            "space",
-            "fill",
-            "cfi_startproc",
-            "cfi_endproc",
-            "cfi_def_cfa_offset",
-            "cfi_def_cfa",
-            "cfi_offset",
-            "cfi_def_cfa_register",
-        ],
+        directive: DIRECTIVES,
         *args: str | int,
+        comment: str | None = None,
     ) -> None:
         text = " ".join([f".{directive}", ", ".join(map(str, args))])
-        self.buffer.append(CISLine(type="directive", text=text))
+        self.buffer.append(CISLine(type="directive", text=text, comment=comment))
 
     def instruction(self, instruction: str) -> None:
         self.buffer.append(CISLine(type="instruction", text=instruction))
 
     def sym_sect_directive(
         self,
-        directive: Literal[
-            "zero",
-            "byte",
-            "quad",
-            "word",
-            "half",
-            "asciz",
-            "space",
-            "fill",
-        ],
+        directive: SYM_SECT_DIRECTIVES,
         *args: str | int,
+        comment: str | None = None,
     ) -> None:
-        self.directive(directive, *args)
+        self.directive(directive, *args, comment=comment)
 
     def full_buffer_flush(self) -> None:
         for cis_line in self.buffer:
             self.fd.write(cis_line.text)
             if cis_line.comment:
-                self.fd.write(f"// {cis_line.comment}")
+                self.fd.write(f" ; {cis_line.comment}")
             self.fd.write("\n")
 
 
@@ -158,7 +148,12 @@ class AARCH64ImmediateWriterImplementation(WriterProtocol):
 
     target: Target
 
-    def __init__(self, fd: IO[str], config: CodegenConfig, target: Target) -> None:
+    def __init__(
+        self,
+        fd: IO[str],
+        config: CodegenConfig,
+        target: Target,
+    ) -> None:
         self._fd = fd
         self.target = target
         self.config = config
@@ -174,7 +169,7 @@ class AARCH64ImmediateWriterImplementation(WriterProtocol):
     def comment(self, line: str) -> None:
         if self.config.no_compiler_comments:
             return
-        self.buffer[-1] = self.buffer[-1] + f"// {line}"
+        self._fd.write(f"// {line}\n")
 
     def comment_eol(self, line: str) -> None:
         if self.config.no_compiler_comments:
@@ -186,28 +181,13 @@ class AARCH64ImmediateWriterImplementation(WriterProtocol):
 
     def directive(
         self,
-        directive: Literal[
-            "p2align",
-            "align",
-            "globl",
-            "zero",
-            "byte",
-            "quad",
-            "word",
-            "half",
-            "asciz",
-            "space",
-            "fill",
-            "cfi_startproc",
-            "cfi_endproc",
-            "cfi_def_cfa_offset",
-            "cfi_def_cfa",
-            "cfi_offset",
-            "cfi_def_cfa_register",
-        ],
+        directive: DIRECTIVES,
         *args: str | int,
+        comment: str | None = None,
     ) -> None:
         self._fd.write(" ".join([f".{directive}", ", ".join(map(str, args))]))
+        if comment:
+            self._fd.write(f" ; {comment}")
         self._fd.write("\n")
 
     def instruction(self, instruction: str) -> None:
@@ -216,17 +196,9 @@ class AARCH64ImmediateWriterImplementation(WriterProtocol):
 
     def sym_sect_directive(
         self,
-        directive: Literal[
-            "zero",
-            "byte",
-            "quad",
-            "word",
-            "half",
-            "asciz",
-            "space",
-            "fill",
-        ],
+        directive: SYM_SECT_DIRECTIVES,
         *args: str | int,
+        comment: str | None = None,
     ) -> None:
         self._fd.write("\t")
-        self.directive(directive, *args)
+        self.directive(directive, *args, comment=comment)

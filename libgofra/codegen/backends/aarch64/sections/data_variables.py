@@ -59,6 +59,7 @@ def write_initialized_data_section(
         writer.directive("align", 8)
 
     for data, name in strings.get_view():
+        # TODO: Proper constant name mangling for string
         decoded_string = data.encode().decode("unicode_escape")
         length = len(decoded_string)
         writer.label(name)

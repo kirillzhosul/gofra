@@ -1,6 +1,7 @@
 from libgofra.codegen.abi import AARCH64ABI
 from libgofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
 from libgofra.codegen.backends.aarch64.writer import WriterProtocol
+from libgofra.codegen.dwarf.dwarf import DWARF
 from libgofra.hir.function import Function
 from libgofra.targets.target import Target
 from libgofra.types.primitive.integers import I64Type
@@ -15,17 +16,19 @@ AARCH64_MACOS_EPILOGUE_EXIT_CODE = 0
 AARCH64_MACOS_EPILOGUE_EXIT_SYSCALL_NUMBER = 1
 
 
-def aarch64_program_entry_point(
+def aarch64_program_entry_point(  # noqa: PLR0913
     writer: WriterProtocol,
     abi: AARCH64ABI,
     system_entry_point_name: str,
     entry_point: Function,
     target: Target,
+    dwarf: DWARF,
 ) -> None:
     """Write program entry, used to not segfault due to returning into protected system memory."""
     # TODO: add flag like `--bare-entry` to allow specify that Gofra `main` is real main
     # also requires reworking entry point flags / specification
 
+    system_entry_point_name = system_entry_point_name.removeprefix("_")
     # This is an executable entry point
     function_begin_with_prologue(
         writer,
@@ -36,6 +39,8 @@ def aarch64_program_entry_point(
         local_variables={},
         string_pool=None,
         parameters=[],
+        dwarf_function=None,
+        dwarf=dwarf,
     )
 
     # Prepare and execute main function
@@ -56,6 +61,7 @@ def aarch64_program_entry_point(
         writer,
         abi=abi,
         has_preserved_frame=False,
+        dwarf=dwarf,
         return_type=VoidType(),
         is_early_return=False,
     )

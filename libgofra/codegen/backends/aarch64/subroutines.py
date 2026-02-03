@@ -27,6 +27,8 @@ if TYPE_CHECKING:
     from libgofra.codegen.abi import AARCH64ABI
     from libgofra.codegen.backends.aarch64.writer import WriterProtocol
     from libgofra.codegen.backends.string_pool import StringPool
+    from libgofra.codegen.dwarf.dwarf import DWARF
+    from libgofra.hir.function import Function
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 
@@ -43,6 +45,8 @@ def function_begin_with_prologue(  # noqa: PLR0913
     preserve_frame: bool = True,
     local_variables: Mapping[str, Variable[Type]],
     parameters: Sequence[Type],
+    dwarf: DWARF,
+    dwarf_function: Function | None,
 ) -> None:
     """Begin an function symbol.
 
@@ -53,7 +57,10 @@ def function_begin_with_prologue(  # noqa: PLR0913
     """
     # TODO: Checkout `BTI` when i have an proper hardware
     # TODO: Checkout PAC because it is suddenly does not work rn
+
+    name = f"_{name}"
     if global_name:
+        global_name = f"_{global_name}"
         writer.directive("globl", global_name)
 
     alignment = (
@@ -68,6 +75,10 @@ def function_begin_with_prologue(  # noqa: PLR0913
             writer.directive("align", alignment)
 
     writer.label(name)
+    if dwarf_function:
+        dwarf.trace_function_start(dwarf_function)
+        dwarf.trace_source_location(dwarf_function.defined_at)
+
     if writer.config.dwarf_emit_cfi:
         writer.directive("cfi_startproc")
 
@@ -111,13 +122,15 @@ def function_return(
     writer.instruction("ret")
 
 
-def function_end_with_epilogue(
+def function_end_with_epilogue(  # noqa: PLR0913
     writer: WriterProtocol,
     abi: AARCH64ABI,
     *,
     has_preserved_frame: bool,
     return_type: Type,
     is_early_return: bool,
+    dwarf: DWARF,
+    is_naked: bool = False,
 ) -> None:
     """End function with proper epilogue.
 
@@ -127,11 +140,14 @@ def function_end_with_epilogue(
     :has_preserved_frame: If true, will restore that to jump out and proper stack management
     :is_early_return: If true, will not emit end end of procedure symbol (e.g directly early return, not finish)
     """
-    function_return(
-        writer,
-        abi,
-        has_preserved_frame=has_preserved_frame,
-        return_type=return_type,
-    )
+    if not is_naked:
+        function_return(
+            writer,
+            abi,
+            has_preserved_frame=has_preserved_frame,
+            return_type=return_type,
+        )
+
+    dwarf.trace_function_end()
     if not is_early_return and writer.config.dwarf_emit_cfi:
         writer.directive("cfi_endproc")

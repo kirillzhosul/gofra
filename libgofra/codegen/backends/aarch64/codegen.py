@@ -26,6 +26,7 @@ from libgofra.codegen.backends.aarch64.writer import (
 )
 from libgofra.codegen.backends.frame import is_native_function_has_frame
 from libgofra.codegen.backends.string_pool import StringPool
+from libgofra.codegen.dwarf.dwarf import DWARF
 from libgofra.codegen.sections import SectionType
 
 if TYPE_CHECKING:
@@ -63,10 +64,20 @@ class AARCH64CodegenBackend:
 
         self.config = config
 
-        if config.peephole_isa_optimizer:
-            self.writer = AARCH64BufferedWriterImplementation(fd, config, target)
+        if config.peephole_isa_optimizer or True:  # noqa: SIM222
+            self.writer = AARCH64BufferedWriterImplementation(
+                fd,
+                config,
+                target,
+            )
         else:
-            self.writer = AARCH64ImmediateWriterImplementation(fd, config, target)
+            self.writer = AARCH64ImmediateWriterImplementation(
+                fd,
+                config,
+                target,
+            )
+
+        self.dwarf = DWARF(self.writer, unit_path=self.module.path)
 
         self.abi = DarwinAARCH64ABI()
         self.string_pool = StringPool()
@@ -74,6 +85,7 @@ class AARCH64CodegenBackend:
     def emit(self) -> None:
         """AARCH64 code generation backend."""
         # Executable section with instructions only (pure_instructions)
+
         self.writer.section(SectionType.INSTRUCTIONS)
 
         for function in self.module.executable_functions:
@@ -83,6 +95,7 @@ class AARCH64CodegenBackend:
                 self.string_pool,
                 self.module,
                 function,
+                dwarf=self.dwarf,
             )
 
         if self.module.entry_point_ref:
@@ -92,21 +105,26 @@ class AARCH64CodegenBackend:
                 system_entry_point_name=self.config.system_entry_point_name,
                 entry_point=self.module.entry_point_ref,
                 target=self.target,
+                dwarf=self.dwarf,
             )
         aarch64_data_section(self.writer, self.string_pool, self.module.variables)
 
         if self.config.peephole_isa_optimizer:
-            assert isinstance(self.writer, AARCH64BufferedWriterImplementation)
             peephole_isa_optimizer_pass(self.writer)
+
+        self.dwarf.write_full_dwarf_sections()
+
+        if isinstance(self.writer, AARCH64BufferedWriterImplementation):  # pyright: ignore[reportUnnecessaryIsInstance]
             self.writer.full_buffer_flush()
 
 
-def function_define_with_instruction_set(
+def function_define_with_instruction_set(  # noqa: PLR0913
     writer: WriterProtocol,
     abi: AARCH64ABI,
     string_pool: StringPool,
     module: Module,
     function: Function,
+    dwarf: DWARF,
 ) -> None:
     """Define all executable functions inside final executable with their executable body respectfully.
 
@@ -123,6 +141,8 @@ def function_define_with_instruction_set(
         global_name=function.name if function.is_public else None,
         preserve_frame=has_frame,
         parameters=function.parameters,
+        dwarf=dwarf,
+        dwarf_function=function,
     )
 
     aarch64_instruction_set(
@@ -132,14 +152,16 @@ def function_define_with_instruction_set(
         function.operators,
         module,
         function,
+        dwarf=dwarf,
     )
 
     # TODO(@kirillzhosul): This is included even after explicit return after end
-    if not function.is_naked:
-        function_end_with_epilogue(
-            writer,
-            abi,
-            has_preserved_frame=has_frame,
-            return_type=function.return_type,
-            is_early_return=False,
-        )
+    function_end_with_epilogue(
+        writer,
+        abi,
+        has_preserved_frame=has_frame,
+        return_type=function.return_type,
+        is_early_return=False,
+        dwarf=dwarf,
+        is_naked=function.is_naked,
+    )

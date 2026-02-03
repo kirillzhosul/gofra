@@ -29,6 +29,7 @@ from libgofra.codegen.backends.aarch64.svc_syscall import ipc_aarch64_syscall
 from libgofra.codegen.backends.aarch64.writer import WriterProtocol
 from libgofra.codegen.backends.general import CODEGEN_GOFRA_CONTEXT_LABEL
 from libgofra.codegen.backends.string_pool import StringPool
+from libgofra.codegen.dwarf.dwarf import DWARF
 from libgofra.hir.function import Function
 from libgofra.hir.module import Module
 from libgofra.hir.operator import FunctionCallOperand, Operator, OperatorType
@@ -68,11 +69,13 @@ def aarch64_instruction_set(  # noqa: PLR0913
     operators: Sequence[Operator],
     program: Module,
     owner_function: Function,
+    dwarf: DWARF,
 ) -> None:
     """Write executable instructions from given operators."""
     writer.comment_eol(
         f"{owner_function.name} = {owner_function.parameters} -> {owner_function.return_type}",
     )
+
     for idx, operator in enumerate(operators):
         aarch64_operator_instructions(
             writer,
@@ -82,6 +85,7 @@ def aarch64_instruction_set(  # noqa: PLR0913
             program,
             idx,
             owner_function,
+            dwarf=dwarf,
         )
 
 
@@ -93,9 +97,11 @@ def aarch64_operator_instructions(  # noqa: PLR0913
     program: Module,
     idx: int,
     owner_function: Function,
+    dwarf: DWARF,
 ) -> None:
     # TODO(@kirillzhosul): Assumes Apple aapcs64
-    writer.comment_eol(f"{operator.type} at {operator.location} ({operator.operand=})")
+    dwarf.trace_source_location(operator.location)
+
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:
             assert isinstance(operator.operand, str)
@@ -280,7 +286,7 @@ def aarch64_operator_instructions(  # noqa: PLR0913
 
             push_address_of_label_onto_stack(
                 writer,
-                label=callee.name,
+                label=f"_{callee.name}",
                 temp_register="X0",
                 mode=addressing_mode,
             )
