@@ -75,6 +75,7 @@
         "exceptfds",
         "execve",
         "EXECVE",
+        "exprloc",
         "FCHDIR",
         "FCVTMS",
         "FCVTZS",

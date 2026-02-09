@@ -127,9 +127,12 @@ def parse_module_from_tokenizer(
         structures=context.structs,
         dependencies=context.module_dependencies,
         entry_point_ref=(context.functions.get(context.entry_point_name, None)),
+        types=context.types,
+        structs=context.structs,
     )
 
     _validate_function_existence_and_visibility(root=root, module=root)
+
     return root
 
 

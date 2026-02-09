@@ -36,6 +36,7 @@ class DWARFAttribute(IntEnum):
     DW_AT_producer              = 37 # Producer (compiler)         
     DW_AT_declaration_file       = 58 # Index of file where defined
     DW_AT_declaration_line      = 59 # Line where defined
+    DW_AT_encoding              = 62 # Encoding type in memory
     DW_AT_external              = 63 # Is it visible externally
     DW_AT_type                  = 73
 
@@ -51,6 +52,21 @@ class DWARFForm(IntEnum):
     DW_FORM_data1  = 11 # 1 byte constant 
     DW_FORM_flag    = 12  # Boolean flag
     DW_FORM_strp   = 14 # Offset inside string pool
+    DW_FORM_ref4   = 19
+    DW_FORM_exprloc = 24
+    DW_FORM_sec_offset = 23
+    # fmt: on
+
+
+class DWARFEncoding(IntEnum):
+    """DWARF DIE base type encoding."""
+
+    # fmt: off
+    DW_ATE_address     = 1
+    DW_ATE_boolean     = 2 
+    DW_ATE_float        = 4
+    DW_ATE_signed      = 5
+    DW_ATE_signed_char = 6
     # fmt: on
 
 

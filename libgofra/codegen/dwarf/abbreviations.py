@@ -18,7 +18,7 @@ DWARF_COMPILE_UNIT_ABBREVIATION = DWARFAbbreviation(
         (DWARFAttribute.DW_AT_producer, DWARFForm.DW_FORM_strp),
         (DWARFAttribute.DW_AT_language, DWARFForm.DW_FORM_data2),
         (DWARFAttribute.DW_AT_name, DWARFForm.DW_FORM_strp),
-        (DWARFAttribute.DW_AT_statement_list, DWARFForm.DW_FORM_data4),
+        (DWARFAttribute.DW_AT_statement_list, DWARFForm.DW_FORM_sec_offset),
         (DWARFAttribute.DW_AT_compilation_directory, DWARFForm.DW_FORM_strp),
         (DWARFAttribute.DW_AT_low_pc, DWARFForm.DW_FORM_addr),
         (DWARFAttribute.DW_AT_high_pc, DWARFForm.DW_FORM_addr),
@@ -35,5 +35,28 @@ DWARF_SUBPROGRAM_ABBREVIATION = DWARFAbbreviation(
         (DWARFAttribute.DW_AT_declaration_file, DWARFForm.DW_FORM_data1),
         (DWARFAttribute.DW_AT_declaration_line, DWARFForm.DW_FORM_data1),
         (DWARFAttribute.DW_AT_external, DWARFForm.DW_FORM_flag),
+    ],
+)
+
+DWARF_BASE_TYPE_ABBREVIATION = DWARFAbbreviation(
+    tag=DWARFTag.DW_TAG_base_type,
+    has_children=False,
+    fields=[
+        (DWARFAttribute.DW_AT_name, DWARFForm.DW_FORM_strp),
+        (DWARFAttribute.DW_AT_encoding, DWARFForm.DW_FORM_data1),
+        (DWARFAttribute.DW_AT_byte_size, DWARFForm.DW_FORM_data1),
+    ],
+)
+
+DWARF_VARIABLE_ABBREVIATION = DWARFAbbreviation(
+    tag=DWARFTag.DW_TAG_variable,
+    has_children=False,
+    fields=[
+        (DWARFAttribute.DW_AT_name, DWARFForm.DW_FORM_strp),
+        (DWARFAttribute.DW_AT_type, DWARFForm.DW_FORM_ref4),
+        (DWARFAttribute.DW_AT_external, DWARFForm.DW_FORM_flag),
+        (DWARFAttribute.DW_AT_declaration_file, DWARFForm.DW_FORM_data1),
+        (DWARFAttribute.DW_AT_declaration_line, DWARFForm.DW_FORM_data1),
+        (DWARFAttribute.DW_AT_location, DWARFForm.DW_FORM_exprloc),
     ],
 )

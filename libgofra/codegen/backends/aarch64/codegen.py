@@ -112,8 +112,9 @@ class AARCH64CodegenBackend:
         if self.config.peephole_isa_optimizer:
             peephole_isa_optimizer_pass(self.writer)
 
-        self.dwarf.write_full_dwarf_sections()
+        self.dwarf.write_full_dwarf_sections(self.module)
 
+        self.writer.directive("subsections_via_symbols")
         if isinstance(self.writer, AARCH64BufferedWriterImplementation):  # pyright: ignore[reportUnnecessaryIsInstance]
             self.writer.full_buffer_flush()
 

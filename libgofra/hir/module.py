@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from libgofra.types.registry import TypeRegistry
+
 if TYPE_CHECKING:
     from collections.abc import Generator, MutableMapping
     from pathlib import Path
@@ -33,6 +35,9 @@ class Module:
 
     # Structures that this module defines (can be unused)
     structures: MutableMapping[str, StructureType]
+
+    types: TypeRegistry
+    structs: MutableMapping[str, StructureType]
 
     # TODO(@kirillzhosul): This must be refactored into graph not within module itself.
     dependencies: MutableMapping[str, Module]

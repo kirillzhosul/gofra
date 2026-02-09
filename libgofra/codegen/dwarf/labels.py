@@ -4,6 +4,7 @@
 DW_LABEL_ABBREV = "Lsection_abbrev"
 
 # Block of info section
+DW_LABEL_INFO = "Lsection_dwarf_info"
 DW_LABEL_INFO_BEGIN = "Lsection_dwarf_info_begin"
 DW_LABEL_INFO_END = "Lsection_dwarf_info_end"
 
