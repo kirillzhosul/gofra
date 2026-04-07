@@ -46,7 +46,6 @@ class AARCH64CodegenBackend:
     config: CodegenConfig
 
     abi: AARCH64ABI
-    target: Target
 
     string_pool: StringPool
 

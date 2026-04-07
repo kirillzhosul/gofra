@@ -14,7 +14,7 @@ class CLIColor:
 
 def cli_message(level: MessageLevel, text: str, *, verbose: bool = True) -> None:
     """Emit an message to CLI user with given level, applying FD according to level."""
-    fd = stdout if level not in ("ERROR",) else stderr
+    fd = stdout if level != "ERROR" else stderr
 
     if level == "INFO" and not verbose:
         return

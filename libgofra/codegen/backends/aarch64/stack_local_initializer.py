@@ -8,9 +8,7 @@ from libgofra.codegen.backends.aarch64.primitive_instructions import (
     AddressingMode,
     get_address_of_label,
 )
-from libgofra.codegen.backends.aarch64.writer import WriterProtocol
 from libgofra.codegen.backends.frame import build_local_variables_frame_offsets
-from libgofra.codegen.backends.string_pool import StringPool
 from libgofra.hir.initializer import (
     T_AnyVariableInitializer,
     VariableIntArrayInitializerValue,
@@ -24,6 +22,8 @@ from libgofra.types.composite.pointer import PointerType
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from libgofra.codegen.backends.aarch64.writer import WriterProtocol
+    from libgofra.codegen.backends.string_pool import StringPool
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
 

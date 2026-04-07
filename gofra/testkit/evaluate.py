@@ -71,7 +71,7 @@ def toolchain_assemble_executable(
     return artifact_path
 
 
-def evaluate_test_case(
+def evaluate_test_case(  # noqa: PLR0911
     path: Path,
     args: CLIArguments,
     build_target: Target,

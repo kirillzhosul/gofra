@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from libgofra.types.registry import TypeRegistry
-
 if TYPE_CHECKING:
     from collections.abc import Generator, MutableMapping
     from pathlib import Path
@@ -13,6 +11,7 @@ if TYPE_CHECKING:
     from libgofra.hir.variable import Variable
     from libgofra.types._base import Type
     from libgofra.types.composite.structure import StructureType
+    from libgofra.types.registry import TypeRegistry
 
 
 @dataclass(frozen=True, slots=True)
