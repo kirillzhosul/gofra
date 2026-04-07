@@ -14,7 +14,6 @@ from libgofra.hir.operator import (
     StructAccessor,
 )
 from libgofra.lexer import Token
-from libgofra.parser.conditional_blocks import RangeQualifier
 from libgofra.parser.errors.general_expect_token import ExpectedTokenByParserError
 from libgofra.preprocessor.macros.registry import MacrosRegistry
 from libgofra.types.composite.structure import StructureType
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
 
     from libgofra.hir.variable import Variable
     from libgofra.lexer.tokens import TokenType
+    from libgofra.parser.conditional_blocks import RangeQualifier
     from libgofra.types._base import Type
     from libgofra.types.generics import GenericParametrizedType
 
@@ -83,8 +83,8 @@ class ParserContext(PeekableTokenizer):
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=list[Operator])
 
-    context_stack: deque[tuple[int, Operator, RangeQualifier | None]] = field(
-        default_factory=deque[tuple[int, Operator, RangeQualifier | None]],
+    context_stack: deque[tuple[int, Operator, "RangeQualifier | None"]] = field(
+        default_factory=deque[tuple[int, Operator, "RangeQualifier | None"]],
     )
 
     variables: MutableMapping[str, Variable[Type]] = field(
@@ -173,7 +173,7 @@ class ParserContext(PeekableTokenizer):
 
         self.operators.extend(inline_block.operators)
 
-    def pop_context_stack(self) -> tuple[int, Operator, RangeQualifier | None]:
+    def pop_context_stack(self) -> tuple[int, Operator, "RangeQualifier | None"]:
         return self.context_stack.pop()
 
     def push_new_operator(
