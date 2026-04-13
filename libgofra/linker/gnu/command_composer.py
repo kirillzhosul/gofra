@@ -64,6 +64,7 @@ def _try_find_macos_cross_compilation_driver(
     brew_installation_bin: Path = Path("/opt/homebrew/bin/"),
 ) -> Path | None:
     # MacOS brew workaround for cross-compilation
+    # x86_64-linux-gnu-binutils must be installed
     gnu_ld = Path("x86_64-linux-gnu-ld")
     brew_macos_gnu_ld = Path(which(gnu_ld) or brew_installation_bin / gnu_ld)
     if brew_macos_gnu_ld.resolve().exists():

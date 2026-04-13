@@ -3,7 +3,7 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from libgofra.lexer.tokens import TokenLocation
-from libgofra.types._base import Type
+from libgofra.types._base import PrimitiveType, Type
 
 if TYPE_CHECKING:
     from libgofra.hir.initializer import T_AnyVariableInitializer
@@ -50,6 +50,10 @@ class Variable[T: Type]:
     def size_in_bytes(self) -> int:
         """Size in bytes that is required to allocate this variable somewhere."""
         return self.type.size_in_bytes
+
+    @property
+    def is_primitive_type(self) -> bool:
+        return isinstance(self.type, PrimitiveType)
 
 
 class VariableStorageClass(Enum):

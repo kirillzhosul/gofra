@@ -13,8 +13,8 @@
 
 
 // Input a string from given file descriptor and returns number of bytes read
-#ifdef OS_LINUX   inline func int input_fd[int, CStr, int] call sc_read end #endif
-#ifdef OS_DARWIN  inline func int input_fd[int, CStr, int] call sc_read end #endif
+#ifdef OS_LINUX   func int input_fd[int fd, CStr data, int len] fd data len call sc_read end #endif
+#ifdef OS_DARWIN  func int input_fd[int fd, CStr data, int len] fd data len call sc_read end #endif
 
 #ifdef OS_LINUX  func int open_file_fd_raw[*string sv, int f, int p] sv.data f p call sc_open end #endif
 #ifdef OS_DARWIN func int open_file_fd_raw[*string sv, int f, int p] sv.data f p call sc_open end #endif
