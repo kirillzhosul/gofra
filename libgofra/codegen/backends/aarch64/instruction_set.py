@@ -69,7 +69,7 @@ def aarch64_instruction_set(  # noqa: PLR0913
     operators: Sequence[Operator],
     program: Module,
     owner_function: Function,
-    dwarf: DWARF,
+    dwarf: DWARF | None,
 ) -> None:
     """Write executable instructions from given operators."""
     writer.comment_eol(
@@ -97,10 +97,11 @@ def aarch64_operator_instructions(  # noqa: PLR0913
     program: Module,
     idx: int,
     owner_function: Function,
-    dwarf: DWARF,
+    dwarf: DWARF | None,
 ) -> None:
     # TODO(@kirillzhosul): Assumes Apple aapcs64
-    dwarf.trace_source_location(operator.location)
+    if dwarf:
+        dwarf.trace_source_location(operator.location)
 
     match operator.type:
         case OperatorType.PUSH_VARIABLE_ADDRESS:

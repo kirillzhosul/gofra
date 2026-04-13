@@ -19,6 +19,10 @@ class CodegenConfig:
     # allows unwinding, additional debug information
     dwarf_emit_cfi: bool = field(default=False)
 
+    # Emit DWARF location directives and DIEs (debug information)
+    dwarf_emit_locations: bool = field(default=False)
+    dwarf_emit_dies: bool = field(default=False)
+
     # Align functions with that amount bytes
     # <= 1 means no alignment
     # None: use target default

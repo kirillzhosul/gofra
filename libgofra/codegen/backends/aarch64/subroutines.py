@@ -45,7 +45,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
     preserve_frame: bool = True,
     local_variables: Mapping[str, Variable[Type]],
     parameters: Sequence[Type],
-    dwarf: DWARF,
+    dwarf: DWARF | None,
     dwarf_function: Function | None,
 ) -> None:
     """Begin an function symbol.
@@ -75,7 +75,7 @@ def function_begin_with_prologue(  # noqa: PLR0913
             writer.directive("align", alignment)
 
     writer.label(name)
-    if dwarf_function:
+    if dwarf and dwarf_function:
         dwarf.trace_function_start(dwarf_function)
         dwarf.trace_source_location(dwarf_function.defined_at)
 
@@ -129,7 +129,7 @@ def function_end_with_epilogue(  # noqa: PLR0913
     has_preserved_frame: bool,
     return_type: Type,
     is_early_return: bool,
-    dwarf: DWARF,
+    dwarf: DWARF | None,
     is_naked: bool = False,
 ) -> None:
     """End function with proper epilogue.
@@ -148,6 +148,7 @@ def function_end_with_epilogue(  # noqa: PLR0913
             return_type=return_type,
         )
 
-    dwarf.trace_function_end()
+    if dwarf:
+        dwarf.trace_function_end()
     if not is_early_return and writer.config.dwarf_emit_cfi:
         writer.directive("cfi_endproc")

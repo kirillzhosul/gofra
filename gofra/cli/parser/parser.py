@@ -229,6 +229,8 @@ def _process_codegen_config(
     return CodegenConfig(
         no_compiler_comments=bool(args.codegen_no_compiler_comments),
         dwarf_emit_cfi=codegen_emit_dwarf_cfi,
+        dwarf_emit_dies=debug_symbols,
+        dwarf_emit_locations=debug_symbols,
         align_functions_bytes=args.codegen_functions_alignment,
         omit_unused_frame_pointers=optimizer.codegen_omit_unused_frame_pointer,
         peephole_isa_optimizer=optimizer.codegen_peephole_isa_optimizer,

@@ -22,7 +22,7 @@ def aarch64_program_entry_point(  # noqa: PLR0913
     system_entry_point_name: str,
     entry_point: Function,
     target: Target,
-    dwarf: DWARF,
+    dwarf: DWARF | None,
 ) -> None:
     """Write program entry, used to not segfault due to returning into protected system memory."""
     # TODO: add flag like `--bare-entry` to allow specify that Gofra `main` is real main

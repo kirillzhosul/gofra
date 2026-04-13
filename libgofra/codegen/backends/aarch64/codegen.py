@@ -49,6 +49,8 @@ class AARCH64CodegenBackend:
 
     string_pool: StringPool
 
+    dwarf: DWARF | None = None
+
     def __init__(
         self,
         target: Target,
@@ -76,7 +78,8 @@ class AARCH64CodegenBackend:
                 target,
             )
 
-        self.dwarf = DWARF(self.writer, unit_path=self.module.path)
+        if config.dwarf_emit_locations or config.dwarf_emit_dies:
+            self.dwarf = DWARF(self.writer, unit_path=self.module.path)
 
         self.abi = DarwinAARCH64ABI()
         self.string_pool = StringPool()
@@ -111,7 +114,8 @@ class AARCH64CodegenBackend:
         if self.config.peephole_isa_optimizer:
             peephole_isa_optimizer_pass(self.writer)
 
-        self.dwarf.write_full_dwarf_sections(self.module)
+        if self.dwarf and self.config.dwarf_emit_dies:
+            self.dwarf.write_full_dwarf_sections(self.module)
 
         self.writer.directive("subsections_via_symbols")
         if isinstance(self.writer, AARCH64BufferedWriterImplementation):  # pyright: ignore[reportUnnecessaryIsInstance]
@@ -124,7 +128,7 @@ def function_define_with_instruction_set(  # noqa: PLR0913
     string_pool: StringPool,
     module: Module,
     function: Function,
-    dwarf: DWARF,
+    dwarf: DWARF | None,
 ) -> None:
     """Define all executable functions inside final executable with their executable body respectfully.
 
