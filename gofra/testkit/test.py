@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
+from libgofra.exceptions import GofraError
+
 if TYPE_CHECKING:
     from pathlib import Path
     from subprocess import CalledProcessError, TimeoutExpired
 
-    from libgofra.exceptions import GofraError
     from libgofra.targets import Target
 
 
@@ -18,10 +19,25 @@ class TestStatus(Enum):
     TOOLCHAIN_ERROR = auto()
     EXPECTED_TOOLCHAIN_ERROR = auto()
 
+    IO_MISMATCH_ERROR = auto()
+
     EXECUTION_STATUS_ERROR = auto()
     EXECUTION_TIMEOUT_ERROR = auto()
 
     SUCCESS = auto()
+
+
+class GofraTestkitIOMismatchError(GofraError):
+    expected_stdout: str
+    actual_stdout: str
+
+    def __init__(self, expected_stdout: str, actual_stdout: str) -> None:
+        super().__init__()
+        self.expected_stdout = expected_stdout
+        self.actual_stdout = actual_stdout
+
+    def __repr__(self) -> str:
+        return f"IO Mismatch! Expected STDOUT: '{self.expected_stdout}', but got '{self.actual_stdout}'"
 
 
 type ERROR = GofraError | CalledProcessError | TimeoutExpired

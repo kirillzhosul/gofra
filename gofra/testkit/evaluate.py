@@ -23,7 +23,7 @@ from libgofra.targets import Target
 from libgofra.typecheck.typechecker import validate_type_safety
 
 from .cli.arguments import CLIArguments
-from .test import Test, TestStatus
+from .test import GofraTestkitIOMismatchError, Test, TestStatus
 
 
 def toolchain_assemble_executable(
@@ -162,17 +162,38 @@ def evaluate_test_case(  # noqa: PLR0911
         msg = "Expected TESTKIT_EXPECTED_EXIT_CODE to be an integer."
         raise TypeError(msg)
 
+    expected_stdout_macro = macros.get("TESTKIT_EXPECTED_STDOUT")
+    expected_stdout = ""
+
+    if expected_stdout_macro:
+        assert len(expected_stdout_macro.tokens) == 1
+        expected_stdout = expected_stdout_macro.tokens[0].value
+        assert isinstance(expected_stdout, str)
+
     apply_file_executable_permissions(filepath=artifact_path)
 
     try:
-        exit_code = execute_native_binary_executable(
+        native_process = execute_native_binary_executable(
             artifact_path,
             args=[],
             timeout=15,
             stdout=PIPE,
             stderr=PIPE,
             stdin=PIPE,
-        ).returncode
+        )
+        exit_code = native_process.returncode
+
+        actual_stdout = native_process.stdout.decode()
+        if expected_stdout != actual_stdout:
+            return Test(
+                target=build_target,
+                status=TestStatus.IO_MISMATCH_ERROR,
+                path=path,
+                error=GofraTestkitIOMismatchError(
+                    actual_stdout=actual_stdout,
+                    expected_stdout=expected_stdout,
+                ),
+            )
     except TimeoutExpired as e:
         return Test(
             target=build_target,

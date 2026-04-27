@@ -1,0 +1,9 @@
+/// Test that print hello world works
+
+#include "std"
+
+#define TESTKIT_EXPECTED_STDOUT "Hello, World!"
+
+func void main[]
+    "Hello, World!" print
+end

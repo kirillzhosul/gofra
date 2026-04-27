@@ -6,11 +6,13 @@ COLORS: dict[TestStatus, str] = {
     TestStatus.TOOLCHAIN_ERROR: CLIColor.RED,
     TestStatus.EXECUTION_STATUS_ERROR: CLIColor.RED,
     TestStatus.EXECUTION_TIMEOUT_ERROR: CLIColor.RED,
+    TestStatus.IO_MISMATCH_ERROR: CLIColor.RED,
     TestStatus.SKIPPED: CLIColor.RESET,
 }
 
 ICONS: dict[TestStatus, str] = {
     TestStatus.SUCCESS: "+",
+    TestStatus.IO_MISMATCH_ERROR: "?",
     TestStatus.TOOLCHAIN_ERROR: "-",
     TestStatus.EXECUTION_TIMEOUT_ERROR: "@",
     TestStatus.EXECUTION_STATUS_ERROR: "@",
