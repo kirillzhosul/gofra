@@ -1,4 +1,4 @@
-from libgofra.types._base import CompositeType, Type
+from libgofra.types._base import CompositeType, PrimitiveType, Type
 
 
 class ArrayType(CompositeType):
@@ -26,7 +26,9 @@ class ArrayType(CompositeType):
         return index >= self.elements_count or index < 0
 
     def __repr__(self) -> str:
-        return f"{self.element_type}[{self.elements_count}]"
+        if isinstance(self.element_type, PrimitiveType):
+            return f"{self.element_type}[{self.elements_count}]"
+        return f"({self.element_type})[{self.elements_count}]"
 
     @property
     def elements_count(self) -> int:
