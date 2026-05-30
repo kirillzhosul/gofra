@@ -5,17 +5,62 @@ Interactive usage of compiler.
 
 import contextlib
 import sys
-from collections.abc import MutableSequence, Sequence
+from collections.abc import Callable, MutableSequence, Sequence
 from pathlib import Path
 from typing import NoReturn
 
 from gofra.cache.directory import prepare_build_cache_directory
 from gofra.cli.parser.arguments import CLIArguments
-from gofra.cli.readline import (
-    finalize_readline,
-    read_multiline_input,
-    try_setup_readline,
-)
+
+try:
+    from gofra.cli.readline import (
+        finalize_readline,
+        read_multiline_input,
+        try_setup_readline,
+    )
+except ModuleNotFoundError:
+    # Underlying error in Windows module resolution (probably)
+    # mock them, as we probably cant do anything
+    def finalize_readline(history_filepath: Path) -> None:  # noqa: ARG001
+        return None
+
+    def try_setup_readline(history_filepath: Path) -> None:  # noqa: ARG001
+        return None
+
+    def read_multiline_input(
+        prompt_initial: str,
+        prompt_multiline: str,
+        raise_eof_on: Callable[[str, int], bool],
+        stop_and_preserve_on: Callable[[str, int], bool],
+    ) -> list[str]:
+        # TODO!: Migrate or refactor so we not duplicate these functions  # noqa: TD004
+        lines: list[str] = []
+
+        while True:
+            line_no = len(lines)
+            prompt = prompt_multiline if line_no else prompt_initial
+            try:
+                line = input(prompt).strip()
+            except KeyboardInterrupt:
+                # Newline and omit after Ctrl+C
+                print()
+                continue
+
+            if raise_eof_on(line, line_no):
+                raise EOFError
+
+            if stop_and_preserve_on(line, line_no):
+                lines.append(line)
+                break
+
+            if line:
+                lines.append(line)
+            elif line_no > 0:
+                break
+
+        return lines
+
+
 from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
 from libgofra.assembler.assembler import assemble_object_file

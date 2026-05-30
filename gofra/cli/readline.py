@@ -1,3 +1,8 @@
+"""Readline wrapper.
+
+Notice that Windows isn't working, so it will probably raise ImportError
+"""
+
 import contextlib
 import readline
 import warnings
