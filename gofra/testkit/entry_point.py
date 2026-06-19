@@ -85,7 +85,7 @@ def cli_process_testkit_runner(args: CLIArguments) -> None:
         )
         for test in test_matrix:
             if test.artifact_path:
-                test.artifact_path.unlink()
+                test.artifact_path.unlink(missing_ok=True)  # was failing due to subdir
 
     time_taken = (time.perf_counter_ns() - start_time) / NANOS_TO_SECONDS
     cli_message(

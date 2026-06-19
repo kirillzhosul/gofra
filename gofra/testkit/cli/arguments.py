@@ -61,8 +61,8 @@ def _construct_argument_parser() -> ArgumentParser:
         "--pattern",
         "-p",
         dest="test_files_pattern",
-        default="test_*.gof",
-        help="Pattern for file that is treated as test cases, defaults to `test_*.gof`",
+        default="**/test_*.gof",
+        help="Pattern for file that is treated as test cases, defaults to `**/test_*.gof`",
     )
 
     parser.add_argument(
