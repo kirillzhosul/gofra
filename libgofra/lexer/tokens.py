@@ -30,7 +30,7 @@ class TokenLocation:
         if self.source == "toolchain":
             return "'(gofra-toolchain-internals)'"
         assert self.filepath is not None
-        return f"'{self.filepath.name}:{self.line_number + 1}:{self.col_number + 1}'"
+        return f"'{self.filepath}:{self.line_number + 1}:{self.col_number + 1}'"
 
     def shift_col_number(self, by: int) -> TokenLocation:
         return TokenLocation(
