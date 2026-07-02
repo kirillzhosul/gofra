@@ -29,7 +29,6 @@ func void main[]
     end
 
     // Read file
-
     fd &sv call read_file_sv false == if 
         "Unable to read given file\n" eprint_fatal 
     end

@@ -1,0 +1,11 @@
+
+#include "std"
+
+#define TESTKIT_EXPECTED_STDOUT "-10\n0\n32\n2048\n"
+
+func void main[]
+    -10 print_int "\n" print
+    0 print_int "\n" print
+    32 print_int "\n" print
+    2048 print_int "\n" print
+end

@@ -16,7 +16,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug",
+            "name": "Debug selected via LLDB",
             "program": "${file}",
             "args": [],
             "cwd": "${workspaceFolder}"

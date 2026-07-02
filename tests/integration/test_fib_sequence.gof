@@ -1,0 +1,30 @@
+#include "std"
+
+const N = 4181;
+
+#define TESTKIT_EXPECTED_STDOUT "Fibonacci Series: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181\n"
+
+func void main[]
+    var a = 0;
+    var b = 1;
+    var x int;
+    &x a b + !<
+
+    "Fibonacci Series: " print
+    a print_int ", " print
+    b print_int ", " print
+
+    while x N <= do
+        x print_int
+
+        &a b !<
+        &b x !<
+        &x a b + !<
+
+        x N <= if
+            ", " print
+        end
+    end 
+
+    "\n" print
+end

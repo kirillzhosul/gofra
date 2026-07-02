@@ -70,10 +70,9 @@ end
 // does not emit '\n' at the end
 var print_int64_buf char[20] // Max 64 bit cap
 pub func void print_int64_fd[int fd, int num]
-    var idx int = 0;
     var is_negative bool = 0;
+    var idx int = 0; // TOOD: somehow this must be second in stack space must be resolved as relies on general stack space layout allocation and must be fixed ASAP
     var str_view string;
-
 
     #ifdef __WASM
         &is_negative 0 !<
@@ -233,8 +232,8 @@ end
 #endif
 
 // Print given number into standard console output
-pub func void print_int64[int]
-    STD_OUT swap call print_int64_fd
+pub func void print_int64[int number]
+    STD_OUT number call print_int64_fd
 end
 
 #ifndef __WASM
@@ -252,4 +251,5 @@ end
     end
 #endif
 
-pub func void print_int[int number] number print_int64 end // Alias as default int is 64 bits
+// TODO: due to BIG problems via stack space and call stack this is must be an macro and must be fixed ASAP as this breaks most of the code that relies on more than two functions!
+#define print_int print_int64 // Alias as default int is 64 bits
