@@ -1,0 +1,4 @@
+/// Tests that empty main function works
+
+func void main[]
+end

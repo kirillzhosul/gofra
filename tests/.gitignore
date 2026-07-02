@@ -1,3 +1,5 @@
 *
 !test_*.gof
+!**/
+!**/test_*.gof
 !.gitignore

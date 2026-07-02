@@ -1,0 +1,3 @@
+/// Tests that empty main function works
+
+#define TESTKIT_EXPECT_COMPILE_ERROR "No entry point function `main` found!"

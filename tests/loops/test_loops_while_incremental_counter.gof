@@ -9,8 +9,7 @@ func void main[]
 
     while x ITERATIONS < do
         &x x 1 + !< 
-    end 
-    
-    x ITERATIONS "While loop must perform exactly N iterations" call assert
+    end
 
+    x ITERATIONS "While loop must perform exactly N iterations" call assert
 end

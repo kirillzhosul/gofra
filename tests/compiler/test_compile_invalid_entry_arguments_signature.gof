@@ -1,0 +1,5 @@
+
+#define TESTKIT_EXPECT_COMPILE_ERROR "Entry point function 'main' violates parameters type contract!"
+
+func void main[int any_arg]
+end

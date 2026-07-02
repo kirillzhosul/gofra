@@ -1,0 +1,5 @@
+
+#define TESTKIT_EXPECT_COMPILE_ERROR "Entry point function 'main' violates return type contract!"
+
+func char main[]
+end

@@ -1,0 +1,6 @@
+
+#define TESTKIT_EXPECTED_EXIT_CODE 32
+
+func int main[]
+    TESTKIT_EXPECTED_EXIT_CODE return
+end
