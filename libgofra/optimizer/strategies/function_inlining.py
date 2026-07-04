@@ -98,7 +98,7 @@ def _mark_inlineable_functions_as_inline(
         function.is_inline = True
 
 
-def should_inline_function(
+def should_inline_function(  # noqa: PLR0911
     function: Function,
     cg: CallGraph,
     max_operators: int,
@@ -113,6 +113,10 @@ def should_inline_function(
     if function.is_inline:
         # Explicitly marked as inline (attribute) - always inline
         return True
+
+    if function.parameters or function.variables:
+        # Do not inline functions which has parameters or local variables as we currently do not support expanding memory locations.
+        return False
 
     if function.is_recursive:
         # do NOT inline functions which has self-recursion as this will lead to broken program and infinite optimizer pass.
