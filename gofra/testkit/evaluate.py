@@ -19,6 +19,8 @@ from libgofra.linker.entry_point import LINKER_EXPECTED_ENTRY_POINT
 from libgofra.linker.linker import link_object_files
 from libgofra.linker.output_format import LinkerOutputFormat
 from libgofra.linker.profile import LinkerProfile
+from libgofra.optimizer.config import build_default_optimizer_config_from_level
+from libgofra.optimizer.pipeline import create_optimizer_pipeline
 from libgofra.preprocessor.macros.registry import MacrosRegistry
 from libgofra.targets import Target
 from libgofra.typecheck.typechecker import validate_type_safety
@@ -93,6 +95,13 @@ def evaluate_test_case(  # noqa: PLR0911
             on_lint_warning=cli_linter_warning,
             entry_point_name="main",
         )
+
+        opt_level = 1 if args.aggressive_optimizations else 0
+        pipeline = create_optimizer_pipeline(
+            config=build_default_optimizer_config_from_level(level=opt_level),
+        )
+        for optimizer_pass, _ in pipeline:
+            optimizer_pass(module)
 
         artifact_path = toolchain_assemble_executable(
             path,

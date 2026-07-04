@@ -23,6 +23,8 @@ class CLIArguments:
     test_files_pattern: str
     excluded_test_files: list[str]
 
+    aggressive_optimizations: bool
+
     fail_with_abnormal_exit_code: bool
     build_only_no_execute: bool
     max_thread_workers: int
@@ -46,6 +48,7 @@ def parse_cli_arguments() -> CLIArguments:
         excluded_test_files=args.excluded_test_files,
         test_files_pattern=args.test_files_pattern,
         fail_with_abnormal_exit_code=bool(args.fail_with_abnormal_exit_code),
+        aggressive_optimizations=bool(args.aggressive_optimizations),
     )
 
 
@@ -122,6 +125,13 @@ def _construct_argument_parser() -> ArgumentParser:
         dest="build_only_no_execute",
         action="store_true",
         help="If specified, will not execute binaries, only tries to build it (e.g suitable for applications build testing)",
+    )
+
+    parser.add_argument(
+        "--aggressive-optimizations",
+        dest="aggressive_optimizations",
+        action="store_true",
+        help="If specified will enable all optimizations available in Gofra optimizer pipeline for optimizer tests",
     )
 
     parser.add_argument(

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from libgofra.hir.module import Module
 
 
-DEBUG_TRACE_INLINES = True
+DEBUG_TRACE_INLINES = False
 
 
 def optimize_function_inlining(
