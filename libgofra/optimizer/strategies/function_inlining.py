@@ -7,7 +7,7 @@ from libgofra.optimizer.helpers.call_graph import CallGraph
 from libgofra.parser.operators import OperatorType
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator
 
     from libgofra.hir.function import Function
     from libgofra.hir.module import Module
@@ -70,9 +70,16 @@ def _inline_direct_call(
 ) -> None:
     def adapt_function_for_inline_expansion(
         inlined: Function,
-    ) -> Sequence[Operator]:
+    ) -> Generator[Operator]:
         # TODO: This requires proper for example loop-unrolling but now left as is
-        return inlined.operators
+        for operator in inlined.operators:
+            if operator.jumps_to_operator_idx:
+                msg = "Inlining function with jumps is not supported yet, please remove inline mark or disable inlining optimizations"
+                raise NotImplementedError(msg)
+            if operator.type == OperatorType.FUNCTION_RETURN:
+                # Remove return operator as it is not needed inlined
+                continue
+            yield operator
 
     caller.operators = [
         *caller.operators[:inline_direct_call_idx],
