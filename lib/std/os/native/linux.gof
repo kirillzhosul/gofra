@@ -25,12 +25,12 @@ type struct timeval
 end
 
 // Network socket address in structure (posix/unix only)
-struct sockaddr_in
+struct packed sockaddr_in
     sin_family char[2]
     sin_port   char[2]
     sin_addr   char[4]
-    sin_zero   int   // zero padding
-end
+    sin_zero   char[8]   // zero padding
+end // 16 bytes
 
 // --- Syscall Numbers (Partial Table) ---
 #ifdef ARCH_AMD64

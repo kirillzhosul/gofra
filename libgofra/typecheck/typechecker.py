@@ -89,7 +89,7 @@ def validate_type_safety(
     *,
     strict_expect_entry_point: bool = True,
     on_lint_warning: Callable[[str], None] | None,
-    entry_point_name: str = "main",
+    entry_point_name: str,
 ) -> None:
     """Validate type safety of an program by type checking all given functions."""
     if on_lint_warning is None:

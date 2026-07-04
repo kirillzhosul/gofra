@@ -43,6 +43,7 @@ def cli_perform_call_graph_goal(args: CLIArguments) -> NoReturn:
         args.include_paths,
         macros=macros_registry,
         rt_array_oob_check=args.runtime_array_oob_checks,
+        entry_point_name=args.executable_entry_point,
     )
 
     cli_process_optimization_pipeline(module, args)

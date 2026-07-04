@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from gofra.cache.vcs import create_cache_gitignore
+from gofra.cache.vcs import try_create_cache_gitignore
 
 INCLUDED_CLEANUP_EXTENSIONS = {"", ".s", ".o"}
 EXCLUDED_CLEANUP_FILENAMES = {".gitignore"}
@@ -12,7 +12,7 @@ def prepare_build_cache_directory(path: Path) -> None:
         return
 
     path.mkdir(exist_ok=False, parents=True)
-    create_cache_gitignore(path)
+    try_create_cache_gitignore(path)
 
 
 def cleanup_build_cache_directory(path: Path) -> None:

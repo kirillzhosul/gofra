@@ -7,6 +7,7 @@ from subprocess import CalledProcessError, CompletedProcess, TimeoutExpired, run
 from typing import TYPE_CHECKING, Final, assert_never
 
 from libgofra.assembler.drivers._driver_protocol import AssemblerDriverProtocol
+from libgofra.assembler.errors import ClangDoesNotSupportWasmError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -105,7 +106,7 @@ class ClangAssemblerDriver(AssemblerDriverProtocol):
             case "arm64-apple-darwin" | "amd64-unknown-linux" | "amd64-unknown-windows":
                 return target.triplet
             case "wasm32-unknown-none":
-                raise NotImplementedError
+                raise ClangDoesNotSupportWasmError(target=target)
             case _:
                 assert_never(target.triplet)
 

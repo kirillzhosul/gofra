@@ -9,13 +9,17 @@ from .clang import ClangAssemblerDriver
 _drivers = [ClangAssemblerDriver, WabtAssemblerDriver]
 
 
-def get_assembler_driver(target: Target) -> AssemblerDriverProtocol | None:
+def get_assembler_driver(
+    target: Target,
+    *,
+    installed_only: bool = True,
+) -> AssemblerDriverProtocol | None:
     """Get supported assembler (driver) for that target.
 
     Returns None if no suitable assembler either installed or supports that target
     """
     for driver in get_supported_drivers(target):
-        if not driver.is_installed():
+        if installed_only and not driver.is_installed():
             continue
         return driver()
     return None

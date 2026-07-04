@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from libgofra.assembler.drivers import AssemblerDriverProtocol, get_assembler_driver
+from libgofra.assembler.drivers._get_assembler_driver import get_supported_drivers
 from libgofra.assembler.errors import NoAssemblerDriverError
 
 if TYPE_CHECKING:
@@ -37,7 +38,10 @@ def assemble_object_file(  # noqa: PLR0913
     """
     driver = driver or get_assembler_driver(target)
     if driver is None:
-        raise NoAssemblerDriverError(target)
+        raise NoAssemblerDriverError(
+            target,
+            supported_drivers=get_supported_drivers(target),
+        )
 
     return driver.assemble(
         target=target,

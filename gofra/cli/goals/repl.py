@@ -272,6 +272,7 @@ def _compile_file_to_execute(
                 module,
                 on_lint_warning=on_lint_warning_suppressed,
                 strict_expect_entry_point=True,
+                entry_point_name=args.executable_entry_point,  # may be useless but we just pass it
             )
         except (ValueError, AssertionError, GofraError) as e:
             print(f"!!! REPL Error: {e!r}")

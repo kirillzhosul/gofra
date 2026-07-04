@@ -20,6 +20,7 @@ def process_input_file(
     macros: MacrosRegistry,
     rt_array_oob_check: bool = False,
     _debug_emit_lexemes: bool = False,
+    entry_point_name: str = "main",
 ) -> Module:
     """Core entry for Gofra API.
 
@@ -40,6 +41,7 @@ def process_input_file(
         macros=macros,
         include_paths=include_paths,
         rt_array_oob_check=rt_array_oob_check,
+        entry_point_name=entry_point_name,
     )
 
 

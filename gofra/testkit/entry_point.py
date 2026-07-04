@@ -38,7 +38,7 @@ NANOS_TO_SECONDS = 1_000_000_000
 def cli_entry_point() -> None:
     """CLI main entry."""
     with cli_gofra_error_handler(
-        debug_user_friendly_errors=False,
+        debug_user_friendly_errors=True,
     ):
         args = parse_cli_arguments()
         cli_process_testkit_runner(args)

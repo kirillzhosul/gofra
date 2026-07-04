@@ -86,6 +86,7 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             macros=macros_registry,
             _debug_emit_lexemes=args.lexer_debug_emit_lexemes,
             rt_array_oob_check=args.runtime_array_oob_checks,
+            entry_point_name=args.executable_entry_point,
         )
 
     if root_module.dependencies and args.output_format not in ("executable", "library"):
@@ -407,6 +408,7 @@ def _perform_typechecker(args: CLIArguments, root_module: Module) -> None:
                 if args.display_lint_warnings
                 else on_lint_warning_suppressed,
                 strict_expect_entry_point=must_has_entry_point,
+                entry_point_name=args.executable_entry_point,
             )
 
 

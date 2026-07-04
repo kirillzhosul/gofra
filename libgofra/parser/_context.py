@@ -83,7 +83,7 @@ class ParserContext(PeekableTokenizer):
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=list[Operator])
 
-    context_stack: deque[tuple[int, Operator, "RangeQualifier | None"]] = field(
+    context_stack: deque[tuple[int, Operator, RangeQualifier | None]] = field(
         default_factory=deque[tuple[int, Operator, "RangeQualifier | None"]],
     )
 
@@ -173,7 +173,7 @@ class ParserContext(PeekableTokenizer):
 
         self.operators.extend(inline_block.operators)
 
-    def pop_context_stack(self) -> tuple[int, Operator, "RangeQualifier | None"]:
+    def pop_context_stack(self) -> tuple[int, Operator, RangeQualifier | None]:
         return self.context_stack.pop()
 
     def push_new_operator(

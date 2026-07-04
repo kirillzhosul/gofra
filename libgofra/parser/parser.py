@@ -95,13 +95,14 @@ BOTH_LEVEL_KEYWORD = (
 )
 
 
-def parse_module_from_tokenizer(
+def parse_module_from_tokenizer(  # noqa: PLR0913
     path: Path,
     tokenizer: Generator[Token],
     macros: MacrosRegistry,
     include_paths: Iterable[Path],
     *,
     rt_array_oob_check: bool = False,
+    entry_point_name: str,
 ) -> Module:
     """Load file for parsing into operators."""
     context = ParserContext(
@@ -110,6 +111,7 @@ def parse_module_from_tokenizer(
         import_search_paths=list(include_paths),
         macros_registry=macros,
         rt_array_oob_check=rt_array_oob_check,
+        entry_point_name=entry_point_name,
     )
     _parse_from_context_into_operators(context=context)
 
@@ -572,6 +574,7 @@ def _unpack_import(context: ParserContext, token: Token) -> None:
         macros=context.macros_registry.copy(),  # TODO: do not mutate root module
         include_paths=context.import_search_paths,
         rt_array_oob_check=context.rt_array_oob_check,
+        entry_point_name=context.entry_point_name,
     )
     context.module_dependencies[named_import_as_name] = imported_module
 

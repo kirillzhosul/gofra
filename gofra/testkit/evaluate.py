@@ -6,6 +6,7 @@ from gofra.cli.is_segmentation_fault import is_segmentation_fault
 from gofra.cli.output import cli_linter_warning, cli_message
 from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
+from gofra.testkit.errors import TestkitExpectedExitCodeMustBeIntError
 from libgofra.assembler.assembler import (
     assemble_object_file,
 )
@@ -90,6 +91,7 @@ def evaluate_test_case(  # noqa: PLR0911
             module,
             strict_expect_entry_point=True,
             on_lint_warning=cli_linter_warning,
+            entry_point_name="main",
         )
 
         artifact_path = toolchain_assemble_executable(
@@ -158,9 +160,13 @@ def evaluate_test_case(  # noqa: PLR0911
             f"Expected exit code is equals to SIGSEGV signal ({expected_exit_code}) this may cause invalid error messages when testing",
         )
 
-    if not isinstance(expected_exit_code, int):
-        msg = "Expected TESTKIT_EXPECTED_EXIT_CODE to be an integer."
-        raise TypeError(msg)
+    if expected_exit_code_macro is not None and not isinstance(expected_exit_code, int):
+        raise TestkitExpectedExitCodeMustBeIntError(
+            at=expected_exit_code_macro.tokens[0].location,
+            token=expected_exit_code_macro.tokens[0],
+        )
+
+    assert isinstance(expected_exit_code, int), "Expected exit code must be an integer"
 
     expected_stdout_macro = macros.get("TESTKIT_EXPECTED_STDOUT")
     expected_stdout = ""

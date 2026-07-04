@@ -80,6 +80,7 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         runtime_array_oob_checks=bool(args.runtime_array_oob_checks),
         propagate_execute_child_exit_code=bool(args.propagate_execute_child_exit_code),
         call_graph_only=bool(args.call_graph_only),
+        executable_entry_point=args.executable_entry_point,
     )
 
 

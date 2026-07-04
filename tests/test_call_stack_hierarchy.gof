@@ -1,0 +1,35 @@
+
+
+#define TESTKIT_EXPECTED_EXIT_CODE 7
+
+func int a[int x]
+    x 1 + call b
+end
+
+func int b[int x]
+    x 1 + call c return
+end
+
+func int c[int x]
+    x 1 + call d return
+end
+
+func int d[int x]
+    x 1 + call e return
+end
+
+func int e[int x]
+    x 1 + call f return
+end
+
+func int f[int x]
+    x 1 + call g return
+end
+
+func int g[int x]
+    x 1 + return
+end
+
+func int main[]
+    0 call a return
+end

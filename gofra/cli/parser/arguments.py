@@ -40,6 +40,8 @@ class CLIArguments:
     build_cache_dir: Path
     delete_build_cache: bool
 
+    executable_entry_point: str
+
     lexer_debug_emit_lexemes: bool
     cli_debug_user_friendly_errors: bool
 

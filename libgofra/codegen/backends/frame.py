@@ -2,6 +2,7 @@ from collections.abc import Mapping
 from typing import NamedTuple
 
 from libgofra.codegen.backends.alignment import align_to_highest_size
+from libgofra.codegen.backends.errors import FrameTableLocatableError
 from libgofra.codegen.config import CodegenConfig
 from libgofra.hir.function import Function
 from libgofra.hir.variable import Variable
@@ -54,8 +55,7 @@ def build_local_variables_frame_offsets(
 
     if local_space_size > STORE_PAIR_MAX_RANGE:  # [-512, 504] STP limitations
         # TODO(@kirillzhosul): Add proper auto relocation / fix STP limitations
-        msg = f"Cannot locate current local variables on a frame or relocate them, please locate big local variables in global space! Max local frame size: {STORE_PAIR_MAX_RANGE}, but currently it is: {local_space_size} bytes (aligned)!"
-        raise NotImplementedError(msg)
+        raise FrameTableLocatableError(local_space_size, STORE_PAIR_MAX_RANGE)
 
     return LocalVariablesFrameOffsets(
         offsets=offsets,

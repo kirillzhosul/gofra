@@ -228,6 +228,15 @@ def add_output_group(parser: ArgumentParser) -> None:
         help="If specified and execute flag is passed, will propagate exit status of child to parent compiler process",
     )
 
+    group.add_argument(
+        "--entry-point",
+        type=str,
+        required=False,
+        dest="executable_entry_point",
+        help="Function used as entry point for executable. By default will be 'main' function.",
+        default="main",
+    )
+
 
 def add_preprocessor_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with preprocessor options into given parser."""
