@@ -13,3 +13,9 @@ class TestkitExpectedExitCodeMustBeIntError(GofraError):
 But got {self.token.type.name} which is not an integer. Please provide an integer value for TESTKIT_EXPECTED_EXIT_CODE.
 
 {self.generic_error_name}"""
+
+
+class TestkitInternalAssemblerError(GofraError): ...
+
+
+class TestkitInternalLinkerError(GofraError): ...

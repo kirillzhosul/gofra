@@ -39,8 +39,8 @@ def _try_optimize_at(buffer: list[CISLine], idx: int) -> tuple[CISLine | None, i
         dest1 = " ".join(item1.text.split()[2:])
         dest2 = " ".join(item2.text.split()[2:])
 
-        assert dest1 == "[SP, -16]!"
-        assert dest2 == "[SP], #16"
+        if dest1 == "[SP, -16]!" or dest2 != "[SP], #16":
+            return buffer[idx], 1
         if reg1 == reg2:
             return CISLine(
                 type="comment",

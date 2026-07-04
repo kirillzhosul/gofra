@@ -21,6 +21,9 @@ class TestStatus(Enum):
 
     IO_MISMATCH_ERROR = auto()
 
+    ASSEMBLER_ERROR = auto()
+    LINKER_ERROR = auto()
+
     EXECUTION_STATUS_ERROR = auto()
     EXECUTION_TIMEOUT_ERROR = auto()
 

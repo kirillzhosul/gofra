@@ -6,7 +6,11 @@ from gofra.cli.is_segmentation_fault import is_segmentation_fault
 from gofra.cli.output import cli_linter_warning, cli_message
 from gofra.execution.execution import execute_native_binary_executable
 from gofra.execution.permissions import apply_file_executable_permissions
-from gofra.testkit.errors import TestkitExpectedExitCodeMustBeIntError
+from gofra.testkit.errors import (
+    TestkitExpectedExitCodeMustBeIntError,
+    TestkitInternalAssemblerError,
+    TestkitInternalLinkerError,
+)
 from libgofra.assembler.assembler import (
     assemble_object_file,
 )
@@ -51,12 +55,14 @@ def toolchain_assemble_executable(
             verbose=args.verbose,
         ),
     )
-    assemble_object_file(
+    assembler_proc = assemble_object_file(
         in_assembly_file=artifact_assembly_file,
         out_object_file=artifact_object_file,
         debug_information=True,
         target=build_target,
-    )
+    )  # Possibly here assembler / linker may be not an external command
+    if assembler_proc.returncode:
+        raise TestkitInternalAssemblerError
 
     linker_process = link_object_files(
         objects=[artifact_object_file],
@@ -70,7 +76,8 @@ def toolchain_assemble_executable(
         cache_directory=cache_directory,
         executable_entry_point_symbol=LINKER_EXPECTED_ENTRY_POINT,
     )
-    linker_process.check_returncode()
+    if linker_process.returncode:
+        raise TestkitInternalLinkerError
     return artifact_path
 
 
