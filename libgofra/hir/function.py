@@ -125,6 +125,13 @@ class Function:
         )
 
     @property
+    def has_relative_jumps(self) -> bool:
+        """If true, function has relative jumps (e.g loops, ifs, etc)."""
+        return any(
+            operator.jumps_to_operator_idx is not None for operator in self.operators
+        )
+
+    @property
     def is_requires_local_frame(self) -> bool:
         assert not self.is_inline, (
             "Do not call `is_requires_local_frame` on inlined functions"

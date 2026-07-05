@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from gofra.cli.output import cli_message
 from libgofra.hir.operator import FunctionCallOperand, Operator
 from libgofra.optimizer.helpers.call_graph import CallGraph
 from libgofra.parser.operators import OperatorType
@@ -30,37 +31,66 @@ def optimize_function_inlining(
     for f in inline_functions:
         pending.extend(cg.get_node(f).callers)
 
+    # TODO(@kirillzhosul): perf, possible can be optimized by using an parallel inlining as callers of inline functions are independent of each other.
+    # but we need to track reference ? this is possibly make solution more complex.
+
     for function in pending:
-        for _ in range(max_iterations):
-            iteration_has_fold = False
-            for idx, operator in enumerate(function.operators):
-                # Iterate each function source 'max_iterations' times until all new inlined function calls is not folded.
-                if operator.type not in (
-                    OperatorType.FUNCTION_CALL,
-                    OperatorType.PUSH_FUNCTION_POINTER,
-                ):
-                    continue
-                assert isinstance(operator.operand, FunctionCallOperand)
-                called_function = module.resolve_function_dependency(
-                    operator.operand.module,
-                    operator.operand.get_name(),
-                )
-                assert called_function
-                if not called_function.is_inline:
-                    continue
+        _mutate_inline_callers(
+            function=function,
+            module=module,
+            max_iterations=max_iterations,
+        )
 
-                assert operator.type != OperatorType.PUSH_FUNCTION_POINTER, (
-                    "Tried to inline function pointer obtain"
-                )
-                iteration_has_fold = True
-                _inline_direct_call(
-                    function,
-                    inline_direct_call_idx=idx,
-                    inline_target=called_function,
-                )
 
-            if not iteration_has_fold:
-                break
+def _mutate_inline_callers(
+    function: Function,
+    module: Module,
+    max_iterations: int,
+) -> None:
+    has_rel_jumps = function.has_relative_jumps
+    for _ in range(max_iterations):
+        # Iterate function source until all new inlined function calls is not folded.
+
+        # TODO(@kirillzhosul): Why exactly we do that not in a single pass?
+        # and should not we mark inlineable functions again ?
+        # (this must be performed once in pending run loop?)
+
+        iteration_has_fold = False
+        for idx, operator in enumerate(function.operators):
+            if operator.type not in (
+                OperatorType.FUNCTION_CALL,
+                OperatorType.PUSH_FUNCTION_POINTER,
+            ):
+                continue
+            assert isinstance(operator.operand, FunctionCallOperand)
+            called_function = module.resolve_function_dependency(
+                operator.operand.module,
+                operator.operand.get_name(),
+            )
+            assert called_function
+            if not called_function.is_inline:
+                continue
+
+            assert operator.type != OperatorType.PUSH_FUNCTION_POINTER, (
+                "Tried to inline function pointer obtain"
+            )
+            if has_rel_jumps:
+                # TODO(@kirillzhosul): must be resolve sorta ASAP as we can inline those functions right, but it will require relative jumps in operators and finishing inlining direct calls.
+                cli_message(
+                    "WARNING",
+                    f"Possible partial inlining of function `{called_function.name}` defined at {called_function.defined_at}, function has been unmarked as inline!",
+                )
+                called_function.is_inline = False
+                continue
+            iteration_has_fold = True
+            _inline_direct_call(
+                function,
+                inline_direct_call_idx=idx,
+                inline_target=called_function,
+            )
+
+        if not iteration_has_fold:
+            break
 
 
 def _inline_direct_call(
@@ -120,6 +150,10 @@ def should_inline_function(  # noqa: PLR0911
     if function.is_inline:
         # Explicitly marked as inline (attribute) - always inline
         return True
+
+    if function.has_relative_jumps:
+        # Do not inline functions which has relative jumps as this will lead to broken program and infinite optimizer pass.
+        return False
 
     if function.parameters or function.variables:
         # Do not inline functions which has parameters or local variables as we currently do not support expanding memory locations.
