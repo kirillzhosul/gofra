@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from libgofra.types import Type
 
 
-type PARAMS_T = Sequence[Type]
+type PARAMS_T = Sequence[tuple[str, Type]]
 
 
 class Visibility(Enum):
@@ -95,13 +95,17 @@ class Function:
     return_type: Type                          = field(repr=True) # Void -> no return
 
     module:      Module                        = field(repr=False)
-    variables:   Mapping[str, Variable[Type]]  = field(repr=False) # Local ones, excluding parameters
+    variables:   Mapping[str, Variable[Type]]  = field(repr=False) # Local ones, must include parameter local vars
     attrs:       FunctionAttributes            = field(repr=True)
 
     operators:   MutableSequence[Operator]     = field(repr=False)
 
     outer_function: Function | None            = field(repr=False)
     # fmt: on
+
+    @property
+    def parameter_types(self) -> list[Type]:
+        return [p[1] for p in self.parameters]
 
     def has_return_value(self) -> bool:
         """Check is given function returns an void type (e.g no return type)."""
@@ -198,6 +202,8 @@ class Function:
         is_external: bool,
     ) -> Self:
         """Alternative for __init__ that is wrapped by factory methods (`create_*`)."""
+        assert name, "Unnamed functions are prohibited"
+
         function = cls()
         function.name = name
         function.defined_at = defined_at

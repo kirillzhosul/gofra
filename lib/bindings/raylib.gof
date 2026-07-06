@@ -29,9 +29,9 @@
 
 
 extern pub func void ClearBackground[Color color]                 
-extern pub func void DrawText[CStr,int,int,int,Color]             
-extern pub func void DrawLine[int,int,int,int,Color]              
-extern pub func void DrawRectangle[int,int,int,int,Color]         
+extern pub func void DrawText[CStr _,int _,int _,int _,Color _]             
+extern pub func void DrawLine[int _,int _ ,int _,int _ ,Color _]              
+extern pub func void DrawRectangle[int _,int _,int _ ,int _,Color _]         
 
 extern pub func void InitWindow[int width,int height,CStr name]   
 extern pub func bool WindowShouldClose[]                          

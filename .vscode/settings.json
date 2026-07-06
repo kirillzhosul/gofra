@@ -146,6 +146,7 @@
         "movq",
         "movz",
         "NANOS",
+        "nbyte",
         "nfds",
         "nobits",
         "noprefix",

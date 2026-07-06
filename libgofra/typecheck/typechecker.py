@@ -139,7 +139,7 @@ def validate_function_type_safety(
     func_block = emulate_type_stack_for_operators(
         operators=function.operators,
         module=module,
-        initial_type_stack=list(function.parameters),
+        initial_type_stack=function.parameter_types,
         on_lint_warning=on_lint_warning,
         current_function=function,
     )
@@ -656,12 +656,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
             assert function is not None, (
                 "Function existence must be resolved before typechecker stage!"
             )
-            scope.push_types(
-                FunctionType(
-                    parameter_types=function.parameters,
-                    return_type=function.return_type,
-                ),
-            )
+            scope.push_types(FunctionType.from_hir(function))
         case _:
             assert_never(operator.type)
 

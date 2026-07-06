@@ -24,6 +24,6 @@ def validate_entry_point_signature(entry_point: Function) -> None:
 
     if entry_point.parameters:
         raise EntryPointParametersMismatchTypecheckError(
-            parameters=entry_point.parameters,
+            parameters=entry_point.parameter_types,
             entry_point_name=entry_point.name,
         )

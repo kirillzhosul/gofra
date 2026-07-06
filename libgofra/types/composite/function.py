@@ -1,7 +1,11 @@
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from libgofra.types._base import CompositeType, Type
 from libgofra.types.composite.pointer import PointerType
+
+if TYPE_CHECKING:
+    from libgofra.hir.function import Function
 
 
 class FunctionType(CompositeType):
@@ -20,3 +24,10 @@ class FunctionType(CompositeType):
 
     def __repr__(self) -> str:
         return f"({', '.join(map(repr, self.parameters))}) -> {self.return_type}"
+
+    @classmethod
+    def from_hir(cls, f: "Function") -> "FunctionType":
+        return FunctionType(
+            parameter_types=f.parameter_types,
+            return_type=f.return_type,
+        )

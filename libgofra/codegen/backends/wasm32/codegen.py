@@ -37,7 +37,7 @@ from libgofra.codegen.backends.wasm32.sexpr import (
 )
 from libgofra.codegen.backends.wasm32.types import wasm_type_from_primitive
 from libgofra.codegen.config import CodegenConfig
-from libgofra.hir.function import PARAMS_T, Function
+from libgofra.hir.function import Function
 from libgofra.hir.initializer import (
     VariableIntArrayInitializerValue,
     VariableIntFieldedStructureInitializerValue,
@@ -361,7 +361,9 @@ class WASM32CodegenBackend:
 
             node = _get_wasm_internal_function_decl_spec(function)
 
-            node.add_nodes(self._function_prologue_load_params(function.parameters))
+            node.add_nodes(
+                self._function_prologue_load_params(function.parameter_types)
+            )
 
             spilled_mem_vars = self._function_allocate_spilled_stack_var_slots(
                 function.variables,
@@ -401,7 +403,7 @@ class WASM32CodegenBackend:
 
     def _function_prologue_load_params(
         self,
-        params: PARAMS_T,
+        params: list[Type],
     ) -> Generator[InstructionNode]:
         for param_i, param in enumerate(params):
             assert param.size_in_bytes <= 8
@@ -698,7 +700,9 @@ def _get_wasm_internal_function_decl_spec(function: Function) -> FunctionNode:
 
     if function.parameters:
         # TODO: WAT/WASM allows named function params
-        params = ParamNode(wasm_type_from_primitive(p) for p in function.parameters)
+        params = ParamNode(
+            wasm_type_from_primitive(p) for p in function.parameter_types
+        )
         decl.add_node(params)
 
     if function.has_return_value():

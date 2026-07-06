@@ -8,6 +8,7 @@ from libgofra.typecheck.errors import (
     ParameterTypeMismatchTypecheckError,
 )
 from libgofra.types.comparison import is_types_same
+from libgofra.types.composite.function import FunctionType
 
 from .exceptions import (
     TypecheckInvalidOperatorArgumentTypeError,
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
     from libgofra.hir.function import Function
     from libgofra.hir.operator import Operator
     from libgofra.types import Type
-    from libgofra.types.composite.function import FunctionType
 
 
 @dataclass(frozen=False)
@@ -76,7 +76,12 @@ class TypecheckScope:
                 at=at.location,
             )
 
-        for expected_type in callee.parameters[::-1]:
+        if isinstance(callee, FunctionType):
+            params_non_t = callee.parameters
+        else:
+            params_non_t = callee.parameter_types
+
+        for expected_type in params_non_t[::-1]:
             argument_type = self.pop_type_from_stack()
 
             if is_types_same(

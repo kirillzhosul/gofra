@@ -238,15 +238,15 @@ end
 
 #ifndef __WASM
     // Print given number as hexadecimal into standard console output
-    pub func void print_int64_hex[int]
-        STD_OUT swap true true call print_int64_hex_fd
+    pub func void print_int64_hex[int num]
+        STD_OUT num true true call print_int64_hex_fd
     end
 #endif
 
 // Print given pointer (TODO: Requires static cast) as hex-addr
 #ifndef __WASM
-    pub func void print_ptr[*void]
-        typecast int 
+    pub func void print_ptr[*void p]
+        p typecast int 
         call print_int64_hex
     end
 #endif

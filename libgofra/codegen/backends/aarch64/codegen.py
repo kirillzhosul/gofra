@@ -144,7 +144,7 @@ def function_define_with_instruction_set(  # noqa: PLR0913
         local_variables=function.variables,
         global_name=function.name if function.is_public else None,
         preserve_frame=has_frame,
-        parameters=function.parameters,
+        parameters=function.parameter_types,
         dwarf=dwarf,
         dwarf_function=function,
     )

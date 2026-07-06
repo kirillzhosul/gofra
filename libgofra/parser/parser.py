@@ -378,8 +378,6 @@ def _unpack_anonymous_lambda_function_from_token(
 
         f_header_def = consume_function_definition(context, context.next_token())
 
-        params = [p[1] for p in f_header_def.parameters]
-
         if f_header_def.qualifiers.is_extern:
             msg = f"Tried to construct an extern lambda-func-def at {token.location}"
             raise ValueError(msg)
@@ -413,8 +411,8 @@ def _unpack_anonymous_lambda_function_from_token(
         )
 
         param_names = [p[0] for p in f_header_def.parameters]
-        if any(param_names) and not all(param_names):
-            msg = f"Either all parameters must be named or none! {token.location}"
+        if not all(param_names):
+            msg = f"Found legacy unnamed param! {token.location}"
             raise ValueError(msg)
 
         for param_name, param_type in reversed(f_header_def.parameters):
@@ -445,7 +443,7 @@ def _unpack_anonymous_lambda_function_from_token(
             defined_at=token.location,
             operators=new_context.operators,
             variables=new_context.variables,
-            parameters=params,
+            parameters=f_header_def.parameters,
             return_type=f_header_def.return_type,
         )
         function.attrs.leaf = new_context.is_leaf_context
@@ -736,13 +734,16 @@ def _unpack_function_definition_from_token(
 ) -> None:
     f_header_def = consume_function_definition(context, token)
 
-    params = [p[1] for p in f_header_def.parameters]
+    param_names = [p[0] for p in f_header_def.parameters]
+    if not all(param_names):
+        msg = f"Found legacy unnamed param! {token.location}"
+        raise ValueError(msg)
 
     if f_header_def.qualifiers.is_extern:
         function = Function.create_external(
             name=f_header_def.name,
             defined_at=token.location,
-            parameters=params,
+            parameters=f_header_def.parameters,
             return_type=f_header_def.return_type,
         )
         function.attrs.no_return = f_header_def.qualifiers.is_no_return
@@ -774,11 +775,6 @@ def _unpack_function_definition_from_token(
         parent=context,
         entry_point_name=context.entry_point_name,  # TODO: Refactor
     )
-
-    param_names = [p[0] for p in f_header_def.parameters]
-    if any(param_names) and not all(param_names):
-        msg = f"Either all parameters must be named or none! {token.location}"
-        raise ValueError(msg)
 
     for param_name, param_type in reversed(f_header_def.parameters):
         if not param_name:
@@ -812,7 +808,7 @@ def _unpack_function_definition_from_token(
             defined_at=token.location,
             operators=new_context.operators,
             return_type=f_header_def.return_type,
-            parameters=params,
+            parameters=f_header_def.parameters,
         )
         function.attrs.no_return = f_header_def.qualifiers.is_no_return
         assert context.root_mod_ref
@@ -827,7 +823,7 @@ def _unpack_function_definition_from_token(
         defined_at=token.location,
         operators=new_context.operators,
         variables=new_context.variables,
-        parameters=params,
+        parameters=f_header_def.parameters,
         return_type=f_header_def.return_type,
     )
 

@@ -161,7 +161,7 @@ def aarch64_operator_instructions(  # noqa: PLR0913
                 writer,
                 abi,
                 name=function.name,
-                parameters=function.parameters,
+                parameters=function.parameter_types,
                 return_type=function.return_type,
                 call_convention="apple_aapcs64",
             )

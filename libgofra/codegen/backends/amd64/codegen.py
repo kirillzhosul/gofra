@@ -176,7 +176,7 @@ def amd64_operator_instructions(
             function_call(
                 context,
                 name=function.name,
-                type_contract_in=function.parameters,
+                type_contract_in=function.parameter_types,
                 type_contract_out=function.return_type,
             )
         case OperatorType.FUNCTION_RETURN:
