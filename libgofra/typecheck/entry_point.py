@@ -12,7 +12,7 @@ from libgofra.types.primitive.integers import I64Type
 def validate_entry_point_signature(entry_point: Function) -> None:
     # TODO(@kirillzhosul): these parser errors comes from legacy entry point validation, must be reworked later - https://github.com/kirillzhosul/gofra/issues/28
 
-    if entry_point.is_external or entry_point.is_inline:
+    if entry_point.attrs.external or entry_point.attrs.inline:
         raise ParserEntryPointFunctionModifiersError(entry_point_name=entry_point.name)
 
     retval_t = entry_point.return_type

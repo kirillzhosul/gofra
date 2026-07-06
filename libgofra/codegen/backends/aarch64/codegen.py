@@ -167,5 +167,5 @@ def function_define_with_instruction_set(  # noqa: PLR0913
         return_type=function.return_type,
         is_early_return=False,
         dwarf=dwarf,
-        is_naked=function.is_naked,
+        is_naked=function.attrs.naked,
     )

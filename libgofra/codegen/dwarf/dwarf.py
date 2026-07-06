@@ -308,7 +308,7 @@ class DWARF(DWARFFieldWriter):
                         self.byte_field(hir.defined_at.line_number, comment=attr.name)
                     case DWARFAttribute.DW_AT_external:
                         assert form == DWARFForm.DW_FORM_flag
-                        self.byte_field(int(hir.is_external), comment=attr.name)
+                        self.byte_field(int(hir.attrs.external), comment=attr.name)
                     case _:
                         raise NotImplementedError(attr, form)
 

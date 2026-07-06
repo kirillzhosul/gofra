@@ -80,7 +80,7 @@ def call_graph_to_dot_format(
         func = node.function
         label = (
             f"λ of {'$'.join(func.name.split('$')[:-1])}"
-            if func.enclosed_in_parent
+            if func.outer_function
             else func.name
         )
 
@@ -91,7 +91,7 @@ def call_graph_to_dot_format(
     for node in call_graph.traverse_nodes():
         for call_site in node.outgoing_edges:
             style = _get_call_edge_style(call_site)
-            arrowhead = "empty" if call_site.callee.is_external else "normal"
+            arrowhead = "empty" if call_site.callee.attrs.external else "normal"
             lines.append(
                 f'  "{call_site.caller.name}" -> "{call_site.callee.name}" [style="{style}", arrowhead="{arrowhead}"];',
             )
@@ -109,14 +109,14 @@ def _get_node_color(
     if node.is_root_node:
         return DotNodeColor.UNUSED_FUNCTION
 
-    if node.function.is_external:
+    if node.function.attrs.external:
         return DotNodeColor.EXTERNAL
     return DotNodeColor.DEFAULT
 
 
 def _get_node_style(node: CallGraphNode) -> Literal["filled", "dashed"]:
     _ = node
-    if node.function.enclosed_in_parent:
+    if node.function.outer_function:
         return "dashed"
     return "filled"
 

@@ -56,6 +56,7 @@ from libgofra.typecheck.errors.user_defined_compile_time_error import (
 from libgofra.types.composite.function import FunctionType
 from libgofra.types.composite.string import StringType
 from libgofra.types.composite.structure import StructureType
+from libgofra.types.registry import get_default_propagated_type_registry
 
 from ._context import ParserContext
 from .exceptions import (
@@ -105,9 +106,20 @@ def parse_module_from_tokenizer(  # noqa: PLR0913
     entry_point_name: str,
 ) -> Module:
     """Load file for parsing into operators."""
-    context = ParserContext(
-        _tokenizer=tokenizer,
+
+    root_mod_ref = Module(
         path=path,
+        functions={},
+        variables={},
+        structures={},
+        dependencies={},
+        entry_point_ref=None,
+        types=get_default_propagated_type_registry(),
+        structs={},
+    )
+    context = ParserContext(
+        root_mod_ref=root_mod_ref,
+        _tokenizer=tokenizer,
         import_search_paths=list(include_paths),
         macros_registry=macros,
         rt_array_oob_check=rt_array_oob_check,
@@ -122,20 +134,19 @@ def parse_module_from_tokenizer(  # noqa: PLR0913
         raise TopLevelExpectedNoOperatorsError(context.operators[0])
 
     _inject_context_module_runtime_definitions(context)
-    root = Module(
-        path=path,
-        functions=context.functions,
-        variables=context.variables,
-        structures=context.structs,
-        dependencies=context.module_dependencies,
-        entry_point_ref=(context.functions.get(context.entry_point_name, None)),
-        types=context.types,
-        structs=context.structs,
-    )
 
-    _validate_function_existence_and_visibility(root=root, module=root)
+    root_mod_ref.path = path
+    root_mod_ref.functions = context.functions
+    root_mod_ref.variables = context.variables
+    root_mod_ref.structures = context.structs
+    root_mod_ref.dependencies = context.module_dependencies
+    root_mod_ref.entry_point_ref = context.functions.get(context.entry_point_name, None)
+    root_mod_ref.types = context.types
+    root_mod_ref.structs = context.structs
 
-    return root
+    _validate_function_existence_and_visibility(root=root_mod_ref, module=root_mod_ref)
+
+    return root_mod_ref
 
 
 def _validate_function_existence_and_visibility(root: Module, module: Module) -> None:
@@ -394,10 +405,10 @@ def _unpack_anonymous_lambda_function_from_token(
             )
 
         new_context = ParserContext(
+            root_mod_ref=context.root_mod_ref,
             _tokenizer=_fixed_tokenizer(),
             functions=dict(context.functions),
             parent=context,
-            path=context.path,
             entry_point_name=context.entry_point_name,  # TODO: Refactor
         )
 
@@ -436,17 +447,19 @@ def _unpack_anonymous_lambda_function_from_token(
             variables=new_context.variables,
             parameters=params,
             return_type=f_header_def.return_type,
-            is_leaf=new_context.is_leaf_context,
-            is_naked=f_header_def.qualifiers.is_naked,
         )
+        function.attrs.leaf = new_context.is_leaf_context
+        function.attrs.naked = f_header_def.qualifiers.is_naked
+
         assert not f_header_def.qualifiers.is_public
         assert not f_header_def.qualifiers.is_no_return
         assert not f_header_def.qualifiers.is_extern
         assert not f_header_def.qualifiers.is_naked
 
-        function.visibility = Visibility.PRIVATE
+        function.attrs.visibility = Visibility.PRIVATE
 
-        function.module_path = context.path
+        assert context.root_mod_ref
+        function.module = context.root_mod_ref
         assert not context.is_top_level
         context.add_function(function)
         return function
@@ -703,8 +716,8 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
         return
 
     if function:
-        if function.is_inline:
-            assert not function.is_external
+        if function.attrs.inline:
+            assert not function.attrs.external
             context.expand_from_inline_block(function)
             return
     else:
@@ -732,8 +745,9 @@ def _unpack_function_definition_from_token(
             parameters=params,
             return_type=f_header_def.return_type,
         )
-        function.is_no_return = f_header_def.qualifiers.is_no_return
-        function.module_path = context.path
+        function.attrs.no_return = f_header_def.qualifiers.is_no_return
+        assert context.root_mod_ref
+        function.module = context.root_mod_ref
         context.add_function(function)
         return
 
@@ -754,10 +768,10 @@ def _unpack_function_definition_from_token(
         )
 
     new_context = ParserContext(
+        root_mod_ref=context.root_mod_ref,
         _tokenizer=_fixed_tokenizer(),
         functions=dict(context.functions),
         parent=context,
-        path=context.path,
         entry_point_name=context.entry_point_name,  # TODO: Refactor
     )
 
@@ -800,8 +814,9 @@ def _unpack_function_definition_from_token(
             return_type=f_header_def.return_type,
             parameters=params,
         )
-        function.is_no_return = f_header_def.qualifiers.is_no_return
-        function.module_path = context.path
+        function.attrs.no_return = f_header_def.qualifiers.is_no_return
+        assert context.root_mod_ref
+        function.module = context.root_mod_ref
         context.add_function(function)
         return
     if f_header_def.name == context.entry_point_name:  # TODO: Refactor
@@ -814,23 +829,25 @@ def _unpack_function_definition_from_token(
         variables=new_context.variables,
         parameters=params,
         return_type=f_header_def.return_type,
-        is_leaf=new_context.is_leaf_context,
-        is_naked=f_header_def.qualifiers.is_naked,
     )
 
+    function.attrs.leaf = new_context.is_leaf_context
+    function.attrs.naked = f_header_def.qualifiers.is_naked
+
     if f_header_def.qualifiers.is_public:
-        function.visibility = Visibility.PUBLIC
-    function.is_no_return = f_header_def.qualifiers.is_no_return
-    function.module_path = context.path
+        function.attrs.visibility = Visibility.PUBLIC
+    function.attrs.no_return = f_header_def.qualifiers.is_no_return
+    assert context.root_mod_ref
+    function.module = context.root_mod_ref
 
     enclosed_new_functions = [
         f for f in new_context.functions.values() if f.name not in context.functions
     ]
     if f_header_def.qualifiers.is_naked:
-        if function.has_local_variables:
+        if function.variables:
             msg = f"Naked functions cannot have local variables {function.defined_at}"
             raise ValueError(msg)
-        if not function.has_executable_operators:
+        if not function.operators:
             msg = f"no instructions inside naked function {function.defined_at}"
             raise ValueError(msg)
         for op in function.operators:
@@ -839,9 +856,8 @@ def _unpack_function_definition_from_token(
                 raise ValueError(msg)
 
     if enclosed_new_functions:
-        function.enclosed_functions = enclosed_new_functions
-        for enclosure in function.enclosed_functions:
-            enclosure.enclosed_in_parent = function
+        for enclosure in enclosed_new_functions:
+            enclosure.outer_function = function
             _enclosure_generate_native_holder_name(
                 context,
                 owner=function,
@@ -874,7 +890,7 @@ def _try_unpack_function_call_from_identifier_token(
     name = token.text
     function = context.functions.get(name, None)
     if function:
-        if function.is_inline:
+        if function.attrs.inline:
             context.expand_from_inline_block(function)
             return True
         call_spec = FunctionCallOperand(module=None, func=function)

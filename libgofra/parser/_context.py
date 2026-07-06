@@ -70,7 +70,8 @@ class PeekableTokenizer:
 class ParserContext(PeekableTokenizer):
     """Context for parsing which only required from internal usages."""
 
-    path: Path = field(default_factory=Path)
+    root_mod_ref: Module | None = field(default=None)
+
     parent: ParserContext | None = field(default=None)
 
     macros_registry: MacrosRegistry = field(default_factory=MacrosRegistry)
@@ -107,6 +108,11 @@ class ParserContext(PeekableTokenizer):
     # No function calls in that context
     # Maybe should be refactored
     is_leaf_context: bool = field(default=True)
+
+    @property
+    def path(self) -> Path:
+        assert self.root_mod_ref
+        return self.root_mod_ref.path
 
     def name_is_already_taken(self, name: str) -> bool:
         is_taken = any(
@@ -165,7 +171,7 @@ class ParserContext(PeekableTokenizer):
         return len(self.operators)
 
     def expand_from_inline_block(self, inline_block: Function) -> None:
-        if inline_block.is_external:
+        if inline_block.attrs.external:
             msg = "Cannot expand extern function."
             raise ValueError(msg)
         if any(op.type == OperatorType.FUNCTION_CALL for op in inline_block.operators):

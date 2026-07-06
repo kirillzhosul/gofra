@@ -137,7 +137,7 @@ def _emit_ir_operator(  # noqa: PLR0911
                 print(f"{shift}&proc-of {mod}.{func}()", end="")
                 if isinstance(operator.operand.func, Function):
                     ptr_of = operator.operand.func
-                    if ptr_of.enclosed_in_parent == owner:
+                    if ptr_of.outer_function == owner:
                         print(" [own_enclosure]", end="")
                 return print()
             return print(f"{shift}&proc-of {operator.operand}()")
@@ -148,7 +148,7 @@ def _emit_ir_operator(  # noqa: PLR0911
 
 
 def _emit_ir_function_signature(function: Function) -> None:
-    if function.is_external:
+    if function.attrs.external:
         print(f"[external function symbol '{function.name}'", end=" ")
         print(f"({function.parameters} -> {function.return_type})")
         return
@@ -156,10 +156,8 @@ def _emit_ir_function_signature(function: Function) -> None:
     print(f"({function.parameters} -> {function.return_type})", end=" ")
     print(f"(public={function.is_public})]", end=" ")
     print(f"({len(function.variables)} local variables)", end=" ")
-    if function.is_leaf:
+    if function.attrs.leaf:
         print("[has_leaf_property]", end="")
-    if function.enclosed_in_parent:
+    if function.outer_function:
         print("[is_enclosure]", end="")
-    if function.enclosed_functions:
-        print("[has_enclosures]", end="")
     print("", function.defined_at)

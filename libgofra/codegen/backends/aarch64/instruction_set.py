@@ -278,9 +278,9 @@ def aarch64_operator_instructions(  # noqa: PLR0913
             )
             assert callee
 
-            if callee.is_external:
+            if callee.attrs.external:
                 addressing_mode = AddressingMode.EXTERNAL
-            elif callee.enclosed_in_parent == owner_function:
+            elif callee.outer_function == owner_function:
                 addressing_mode = AddressingMode.NEAR
             else:
                 addressing_mode = AddressingMode.PAGE

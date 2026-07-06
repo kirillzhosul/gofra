@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from libgofra.types.registry import TypeRegistry
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=False, slots=True)
 class Module:
     """HIR compilation (parsing) unit or module for an preprocessed (is applicable) file.
 
@@ -101,6 +101,6 @@ class Module:
     @property
     def executable_functions(self) -> filter[Function]:
         return filter(
-            lambda f: not f.is_external and not f.is_inline,
+            lambda f: not f.attrs.external and not f.attrs.inline,
             self.functions.values(),
         )

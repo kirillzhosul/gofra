@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from gofra.cli.output import cli_message
+from libgofra.hir.function import FunctionInlineAttribute
 from libgofra.hir.operator import FunctionCallOperand, Operator
 from libgofra.optimizer.helpers.call_graph import CallGraph
 from libgofra.parser.operators import OperatorType
@@ -26,7 +27,7 @@ def optimize_function_inlining(
     cg = CallGraph(module)
     _mark_inlineable_functions_as_inline(module, cg=cg, max_operators=max_operators)
 
-    inline_functions = [f for f in module.functions.values() if f.is_inline]
+    inline_functions = [f for f in module.functions.values() if f.attrs.inline]
     pending: list[Function] = []
     for f in inline_functions:
         pending.extend(cg.get_node(f).callers)
@@ -68,7 +69,7 @@ def _mutate_inline_callers(
                 operator.operand.get_name(),
             )
             assert called_function
-            if not called_function.is_inline:
+            if not called_function.attrs.inline:
                 continue
 
             assert operator.type != OperatorType.PUSH_FUNCTION_POINTER, (
@@ -80,7 +81,7 @@ def _mutate_inline_callers(
                     "WARNING",
                     f"Possible partial inlining of function `{called_function.name}` defined at {called_function.defined_at}, function has been unmarked as inline!",
                 )
-                called_function.is_inline = False
+                called_function.attrs.inline = FunctionInlineAttribute.NEVER
                 continue
             iteration_has_fold = True
             _inline_direct_call(
@@ -125,14 +126,14 @@ def _mark_inlineable_functions_as_inline(
 ) -> None:
     """Mark all functions that is not inlined as inlined if they may be inlined due to 'max_operators' threshold."""
     for function in program.functions.values():
-        if function.is_inline:
+        if function.attrs.inline:
             continue
         if not should_inline_function(function, cg, max_operators):
             continue
 
         if DEBUG_TRACE_INLINES:
             print(f"[CGO] Marked as inline: `{function.name}`")
-        function.is_inline = True
+        function.attrs.inline = FunctionInlineAttribute.ALWAYS
 
 
 def should_inline_function(  # noqa: PLR0911
@@ -140,14 +141,14 @@ def should_inline_function(  # noqa: PLR0911
     cg: CallGraph,
     max_operators: int,
 ) -> bool:
-    if function.is_external or function.is_public:
+    if function.attrs.external or function.is_public:
         return False
 
-    if function.enclosed_in_parent:
+    if function.outer_function:
         # If this is lambda we cannot inline it
         return False
 
-    if function.is_inline:
+    if function.attrs.inline:
         # Explicitly marked as inline (attribute) - always inline
         return True
 
@@ -159,7 +160,7 @@ def should_inline_function(  # noqa: PLR0911
         # Do not inline functions which has parameters or local variables as we currently do not support expanding memory locations.
         return False
 
-    if function.is_recursive:
+    if function.attrs.recursive:
         # do NOT inline functions which has self-recursion as this will lead to broken program and infinite optimizer pass.
         return False
 

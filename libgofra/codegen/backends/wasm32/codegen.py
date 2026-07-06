@@ -267,7 +267,7 @@ class WASM32CodegenBackend:
 
     def build_extern_function_imports(self) -> Generator[ImportNode]:
         for function in self.module.functions.values():
-            if not function.is_external:
+            if not function.attrs.external:
                 continue
 
             function_specification = _get_wasm_internal_function_decl_spec(function)
@@ -356,7 +356,7 @@ class WASM32CodegenBackend:
 
     def build_executable_functions(self) -> Generator[SExpr]:
         for function in self.module.functions.values():
-            if function.is_external:
+            if function.attrs.external:
                 continue
 
             node = _get_wasm_internal_function_decl_spec(function)

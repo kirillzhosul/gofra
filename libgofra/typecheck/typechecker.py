@@ -107,7 +107,7 @@ def validate_type_safety(
     global_var_references: MutableMapping[str, Variable[Type]] = {}
     functions = list(module.functions.values())
     for function in functions:
-        if function.is_external:
+        if function.attrs.external:
             # Skip symbols that are has no compile-time known executable operators as have nothing to typecheck
             continue
 
@@ -146,10 +146,10 @@ def validate_function_type_safety(
 
     # TODO(@kirillzhosul): Probably this should be refactored due to overall new complexity of an `ANY` and coercion.
 
-    if func_block.reason == "no-return-func-call" and not function.is_no_return:
+    if func_block.reason == "no-return-func-call" and not function.attrs.no_return:
         emit_no_return_attribute_propagation_warning(on_lint_warning, function)
 
-    if function.is_no_return and function.has_return_value():
+    if function.attrs.no_return and function.has_return_value():
         msg = f"Cannot return value from function '{function.name}' defined at {function.defined_at}, it has no_return attribute"
         raise ValueError(msg)
 
@@ -165,7 +165,7 @@ def validate_function_type_safety(
             type_stack=list(func_block.types),
         )
 
-    if function.is_naked:
+    if function.attrs.naked:
         return func_block
 
     _validate_retval_stack(function, func_block.types, return_hit_at=None)
@@ -380,7 +380,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                     f"Function '{current_function.name}' cannot return without recursion. This will lead to infinite recursion loop. Recursive call at {operator.location}",
                 )
 
-            if function.is_no_return:
+            if function.attrs.no_return:
                 if operators[idx:]:
                     emit_unreachable_code_after_no_return_call_warning(
                         on_lint_warning,

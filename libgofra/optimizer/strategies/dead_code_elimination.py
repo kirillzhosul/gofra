@@ -33,7 +33,7 @@ def _bfs_dce_primitive(
         cg = CallGraph(module)
 
         for function in (f for f in cg.get_root_functions() if not f.is_public):
-            assert function.module_path == module.path, (
+            assert function.module.path == module.path, (
                 "Must be resolved and fixed later, please disable DCE on module system"
             )
             if DCE_TRACE_KILLS:
@@ -68,7 +68,7 @@ def _dfs_dce_aggressive_on_main(
     ref = copy(module.functions)
     for f in ref.values():
         if f not in survivors:
-            assert f.module_path == module.path
+            assert f.module.path == module.path
 
             if DCE_TRACE_KILLS:
                 print(f"DCE kill: {f.name}")

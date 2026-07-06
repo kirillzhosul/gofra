@@ -303,7 +303,7 @@ def amd64_executable_functions(
         amd64_instruction_set(context, function.operators, program, function)
 
         # TODO(@kirillzhosul): This is included even after explicit return after end
-        if not function.is_naked:
+        if not function.attrs.naked:
             function_end_with_epilogue(
                 context,
                 has_preserved_frame=has_frame,
