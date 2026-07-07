@@ -21,7 +21,6 @@ def cli_perform_call_graph_goal(args: CLIArguments) -> NoReturn:
     assert args.call_graph_only, (
         "Cannot perform call graph goal with no call graph flag set!"
     )
-    assert not args.lexer_debug_emit_lexemes, "Try use compile goal"
 
     if args.output_file_is_specified:
         return cli_fatal_abort(

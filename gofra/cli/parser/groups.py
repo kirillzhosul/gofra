@@ -84,13 +84,6 @@ def add_additional_group(parser: ArgumentParser) -> None:
 def add_toolchain_debug_group(parser: ArgumentParser) -> None:
     """Construct and inject argument group with internal toolchain debug options into given parser."""
     parser.add_argument(
-        "--debug-emit-lexemes",
-        dest="lexer_debug_emit_lexemes",
-        action="store_true",
-        help=argparse.SUPPRESS,
-    )
-
-    parser.add_argument(
         "--debug-unwrap-errors",
         dest="cli_debug_user_friendly_errors",
         action="store_false",

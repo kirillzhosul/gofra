@@ -223,8 +223,6 @@ def _compile_file_to_execute(
     ref_macros_registry: MacrosRegistry,
     immediate_type_stack: MutableSequence[Type] | None = None,
 ) -> Path | None:
-    assert not args.lexer_debug_emit_lexemes
-
     repl_preview_expr = _assemble_preview_expr_from_types(immediate_type_stack)
     execute_source = _assemble_execute_source(source, repl_preview_expr)
     file_to_execute = args.build_cache_dir / FTE_FILEPATH

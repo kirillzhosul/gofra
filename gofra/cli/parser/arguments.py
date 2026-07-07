@@ -42,7 +42,6 @@ class CLIArguments:
 
     executable_entry_point: str
 
-    lexer_debug_emit_lexemes: bool
     cli_debug_user_friendly_errors: bool
 
     runtime_array_oob_checks: bool

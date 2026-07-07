@@ -23,7 +23,6 @@ DISPLAY_FUNCTION_BODY = True
 def cli_perform_hir_goal(args: CLIArguments) -> NoReturn:
     """Perform HIR display only goal that emits HIR operators into stdout."""
     assert args.hir, "Cannot perform HIR goal with no HIR flag set!"
-    assert not args.lexer_debug_emit_lexemes, "Try use compile goal"
 
     if args.output_file_is_specified:
         return cli_fatal_abort(

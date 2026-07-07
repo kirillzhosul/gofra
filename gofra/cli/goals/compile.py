@@ -84,7 +84,6 @@ def cli_perform_compile_goal(args: CLIArguments) -> NoReturn:
             args.source_filepaths[0],
             args.include_paths,
             macros=macros_registry,
-            _debug_emit_lexemes=args.lexer_debug_emit_lexemes,
             rt_array_oob_check=args.runtime_array_oob_checks,
             entry_point_name=args.executable_entry_point,
         )

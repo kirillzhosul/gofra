@@ -72,7 +72,6 @@ def parse_cli_arguments(args: Namespace) -> CLIArguments:
         linker_resolve_libraries_with_pkgconfig=bool(
             args.linker_resolve_libraries_with_pkgconfig,
         ),
-        lexer_debug_emit_lexemes=bool(args.lexer_debug_emit_lexemes),
         cli_debug_user_friendly_errors=bool(args.cli_debug_user_friendly_errors),
         incremental_compilation=bool(args.incremental_compilation),
         display_lint_warnings=bool(args.display_lint_warnings),
