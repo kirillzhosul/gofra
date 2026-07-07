@@ -55,4 +55,4 @@ pub func CStr int64_to_cstr[int num]
     &int64_to_cstr_buf return
 end
 
-func CStr int_to_cstr[int num] num call int64_to_cstr end // Alias as default int is 64 bits
+pub func CStr int_to_cstr[int num] num call int64_to_cstr end // Alias as default int is 64 bits

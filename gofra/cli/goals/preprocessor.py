@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, NoReturn
 
 from gofra.cli.output import cli_fatal_abort
 from libgofra.lexer import tokenize_from_raw
-from libgofra.lexer.io.io import open_source_file_line_stream
+from libgofra.lexer.io import open_source_file_line_stream
 from libgofra.lexer.tokens import TokenLocation
 from libgofra.preprocessor.macros.registry import registry_from_raw_definitions
 from libgofra.preprocessor.preprocessor import preprocess_file

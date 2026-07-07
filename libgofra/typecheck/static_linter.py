@@ -112,6 +112,17 @@ def lint_unused_function_local_variables(
         )
 
 
+def lint_empty_function_executable_body(
+    on_lint_warning: Callable[[str], None],
+    function: Function,
+) -> None:
+    if function.operators or function.attrs.external:
+        return
+    on_lint_warning(
+        f"Function '{function.name}' defined at {function.defined_at} has no executable body!",
+    )
+
+
 def emit_no_return_attribute_propagation_warning(
     on_lint_warning: Callable[[str], None],
     function: Function,

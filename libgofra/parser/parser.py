@@ -15,7 +15,7 @@ from libgofra.lexer import (
     Token,
     TokenType,
 )
-from libgofra.lexer.io.io import open_source_file_line_stream
+from libgofra.lexer.io import open_source_file_line_stream
 from libgofra.lexer.keywords import PreprocessorKeyword
 from libgofra.lexer.lexer import tokenize_from_raw
 from libgofra.lexer.tokens import TokenLocation
@@ -801,7 +801,7 @@ def _unpack_function_definition_from_token(
     if f_header_def.qualifiers.is_inline:
         assert not new_context.variables, "Inline functions cannot have local variables"
         assert not f_header_def.qualifiers.is_public, (
-            "Inline functions is always internal private - cannot do public"
+            f"Inline functions is always internal private - cannot do public ({token.location})"
         )
         function = Function.create_internal_inline(
             name=f_header_def.name,

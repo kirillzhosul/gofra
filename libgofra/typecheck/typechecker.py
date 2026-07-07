@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal, assert_never
 
 from libgofra.hir.operator import FunctionCallOperand, OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
+from libgofra.optimizer.helpers.call_graph import CallGraph
 from libgofra.typecheck.entry_point import validate_entry_point_signature
 from libgofra.typecheck.errors.no_main_entry_function import NoMainEntryFunctionError
 from libgofra.typecheck.errors.read_only_memory_assignment import (
@@ -21,6 +22,7 @@ from libgofra.typecheck.static_linter import (
     emit_unreachable_code_after_early_return_warning,
     emit_unreachable_code_after_no_return_call_warning,
     emit_unused_global_variable_warning,
+    lint_empty_function_executable_body,
     lint_stack_memory_retval,
     lint_structure_types,
     lint_typecast_same_type,
@@ -102,6 +104,19 @@ def validate_type_safety(
             raise NoMainEntryFunctionError(expected_entry_name=entry_point_name)
         validate_entry_point_signature(entry_point)
 
+    cg = CallGraph(module=module)
+
+    for function in (
+        f
+        for f in cg.get_root_functions()
+        if not f.is_public
+        and not f.attrs.external
+        and not f.attrs.inline  # TODO(@kirillzhosul): Inline ones are always internal private but probably track usages?
+    ):
+        on_lint_warning(
+            f"Unused private module function {function.name} defined at {function.defined_at}! Either remove it or make public!",
+        )
+
     lint_structure_types(on_lint_warning, module.structures)
     lint_variables_initializer(on_lint_warning, module.variables)
     global_var_references: MutableMapping[str, Variable[Type]] = {}
@@ -152,6 +167,9 @@ def validate_function_type_safety(
     if function.attrs.no_return and function.has_return_value():
         msg = f"Cannot return value from function '{function.name}' defined at {function.defined_at}, it has no_return attribute"
         raise ValueError(msg)
+
+    if module.entry_point_ref != function:
+        lint_empty_function_executable_body(on_lint_warning, function)
 
     lint_unused_function_local_variables(
         on_lint_warning,

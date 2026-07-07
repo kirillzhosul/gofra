@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from libgofra.lexer.io.io import open_source_file_line_stream
+from libgofra.lexer.io import open_source_file_line_stream
 from libgofra.lexer.keywords import PreprocessorKeyword
 from libgofra.lexer.lexer import tokenize_from_raw
 from libgofra.lexer.tokens import Token, TokenType

@@ -2,7 +2,7 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import IO
 
-from .exceptions import (
+from libgofra.lexer.errors import (
     IOFileDoesNotExistsError,
     IOFileNotAnFileError,
     IOFileNotAnTextFileError,
@@ -14,6 +14,7 @@ def open_source_file_line_stream(path: Path) -> Generator[str]:
 
     :raises IOFileDoesNotExistsError: File does not exists
     :raises IOFileNotAnFileError: File is not an file
+    :raises IOFileNotAnTextFileError: File is not an text one or contains weird symbols
     """
     try:
         with open_source_file(path) as io:
@@ -38,7 +39,7 @@ def open_source_file(path: Path) -> IO[str]:
     return path.open(
         mode="rt",
         buffering=-1,
-        encoding="utf-8",
+        encoding="UTF-8",
         errors="strict",
         newline=None,
     )
