@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, assert_never
 
+from libgofra.exceptions import GofraError
+from libgofra.feature_flags import FEATURE_ALLOW_MODULES
 from libgofra.hir.operator import FunctionCallOperand, OperatorType
 from libgofra.hir.variable import Variable, VariableStorageClass
 from libgofra.optimizer.helpers.call_graph import CallGraph
@@ -104,18 +106,23 @@ def validate_type_safety(
             raise NoMainEntryFunctionError(expected_entry_name=entry_point_name)
         validate_entry_point_signature(entry_point)
 
-    cg = CallGraph(module=module)
-
-    for function in (
-        f
-        for f in cg.get_root_functions()
-        if not f.is_public
-        and not f.attrs.external
-        and not f.attrs.inline  # TODO(@kirillzhosul): Inline ones are always internal private but probably track usages?
-    ):
+    if FEATURE_ALLOW_MODULES:
         on_lint_warning(
-            f"Unused private module function {function.name} defined at {function.defined_at}! Either remove it or make public!",
+            "Skipped unused private module function check due to module system feature enabled",
         )
+    else:
+        cg = CallGraph(module=module)
+
+        for function in (
+            f
+            for f in cg.get_root_functions()
+            if not f.is_public
+            and not f.attrs.external
+            and not f.attrs.inline  # TODO(@kirillzhosul): Inline ones are always internal private but probably track usages?
+        ):
+            on_lint_warning(
+                f"Unused private module function {function.name} defined at {function.defined_at}! Either remove it or make public!",
+            )
 
     lint_structure_types(on_lint_warning, module.structures)
     lint_variables_initializer(on_lint_warning, module.variables)
@@ -500,7 +507,7 @@ def _emulate_scope_unconditional_hir_operator(  # noqa: PLR0913
                 strategy="strict-same-type",
             ):
                 msg = f"\nStorage and value type mismatch at {operator.location}. Holder has type {value_holder_type}, which is {value_type} but tried to store {store_type}.\n\nMismatch: {store_type} != {value_type}\n[write-store-type-mismatch]"
-                raise ValueError(msg)
+                raise GofraError(msg)
         case OperatorType.LOAD_PARAM_ARGUMENT:
             scope.raise_for_enough_arguments(operator, required_args=1)
             scope.consume_n_arguments(1)
