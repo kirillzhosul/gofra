@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
+from libgofra.types.composite.string import StringType
+from libgofra.types.registry import get_default_propagated_type_registry
 
 if TYPE_CHECKING:
     from collections.abc import Generator, MutableMapping
@@ -25,24 +28,31 @@ class Module:
     # Location of an file which this module initial parsed from (excluding preprocessor stages)
     path: Path
 
+    types: TypeRegistry = field(default_factory=get_default_propagated_type_registry)
+
+    # TODO(@kirillzhosul): This must be refactored into graph not within module itself.
+    dependencies: MutableMapping[str, Module] = field(
+        default_factory=dict[str, "Module"],
+    )
+
+    # Reference for symbol that must be treated as entry point if artifact of compilation requires it
+    entry_point_ref: Function | None = field(default=None)
+
     # Any function that this module defines (implements, externs, exports)
-    functions: MutableMapping[str, Function]
+    functions: MutableMapping[str, Function] = field(
+        default_factory=dict[str, "Function"],
+    )
 
     # Global functions that this module defines (excluding static variables inside function)
     # notice that static variables inside function is held inside functions
-    variables: MutableMapping[str, Variable[Type]]
+    variables: MutableMapping[str, Variable[Type]] = field(
+        default_factory=dict[str, "Variable[Type]"],
+    )
 
     # Structures that this module defines (can be unused)
-    structures: MutableMapping[str, StructureType]
-
-    types: TypeRegistry
-    structs: MutableMapping[str, StructureType]
-
-    # TODO(@kirillzhosul): This must be refactored into graph not within module itself.
-    dependencies: MutableMapping[str, Module]
-
-    # Reference for symbol that must be treated as entry point if artifact of compilation requires it
-    entry_point_ref: Function | None = None
+    structures: MutableMapping[str, StructureType] = field(
+        default_factory=lambda: {StringType().name: StringType()},
+    )
 
     def visit_dependencies(
         self,

@@ -5,9 +5,12 @@ from libgofra.hir.variable import (
 )
 from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.errors.constant_variable_requires_initializer import (
     ConstantVariableRequiresInitializerError,
+)
+from libgofra.parser.errors.general_name_conflict_error import (
+    GeneralNameHolderConflictError,
 )
 from libgofra.parser.errors.variable_with_void_type import (
     VariableCannotHasVoidTypeParserError,
@@ -24,7 +27,7 @@ from libgofra.types.primitive.void import VoidType
 
 
 def _consume_variable_modifier_is_const(
-    context: ParserContext,
+    context: ParserScope,
     begin_token: Token,
 ) -> bool:
     """Consume modifiers for *definition* (e.g constant or variable* from token that describes start of definition (any modifier or specifier).
@@ -47,7 +50,7 @@ def _consume_variable_modifier_is_const(
 
 
 def _validate_variable_redefinition(
-    context: ParserContext,
+    context: ParserScope,
     name: str,
     token: Token,
 ) -> None:
@@ -57,14 +60,15 @@ def _validate_variable_redefinition(
             name=name,
         )
 
-    if context.name_is_already_taken(name):
-        previous_def = context.search_variable_in_context_parents(name)
-        msg = f"Variable name {name} at {token.location} is already taken by other definition within context parents at {previous_def.defined_at if previous_def else 'unknown location'}"
-        raise ValueError(msg)
+    if name_holder := context.query_name_holder(name):
+        raise GeneralNameHolderConflictError(
+            name_holder=name_holder,
+            conflicting_holder=f"Variable '{name}' at {token.location}",
+        )
 
 
 def unpack_variable_definition_from_token(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> None:
     assert token.type == TokenType.KEYWORD

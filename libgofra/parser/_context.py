@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from libgofra.hir.function import Function
-from libgofra.hir.module import Module
 from libgofra.hir.operator import (
     FunctionCallOperand,
     Operator,
@@ -15,7 +13,6 @@ from libgofra.hir.operator import (
 )
 from libgofra.lexer import Token
 from libgofra.parser.errors.general_expect_token import ExpectedTokenByParserError
-from libgofra.preprocessor.macros.registry import MacrosRegistry
 from libgofra.types.composite.structure import StructureType
 from libgofra.types.registry import (
     TypeRegistry,
@@ -24,15 +21,17 @@ from libgofra.types.registry import (
 
 if TYPE_CHECKING:
     from collections.abc import (
+        Callable,
         Generator,
         MutableMapping,
         MutableSequence,
-        Sequence,
     )
+    from pathlib import Path
 
+    from libgofra.hir.module import Module
     from libgofra.hir.variable import Variable
     from libgofra.lexer.tokens import TokenType
-    from libgofra.parser.conditional_blocks import RangeQualifier
+    from libgofra.parser.exprs.conditional_blocks import RangeQualifier
     from libgofra.types._base import Type
     from libgofra.types.generics import GenericParametrizedType
 
@@ -40,7 +39,7 @@ if TYPE_CHECKING:
 @dataclass
 class PeekableTokenizer:
     _tokenizer: Generator[Token] = field()
-    _peeked: deque[Token] = field(default_factory=deque[Token])
+    _peeked: deque[Token] = field(default_factory=deque[Token], init=False)
 
     def next_token(self) -> Token:
         if self._peeked:
@@ -67,19 +66,18 @@ class PeekableTokenizer:
 
 
 @dataclass(frozen=False)
-class ParserContext(PeekableTokenizer):
+class ParserScope(PeekableTokenizer):
     """Context for parsing which only required from internal usages."""
 
-    root_mod_ref: Module | None = field(default=None)
+    # Will be called when scope encounters import request
+    # goal of this callback to load specified named import and inject as dependency
+    # both scope and parser itself is not responsible for loading near modules
+    on_import_request: Callable[[str, Path], None] = field(repr=False, kw_only=True)
 
-    parent: ParserContext | None = field(default=None)
+    # If this scope not an top level (e.g root of the file) either an function or something like that
+    parent: ParserScope | None = field(default=None)
 
-    macros_registry: MacrosRegistry = field(default_factory=MacrosRegistry)
-
-    module_dependencies: MutableMapping[str, Module] = field(
-        default_factory=dict[str, Module],
-    )
-    import_search_paths: Sequence[Path] = field(default_factory=list[Path])
+    module: Module | None = field(default=None)
 
     # Resulting operators from parsing
     operators: MutableSequence[Operator] = field(default_factory=list[Operator])
@@ -111,18 +109,47 @@ class ParserContext(PeekableTokenizer):
 
     @property
     def path(self) -> Path:
-        assert self.root_mod_ref
-        return self.root_mod_ref.path
+        assert self.module
+        return self.module.path
 
-    def name_is_already_taken(self, name: str) -> bool:
-        is_taken = any(
-            name in container
-            for container in (self.structs, self.variables, self.functions, self.types)
+    @staticmethod
+    def from_parent(parent: ParserScope, tokenizer: Generator[Token]) -> ParserScope:
+        """Create a new scope with the specified scope as the parent propagating fields to the child."""
+        return ParserScope(
+            module=parent.module,
+            _tokenizer=tokenizer,
+            functions=dict(parent.functions),
+            parent=parent,
+            entry_point_name=parent.entry_point_name,  # TODO: Refactor
+            on_import_request=parent.on_import_request,
         )
 
-        if not is_taken and self.parent:
-            return self.parent.name_is_already_taken(name)
-        return is_taken
+    def query_name_holder(
+        self,
+        name: str,
+    ) -> (
+        StructureType
+        | Function
+        | Variable[Type]
+        | Type
+        | GenericParametrizedType
+        | None
+    ):
+        if name in self.structs:
+            return self.structs.get(name)
+
+        if name in self.variables:
+            return self.variables.get(name)
+
+        if name in self.functions:
+            return self.functions.get(name)
+
+        if name in self.types:
+            return self.types.get(name)
+
+        if self.parent:
+            return self.parent.query_name_holder(name)
+        return None
 
     def has_context_stack(self) -> bool:
         return len(self.context_stack) > 0
@@ -206,3 +233,15 @@ class ParserContext(PeekableTokenizer):
         self.operators.append(operator)
         if is_contextual:
             self.context_stack.append((self.current_operator - 1, operator, None))
+
+    def merge_scope_into_module(self, module: Module) -> None:
+        assert module.path == self.path, (
+            "Tried to merge parser scope into module that belongs to other path"
+        )
+
+        module.functions.update(self.functions)
+        module.variables.update(self.variables)
+        module.structures.update(self.structs)
+        module.types.update(self.types)
+
+        module.entry_point_ref = self.functions.get(self.entry_point_name, None)

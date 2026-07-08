@@ -29,7 +29,7 @@ def tokenize_from_raw(
 
     :returns tokenizer: Generator of tokens, in order from top to bottom of an file (default order)
     """
-    state = LexerState(path=source)
+    state = LexerState(source=source)
 
     for row, line in enumerate(lines, start=0):
         state.set_line(row, line)

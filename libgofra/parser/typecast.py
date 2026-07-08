@@ -1,12 +1,12 @@
 from libgofra.hir.operator import OperatorType
 from libgofra.lexer.tokens import Token
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.type_parser import (
     parse_concrete_type_from_tokenizer,
 )
 
 
-def unpack_typecast_from_token(context: ParserContext, typecast_token: Token) -> None:
+def unpack_typecast_from_token(context: ParserScope, typecast_token: Token) -> None:
     typename = parse_concrete_type_from_tokenizer(context)
 
     context.push_new_operator(

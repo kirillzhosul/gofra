@@ -1,5 +1,5 @@
 from libgofra.lexer.tokens import TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.errors.type_definition_already_exists import (
     TypeDefinitionAlreadyExistsError,
 )
@@ -9,7 +9,7 @@ from libgofra.parser.type_parser import (
 )
 
 
-def unpack_type_definition_from_token(context: ParserContext) -> None:
+def unpack_type_definition_from_token(context: ParserScope) -> None:
     name_token = context.next_token()
 
     if name_token.type != TokenType.IDENTIFIER:

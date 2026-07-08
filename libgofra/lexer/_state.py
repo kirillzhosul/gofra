@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class LexerState:
     """State for lexical analysis which only required for internal usages."""
 
-    path: Path | Literal["cli", "toolchain"]
+    source: Path | Literal["cli", "toolchain"]
 
     _row: int = 0
     col: int = 0
@@ -21,13 +21,13 @@ class LexerState:
     _line: str = ""
 
     def current_location(self) -> TokenLocation:
-        if self.path == "cli":
+        if self.source == "cli":
             return TokenLocation.cli()
-        if self.path == "toolchain":
+        if self.source == "toolchain":
             return TokenLocation.toolchain()
 
         return TokenLocation(
-            filepath=self.path,
+            filepath=self.source,
             line_number=self.row,
             col_number=self.col,
         )

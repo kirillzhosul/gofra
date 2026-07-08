@@ -7,19 +7,19 @@ from libgofra.lexer.tokens import Token, TokenType
 
 
 def test_string_literal_tokenize_empty_state() -> None:
-    state = LexerState(path="toolchain")
+    state = LexerState(source="toolchain")
     with pytest.raises(AssertionError):
         tokenize_string_literal(state)
 
 
 def test_string_literal_tokenize_valid() -> None:
-    state = LexerState(path="toolchain")
+    state = LexerState(source="toolchain")
     state.set_line(0, '"string"')
     _assert_is_string_token(tokenize_string_literal(state))
 
 
 def test_string_literal_tokenize_unclosed() -> None:
-    state = LexerState(path="toolchain")
+    state = LexerState(source="toolchain")
     state.set_line(0, '"string')
 
     with pytest.raises(UnclosedStringQuoteError):
@@ -27,7 +27,7 @@ def test_string_literal_tokenize_unclosed() -> None:
 
 
 def test_string_literal_tokenize_unclosed_eol() -> None:
-    state = LexerState(path="toolchain")
+    state = LexerState(source="toolchain")
     state.set_line(0, '"')
 
     with pytest.raises(UnclosedStringQuoteError):
@@ -35,20 +35,20 @@ def test_string_literal_tokenize_unclosed_eol() -> None:
 
 
 def test_string_literal_tokenize_empty() -> None:
-    state = LexerState(path="toolchain")
+    state = LexerState(source="toolchain")
     state.set_line(0, '""')
     _assert_is_string_token(tokenize_string_literal(state))
 
 
 def test_string_literal_tokenize_escaped() -> None:
-    state = LexerState(path="toolchain")
+    state = LexerState(source="toolchain")
     state.set_line(0, r'"\r\n"')
     _assert_is_string_token(tokenize_string_literal(state))
 
 
-@pytest.mark.skip("Does not work")
+@pytest.mark.xfail(reason="Does not work", strict=True)
 def test_string_literal_tokenize_escaped_quote() -> None:
-    state = LexerState(path="toolchain")
+    state = LexerState(source="toolchain")
     state.set_line(0, r'"\""')
     _assert_is_string_token(tokenize_string_literal(state))
 

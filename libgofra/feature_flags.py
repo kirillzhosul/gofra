@@ -11,4 +11,4 @@ FEATURE_ALLOW_FPU = False
 
 # Will be `import` allowed?
 # Merge plan: Finish implementation, close caveats, remove preprocessor direct include? (with exchange)
-FEATURE_ALLOW_MODULES = False
+FEATURE_ALLOW_MODULES = True

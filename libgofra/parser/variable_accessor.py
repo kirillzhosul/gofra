@@ -6,7 +6,7 @@ from libgofra.hir.variable import (
     Variable,
 )
 from libgofra.lexer.tokens import Token, TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.errors.static_array_out_of_bounds import ArrayOutOfBoundsError
 from libgofra.parser.errors.unknown_field_accessor_struct_field import (
     UnknownFieldAccessorStructFieldError,
@@ -35,7 +35,7 @@ class _VariableAccessorExpr:
         )
 
 
-def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
+def try_push_variable_reference(context: ParserScope, token: Token) -> bool:
     if not (expr := _resolve_variable_expr(context, token)):
         return False
 
@@ -177,7 +177,7 @@ def try_push_variable_reference(context: ParserContext, token: Token) -> bool:
 
 
 def _try_unwind_constant(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
     expr: _VariableAccessorExpr,
 ) -> bool:
@@ -199,7 +199,7 @@ def _try_unwind_constant(
 
 
 def _resolve_variable_expr(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> _VariableAccessorExpr | None:
     assert token.type == TokenType.IDENTIFIER

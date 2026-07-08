@@ -3,7 +3,11 @@
 from collections.abc import Generator, Iterable
 from pathlib import Path
 
+from gofra.cli.output import cli_message
 from libgofra.hir.module import Module
+from libgofra.import_path_resolver import (
+    try_resolve_and_find_real_include_path,
+)
 from libgofra.lexer import tokenize_from_raw
 from libgofra.lexer.io import open_source_file_line_stream
 from libgofra.lexer.tokens import Token
@@ -28,13 +32,45 @@ def process_input_file(
 
     Does not provide optimizer or type checker.
     """
+    module = Module(path=filepath)
+
+    def on_import_request(
+        named_import_as_name: str,
+        requested_import_path: Path,
+    ) -> None:
+        import_path = try_resolve_and_find_real_include_path(
+            requested_import_path,
+            current_path=Path(),
+            search_paths=include_paths,
+        )
+        if import_path is None:
+            msg = f"Cannot find import path for module '{requested_import_path}' at ..."
+            raise ValueError(msg)
+
+        already_imported_paths = (m.path for m in module.dependencies.values())
+        if import_path in already_imported_paths:
+            cli_message(
+                "WARNING",
+                "Tried to import already imported module -> rejecting",
+            )
+            return
+
+        imported_module = process_input_file(
+            import_path,
+            include_paths=include_paths,
+            macros=macros,
+            rt_array_oob_check=rt_array_oob_check,
+            entry_point_name=entry_point_name,
+        )
+        assert named_import_as_name not in module.dependencies
+        module.dependencies[named_import_as_name] = imported_module
+
     return parse_module_from_tokenizer(
-        filepath,
+        module,
         tokenizer=_get_tokenizer(filepath, include_paths, macros),
-        macros=macros,
-        include_paths=include_paths,
         rt_array_oob_check=rt_array_oob_check,
         entry_point_name=entry_point_name,
+        on_import_request=on_import_request,
     )
 
 

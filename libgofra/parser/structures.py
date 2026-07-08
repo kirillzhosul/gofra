@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from libgofra.exceptions import GofraError
 from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.errors.wildcard_cannot_be_used_as_symbol_name import (
     WildcardCannotBeUsedAsSymbolNameError,
 )
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from libgofra.types._base import Type
 
 
-def unpack_structure_definition_from_token(context: ParserContext) -> None:
+def unpack_structure_definition_from_token(context: ParserScope) -> None:
     attr_is_packed, attr_reorder = _consume_structure_attributes(context)
 
     name_token = context.next_token()
@@ -32,7 +32,7 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
     if name == "_":
         raise WildcardCannotBeUsedAsSymbolNameError(at=name_token.location)
 
-    if context.name_is_already_taken(name):
+    if context.query_name_holder(name):
         msg = f"Structure name {name} is already taken by other definition"
         raise ValueError(msg)
     if (
@@ -55,7 +55,7 @@ def unpack_structure_definition_from_token(context: ParserContext) -> None:
     )
 
 
-def _consume_structure_attributes(context: ParserContext) -> tuple[bool, bool]:
+def _consume_structure_attributes(context: ParserScope) -> tuple[bool, bool]:
     attr_is_packed, attr_reorder = False, False
 
     while context.peek_token().type == TokenType.KEYWORD:
@@ -75,7 +75,7 @@ def _consume_structure_attributes(context: ParserContext) -> tuple[bool, bool]:
 
 
 def _consume_generic_structure_type_definition(
-    context: ParserContext,
+    context: ParserScope,
     name: str,
     type_params: Mapping[str, Token],
 ) -> None:
@@ -120,7 +120,7 @@ def _consume_generic_structure_type_definition(
 
 
 def _consume_concrete_structure_type_definition(
-    context: ParserContext,
+    context: ParserScope,
     name: str,
     *,
     attr_is_packed: bool,

@@ -8,7 +8,7 @@ from libgofra.hir.initializer import (
     VariableStringPtrInitializerValue,
 )
 from libgofra.lexer.tokens import Token, TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.errors.type_has_no_compile_time_initializer import (
     TypeHasNoCompileTimeInitializerParserError,
 )
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 def consume_variable_initializer(
-    context: ParserContext,
+    context: ParserScope,
     var_t: Type | None,
     varname_token: Token,
 ) -> tuple[T_AnyVariableInitializer, Type]:
@@ -162,7 +162,7 @@ def consume_variable_initializer(
 
 def _consume_string_literal_initializer(
     t: PointerType | StringType,
-    context: ParserContext,
+    context: ParserScope,
 ) -> VariableStringPtrInitializerValue:
     string_token = context.next_token()
     if string_token.type != TokenType.STRING:
@@ -185,7 +185,7 @@ def _consume_string_literal_initializer(
 
 def _consume_structure_initializer(
     var_t: StructureType,
-    context: ParserContext,
+    context: ParserScope,
     varname_token: Token,
 ) -> VariableIntFieldedStructureInitializerValue:
     context.expect_token(TokenType.LCURLY)

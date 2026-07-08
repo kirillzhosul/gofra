@@ -1,5 +1,5 @@
 from libgofra.lexer.tokens import Token, TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.errors.cannot_infer_var_type_from_empty_array_initializer import (
     CannotInferVariableTypeFromEmptyArrayInitializerError,
 )
@@ -15,7 +15,7 @@ from libgofra.types.primitive.integers import I64Type
 
 
 def infer_type_from_initializer(
-    context: ParserContext,
+    context: ParserScope,
     varname_token: Token,
 ) -> Type:
     """Infer which type definition must has based on upcoming initializer.

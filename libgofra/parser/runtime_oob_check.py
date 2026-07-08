@@ -3,12 +3,12 @@ from libgofra.hir.variable import (
     Variable,
 )
 from libgofra.lexer.tokens import Token, TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.types.primitive.integers import I64Type
 
 
 def emit_runtime_hir_oob_check(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
     index_var: Variable[I64Type],
     elements_const: int,

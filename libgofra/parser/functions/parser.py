@@ -18,8 +18,8 @@ from dataclasses import dataclass
 
 from libgofra.lexer import Token
 from libgofra.lexer.keywords import KEYWORD_TO_NAME, WORD_TO_KEYWORD, Keyword
-from libgofra.lexer.tokens import TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.lexer.tokens import TokenLocation, TokenType
+from libgofra.parser._context import ParserScope
 from libgofra.parser.errors.wildcard_cannot_be_used_as_symbol_name import (
     WildcardCannotBeUsedAsSymbolNameError,
 )
@@ -58,7 +58,7 @@ class FunctionHeaderDefinition:
 
 
 def consume_function_definition(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> FunctionHeaderDefinition:
     token, qualifiers = consume_function_qualifiers(context, token)
@@ -70,6 +70,11 @@ def consume_function_definition(
     if function_name == "_":
         raise WildcardCannotBeUsedAsSymbolNameError(at=token.location)
 
+    param_names = [p[0] for p in parameters]
+    if not all(param_names):
+        msg = f"Found legacy unnamed param! {token.location}"
+        raise ValueError(msg)
+
     return FunctionHeaderDefinition(
         token,
         function_name,
@@ -80,7 +85,7 @@ def consume_function_definition(
 
 
 def consume_function_qualifiers(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> tuple[Token, FunctionHeaderQualifiers]:
     """Consume parser context assuming given token is last popped, and it is a function modifier (or base function).
@@ -160,7 +165,7 @@ def consume_function_qualifiers(
     return (next_token, qualifiers)
 
 
-def consume_function_body_tokens(context: ParserContext) -> Generator[Token]:
+def consume_function_body_tokens(context: ParserScope) -> Generator[Token]:
     opened_context_blocks = 0
 
     context_keywords = (Keyword.IF, Keyword.DO, Keyword.LAMBDA_DEF)
@@ -184,3 +189,10 @@ def consume_function_body_tokens(context: ParserContext) -> Generator[Token]:
             opened_context_blocks += 1
 
         yield token
+
+    yield Token(
+        type=TokenType.EOL,
+        text="",
+        value="",
+        location=TokenLocation.toolchain(),
+    )

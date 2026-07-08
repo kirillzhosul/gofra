@@ -5,7 +5,7 @@ from libgofra.hir.operator import OperatorType
 from libgofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
-from libgofra.parser._context import ParserContext
+from libgofra.parser._context import ParserScope
 from libgofra.parser.exceptions import (
     ParserEmptyIfBodyError,
     ParserEndAfterWhileError,
@@ -38,7 +38,7 @@ type RangeQualifier = RangeQualifierForeach | RangeQualifierRange
 
 
 def consume_conditional_block_keyword_from_token(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> None:
     assert isinstance(token.value, Keyword)
@@ -202,7 +202,7 @@ def consume_conditional_block_keyword_from_token(
 
 
 def parse_for_range_qualifier(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> RangeQualifier:
     iterator_identifier = context.next_token()
@@ -211,7 +211,9 @@ def parse_for_range_qualifier(
         raise ValueError(msg)
 
     iterator_varname = iterator_identifier.text
-    if context.name_is_already_taken(iterator_varname):
+    if context.query_name_holder(
+        iterator_varname,
+    ):  # TODO(@kirillzhosul): proper name holder error
         conflicting_variable = context.search_variable_in_context_parents(
             iterator_varname,
         )
@@ -337,14 +339,14 @@ def parse_for_range_qualifier(
     )
 
 
-def _consume_dot_dot_syntax(context: ParserContext) -> None:
+def _consume_dot_dot_syntax(context: ParserScope) -> None:
     context.expect_token(TokenType.DOT)
     context.next_token()
     context.expect_token(TokenType.DOT)
     context.next_token()
 
 
-def _peek_for_dot_dot_syntax(context: ParserContext) -> bool:
+def _peek_for_dot_dot_syntax(context: ParserScope) -> bool:
     """Check if next tokens are containing `..` (dot-dot) syntax."""
     dot_t1 = context.next_token()
     if dot_t1.type != TokenType.DOT:
@@ -363,7 +365,7 @@ def _peek_for_dot_dot_syntax(context: ParserContext) -> bool:
 
 
 def unwrap_for_operators_syntactical_sugar(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
     qualifier: RangeQualifier,
 ) -> None:
@@ -485,7 +487,7 @@ def unwrap_for_operators_syntactical_sugar(
 
 
 def operators_read_sint64_variable(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
     variable: Variable[Type],
 ) -> None:
@@ -499,7 +501,7 @@ def operators_read_sint64_variable(
 
 
 def operators_set_sint64_variable(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
     value: int,
     variable: Variable[Type],

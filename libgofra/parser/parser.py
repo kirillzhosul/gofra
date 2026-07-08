@@ -4,10 +4,8 @@ from difflib import get_close_matches
 from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
-from gofra.cli.output import cli_message
 from libgofra.feature_flags import FEATURE_ALLOW_FPU, FEATURE_ALLOW_MODULES
 from libgofra.hir.function import Function, Visibility
-from libgofra.hir.module import Module
 from libgofra.hir.operator import FunctionCallOperand
 from libgofra.hir.variable import Variable, VariableScopeClass, VariableStorageClass
 from libgofra.lexer import (
@@ -15,15 +13,17 @@ from libgofra.lexer import (
     Token,
     TokenType,
 )
-from libgofra.lexer.io import open_source_file_line_stream
 from libgofra.lexer.keywords import PreprocessorKeyword
-from libgofra.lexer.lexer import tokenize_from_raw
-from libgofra.lexer.tokens import TokenLocation
-from libgofra.parser.conditional_blocks import (
-    consume_conditional_block_keyword_from_token,
+from libgofra.parser.errors.general_name_conflict_error import (
+    GeneralNameHolderConflictError,
 )
 from libgofra.parser.errors.keyword_in_without_loop_block import (
     KeywordInWithoutLoopBlockError,
+)
+from libgofra.parser.errors.lambda_with_extern_attr import LambdaWithExternAttrError
+from libgofra.parser.errors.lambda_with_inline_attr import LambdaWithInlineAttrError
+from libgofra.parser.errors.lambda_with_visibility_attr import (
+    LambdaWithVisibilityAttrError,
 )
 from libgofra.parser.errors.local_level_keyword_in_global_scope import (
     LocalLevelKeywordInGlobalScopeError,
@@ -34,6 +34,16 @@ from libgofra.parser.errors.top_level_expected_no_operators import (
 )
 from libgofra.parser.errors.top_level_keyword_in_local_scope import (
     TopLevelKeywordInLocalScopeError,
+)
+from libgofra.parser.exprs.compile_time_error import unpack_compile_time_error
+from libgofra.parser.exprs.conditional_blocks import (
+    consume_conditional_block_keyword_from_token,
+)
+from libgofra.parser.exprs.primitives import (
+    push_float_operator,
+    push_integer_operator,
+    push_string_operator,
+    try_push_intrinsic_operator,
 )
 from libgofra.parser.functions.parser import (
     consume_function_body_tokens,
@@ -49,16 +59,10 @@ from libgofra.parser.variable_accessor import try_push_variable_reference
 from libgofra.parser.variable_definition import (
     unpack_variable_definition_from_token,
 )
-from libgofra.preprocessor.preprocessor import preprocess_file
-from libgofra.typecheck.errors.user_defined_compile_time_error import (
-    UserDefinedCompileTimeError,
-)
 from libgofra.types.composite.function import FunctionType
-from libgofra.types.composite.string import StringType
 from libgofra.types.composite.structure import StructureType
-from libgofra.types.registry import get_default_propagated_type_registry
 
-from ._context import ParserContext
+from ._context import ParserScope
 from .exceptions import (
     ParserDirtyNonPreprocessedTokenError,
     ParserExhaustiveContextStackError,
@@ -70,9 +74,11 @@ from .exceptions import (
 from .operators import IDENTIFIER_TO_OPERATOR_TYPE, OperatorType
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Callable, Generator
 
-    from libgofra.preprocessor.macros.registry import MacrosRegistry
+    from libgofra.hir.module import Module
+    from libgofra.types._base import Type
+
 
 TOP_LEVEL_KEYWORD = (
     Keyword.ATTR_FUNC_INLINE,
@@ -96,34 +102,21 @@ BOTH_LEVEL_KEYWORD = (
 )
 
 
-def parse_module_from_tokenizer(  # noqa: PLR0913
-    path: Path,
+def parse_module_from_tokenizer(
+    module: Module,
     tokenizer: Generator[Token],
-    macros: MacrosRegistry,
-    include_paths: Iterable[Path],
     *,
     rt_array_oob_check: bool = False,
     entry_point_name: str,
+    on_import_request: Callable[[str, Path], None],
 ) -> Module:
     """Load file for parsing into operators."""
-
-    root_mod_ref = Module(
-        path=path,
-        functions={},
-        variables={},
-        structures={},
-        dependencies={},
-        entry_point_ref=None,
-        types=get_default_propagated_type_registry(),
-        structs={},
-    )
-    context = ParserContext(
-        root_mod_ref=root_mod_ref,
+    context = ParserScope(
+        module=module,
         _tokenizer=tokenizer,
-        import_search_paths=list(include_paths),
-        macros_registry=macros,
         rt_array_oob_check=rt_array_oob_check,
         entry_point_name=entry_point_name,
+        on_import_request=on_import_request,
     )
     _parse_from_context_into_operators(context=context)
 
@@ -133,20 +126,11 @@ def parse_module_from_tokenizer(  # noqa: PLR0913
     if context.operators:
         raise TopLevelExpectedNoOperatorsError(context.operators[0])
 
-    _inject_context_module_runtime_definitions(context)
+    context.merge_scope_into_module(module)
 
-    root_mod_ref.path = path
-    root_mod_ref.functions = context.functions
-    root_mod_ref.variables = context.variables
-    root_mod_ref.structures = context.structs
-    root_mod_ref.dependencies = context.module_dependencies
-    root_mod_ref.entry_point_ref = context.functions.get(context.entry_point_name, None)
-    root_mod_ref.types = context.types
-    root_mod_ref.structs = context.structs
+    _validate_function_existence_and_visibility(root=module, module=module)
 
-    _validate_function_existence_and_visibility(root=root_mod_ref, module=root_mod_ref)
-
-    return root_mod_ref
+    return module
 
 
 def _validate_function_existence_and_visibility(root: Module, module: Module) -> None:
@@ -184,13 +168,7 @@ def _validate_function_existence_and_visibility(root: Module, module: Module) ->
         _validate_function_existence_and_visibility(root=root, module=children_module)
 
 
-def _inject_context_module_runtime_definitions(context: ParserContext) -> None:
-    """Inject definitions that must be known at parse stage."""
-    string_t = StringType()
-    context.structs[string_t.name] = string_t
-
-
-def _parse_from_context_into_operators(context: ParserContext) -> None:
+def _parse_from_context_into_operators(context: ParserScope) -> None:
     """Consumes token stream into language operators."""
     try:
         while token := context.next_token():
@@ -212,17 +190,17 @@ def _parse_from_context_into_operators(context: ParserContext) -> None:
                 raise ParserExhaustiveContextStackError
 
 
-def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:  # noqa: PLR0911
+def _consume_token_for_parsing(token: Token, context: ParserScope) -> None:  # noqa: PLR0911
     match token.type:
         case TokenType.INTEGER | TokenType.CHARACTER:
-            return _push_integer_operator(context, token)
+            return push_integer_operator(context, token)
         case TokenType.FLOAT:
             if not FEATURE_ALLOW_FPU:
                 msg = "FPU is disabled as feature for being in unstable test stage, try enable `FEATURE_ALLOW_FPU` to access FP."
                 raise ValueError(msg)
-            return _push_float_operator(context, token)
+            return push_float_operator(context, token)
         case TokenType.STRING:
-            return _push_string_operator(context, token)
+            return push_string_operator(context, token)
         case TokenType.IDENTIFIER:
             return _consume_word_token(token, context)
         case TokenType.KEYWORD:
@@ -254,8 +232,8 @@ def _consume_token_for_parsing(token: Token, context: ParserContext) -> None:  #
             assert_never(token.type)
 
 
-def _consume_word_token(token: Token, context: ParserContext) -> None:
-    if _try_push_intrinsic_operator(context, token):
+def _consume_word_token(token: Token, context: ParserScope) -> None:
+    if try_push_intrinsic_operator(context, token):
         return
 
     if _try_unpack_function_call_from_identifier_token(context, token):
@@ -270,7 +248,7 @@ def _consume_word_token(token: Token, context: ParserContext) -> None:
     )
 
 
-def _best_match_for_word(context: ParserContext, word: str) -> str | None:
+def _best_match_for_word(context: ParserScope, word: str) -> str | None:
     matches = get_close_matches(
         word,
         IDENTIFIER_TO_OPERATOR_TYPE.keys()
@@ -280,7 +258,7 @@ def _best_match_for_word(context: ParserContext, word: str) -> str | None:
     return matches[0] if matches else None
 
 
-def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noqa: PLR0911
+def _consume_keyword_token(context: ParserScope, token: Token) -> None:  # noqa: PLR0911
     if isinstance(token.value, PreprocessorKeyword):
         raise ParserDirtyNonPreprocessedTokenError(token=token)
     assert isinstance(token.value, Keyword)
@@ -340,7 +318,7 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
         case Keyword.INLINE_RAW_ASM:
             return _unpack_inline_raw_assembly(context, token)
         case Keyword.COMPILE_TIME_ERROR:
-            return _unpack_compile_time_error(context, token)
+            return unpack_compile_time_error(context, token)
         case Keyword.MODULE_IMPORT:
             return _unpack_import(context, token)
         case Keyword.ALIGN_OF:
@@ -367,76 +345,68 @@ def _consume_keyword_token(context: ParserContext, token: Token) -> None:  # noq
             assert_never(token.value)
 
 
+def _new_function_scope(
+    parent: ParserScope,
+    token: Token,
+    parameters: list[tuple[str, Type]],
+) -> ParserScope:
+    new_scope = ParserScope.from_parent(
+        parent,
+        tokenizer=consume_function_body_tokens(parent),
+    )
+
+    for param_name, param_type in reversed(parameters):
+        if not param_name:
+            continue
+        if param_name == "_":
+            new_scope.push_new_operator(OperatorType.STACK_DROP, token=token)
+            continue
+        new_scope.variables[param_name] = Variable(
+            name=param_name,
+            defined_at=token.location,
+            is_constant=False,
+            storage_class=VariableStorageClass.STACK,
+            scope_class=VariableScopeClass.FUNCTION,
+            type=param_type,
+            initial_value=None,
+        )
+
+        new_scope.push_new_operator(
+            OperatorType.LOAD_PARAM_ARGUMENT,
+            token,
+            operand=param_name,
+        )
+    _parse_from_context_into_operators(context=new_scope)
+
+    return new_scope
+
+
 def _unpack_anonymous_lambda_function_from_token(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> None:
-    def _parse_and_spill_enclosures() -> Function:
-        assert token.type == TokenType.KEYWORD
-        assert token.value == Keyword.LAMBDA_DEF
-        assert not context.is_top_level
+    assert token.type == TokenType.KEYWORD
+    assert token.value == Keyword.LAMBDA_DEF
+    assert not context.is_top_level
 
+    def _parse_and_spill_enclosures() -> Function:
         f_header_def = consume_function_definition(context, context.next_token())
 
         if f_header_def.qualifiers.is_extern:
-            msg = f"Tried to construct an extern lambda-func-def at {token.location}"
-            raise ValueError(msg)
+            raise LambdaWithExternAttrError(at=token.location)
 
         if f_header_def.qualifiers.is_inline:
-            msg = f"Tried to construct an inline lambda-func-def at {token.location}"
-            raise ValueError(msg)
+            raise LambdaWithInlineAttrError(at=token.location)
 
-        if context.name_is_already_taken(f_header_def.name):
+        if f_header_def.qualifiers.is_public:
+            raise LambdaWithVisibilityAttrError(at=token.location)
+
+        # TODO(@kirillzhosul): doesn't anonymous functions do not hold their names?
+        if context.query_name_holder(f_header_def.name):
             msg = f"Function name {f_header_def.name} is already taken by other definition"
             raise ValueError(msg)
 
-        def _fixed_tokenizer() -> Generator[Token]:
-            # TODO(@kirillzhosul): This must removed or refactored
-            # refactored so single peek can always find an place where to peek
-            # otherwise will release tokenizer from parse
-            yield from consume_function_body_tokens(context)
-            yield Token(
-                type=TokenType.EOL,
-                text="",
-                value="",
-                location=TokenLocation.toolchain(),
-            )
-
-        new_context = ParserContext(
-            root_mod_ref=context.root_mod_ref,
-            _tokenizer=_fixed_tokenizer(),
-            functions=dict(context.functions),
-            parent=context,
-            entry_point_name=context.entry_point_name,  # TODO: Refactor
-        )
-
-        param_names = [p[0] for p in f_header_def.parameters]
-        if not all(param_names):
-            msg = f"Found legacy unnamed param! {token.location}"
-            raise ValueError(msg)
-
-        for param_name, param_type in reversed(f_header_def.parameters):
-            if not param_name:
-                continue
-            if param_name == "_":
-                new_context.push_new_operator(OperatorType.STACK_DROP, token=token)
-                continue
-            new_context.variables[param_name] = Variable(
-                name=param_name,
-                defined_at=token.location,
-                is_constant=False,
-                storage_class=VariableStorageClass.STACK,
-                scope_class=VariableScopeClass.FUNCTION,
-                type=param_type,
-                initial_value=None,
-            )
-
-            new_context.push_new_operator(
-                OperatorType.LOAD_PARAM_ARGUMENT,
-                token,
-                operand=param_name,
-            )
-        _parse_from_context_into_operators(context=new_context)
+        new_context = _new_function_scope(context, token, f_header_def.parameters)
 
         function = Function.create_internal(
             name=f_header_def.name,
@@ -448,16 +418,12 @@ def _unpack_anonymous_lambda_function_from_token(
         )
         function.attrs.leaf = new_context.is_leaf_context
         function.attrs.naked = f_header_def.qualifiers.is_naked
-
-        assert not f_header_def.qualifiers.is_public
-        assert not f_header_def.qualifiers.is_no_return
-        assert not f_header_def.qualifiers.is_extern
-        assert not f_header_def.qualifiers.is_naked
+        function.attrs.no_return = f_header_def.qualifiers.is_no_return
 
         function.attrs.visibility = Visibility.PRIVATE
 
-        assert context.root_mod_ref
-        function.module = context.root_mod_ref
+        assert context.module
+        function.module = context.module
         assert not context.is_top_level
         context.add_function(function)
         return function
@@ -470,7 +436,7 @@ def _unpack_anonymous_lambda_function_from_token(
     )
 
 
-def _unpack_align_of(context: ParserContext, token: Token) -> None:
+def _unpack_align_of(context: ParserScope, token: Token) -> None:
     alignment_of_type = parse_concrete_type_from_tokenizer(
         context,
         allow_inferring_variable_types=False,  # ? must be
@@ -483,7 +449,7 @@ def _unpack_align_of(context: ParserContext, token: Token) -> None:
     )
 
 
-def _unpack_pointer_of_proc(context: ParserContext, token: Token) -> None:
+def _unpack_pointer_of_proc(context: ParserScope, token: Token) -> None:
     function_name_token = context.next_token()
     if function_name_token.type != TokenType.IDENTIFIER:
         msg = f"Expected identifier as function name for pointer-of-proc at {token.location} but got {function_name_token.type}"
@@ -500,44 +466,7 @@ def _unpack_pointer_of_proc(context: ParserContext, token: Token) -> None:
     )
 
 
-def _try_resolve_and_find_real_include_path(
-    path: Path,
-    current_path: Path,
-    search_paths: Iterable[Path],
-) -> Path | None:
-    """Resolve real import path and try to search for possible location of include (include directories system)."""
-    traversed_paths = (
-        # 1. Try path where callee request an include
-        current_path.parent,
-        # 2. Try CLI toolchain call directory
-        Path("./"),
-        # 3. Traverse each search path
-        *search_paths,
-    )
-    for search_path in traversed_paths:
-        probable_path = search_path.joinpath(path)
-        if not probable_path.exists(follow_symlinks=True):
-            probable_path = search_path.joinpath(path).with_suffix(".gof")
-            if not probable_path.exists(follow_symlinks=True):
-                continue
-
-        if probable_path.is_file():
-            # We found an straightforward file reference
-            return probable_path
-
-        # Non-existent file here or directory reference.
-        if not probable_path.is_dir():
-            continue
-
-        probable_package = Path(probable_path / probable_path.name).with_suffix(
-            ".gof",
-        )
-        if probable_package.exists():
-            return probable_package
-    return None
-
-
-def _unpack_import(context: ParserContext, token: Token) -> None:
+def _unpack_import(context: ParserScope, token: Token) -> None:
     if not FEATURE_ALLOW_MODULES:
         msg = "Import feature is not enabled, required to import modules\nModules is still Work-In-Progress, expect possible errors and caveats while using them"
         raise ValueError(msg)
@@ -557,41 +486,11 @@ def _unpack_import(context: ParserContext, token: Token) -> None:
         msg = f"Tried to import self at {context.path}"
         raise ValueError(msg)
 
-    import_path = _try_resolve_and_find_real_include_path(
-        requested_import_path,
-        current_path=context.path,
-        search_paths=context.import_search_paths,
-    )
-    if import_path is None:
-        msg = f"Cannot find import path for module '{requested_import_path}' at {token.location}"
-        raise ValueError(msg)
-
-    already_imported_paths = (m.path for m in context.module_dependencies.values())
-    if import_path in already_imported_paths:
-        cli_message("WARNING", "Tried to import already imported module -> rejecting")
-        return
-
-    io = open_source_file_line_stream(import_path)
-    lexer = tokenize_from_raw(import_path, io)
-    preprocessor = preprocess_file(
-        import_path,
-        lexer,
-        context.import_search_paths,
-        context.macros_registry,
-    )
-    imported_module = parse_module_from_tokenizer(
-        import_path,
-        tokenizer=preprocessor,
-        macros=context.macros_registry.copy(),  # TODO: do not mutate root module
-        include_paths=context.import_search_paths,
-        rt_array_oob_check=context.rt_array_oob_check,
-        entry_point_name=context.entry_point_name,
-    )
-    context.module_dependencies[named_import_as_name] = imported_module
+    context.on_import_request(named_import_as_name, requested_import_path)
 
 
 def _consume_import_raw_path_from_token(
-    context: ParserContext,
+    context: ParserScope,
     include_token: Token,
 ) -> Path:
     """Consume include path from `include` construction."""
@@ -611,22 +510,7 @@ def _consume_import_raw_path_from_token(
     return Path(include_path_raw)
 
 
-def _unpack_compile_time_error(context: ParserContext, token: Token) -> None:
-    context.expect_token(TokenType.STRING)
-    message_tok = context.next_token()
-    assert isinstance(message_tok.value, str)
-    if context.parent is None:
-        # If global scope - emit right now
-        raise UserDefinedCompileTimeError(at=token.location, message=message_tok.value)
-    context.push_new_operator(
-        OperatorType.COMPILE_TIME_ERROR,
-        token=token,
-        operand=message_tok.value,
-        is_contextual=False,
-    )
-
-
-def _unpack_inline_raw_assembly(context: ParserContext, token: Token) -> None:
+def _unpack_inline_raw_assembly(context: ParserScope, token: Token) -> None:
     context.expect_token(TokenType.STRING)
     asm_source = context.next_token()
     assert isinstance(asm_source.value, str)
@@ -638,7 +522,7 @@ def _unpack_inline_raw_assembly(context: ParserContext, token: Token) -> None:
     )
 
 
-def _unpack_sizeof_from_token(context: ParserContext, token: Token) -> None:
+def _unpack_sizeof_from_token(context: ParserScope, token: Token) -> None:
     sizeof_type = parse_concrete_type_from_tokenizer(
         context,
         allow_inferring_variable_types=True,
@@ -650,7 +534,7 @@ def _unpack_sizeof_from_token(context: ParserContext, token: Token) -> None:
     )
 
 
-def _unpack_offset_of_from_token(context: ParserContext, token: Token) -> None:
+def _unpack_offset_of_from_token(context: ParserScope, token: Token) -> None:
     struct_type = parse_concrete_type_from_tokenizer(
         context,
         allow_inferring_variable_types=True,
@@ -678,7 +562,7 @@ def _unpack_offset_of_from_token(context: ParserContext, token: Token) -> None:
     )
 
 
-def _unpack_function_call_from_token(context: ParserContext, token: Token) -> None:
+def _unpack_function_call_from_token(context: ParserScope, token: Token) -> None:
     name_token = context.next_token()
     if name_token.type != TokenType.IDENTIFIER:
         msg = "expected function name as identifier after `call`"
@@ -719,7 +603,7 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
             context.expand_from_inline_block(function)
             return
     else:
-        assert not context.name_is_already_taken(name)
+        assert not context.query_name_holder(name)
 
     context.push_new_operator(
         OperatorType.FUNCTION_CALL,
@@ -729,15 +613,10 @@ def _unpack_function_call_from_token(context: ParserContext, token: Token) -> No
 
 
 def _unpack_function_definition_from_token(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> None:
     f_header_def = consume_function_definition(context, token)
-
-    param_names = [p[0] for p in f_header_def.parameters]
-    if not all(param_names):
-        msg = f"Found legacy unnamed param! {token.location}"
-        raise ValueError(msg)
 
     if f_header_def.qualifiers.is_extern:
         function = Function.create_external(
@@ -747,56 +626,18 @@ def _unpack_function_definition_from_token(
             return_type=f_header_def.return_type,
         )
         function.attrs.no_return = f_header_def.qualifiers.is_no_return
-        assert context.root_mod_ref
-        function.module = context.root_mod_ref
+        assert context.module
+        function.module = context.module
         context.add_function(function)
         return
 
-    if context.name_is_already_taken(f_header_def.name):
-        msg = f"Function name {f_header_def.name} is already taken by other definition"
-        raise ValueError(msg)
-
-    def _fixed_tokenizer() -> Generator[Token]:
-        # TODO(@kirillzhosul): This must removed or refactored
-        # refactored so single peek can always find an place where to peek
-        # otherwise will release tokenizer from parse
-        yield from consume_function_body_tokens(context)
-        yield Token(
-            type=TokenType.EOL,
-            text="",
-            value="",
-            location=TokenLocation.toolchain(),
+    if name_holder := context.query_name_holder(f_header_def.name):
+        raise GeneralNameHolderConflictError(
+            conflicting_holder=f"Function '{f_header_def.name}' at {token.location}",
+            name_holder=name_holder,
         )
 
-    new_context = ParserContext(
-        root_mod_ref=context.root_mod_ref,
-        _tokenizer=_fixed_tokenizer(),
-        functions=dict(context.functions),
-        parent=context,
-        entry_point_name=context.entry_point_name,  # TODO: Refactor
-    )
-
-    for param_name, param_type in reversed(f_header_def.parameters):
-        if not param_name:
-            continue
-        if param_name == "_":
-            new_context.push_new_operator(OperatorType.STACK_DROP, token=token)
-            continue
-        new_context.variables[param_name] = Variable(
-            name=param_name,
-            defined_at=token.location,
-            is_constant=False,
-            storage_class=VariableStorageClass.STACK,
-            scope_class=VariableScopeClass.FUNCTION,
-            type=param_type,
-            initial_value=None,
-        )
-        new_context.push_new_operator(
-            OperatorType.LOAD_PARAM_ARGUMENT,
-            token,
-            operand=param_name,
-        )
-    _parse_from_context_into_operators(context=new_context)
+    new_context = _new_function_scope(context, token, f_header_def.parameters)
 
     if f_header_def.qualifiers.is_inline:
         assert not new_context.variables, "Inline functions cannot have local variables"
@@ -811,8 +652,8 @@ def _unpack_function_definition_from_token(
             parameters=f_header_def.parameters,
         )
         function.attrs.no_return = f_header_def.qualifiers.is_no_return
-        assert context.root_mod_ref
-        function.module = context.root_mod_ref
+        assert context.module
+        function.module = context.module
         context.add_function(function)
         return
     if f_header_def.name == context.entry_point_name:  # TODO: Refactor
@@ -833,8 +674,8 @@ def _unpack_function_definition_from_token(
     if f_header_def.qualifiers.is_public:
         function.attrs.visibility = Visibility.PUBLIC
     function.attrs.no_return = f_header_def.qualifiers.is_no_return
-    assert context.root_mod_ref
-    function.module = context.root_mod_ref
+    assert context.module
+    function.module = context.module
 
     enclosed_new_functions = [
         f for f in new_context.functions.values() if f.name not in context.functions
@@ -864,21 +705,21 @@ def _unpack_function_definition_from_token(
 
 
 def _enclosure_generate_native_holder_name(
-    context: ParserContext,
+    context: ParserScope,
     owner: Function,
     enclosure: Function,
 ) -> None:
     name = owner.name + "$enclosure"
     enclosure.name = name
     uid = 1
-    while context.name_is_already_taken(enclosure.name):
+    while context.query_name_holder(enclosure.name):
         name = enclosure.name + f"_{uid}"
         enclosure.name = name
         uid += 1
 
 
 def _try_unpack_function_call_from_identifier_token(
-    context: ParserContext,
+    context: ParserScope,
     token: Token,
 ) -> bool:
     assert token.type == TokenType.IDENTIFIER
@@ -896,42 +737,4 @@ def _try_unpack_function_call_from_identifier_token(
             operand=call_spec,
         )
         return True
-    return False
-
-
-def _push_string_operator(context: ParserContext, token: Token) -> None:
-    assert isinstance(token.value, str)
-    context.push_new_operator(
-        type=OperatorType.PUSH_STRING,
-        token=token,
-        operand=token.value,
-    )
-
-
-def _push_integer_operator(context: ParserContext, token: Token) -> None:
-    assert isinstance(token.value, int)
-    context.push_new_operator(
-        type=OperatorType.PUSH_INTEGER,
-        token=token,
-        operand=token.value,
-    )
-
-
-def _push_float_operator(context: ParserContext, token: Token) -> None:
-    assert isinstance(token.value, float)
-    context.push_new_operator(
-        type=OperatorType.PUSH_FLOAT,
-        token=token,
-        operand=token.value,
-    )
-
-
-def _try_push_intrinsic_operator(context: ParserContext, token: Token) -> bool:
-    assert isinstance(token.value, str)
-
-    operator_type = IDENTIFIER_TO_OPERATOR_TYPE.get(token.value)
-    if operator_type:
-        context.push_new_operator(type=operator_type, token=token)
-        return True
-
     return False
