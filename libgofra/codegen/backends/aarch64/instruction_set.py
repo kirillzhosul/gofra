@@ -281,7 +281,9 @@ def aarch64_operator_instructions(  # noqa: PLR0913
             if callee.attrs.external:
                 addressing_mode = AddressingMode.EXTERNAL
             elif callee.outer_function == owner_function:
-                addressing_mode = AddressingMode.NEAR
+                # TODO(@kirillzhosul): Must be NEAR for memory optimization
+                # but got broken at some time? reverted to PAGE
+                addressing_mode = AddressingMode.PAGE
             else:
                 addressing_mode = AddressingMode.PAGE
 

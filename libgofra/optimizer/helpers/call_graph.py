@@ -134,7 +134,7 @@ class CallGraph:
         )
 
         if not callee:
-            msg = f"Missing mod dependency for DCE, possible DCE removed existed function call without DCE propagation {operator.operand}"
+            msg = f"Missing mod dependency for call graph, possibly DCE removed existed function call without call graph propagation {operator}"
             raise ValueError(msg)
 
         return callee

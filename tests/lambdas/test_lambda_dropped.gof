@@ -1,0 +1,10 @@
+#include "std"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 0
+
+
+func void main[]
+    lambda no_return func void inner[]
+        1 exit
+    end drop
+end

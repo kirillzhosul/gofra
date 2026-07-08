@@ -1,0 +1,15 @@
+#include "std"
+
+#define TESTKIT_EXPECTED_EXIT_CODE 210
+
+type F_T func int _[]
+
+func int main[]
+    var f F_T;
+
+    &f lambda func int inner[]
+        TESTKIT_EXPECTED_EXIT_CODE return
+    end !<
+
+    call f return
+end

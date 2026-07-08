@@ -1,4 +1,6 @@
 /// Tests that empty main function works
 
+#define TESTKIT_EXPECTED_EXIT_CODE 0
+
 func void main[]
 end

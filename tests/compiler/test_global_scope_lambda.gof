@@ -1,0 +1,4 @@
+#define TESTKIT_EXPECT_COMPILE_ERROR "Local-level keyword used in global scope!"
+
+lambda func void main[]
+end
