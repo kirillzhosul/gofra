@@ -28,7 +28,7 @@ mkdocs = "^1.6.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.15.9"
-pytest = "^9.0.1"
+pytest = "^9.0.3"
 
 [tool.ruff.lint]
 select = ["ALL"]
