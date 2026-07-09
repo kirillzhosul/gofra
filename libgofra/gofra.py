@@ -58,7 +58,7 @@ def process_input_file(
         imported_module = process_input_file(
             import_path,
             include_paths=include_paths,
-            macros=macros,
+            macros=macros.copy(),
             rt_array_oob_check=rt_array_oob_check,
             entry_point_name=entry_point_name,
         )
