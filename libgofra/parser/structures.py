@@ -1,10 +1,14 @@
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from libgofra.exceptions import GofraError
 from libgofra.lexer.keywords import Keyword
 from libgofra.lexer.tokens import Token, TokenType
 from libgofra.parser._context import ParserScope
+from libgofra.parser.errors.structure_field_has_zero_size import (
+    StructureFieldHasZeroError,
+)
+from libgofra.parser.errors.structure_has_no_fields import StructureHasNoFieldsError
+from libgofra.parser.errors.structure_has_zero_size import StructureHasZeroSizeError
 from libgofra.parser.errors.wildcard_cannot_be_used_as_symbol_name import (
     WildcardCannotBeUsedAsSymbolNameError,
 )
@@ -154,6 +158,16 @@ def _consume_concrete_structure_type_definition(
         field_type = parse_concrete_type_from_tokenizer(context)
         if id(field_type) == id(ref):
             has_forward_reference = True
+
+        if field_type.size_in_bytes == 0:
+            at = context.peek_token().location
+            raise StructureFieldHasZeroError(
+                field_type=field_type,
+                field_name=field_name,
+                at=at,
+                structure=ref,
+            )
+
         fields_ordering.append(field_name)
         fields[field_name] = field_type
 
@@ -166,9 +180,9 @@ def _consume_concrete_structure_type_definition(
     )
 
     if not ref.natural_fields:
-        msg = f"Structure {ref.name} has no fields."
-        raise GofraError(msg)
+        at = context.peek_token().location
+        raise StructureHasNoFieldsError(structure=ref, at=at)
 
     if ref.size_in_bytes <= 0:
-        msg = f"Structure {ref} (defined around {context.peek_token().location} has zero size which is prohibited, if you define self-reference type, this leaded to infinite size (0 == inf in type)."
-        raise GofraError(msg)
+        at = context.peek_token().location
+        raise StructureHasZeroSizeError(structure=ref, at=at)
