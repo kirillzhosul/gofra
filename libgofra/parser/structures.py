@@ -159,15 +159,6 @@ def _consume_concrete_structure_type_definition(
         if id(field_type) == id(ref):
             has_forward_reference = True
 
-        if field_type.size_in_bytes == 0:
-            at = context.peek_token().location
-            raise StructureFieldHasZeroError(
-                field_type=field_type,
-                field_name=field_name,
-                at=at,
-                structure=ref,
-            )
-
         fields_ordering.append(field_name)
         fields[field_name] = field_type
 
@@ -178,6 +169,16 @@ def _consume_concrete_structure_type_definition(
         # TODO: proper backpatch
         has_forward_reference=has_forward_reference,
     )
+
+    for field_name, field_type in ref.natural_fields.items():
+        if field_type.size_in_bytes == 0:
+            at = context.peek_token().location
+            raise StructureFieldHasZeroError(
+                field_type=field_type,
+                field_name=field_name,
+                at=at,
+                structure=ref,
+            )
 
     if not ref.natural_fields:
         at = context.peek_token().location

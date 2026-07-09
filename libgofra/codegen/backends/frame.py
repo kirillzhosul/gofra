@@ -77,4 +77,4 @@ def is_native_function_has_frame(config: CodegenConfig, function: Function) -> b
     if not function.attrs.leaf:  # If has any calls we cant skip frame setup
         return True
 
-    return config.omit_unused_frame_pointers
+    return not config.omit_unused_frame_pointers
