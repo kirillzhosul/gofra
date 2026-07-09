@@ -65,10 +65,16 @@ def build_local_variables_frame_offsets(
 
 def is_native_function_has_frame(config: CodegenConfig, function: Function) -> bool:
     """Return is this function must define frame pointer in codegen."""
-    if function.attrs.naked:
+    if function.attrs.inline:
+        return True  # TODO(@kirillzhosul): research while inline functions depend on frame?
+
+    if function.attrs.naked:  # Naked has no frame by its definition
         return False
 
-    if config.omit_unused_frame_pointers and not function.attrs.inline:
-        return not function.attrs.leaf or bool(function.variables)
+    if function.variables:  # Must hold frame due to variables located on the frame
+        return True
 
-    return True
+    if not function.attrs.leaf:  # If has any calls we cant skip frame setup
+        return True
+
+    return config.omit_unused_frame_pointers
