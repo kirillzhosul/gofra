@@ -74,3 +74,17 @@ pub func int factorial[int n]
 
     r return
 end
+
+// Multiply each element of 2D matrix by scalar
+func void matrix_scalar_mul[*int matrix, int w, int h, int multiplier]
+    var v int;
+    var i int;
+
+    for row in 0..w do
+    for col in 0..h do
+        &i col w * row + !<
+        &v matrix sizeof int i * + ?> !<
+
+        matrix sizeof int i * + v multiplier * !<
+    end end
+end

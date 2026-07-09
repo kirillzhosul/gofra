@@ -106,7 +106,7 @@ type fd_t int
     pub func fd_t sc_socket[int domain,int type_,int protocol] domain type_ protocol DARWIN_SYSCALL_SOCKET syscall3 end
 
     // Bind given socket to given address
-    pub func int sc_bind[fd_t socket, *sockaddr_in address, int address_len]socket address address_len DARWIN_SYSCALL_BIND syscall3 end
+    pub func int sc_bind[fd_t socket, *sockaddr_in address, int address_len] socket address address_len DARWIN_SYSCALL_BIND syscall3 end
 
     // Listen to an socket with specified backlog
     pub func int sc_listen[fd_t socket, int backlog] socket backlog DARWIN_SYSCALL_LISTEN syscall2 end
